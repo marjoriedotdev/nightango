@@ -1,0 +1,20 @@
+<!-- @dsCard group="Feedback" height=64 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spinner, preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>body{margin:0;padding:16px;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:1.45}.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.col{display:flex;flex-direction:column;gap:12px}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+var T = window.Torch, h = React.createElement;
+function Demo() {
+  return h('div', { className: 'row', style: { color: 'var(--text-2)' } }, h(T.Spinner, { label: 'Loading' }), h(T.Spinner, { size: 24 }), h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 8 } }, h(T.Spinner, null), 'Signing in'));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

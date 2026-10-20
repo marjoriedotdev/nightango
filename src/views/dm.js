@@ -37,7 +37,8 @@ function DMView(p) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
-      shown.length ? shown.map(function (n) {
+      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading conversations' })
+      : shown.length ? shown.map(function (n) {
         return h('div', { key: n, className: 'conv-row' },
           personRow(s, n, function () { app.nav({ view: 'dm', id: n }); }, id),
           h(T.IconButton, { icon: 'x', label: 'Close conversation', size: 26, iconSize: 14, className: 'conv-close', onClick: function () { app.actions.closeDm(n); } }));
@@ -74,7 +75,7 @@ function DMView(p) {
     else if (convo.request) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'info', size: 16 }), h('span', { className: 'grow' }, id + " isn't on your friends list. Accept to reply, or decline to remove the conversation."),
       h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.actions.declineRequest(id); } }, 'Decline'),
       h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); app.ui.toast('Request accepted.'); } }, 'Accept'));
-    else bottom = h(T.Composer, { key: id, placeholder: 'Message ' + id, onSend: function (text) { app.actions.sendDm(id, text); }, tools: false });
+    else bottom = h(T.Composer, { key: id, placeholder: 'Message ' + id, onSend: function (text) { app.actions.sendDm(id, text); }, beforeSend: h(MessageStyleButton, null) });
     thread = h('main', { className: 'thread' },
       h('header', { className: 'topbar' },
         h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
@@ -107,6 +108,14 @@ function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
 function personMeta(u) {
   return [statusLabel(u.status), u.age || null, u.gender && u.gender !== 'Not specified' ? u.gender : null, u.location || null].filter(Boolean).join(' · ');
 }
+/**
+ * Ligne d'informations d'une personne.
+ * @param {string} n Nom du membre.
+ * @param {Object} u Membre dans l'état.
+ */
+function personMetaLine(n, u) {
+  return h('span', { className: 'conv-meta' }, personMeta(u), isProfilePending(n, u) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
+}
 function useProfiles(names) {
   var app = useApp();
   useEffect(function () { app.actions.loadProfiles(names); }, [names.join(',')]);
@@ -117,7 +126,7 @@ function personRow(s, n, onClick, current) {
     h(T.Avatar, { name: n, size: 36, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main' },
       h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), last ? h('time', { className: 'tc-msg-time' }, shortWhen(last.ts, s.prefs.h24)) : null),
-      h('span', { className: 'conv-meta' }, personMeta(u)),
+      personMetaLine(n, u),
       c ? h('span', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
         h('span', { className: 'conv-prev grow' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet'),
         c.unread ? h('span', { className: 'udot', 'aria-label': 'Unread' }) : null) : null));
@@ -145,8 +154,9 @@ function FriendsList(p) {
     h('form', { onSubmit: add, noValidate: true, style: { padding: '12px 12px 4px', display: 'flex', alignItems: 'flex-end', gap: 8 } },
       h('div', { style: { flex: 1 } }, h(T.TextField, { id: 'add-friend', label: 'Add a friend', placeholder: 'Username', value: name, error: err || undefined, autoComplete: 'off', onChange: function (e) { setName(e.target.value); setErr(''); } })),
       h(T.Button, { type: 'submit', style: { height: 38 } }, 'Add')),
-    h('p', { className: 'mlabel', style: { margin: '8px 16px 4px' } }, online + ' online · ' + plural(friends.length, 'friend', 'friends')),
-    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, friends.length
+    LIVE && !s.friendsLoaded ? null : h('p', { className: 'mlabel', style: { margin: '8px 16px 4px' } }, online + ' online · ' + plural(friends.length, 'friend', 'friends')),
+    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading friends' })
+      : friends.length
       ? friends.map(function (n) { return personRow(s, n, function () { app.actions.openDm(n, 'friends'); }, p.current); })
       : h('p', { className: 'pal-empty' }, 'No friends yet. Add someone by username, or from their profile.')));
 }

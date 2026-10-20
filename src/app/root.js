@@ -145,6 +145,7 @@ function Root(props) {
     resetDemo: function () { update(function (d) { var me = d.me; Object.assign(d, seedWorld(me)); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
+    setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
       update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = Date.now(); });
@@ -361,9 +362,10 @@ function Root(props) {
   }, [state.auth.loggedIn, prefs.simulate]);
 
   /* ---------- Mode live : actions transmises à Chatango par le client Torch ---------- */
-  var localRef = useRef({ fav: [], muted: [], ignored: [], hidden: [] });
+  var localRef = useRef(blankLocal());
   var profilePending = useRef({});
   function skinKey(me) { return 'torch-skin:' + me; }
+  function blankLocal() { return { fav: [], muted: [], ignored: [], hidden: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -417,14 +419,18 @@ function Root(props) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
       if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return; }
-      var style = liveBridge.send(gid, text, { replyId: replyId, channel: opts.channel });
+      var style = liveBridge.send(gid, text, { replyId: replyId, channel: opts.channel, style: stateRef.current.ownStyle });
       if (style) setOwnStyle(style); else toast('Message not sent. Torch rejected it.');
     };
     actions.sendDm = function (name, text) {
       var me = stateRef.current.me;
       update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: text, ts: Date.now() }); });
-      var style = liveBridge.sendPm(name, text);
+      var style = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
       if (style) setOwnStyle(style); else toast('Private message not sent.');
+    };
+    actions.setMessageStyle = function (style) {
+      liveBridge.applyStyle(style);
+      update(function (d) { d.ownStyle = style; });
     };
     actions.joinGroup = function (gid) {
       update(function (d) { ensureLiveGroup(d, gid).joined = true; });
@@ -440,7 +446,11 @@ function Root(props) {
     };
     actions.reconnect = function (gid) {
       liveBridge.reconnect(gid);
-      update(function (d) { var g = d.groups[gid]; if (g) g.conn = 'connecting'; });
+      update(function (d) { var g = d.groups[gid]; if (g) g.conn = 'connecting'; if (gid === 'private_message') d.pmConn = 'connecting'; });
+    };
+    actions.reconnectSession = function () {
+      reconnectClosed();
+      update(function (d) { if (d.session) d.session.attempts += 1; });
     };
     actions.loadProfile = function (name) {
       var pending = profilePending.current;
@@ -462,7 +472,7 @@ function Root(props) {
     /** Mini profils d'une liste de résultats, quatre requêtes à la fois pour ménager Chatango. */
     actions.loadProfiles = function (names) {
       var pending = profilePending.current;
-      var queue = names.filter(function (n) { var u = stateRef.current.users[n]; return /^[a-z0-9_-]{1,20}$/.test(n) && !(u && (u.profileLoaded || u.profileFailed)) && !pending[n]; });
+      var queue = names.filter(function (n) { var u = stateRef.current.users[n]; return ACCOUNT_NAME.test(n) && !(u && (u.profileLoaded || u.profileFailed)) && !pending[n]; });
       queue.forEach(function (n) { pending[n] = true; });
       function next() {
         var n = queue.shift();
@@ -486,7 +496,10 @@ function Root(props) {
         update(function (d) { d.meet = Object.assign({ results: [] }, d.meet, { loading: false, error: e && e.message ? e.message : 'The search failed.' }); });
       });
     };
-    actions.loadMore = function (gid) { if (!liveBridge.loadMore(gid)) update(function (d) { if (d.groups[gid]) d.groups[gid].historyDone = true; }); };
+    actions.loadMore = function (gid) {
+      var asked = liveBridge.loadMore(gid);
+      update(function (d) { var g = d.groups[gid]; if (!g) return; if (asked) g.loadingMore = true; else g.historyDone = true; });
+    };
     actions.toggleUser = function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
       if (key === 'friend' && !was) { if (liveBridge.addFriend(name)) toast('Adding ' + name + ' to friends.'); return; }
@@ -617,17 +630,29 @@ function Root(props) {
     return String(m.text).split(/\s+/).concat(media).filter(Boolean).sort().filter(function (v, i, a) { return v !== a[i - 1]; }).join(' ');
   }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
+  /**
+   * Permet de relancer les connexions fermées.
+   */
+  function reconnectClosed() {
+    var s0 = stateRef.current, held = s0.session && SESSION_RANK[s0.session.reason] >= SESSION_RANK.kicked;
+    Object.keys(s0.groups).forEach(function (gid) { var g = s0.groups[gid]; if (g.joined && g.conn === 'closed') actions.reconnect(gid); });
+    if (s0.pmConn === 'closed' && !held) actions.reconnect('private_message');
+  }
 
   function handleLiveOp(op) {
     switch (op.op) {
       case 'login':
-        localRef.current = Object.assign({ fav: [], muted: [], ignored: [], hidden: [] }, storageGet(skinKey(op.me)) || {});
-        update(function (d) { Object.assign(d, liveWorld(op.me)); d.auth = { loggedIn: true }; });
+        localRef.current = Object.assign(blankLocal(), storageGet(skinKey(op.me)) || {});
+        update(function (d) { Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style; d.auth = { loggedIn: true }; });
+        // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
+        setTimeout(function () { update(function (d) { d.groupsSeen = true; }); }, 10000);
         break;
       case 'group': {
         update(function (d) {
           if (!d.auth.loggedIn) return;
           var g = ensureLiveGroup(d, op.id);
+          d.groupsSeen = true;
+          if (op.ready) { g.inited = true; g.membersLoaded = true; }
           if (op.title) { g.title = op.title; g.topic = op.title; }
           g.joined = !op.hidden;
           if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: Date.now() }; }
@@ -676,7 +701,7 @@ function Root(props) {
       case 'cleared': groupUpdate(op.gid, function (g) { g.messages = [{ id: uid(), kind: 'system', text: 'All messages in #' + g.id + ' were cleared.', ts: Date.now() }]; }); break;
       case 'members': groupUpdate(op.gid, function (g, d) {
         var list = op.names.slice(); if (list.indexOf(d.me) < 0) list.push(d.me);
-        g.members = list; g.guests = op.guests;
+        g.members = list; g.guests = op.guests; g.membersLoaded = true;
         list.forEach(function (n) { var u = ensureLiveUser(d, n); if (u.status === 'offline' && !u.friend) u.status = 'online'; });
       }); break;
       case 'member': groupUpdate(op.gid, function (g, d) {
@@ -693,6 +718,7 @@ function Root(props) {
       case 'mods': groupUpdate(op.gid, function (g) { g.live.mods = op.mods; deriveLive(g); }); break;
       case 'flags': groupUpdate(op.gid, function (g) { g.live.flags = op.flags; deriveLive(g); }); break;
       case 'inited':
+        groupUpdate(op.gid, function (g) { g.inited = true; });
         liveBridge.requestAnnouncement(op.gid);
         // Torch charge le titre et la description du groupe juste après la connexion.
         setTimeout(function () {
@@ -705,7 +731,9 @@ function Root(props) {
         g.settings.overview.title = op.title || g.settings.overview.title;
         g.settings.overview.description = op.description && op.description !== 'No description' ? op.description : '';
       }); break;
-      case 'histEnd': groupUpdate(op.gid, function (g) { g.historyDone = true; }); break;
+      case 'denied': groupUpdate(op.gid, function (g) { g.inited = true; g.membersLoaded = true; }); break;
+      case 'histEnd': groupUpdate(op.gid, function (g) { g.historyDone = true; g.loadingMore = false; }); break;
+      case 'moreLoaded': groupUpdate(op.gid, function (g) { g.loadingMore = false; }); break;
       case 'annc': groupUpdate(op.gid, function (g) { g.live.annc = { enabled: op.enabled, interval: op.interval, text: op.text, prefix: op.prefix || '' }; deriveLive(g); }); break;
       case 'anncPost': if (op.text) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', text: 'Announcement: ' + op.text, ts: Date.now() }); }); break;
       case 'bw': groupUpdate(op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
@@ -731,9 +759,23 @@ function Root(props) {
         list.sort(function (a, b) { return b.at - a.at; });
         g.live.modlog = list;
       }); break;
-      case 'conn':
-        if (op.gid === 'private_message') update(function (d) { d.pmConn = op.state; });
-        else groupUpdate(op.gid, function (g) { if (g.joined) g.conn = op.state; });
+      case 'conn': update(function (d) {
+        if (op.gid === 'private_message') d.pmConn = op.state;
+        if (!d.auth.loggedIn) return;
+        var g = d.groups[op.gid];
+        if (g && g.joined) g.conn = op.state;
+        d.session = sessionAfterConn(d, op);
+      }); break;
+      case 'session': update(function (d) {
+        if (!d.session || SESSION_RANK[op.reason] >= SESSION_RANK[d.session.reason]) d.session = { reason: op.reason, attempts: 0 };
+      }); break;
+      case 'online':
+        reconnectClosed();
+        update(function (d) {
+          var open = d.pmConn === 'open' || Object.keys(d.groups).some(function (k) { return d.groups[k].joined && d.groups[k].conn === 'open'; });
+          // Coupure brève : les sockets restés ouverts ne changent pas d'état, aucune trame conn ne lèverait la fenêtre.
+          if (d.session && d.session.reason === 'offline' && open) d.session = null;
+        });
         break;
       case 'notice': {
         var gs = stateRef.current.groups[op.gid];
@@ -741,7 +783,7 @@ function Root(props) {
         else toast(op.text, { icon: 'info' });
         break;
       }
-      case 'alert': toast(op.text, op.button && op.action ? { icon: 'info', action: { label: op.button, run: op.action } } : { icon: 'info' }); break;
+      case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { icon: 'info', action: { label: op.button, run: op.action } } : { icon: 'info' }); break;
       case 'pm': {
         var s0 = stateRef.current;
         var focused = s0.route.view === 'dm' && s0.route.id === op.from && document.visibilityState === 'visible';
@@ -762,6 +804,7 @@ function Root(props) {
         liveBridge.pmHistory(100).then(function (hist) {
           update(function (d) {
             if (!d.auth.loggedIn) return;
+            d.pmLoaded = true;
             Object.keys(hist).forEach(function (t) {
               if (t === d.me) return;
               ensureLiveUser(d, t);
@@ -779,7 +822,10 @@ function Root(props) {
         });
         break;
       case 'friends':
-        update(function (d) { op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; u.status = f.status; }); });
+        update(function (d) {
+          if (!op.added) d.friendsLoaded = true;
+          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; u.status = f.status; });
+        });
         if (op.added) op.list.forEach(function (f) { toast(f.name + ' added to friends.', { icon: 'check' }); });
         break;
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
@@ -805,10 +851,11 @@ function Root(props) {
       default: break;
     }
   }
-  /* Favoris, sourdines, membres ignorés et conversations masquées, conservés par compte dans ce navigateur */
+  /* Favoris, sourdines, membres ignorés, conversations masquées et style perso, conservés par compte dans ce navigateur */
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
-    var prev = localRef.current, o = { fav: [], muted: [], ignored: [], hidden: [] };
+    var prev = localRef.current, o = blankLocal();
+    o.style = state.ownStyle;
     prev.fav.forEach(function (k) { if (!state.groups[k]) o.fav.push(k); });
     prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
@@ -845,5 +892,6 @@ function Root(props) {
     state.auth.loggedIn && create ? h(CreateGroupDialog, { prefill: create.prefill, onClose: function () { setCreate(null); } }) : null,
     state.auth.loggedIn && newDm ? h(NewDmDialog, { onClose: function () { setNewDm(false); } }) : null,
     confirmCfg ? h(ConfirmDialog, { confirm: confirmCfg, onClose: function () { setConfirm(null); } }) : null,
+    state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
     h(Toasts, { toasts: toasts, dismiss: dismissToast }));
 }

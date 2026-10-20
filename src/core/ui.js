@@ -83,6 +83,35 @@ function MenuButton(p) {
       }))) : null);
 }
 
+/**
+ * Champ de couleur avec sa valeur hexadécimale.
+ * @param {{id: string, label: string, value: string, onChange: function(string)}} p Identifiant, libellé, couleur #rrggbb et rappel de changement.
+ */
+function ColorField(p) {
+  return h('div', { className: 'tc-field' },
+    h('label', { className: 'tc-label', htmlFor: p.id }, p.label),
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+      h('input', { id: p.id, type: 'color', className: 'color-in', style: { borderRadius: 7 }, value: p.value, onChange: function (e) { p.onChange(e.target.value); } }),
+      h('span', { className: 'mono', style: { fontSize: 12.5, color: 'var(--text-2)' } }, p.value)));
+}
+
+var SKELETON_WIDTHS = ['62%', '44%', '70%', '52%', '66%', '40%'];
+/**
+ * Lignes d'attente à la forme d'une liste.
+ * @param {{count: number, avatar: number, square: boolean, twoLines: boolean, label: string}} p Nombre de lignes, taille de l'avatar, avatar de groupe, seconde ligne de texte et annonce lue par les lecteurs d'écran.
+ */
+function SkeletonRows(p) {
+  var rows = [];
+  for (var i = 0; i < p.count; i++) {
+    rows.push(h('div', { key: i, className: 'skel-row' },
+      h(T.Skeleton, { circle: !p.square, width: p.avatar, height: p.avatar }),
+      h('span', { className: 'skel-lines' },
+        h(T.Skeleton, { width: SKELETON_WIDTHS[i % SKELETON_WIDTHS.length], height: 12 }),
+        p.twoLines ? h(T.Skeleton, { width: '85%', height: 10 }) : null)));
+  }
+  return h('div', { role: 'status' }, h('span', { className: 'tc-sr' }, p.label), rows);
+}
+
 function Dialog(p) {
   var ref = useRef(null);
   useEffect(function () {
@@ -91,7 +120,7 @@ function Dialog(p) {
     var el = ref.current && ref.current.querySelector('[data-autofocus], input, textarea, select, button');
     if (el) el.focus();
     function onKey(e) {
-      if (e.key === 'Escape') { e.stopPropagation(); p.onClose(); }
+      if (e.key === 'Escape' && p.onClose) { e.stopPropagation(); p.onClose(); }
       if (e.key === 'Tab' && ref.current) {
         var f = ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         if (!f.length) return;
@@ -101,11 +130,19 @@ function Dialog(p) {
         else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
       }
     }
+    // Fenêtre non fermable : Escape est arrêté en capture, avant les fenêtres et menus ouverts dessous qui écoutent document.
+    function onEscape(e) { if (e.key === 'Escape') e.stopPropagation(); }
+    var blocking = !p.onClose;
     document.addEventListener('keydown', onKey);
-    return function () { document.removeEventListener('keydown', onKey); if (prev && prev.focus) prev.focus(); };
+    if (blocking) document.addEventListener('keydown', onEscape, true);
+    return function () {
+      document.removeEventListener('keydown', onKey);
+      if (blocking) document.removeEventListener('keydown', onEscape, true);
+      if (prev && prev.focus) prev.focus();
+    };
   }, []);
-  return h(Portal, null, h('div', { className: 'overlay', onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
-    h('div', { className: cx('dialog', p.wide && 'wide', p.className), role: 'dialog', 'aria-modal': 'true', 'aria-label': p.label || p.title, ref: ref },
+  return h(Portal, null, h('div', { className: 'overlay', onMouseDown: function (e) { if (e.target === e.currentTarget && p.onClose) p.onClose(); } },
+    h('div', { className: cx('dialog', p.wide && 'wide', p.className), role: p.role || 'dialog', 'aria-modal': 'true', 'aria-label': p.label || p.title, ref: ref },
       p.title ? h('div', { className: 'dialog-head' }, h('h2', null, p.title), p.description ? h('p', null, p.description) : null) : null,
       p.children,
       p.footer ? h('div', { className: 'dialog-foot' }, p.footer) : null)));

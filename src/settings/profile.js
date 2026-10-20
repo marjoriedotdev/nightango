@@ -32,11 +32,7 @@ function ProfilePage() {
         })),
         h(T.SettingsSection, { title: 'Full profile page', description: 'Colors of your page on chatango.com. Torch shows profiles in its own theme.', padded: true },
           h('div', { className: 'grid3' }, [['bg', 'Background'], ['text', 'Text'], ['link', 'Links']].map(function (c) {
-            return h('div', { key: c[0], className: 'tc-field' },
-              h('label', { className: 'tc-label', htmlFor: 'pf-c-' + c[0] }, c[1]),
-              h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
-                h('input', { id: 'pf-c-' + c[0], type: 'color', className: 'color-in', style: { borderRadius: 7 }, value: draft.colors[c[0]], onChange: function (e) { set('colors.' + c[0], e.target.value); } }),
-                h('span', { className: 'mono', style: { fontSize: 12.5, color: 'var(--text-2)' } }, draft.colors[c[0]])));
+            return h(ColorField, { key: c[0], id: 'pf-c-' + c[0], label: c[1], value: draft.colors[c[0]], onChange: function (v) { set('colors.' + c[0], v); } });
           }))),
         h(VisitorsSection, null)),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },

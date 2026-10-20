@@ -23,7 +23,7 @@ function personCard(s, n, onClick) {
     h(T.Avatar, { name: n, size: 44, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main' },
       h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), u.premium ? h(T.Badge, { tone: 'accent' }, 'Premium') : null),
-      h('span', { className: 'conv-meta' }, personMeta(u)),
+      personMetaLine(n, u),
       about ? h('span', { className: 'conv-about' }, about)
         : u.profileMissing ? h('span', { className: 'conv-about' }, 'No public profile.')
           : LIVE && !u.profileLoaded ? h('span', { className: 'conv-about' }, 'Loading profile') : null));

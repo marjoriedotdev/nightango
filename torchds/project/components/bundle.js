@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"Torch","components":[{"name":"Icon"},{"name":"Button"},{"name":"IconButton"},{"name":"TextField"},{"name":"Switch"},{"name":"Checkbox"},{"name":"SegmentedControl"},{"name":"Badge"},{"name":"CountBadge"},{"name":"Avatar"},{"name":"NavItem"},{"name":"Message"},{"name":"DayDivider"},{"name":"Banner"},{"name":"SettingsSection"},{"name":"SettingRow"},{"name":"SaveBar"},{"name":"Composer"}]} */
+/* @ds-bundle: {"format":4,"namespace":"Torch","components":[{"name":"Icon"},{"name":"Button"},{"name":"IconButton"},{"name":"TextField"},{"name":"Switch"},{"name":"Checkbox"},{"name":"SegmentedControl"},{"name":"Badge"},{"name":"CountBadge"},{"name":"Avatar"},{"name":"NavItem"},{"name":"Message"},{"name":"DayDivider"},{"name":"Banner"},{"name":"SettingsSection"},{"name":"SettingRow"},{"name":"SaveBar"},{"name":"Composer"},{"name":"Skeleton"},{"name":"Spinner"}]} */
 (function () {
   'use strict';
   var React = window.React;
@@ -64,6 +64,7 @@
     menu: [['line', { x1: 4, x2: 20, y1: 12, y2: 12 }], ['line', { x1: 4, x2: 20, y1: 6, y2: 6 }], ['line', { x1: 4, x2: 20, y1: 18, y2: 18 }]],
     star: [['polygon', { points: '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2' }]],
     gift: [['rect', { x: 3, y: 8, width: 18, height: 4, rx: 1 }], ['path', { d: 'M12 8v13' }], ['path', { d: 'M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7' }], ['path', { d: 'M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5' }]],
+    type: [['polyline', { points: '4 7 4 4 20 4 20 7' }], ['line', { x1: 9, x2: 15, y1: 20, y2: 20 }], ['line', { x1: 12, x2: 12, y1: 4, y2: 20 }]],
     list: [['line', { x1: 8, x2: 21, y1: 6, y2: 6 }], ['line', { x1: 8, x2: 21, y1: 12, y2: 12 }], ['line', { x1: 8, x2: 21, y1: 18, y2: 18 }], ['line', { x1: 3, x2: 3.01, y1: 6, y2: 6 }], ['line', { x1: 3, x2: 3.01, y1: 12, y2: 12 }], ['line', { x1: 3, x2: 3.01, y1: 18, y2: 18 }]]
   };
 
@@ -164,16 +165,20 @@
 
   // Images en échec mémorisées pour toute la page : un compte sans photo n'est demandé qu'une fois.
   var brokenAvatars = Object.create(null);
+  // Images déjà chargées : affichées sans fondu au montage suivant.
+  var loadedAvatars = Object.create(null);
 
   function Avatar(props) {
     var size = props.size || 36;
     var dot = Math.max(8, Math.round(size * 0.3));
     var failed = React.useState(0)[1];
+    var fade = React.useState(null), fadedSrc = fade[0], setFadedSrc = fade[1];
     var src = props.src && !brokenAvatars[props.src] ? props.src : null;
     var style = Object.assign({ width: size, height: size, background: props.color || avatarColor(props.name), fontSize: Math.round(size * (props.square ? 0.45 : 0.36)) }, props.ring ? { '--presence-ring': props.ring } : null, props.style);
     return h('span', { className: cx('tc-avatar', props.square && 'tc-avatar-square'), style: style, 'aria-hidden': 'true' },
       props.square ? String(props.name || '?').charAt(0).toUpperCase() : initials(props.name),
-      src ? h('img', { className: 'tc-avatar-img', src: src, alt: '', loading: 'lazy', decoding: 'async', draggable: false,
+      src ? h('img', { className: cx('tc-avatar-img', fadedSrc === src ? 'tc-fade-in' : !loadedAvatars[src] && 'tc-avatar-img-wait'), src: src, alt: '', loading: 'lazy', decoding: 'async', draggable: false,
+        onLoad: function () { loadedAvatars[src] = true; setFadedSrc(src); },
         onError: function () { brokenAvatars[src] = true; failed(function (n) { return n + 1; }); } }) : null,
       props.status ? h('span', { className: 'tc-presence tc-presence-' + props.status, style: { width: dot, height: dot } }) : null);
   }
@@ -289,7 +294,13 @@
       el.style.height = Math.min(el.scrollHeight, 160) + 'px';
     }, [value]);
     React.useEffect(function () { if (props.replyTo && ref.current) ref.current.focus(); }, [props.replyTo]);
-    return h('div', { className: 'tc-composer' },
+    function focusInput(e) {
+      // Les menus et fenêtres rendus en portail remontent leurs événements React jusqu'ici sans être dans le composeur.
+      if (!e.currentTarget.contains(e.target) || e.target.closest('button,a,input,select,textarea,[role=menu],[role=menuitem]')) return;
+      e.preventDefault();
+      ref.current.focus();
+    }
+    return h('div', { className: 'tc-composer', onMouseDown: focusInput },
       props.replyTo ? h('div', { className: 'tc-composer-reply' },
         h(Icon, { name: 'reply', size: 14 }),
         h('span', { style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
@@ -305,24 +316,30 @@
         }
       }),
       h('div', { className: 'tc-composer-bar' },
-        props.tools === false ? null : [
-          h(IconButton, { key: 'b', icon: 'bold', label: 'Bold', size: 30, iconSize: 15 }),
-          h(IconButton, { key: 'i', icon: 'italic', label: 'Italic', size: 30, iconSize: 15 }),
-          h(IconButton, { key: 'l', icon: 'link', label: 'Insert link', size: 30, iconSize: 15 }),
-          h('span', { key: 's', className: 'tc-sep' }),
-          h(IconButton, { key: 'e', icon: 'smile', label: 'Emoji', size: 30, iconSize: 16, onClick: props.onEmoji }),
-          h(IconButton, { key: 'a', icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach })
-        ],
+        props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', size: 30, iconSize: 16, onClick: props.onEmoji }) : null,
+        props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach }) : null,
         h('span', { style: { flex: 1 } }),
         props.aside || null,
+        props.beforeSend || null,
         h('button', { type: 'button', className: 'tc-send', 'aria-label': 'Send message', disabled: !value.trim(), onClick: send }, h(Icon, { name: 'send', size: 16 }))));
+  }
+
+  function Skeleton(props) {
+    return h('span', { className: cx('tc-skeleton', props.circle && 'tc-skeleton-circle'), style: { width: props.width, height: props.height || 12 }, 'aria-hidden': 'true' });
+  }
+
+  function Spinner(props) {
+    var size = props.size || 16;
+    return h('span', { className: 'tc-spinner', style: { width: size, height: size }, 'aria-hidden': props.label ? undefined : 'true', role: props.label ? 'img' : undefined, 'aria-label': props.label },
+      h('svg', { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round' },
+        h('circle', { cx: 12, cy: 12, r: 9, opacity: 0.25 }), h('path', { d: 'M21 12a9 9 0 0 0-9-9' })));
   }
 
   var api = {
     Icon: Icon, Button: Button, IconButton: IconButton, TextField: TextField, Switch: Switch, Checkbox: Checkbox,
     SegmentedControl: SegmentedControl, Badge: Badge, CountBadge: CountBadge, Avatar: Avatar, NavItem: NavItem,
     Message: Message, DayDivider: DayDivider, Banner: Banner, SettingsSection: SettingsSection, SettingRow: SettingRow,
-    SaveBar: SaveBar, Composer: Composer,
+    SaveBar: SaveBar, Composer: Composer, Skeleton: Skeleton, Spinner: Spinner,
     avatarColor: avatarColor, iconNames: Object.keys(ICONS)
   };
   window.Torch = Object.assign(window.Torch || {}, api);

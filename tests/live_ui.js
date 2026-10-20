@@ -12,6 +12,14 @@ const dom = new JSDOM(`<!doctype html><html><head></head><body>
   <input data-text-field="age" value="34"><select data-text-field="gender"><option value="?">?</option><option value="M" selected>M</option><option value="F">F</option></select>
   <input data-text-field="location" value="Rouen"><textarea data-text-field="about">Hello there</textarea><textarea data-text-field="full">FULL PAGE</textarea>
   <div data-setting="show_profile"><input type="checkbox" checked></div>
+  <div data-preload="fonts"><form data-form="msgstyles">
+    <label><input type="checkbox" name="bold"><span class="fa-bold"></span></label><label><input type="checkbox" name="italics"><span class="fa-italic"></span></label>
+    <label><input type="checkbox" name="underline"><span class="fa-underline"></span></label><label><input type="checkbox" name="strikethrough"><span class="fa-strikethrough"></span></label>
+    <span class="text-field font-size"><select class="font-size text-input">${Array.from({ length: 14 }, (_, i) => `<option value="${i + 9}"${i + 9 === 11 ? ' selected' : ''}>${i + 9}</option>`).join('')}</select></span>
+    <input type="color" value="#000000" data-color="fontColor"><input type="color" value="#000000" data-color="nameColor">
+    <span class="text-field font-face"><select class="font-face text-input">${Array.from({ length: 9 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select></span>
+    <input type="checkbox" name="stylesOn">
+  </form></div>
   <div id="app"></div></body></html>`, { runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: vc, url: 'https://st.chatango.com/' });
 const w = dom.window, d = w.document;
 w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
@@ -26,28 +34,39 @@ w.__TORCH_SHOW__ = () => { shown++; };
 w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'blocked', 'unblocked', 'allunblocked', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
-const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw'];
+const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
 const pmRecords = [
   { target: 'dave', data: 'msg:dave:marjorie:unknown:1700000000.5:0:<n000/>Hello &amp; welcome', unread: 0 },
   { target: 'dave', data: 'msg:marjorie:marjorie:unknown:1700000100.5:0:<n000/>Thanks', unread: 0 },
   { target: 'fay', data: 'msg:fay:marjorie:unknown:1700000050.5:0:<n3366FF/><m v="1"><g x12s9900cc="4">Old styled</g></m>', unread: 0 }
 ];
+// Relevé du style de Torch au moment où il construit un corps de message (sendMessage avec length).
+let styleProbe = null;
+const styleAtBuild = [];
 function fakeGroup() { return { socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { information: { title: 'Test group', description: 'A test room' } }, load: 5 }; }
 const C = {
-  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.fromEntries(privHandlers.map(n => [n, noop])) },
-  user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 } }, groups: {}, focus: 'test',
+  // DENIED : Torch affiche un alert() bloquant.
+  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); } }) },
+  user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
   emit(ev, data) { d.dispatchEvent(new w.CustomEvent('chatango_' + ev, { detail: data })); },
   socket(gid, frame) { sent.push([gid, frame]); },
   sendMessage(data, length, group, user) {
+    if (length && styleProbe) styleAtBuild.push({ group, style: styleProbe() });
     if (length) return group === 'private_message' ? '<n3366FF/><m v="1"><g x12s9900cc="4">' + data + '</g></m>' : '<n000/><f x11000="0">' + data;
     calls.push(['pm', group, user, data]);
   },
-  connect(gid) { calls.push(['connect', gid]); if (gid !== 'private_message' && !C.groups[gid]) C.groups[gid] = fakeGroup(); return Promise.resolve({}); },
+  // Comme socketEvent de Torch : un groupe encore dans cache.connect est ignoré, sa promesse ne se règle jamais.
+  cache: { connect: [] },
+  connect(gid) {
+    if (C.cache.connect.includes(gid)) return new Promise(noop);
+    C.cache.connect.push(gid);
+    calls.push(['connect', gid]); if (gid !== 'private_message' && !C.groups[gid]) C.groups[gid] = fakeGroup(); return Promise.resolve({});
+  },
   setFocus(o) { calls.push(['focus', o.group]); }, disconnectFrom(gid) { calls.push(['disconnect', gid]); delete C.groups[gid]; },
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
   post(url, form) { const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f }); return Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked'); },
-  private: { focus: false, socket: { readyState: 1 }, clearHistory(t) { calls.push(['clearHistory', t]); } },
+  private: { focus: false, socket: { readyState: 0 }, clearHistory(t) { calls.push(['clearHistory', t]); } },
   database: { pm: { transaction() { return { objectStore() { return { openCursor() {
     const req = {}; let i = 0;
     const next = () => setTimeout(() => req.onsuccess({ target: { result: i < pmRecords.length ? { value: pmRecords[i], continue() { i++; next(); } } : null } }), 0);
@@ -63,13 +82,15 @@ w.__torchRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 't
 const fetches = [];
 let searchHold = null;
 const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img src="x" onerror="alert(2)"><a href="javascript:alert(3)">bad</a> <a href="https://example.com/p">good</a> <font color="#ff0000" size="5">red</font>');
+// Âge Chatango, comme Torch : année courante moins année de naissance.
+const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · Female · Lyon';
 const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">');
 w.fetch = (url, opts) => {
   const f = {}; if (opts && opts.body && opts.body.forEach) opts.body.forEach((v, k) => { f[k] = v; });
   fetches.push({ url, f, credentials: opts && opts.credentials });
   let body = '';
   if (/\/search$/.test(url)) body = 'h=zoe;1;2:yann;3:marjorie;9';
-  else if (/zoe\/mod1\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + ABOUT + '</body><s>F</s><b>1995-04-02</b><l c="FR">Lyon</l></mod>';
+  else if (/zoe\/mod1\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + ABOUT + '</body><s>F</s><b>' + ZOE_BIRTH + '</b><l c="FR">Lyon</l></mod>';
   else if (/zoe\/mod2\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + FULL + '</body></mod>';
   else if (/marjorie\/mod1\.xml/.test(url)) {
     // Chatango sert la bio du dernier enregistrement.
@@ -125,9 +146,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('overlay shown after login', shown === 1);
   SB.renderGroup({ group: 'test', header: 'Test' });
   g('ok', 'test', ['marjorie', '', '', '', '1700000000', '', 'alice,' + MOD + ';bob,' + (MOD | 2 | 16), String(64)]);
+  await wait(100);
+  const groupSkeleton = { beforeInit: !!$('.log .tc-skeleton') };
   g('inited', 'test', []);
   g('g_participants', 'test', ['S1:1700:U1:Alice:None;S2:1700:U2:Bob:None;S3:1700:U3:None:None']);
   await wait(150);
+  groupSkeleton.afterInit = !!$('.log .tc-skeleton');
   step('group opens', !!byText('h1', 'test'));
   step('announcement requested after init', frame('getannouncement').length >= 1);
   step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
@@ -145,7 +169,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('edit replaces original text', d.body.textContent.includes('Hi everyone') && !d.body.textContent.includes('Hi all') && d.body.textContent.includes('(edited)'));
 
   /* Envoi : échappement, réponse, canal */
-  const ta = $('.tc-composer textarea');
+  const ta = $('.tc-composer textarea'), bar = $('.tc-composer-bar');
+  $('button[aria-label="Group options"]').focus();
+  bar.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, cancelable: true })); click(bar); await wait(20);
+  step('composer click focuses input', d.activeElement === ta, d.activeElement && d.activeElement.outerHTML.slice(0, 80));
   type(ta, 'a < b & c'); key(ta, 'Enter'); await wait(30);
   const plain = frame('bm:').pop() || '';
   step('message escaped for Chatango', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">a &lt; b &amp; c$/.test(plain), plain);
@@ -211,6 +238,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('reconnect asks Torch', calls.some(c => c[0] === 'connect' && c[1] === 'test'));
   C.groups.test.socket.readyState = 1; await wait(2300);
   step('banner clears once connected', !byText('.banner-wrap', 'Disconnected'));
+  C.groups.test.socket.readyState = 3; await wait(2300);
+  click(byText('.banner-wrap button', 'Reconnect')); await wait(30);
+  const testConnects = calls.filter(c => c[0] === 'connect' && c[1] === 'test').length;
+  step('reconnect twice', testConnects === 2 && !C.cache.connect.includes('test'), { testConnects, cache: C.cache.connect });
+  C.groups.test.socket.readyState = 1; await wait(2300);
 
   /* Historique */
   click(byText('button', 'Load earlier messages')); await wait(30);
@@ -310,7 +342,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     }, 0);
     return req;
   } };
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  const pmSkeleton = { beforeReady: !!$('.convs .tc-skeleton') };
+  C.private.socket.readyState = 1;
   pm('OK', []); await wait(150);
+  pmSkeleton.afterHistory = !!$('.convs .tc-skeleton');
+  step('loading skeletons', groupSkeleton.beforeInit && !groupSkeleton.afterInit && pmSkeleton.beforeReady && !pmSkeleton.afterHistory, { groupSkeleton, pmSkeleton });
   step("Torch's history base opened with its exact schema", JSON.stringify(schema) === JSON.stringify([['open', 'marjorie_history', 1], ['store', 'messages', 'ts'], ['index', 'target_idx', '"target"'], ['index', 'target_read_idx', '["target","unread"]'], ['index', 'target_ts_idx', '["target","ts"]']]), schema);
   step('base handed to Torch for archiving', C.database.pm === fakeDb);
   click(byText('.tc-nav', 'Private messages')); await wait(50);
@@ -346,7 +383,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('pm history keeps style', styleOk(old), old.p && [old.p.style.cssText, old.name && old.name.style.cssText]);
   type($('.thread .tc-composer textarea'), 'Mine'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
   const mine = styled('Mine');
-  step('own pm carries own style', styleOk(mine) && calls.some(c => c[0] === 'pm' && c[2] === 'fay' && c[3] === 'Mine'), mine.p && [mine.p.style.cssText, mine.name && mine.name.style.cssText]);
+  const minePms = calls.filter(c => c[0] === 'pm' && c[2] === 'fay' && c[3] === 'Mine').length;
+  step('own pm carries own style', styleOk(mine) && minePms === 1, { minePms, style: mine.p && [mine.p.style.cssText, mine.name && mine.name.style.cssText] });
 
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000270.1', 'Eve', '', 'u7', 'UNID7', 'tmp13', '9.9.9.9', '0', '', '<n000/><f x11000="2">Look at this']);
@@ -400,6 +438,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(menuItem('Delete conversation')); await wait(30);
   click(byText('.dialog-foot button', 'Delete')); await wait(50);
   step('delete clears Torch history', calls.some(c => c[0] === 'clearHistory' && c[1] === 'dave') && !listed('dave'), calls.filter(c => c[0] === 'clearHistory'));
+  click($('.convs button[aria-label="New message"]')); await wait(50);
+  const dmChips = $$('.dialog .chip').length;
+  type($('#newdm'), 'hank'); key($('#newdm'), 'Enter'); await wait(50);
+  const hankHead = $('.thread .topbar h2');
+  step('new dm has no suggestions', dmChips === 0 && !$('.dialog') && !!hankHead && hankHead.textContent === 'hank', { dmChips, dialog: !!$('.dialog'), head: hankHead && hankHead.textContent });
 
   /* Amis et rencontres */
   click(byText('.tc-nav', 'Friends')); await wait(60);
@@ -411,7 +454,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('msg', ['zoe', 'marjorie', 'unknown', '1700000600.5', '0', '<n000/><m v="1"><g x12s000="0">See you at 8</g></m>']); await wait(150);
   const zoeRow = $$('.convs .conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === 'zoe');
   const zoeText = zoeRow ? zoeRow.textContent : '';
-  step('friends rows show ASL and last message', /(30|31) · Female · Lyon/.test(zoeText) && zoeText.includes('See you at 8') && !zoeText.includes('Bold'), zoeText);
+  step('friends rows show ASL and last message', zoeText.includes(ZOE_ASL) && zoeText.includes('See you at 8') && !zoeText.includes('Bold'), zoeText);
   click(byText('.tc-nav', 'Meet people')); await wait(120);
   const search = fetches.find(x => /\/search$/.test(x.url));
   step('meet search uses Torch parameters and the browser session', !!search && search.credentials === 'include' && search.f.s === 'B' && String(search.f.o) === '1' && String(search.f.ami) === '13' && String(search.f.ama) === '99' && String(search.f.f) === '0' && String(search.f.t) === '40', search);
@@ -438,7 +481,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.convs .conv', 'zoe')); await wait(120);
   const card = $('.dialog');
   const rich = card && card.querySelector('.about.rich');
-  step('mini profile loaded (age, gender, location)', !!card && /(30|31) · Female · Lyon/.test(card.textContent));
+  step('mini profile loaded (age, gender, location)', !!card && card.textContent.includes(ZOE_ASL), card && card.textContent);
   step('mini profile keeps formatting', !!rich && !!rich.querySelector('b') && rich.querySelector('b').textContent === 'Bold' && !!rich.querySelector('span[style*="color"]'));
   step('mini profile drops scripts and handlers', !!rich && !rich.querySelector('script') && !rich.innerHTML.includes('onerror') && !rich.innerHTML.includes('javascript:') && !rich.innerHTML.includes('alert'));
   step('mini profile keeps safe links only', !!rich && $$('.about.rich a').length === 1 && rich.querySelector('a').getAttribute('href') === 'https://example.com/p');
@@ -505,7 +548,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('notifications: no email or sound columns', !byText('th', 'Email') && !byText('th', 'Sound') && !!byText('.tc-banner', 'Torch plays alert sounds'));
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
 
-  /* Bio : sauts de ligne au format Chatango */
+  /* Bio : line Chatango brute dans le champ, rendue dans l'aperçu */
   const ownCard = async () => {
     click(byText('.tc-nav', 'test')); await wait(50);
     click(byText('.members .mrow', 'marjorie (you)')); await wait(120);
@@ -524,7 +567,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const bioPost = posts.filter(p => /updateprofile/.test(p.url)).pop().f.line;
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   const cardAfter = await ownCard();
-  step('own bio renders line breaks', cardBefore.text === 'Hello there' && bioPage.field === 'a\nb' && bioPage.br && !bioPage.literal && bioPost === 'a<br/>b' && cardAfter.br && cardAfter.text === 'ab', { cardBefore, bioPage, bioPost, cardAfter });
+  step('own bio raw in field', cardBefore.text === 'Hello there' && bioPage.field === 'a<br/>b' && bioPage.br && !bioPage.literal && bioPost === 'a<br/>b' && cardAfter.br && cardAfter.text === 'ab', { cardBefore, bioPage, bioPost, cardAfter });
 
   /* Création de groupe */
   click(byText('.tc-nav', 'Discover groups')); await wait(50);
@@ -534,6 +577,72 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const cp = posts.find(p => /creategrouploginjs/.test(p.url));
   step('group creation posted through Torch', !!cp && cp.f.u === 'newroom' && cp.f.n === 'New room' && cp.f.owner === 'marjorie' && cp.f.authType === 'cookie', cp);
   step('new group joined', calls.some(c => c[0] === 'connect' && c[1] === 'newroom'));
+
+  /* Style perso : champs de Torch écrits avant l'envoi, jamais enregistrés chez Chatango */
+  const fontsEl = d.querySelector('[data-preload="fonts"]'), emph = cls => fontsEl.querySelector(cls).previousElementSibling;
+  let submits = 0;
+  fontsEl.querySelector('form').addEventListener('submit', e => { submits++; e.preventDefault(); });
+  const torchStyle = () => JSON.stringify({
+    face: d.querySelector('.font-face').firstElementChild.value, size: d.querySelector('.font-size .text-input').value,
+    text: fontsEl.querySelector('[data-color="fontColor"]').value, name: fontsEl.querySelector('[data-color="nameColor"]').value,
+    bold: emph('.fa-bold').checked, italic: emph('.fa-italic').checked, underline: emph('.fa-underline').checked, on: fontsEl.querySelector('[name="stylesOn"]').checked, user: C.user.style
+  });
+  const WANT = JSON.stringify({ face: '4', size: '14', text: '#9900cc', name: '#3366ff', bold: true, italic: false, underline: false, on: true, user: true });
+  // Torch recharge le style du compte à la reconnexion : ses champs reviennent aux valeurs de Chatango.
+  const resetTorchStyle = () => {
+    d.querySelector('.font-face').firstElementChild.value = '0'; d.querySelector('.font-size .text-input').value = '11';
+    fontsEl.querySelector('[data-color="fontColor"]').value = '#000000'; fontsEl.querySelector('[data-color="nameColor"]').value = '#000000';
+    emph('.fa-bold').checked = false; fontsEl.querySelector('[name="stylesOn"]').checked = false; C.user.style = false;
+  };
+  const postsBeforeStyle = posts.length;
+  styleProbe = torchStyle;
+  click(byText('.tc-nav', 'test')); await wait(50);
+  const styleBtn = $('.tc-composer button[aria-label="Message style"]');
+  if (styleBtn) {
+    click(styleBtn); await wait(50);
+    type($('#ms-face'), '4'); type($('#ms-size'), '14'); type($('#ms-text'), '#9900cc'); type($('#ms-name'), '#3366ff');
+    click(byText('.dialog .tc-checkline', 'Bold').querySelector('input')); await wait(20);
+    click(byText('.dialog-foot button', 'Save')); await wait(50);
+    resetTorchStyle();
+    type($('.tc-composer textarea'), 'Styled'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
+  }
+  const storedStyle = JSON.stringify(JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}'));
+  resetTorchStyle();
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  click(byText('.conv', 'fay')); await wait(50);
+  type($('.thread .tc-composer textarea'), 'Styled pm'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(30);
+  styleProbe = null;
+  const atGroup = styleAtBuild.filter(x => x.group === 'test').map(x => x.style), atPm = styleAtBuild.filter(x => x.group === 'private_message').map(x => x.style);
+  step('own style applied locally', !!styleBtn && atGroup.length === 1 && atGroup[0] === WANT && storedStyle.includes('#9900cc') && storedStyle.includes('#3366ff') && atPm.length === 1 && atPm[0] === WANT && posts.length === postsBeforeStyle && submits === 0,
+    { button: !!styleBtn, atGroup, storedStyle, atPm, posts: posts.slice(postsBeforeStyle), submits });
+
+  /* Session coupée : connecté ailleurs, hors ligne, connexion perdue, session expirée */
+  const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
+  const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
+  C.private.socket.readyState = 3;
+  pm('kickingoff', []); await wait(2300);
+  const kicked = overlay();
+  const pmConnects = connects('private_message');
+  if (kicked) { click(byText('[role="alertdialog"] button', 'Reconnect here')); await wait(30); }
+  const hereAsked = connects('private_message') === pmConnects + 1;
+  C.private.socket.readyState = 1; await wait(2300);
+  const afterHere = overlay();
+  w.dispatchEvent(new w.Event('offline')); await wait(50);
+  const offline = overlay();
+  C.groups.test.socket.readyState = 3; await wait(2300);
+  const testConnects2 = connects('test');
+  w.dispatchEvent(new w.Event('online')); await wait(50);
+  const onlineReconnects = connects('test') - testConnects2;
+  Object.keys(C.groups).forEach(k => { C.groups[k].socket.readyState = 3; }); C.private.socket.readyState = 3; await wait(2300);
+  const lost = overlay();
+  pm('DENIED', []); await wait(50);
+  const denied = overlay();
+  step('session overlay',
+    !!kicked && kicked.text.includes("You're signed in somewhere else") && kicked.buttons.includes('Reload') && kicked.buttons.includes('Reconnect here') && hereAsked && !afterHere
+      && !!offline && offline.text.includes("You're offline") && onlineReconnects === 1
+      && !!lost && lost.text.includes('Connection lost')
+      && !!denied && denied.text.includes('Your session expired') && !calls.some(c => c[0] === 'alert'),
+    { kicked, hereAsked, afterHere, offline, onlineReconnects, lost, denied, alerts: calls.filter(c => c[0] === 'alert').length });
 
   console.log(log.join('\n'));
   console.log('ERRORS: ' + (errors.length ? '\n' + errors.join('\n') : 'none'));

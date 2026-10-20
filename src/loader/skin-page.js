@@ -4,7 +4,9 @@
   window.__TORCH_SKIN__ = true;
   window.__TORCH_SKIN_VERSION__ = '/*VERSION*/';
   var CSS = /*CSS*/;
+  var LOGIN_CSS = /*LOGIN_CSS*/;
   var TORCH_START = 'https://vissle.me/client/start';
+  var FONT_URL = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
 
   // Bibliothèques vérifiées par empreinte : un fichier modifié sur le CDN n'est pas exécuté.
   function load(src, integrity) {
@@ -22,6 +24,31 @@
     return !!window.__torchRefs;
   }
   function headline(text) { var h1 = document.querySelector('h1'); if (h1) h1.textContent = text; }
+  function addFont() {
+    if (document.querySelector('link[href="' + FONT_URL + '"]')) return;
+    var font = document.createElement('link');
+    font.rel = 'stylesheet';
+    font.href = FONT_URL;
+    document.head.appendChild(font);
+  }
+
+  /* Écran de connexion de Torch rhabillé en CSS seul : ses champs, leurs valeurs et ses écouteurs restent intacts. */
+  function dressLogin() {
+    if (document.getElementById('torch-skin-login') || !document.querySelector('.login-wrapper')) return;
+    var theme = null;
+    try { theme = (JSON.parse(localStorage.getItem('torch-prototype-prefs')) || {}).theme; } catch (e) { /* stockage indisponible : thème du système */ }
+    document.documentElement.classList.toggle('tsk-light', theme === 'light');
+    document.documentElement.classList.toggle('tsk-dark', theme === 'dark');
+    var style = document.createElement('style');
+    style.id = 'torch-skin-login';
+    style.textContent = LOGIN_CSS;
+    document.head.appendChild(style);
+    addFont();
+  }
+  // Torch remplace tout le contenu de <html> en démarrant : la feuille est reposée dès que son écran apparaît.
+  var loginWatch = new MutationObserver(dressLogin);
+  loginWatch.observe(document.documentElement, { childList: true, subtree: true });
+  dressLogin();
 
   /* Démarrage de Torch, comme son favori : même script, sans rechargement en boucle en cas d'échec. */
   function startTorch() {
@@ -61,12 +88,13 @@
       var shadow = host.attachShadow({ mode: 'open' });
       var style = document.createElement('style'); style.textContent = CSS; shadow.appendChild(style);
       var mount = document.createElement('div'); mount.id = 'app'; shadow.appendChild(mount);
-      var font = document.createElement('link');
-      font.rel = 'stylesheet';
-      font.href = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
-      document.head.appendChild(font);
+      addFont();
       // L'interface reste masquée tant que la session Torch n'est pas ouverte : la connexion se fait sur l'écran de Torch.
       window.__TORCH_SHOW__ = function () {
+        loginWatch.disconnect();
+        var login = document.getElementById('torch-skin-login');
+        if (login) login.remove();
+        document.documentElement.classList.remove('tsk-light', 'tsk-dark');
         if (!host.isConnected) document.body.appendChild(host);
         if (!document.getElementById('torch-skin-hide')) {
           var hide = document.createElement('style');

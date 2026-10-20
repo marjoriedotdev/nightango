@@ -7,6 +7,17 @@ function profileAbout(u) {
   return null;
 }
 
+/**
+ * Ligne d'informations d'une fiche de profil.
+ * @param {string} meta Texte déjà composé.
+ * @param {string} name Nom du membre.
+ * @param {Object} u Membre dans l'état.
+ */
+function profileMeta(meta, name, u) {
+  if (meta) return h('span', { className: 'muted', style: { fontSize: 13 } }, meta);
+  return isProfilePending(name, u) ? h(T.Skeleton, { width: 120, height: 12 }) : null;
+}
+
 /** Profil complet : page HTML du membre, affichée dans un cadre isolé sans script. */
 function FullProfileDialog(p) {
   var app = useApp(), s = app.state, u = userOf(s, p.name), safety = s.prefs.safety;
@@ -45,7 +56,7 @@ function ProfilePanel(p) {
     h('div', { className: 'scroll' },
       h('div', { className: 'profile-card' },
         h(T.Avatar, { name: name, size: 72, status: u.status, ring: 'var(--panel)' }),
-        h('h2', null, name), meta ? h('span', { className: 'muted', style: { fontSize: 13 } }, meta) : null),
+        h('h2', null, name), profileMeta(meta, name, u)),
       profileAbout(u),
       h('div', { style: { padding: '0 16px 8px' } }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'external', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')),
       common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length),

@@ -93,7 +93,7 @@ const COMPONENTS = [
     `  return h('div', { className: 'row' }, h(T.CountBadge, { count: 2 }), h(T.CountBadge, { count: 3, mention: true }), h(T.CountBadge, { count: 140 }));`],
   ['Avatar', 'Identity', 80,
     'Profile picture or initials on a muted color derived from the username, with optional presence.',
-    `Pass \`src\` to show a profile picture. The initials stay underneath and remain visible while it loads or if it fails (account without a picture, guest); a failed URL is not requested again on the same page.
+    `Pass \`src\` to show a profile picture. The initials stay underneath and remain visible while it loads or if it fails (account without a picture, guest); a failed URL is not requested again on the same page. The picture fades in once loaded, and shows at once when the page already loaded it.
 
 Pass \`name\`; the color comes from a fixed palette of eight muted tones so a user keeps the same color everywhere. \`status\` is online, idle or offline and must also be stated in text nearby (Online, Idle). Set \`ring\` to the surface color behind the avatar so the presence dot is cut out cleanly. \`square\` renders a group icon.
 
@@ -146,9 +146,28 @@ Sizes: 16 in reply previews, 22 in the sidebar, 28 in lists, 36 in messages, 64 
     `Use it only where changes are sent to Chatango (profile, group settings). Local preferences save on change and never show it. Children say what will change ("Moderator role changed. Applies to sable and vantage."). Provide \`onDiscard\` and \`onSave\`.`,
     `  return h(T.SaveBar, { onDiscard: function () {}, onSave: function () {} }, 'You have 2 unsaved changes');`],
   ['Composer', 'Chat', 150,
-    'The message input with formatting tools, reply context and send button.',
-    `Provide \`placeholder\` ("Message #community", "Message sable") and \`onSend(text)\`. Enter sends, Shift+Enter adds a line, Escape cancels a reply. Pass \`replyTo\` as \`{author, text}\` with \`onCancelReply\`. \`aside\` holds the channel picker. Set \`tools={false}\` on mobile.`,
-    `  return h(T.Composer, { placeholder: 'Message #community', replyTo: { author: 'sable', text: "Known issue on server s12" }, onCancelReply: function () {}, onSend: function () {} });`]
+    'The message input with reply context, optional tools and send button.',
+    `Provide \`placeholder\` ("Message #community", "Message sable") and \`onSend(text)\`. Enter sends, Shift+Enter adds a line, Escape cancels a reply. Pass \`replyTo\` as \`{author, text}\` with \`onCancelReply\`. A click anywhere in the composer outside its controls focuses the input.
+
+- \`onEmoji\` and \`onAttach\` each show their tool button; leave them out when the feature does not exist.
+- \`aside\` holds the channel picker. \`beforeSend\` holds one icon button placed right before Send, such as the message style.`,
+    `  return h(T.Composer, { placeholder: 'Message #community', replyTo: { author: 'sable', text: "Known issue on server s12" }, onCancelReply: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) });`],
+  ['Skeleton', 'Feedback', 120,
+    'A pulsing placeholder that holds the place of content still loading.',
+    `Pass \`width\` and \`height\` in pixels, or \`circle\` for an avatar. Compose them in the shape of the rows they replace (avatar plus one or two lines) so the layout does not jump when the content arrives. Use them only while data is on its way: an empty list says so in words.
+
+- Skeletons are hidden from assistive tech: the region that loads announces it once, in text.
+- The pulse stops when the reader asks for reduced motion.
+- Add \`tc-fade-in\` on content that replaces a skeleton or appears late, such as a loaded picture.`,
+    `  function line(w) { return h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } }, h(T.Skeleton, { circle: true, width: 36, height: 36 }), h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, h(T.Skeleton, { width: w, height: 12 }), h(T.Skeleton, { width: w + 60, height: 10 }))); }
+  return h('div', { className: 'col', style: { maxWidth: 320 } }, line(90), line(130), line(70));`],
+  ['Spinner', 'Feedback', 64,
+    'A turning ring for a short wait triggered by the reader.',
+    `Use it inline where an action is in progress: loading earlier messages, signing in. Prefer a Skeleton when the shape of the coming content is known. It takes \`currentColor\`; \`size\` defaults to 16.
+
+- Pass \`label\` when no visible text says what is loading; leave it out next to a text such as "Signing in".
+- It stops turning when the reader asks for reduced motion.`,
+    `  return h('div', { className: 'row', style: { color: 'var(--text-2)' } }, h(T.Spinner, { label: 'Loading' }), h(T.Spinner, { size: 24 }), h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 8 } }, h(T.Spinner, null), 'Signing in'));`]
 ];
 
 // -- Génération ---------------------------------------------------------------

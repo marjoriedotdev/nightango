@@ -1,12 +1,10 @@
 /* ---------- Réglages du compte en mode live ---------- */
 var GENDER_LABEL = { M: 'Male', F: 'Female' };
 var GENDER_CODE = { Male: 'M', Female: 'F' };
-function bioFromLine(line) { return line.replace(/<br\s*\/?>(\r?\n)?/gi, '\n'); }
-function bioToLine(bio) { return bio.replace(/\r?\n/g, '<br/>'); }
 
 function ProfilePageLive() {
   var app = useApp(), s = app.state;
-  function load() { var r = liveBridge.readProfile(); return { loaded: r.loaded, age: r.age, gender: GENDER_LABEL[r.gender] || 'Not specified', location: r.location, about: bioFromLine(r.about), line: r.about, dir: r.dir, full: r.full }; }
+  function load() { var r = liveBridge.readProfile(); return { loaded: r.loaded, age: r.age, gender: GENDER_LABEL[r.gender] || 'Not specified', location: r.location, about: r.about, dir: r.dir, full: r.full }; }
   function editable(x) { return { age: x.age, gender: x.gender, location: x.location, about: x.about, dir: x.dir }; }
   var a = useState(load), base = a[0], setBase = a[1];
   var b = useState(function () { return editable(base); }), draft = b[0], setDraft = b[1];
@@ -19,11 +17,10 @@ function ProfilePageLive() {
     if (ageErr) { app.ui.toast('Fix the age before saving.'); return; }
     if (!base.loaded) { app.ui.toast('Your profile is not loaded yet. Nothing was saved.'); return; }
     setSaving(true);
-    var line = draft.about === base.about ? base.line : bioToLine(draft.about);
-    liveBridge.saveProfile({ age: draft.age, gender: GENDER_CODE[draft.gender] || '?', location: draft.location, about: line, dir: draft.dir, full: base.full }).then(function () {
-      setBase(Object.assign({}, base, draft, { line: line }));
+    liveBridge.saveProfile({ age: draft.age, gender: GENDER_CODE[draft.gender] || '?', location: draft.location, about: draft.about, dir: draft.dir, full: base.full }).then(function () {
+      setBase(Object.assign({}, base, draft));
       setSaving(false);
-      app.update(function (d) { var u = d.users[d.me]; if (u) { u.age = draft.age === '' ? '' : +draft.age; u.location = draft.location; u.about = draft.about; u.aboutHtml = line; u.gender = draft.gender; } });
+      app.update(function (d) { var u = d.users[d.me]; if (u) { u.age = draft.age === '' ? '' : +draft.age; u.location = draft.location; u.about = draft.about; u.aboutHtml = draft.about; u.gender = draft.gender; } });
       app.ui.toast('Profile saved to Chatango.', { icon: 'check' });
     }, function (e) {
       setSaving(false);
@@ -60,7 +57,7 @@ function ProfilePageLive() {
             h(T.Avatar, { name: s.me, size: 64, style: { border: '4px solid var(--subtle)', boxSizing: 'content-box' } }),
             h('p', { style: { margin: '8px 0 0', fontSize: 17, fontWeight: 600 } }, s.me),
             meta ? h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, meta) : null,
-            draft.about ? h('div', { style: { marginTop: 12 } }, h(RichText, { html: bioToLine(draft.about) })) : h('p', { className: 'about', style: { marginTop: 12 } }, 'No bio yet.'))))),
+            draft.about ? h('div', { style: { marginTop: 12 } }, h(RichText, { html: draft.about })) : h('p', { className: 'about', style: { marginTop: 12 } }, 'No bio yet.'))))),
     dirty && base.loaded ? h(T.SaveBar, { onDiscard: function () { setDraft(editable(base)); }, onSave: saving ? function () {} : save, saveLabel: saving ? 'Saving' : 'Save profile' }, 'Unsaved changes to your Chatango profile') : null);
 }
 

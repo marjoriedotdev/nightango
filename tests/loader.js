@@ -60,6 +60,11 @@ async function deliverReact(w) {
   step('no overlay before Torch is ready', !a.d.getElementById('torch-skin'));
   step('React loaded with integrity check', [...a.d.querySelectorAll('script[src*="cdnjs"]')].every(s => s.integrity.indexOf('sha384-') === 0 && s.crossOrigin === 'anonymous'));
   await deliverReact(a.w);
+  // Torch remplace tout le document par son client, écran de connexion compris.
+  a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div></body>';
+  await wait(20);
+  const loginStyle = a.d.getElementById('torch-skin-login');
+  const loginDressed = !!loginStyle && loginStyle.parentNode === a.d.head;
   fakeTorch(a.w);
   await wait(700);
   const host = a.d.getElementById('torch-skin');
@@ -70,6 +75,7 @@ async function deliverReact(w) {
   await wait(150);
   const host2 = a.d.getElementById('torch-skin');
   step('overlay shown after sign-in, re-attached if Torch removed it', !!host2 && host2.style.display === 'block' && !!host2.shadowRoot.querySelector('#app').children.length);
+  step('login stylesheet', loginDressed && !a.d.getElementById('torch-skin-login'), { loginDressed, afterShow: !!a.d.getElementById('torch-skin-login') });
   step('app runs in the page world',
     a.injected.some(t => t.indexOf('__TORCH_SKIN__') >= 0) && a.w.__TORCH_SKIN__ === true && a.w.__TORCH_LIVE__ === true
       && typeof a.w.client.event.group.getratelimit === 'function' && !!host2 && !!host2.shadowRoot.querySelector('#app').children.length,

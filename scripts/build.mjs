@@ -28,9 +28,11 @@ export const APP_SOURCES = [
   'views/meet.js',
   'views/profile.js',
   'views/new-dm.js',
+  'views/message-style.js',
   'views/discover.js',
   'views/palette.js',
   'views/live-joined.js',
+  'views/session.js',
   'settings/shell.js',
   'settings/profile.js',
   'settings/appearance.js',
@@ -92,18 +94,40 @@ function themeBlock(tokens, theme) {
 }
 
 /**
+ * Permet de déclarer les jetons sous une racine, sombre d'abord.
+ * @param {object} tokens Contenu de tokens.json.
+ * @param {string} root Sélecteur qui porte les jetons.
+ * @param {string} auto Sélecteur qui suit le thème clair du système.
+ * @param {string} light Sélecteur du thème clair choisi.
+ * @param {string} dark Sélecteur du thème sombre choisi.
+ */
+function themeRules(tokens, root, auto, light, dark) {
+  const statics = [];
+  for (const family of ['spacing', 'radius', 'size']) for (const t of tokens[family].tokens) statics.push(`--${t.name}: ${t.value};`);
+  for (const [key, stack] of Object.entries(tokens.type.families)) statics.push(`--font-${key}: ${stack};`);
+  return `${root} { color-scheme: dark; ${ACCENT_DEFAULTS} ${statics.join(' ')} ${themeBlock(tokens, 'dark')} }\n` +
+    `@media (prefers-color-scheme: light) { ${auto} { color-scheme: light; ${themeBlock(tokens, 'light')} } }\n` +
+    `${light} { color-scheme: light; ${themeBlock(tokens, 'light')} }\n` +
+    `${dark} { color-scheme: dark; ${themeBlock(tokens, 'dark')} }\n`;
+}
+
+/**
  * Permet de produire la feuille des jetons.
  * @param {object} tokens Contenu de tokens.json.
  */
 function tokensCss(tokens) {
-  const statics = [];
-  for (const family of ['spacing', 'radius', 'size']) for (const t of tokens[family].tokens) statics.push(`--${t.name}: ${t.value};`);
-  for (const [key, stack] of Object.entries(tokens.type.families)) statics.push(`--font-${key}: ${stack};`);
   return '/* Torch tokens, dark first: generated from the Torch design system */\n' +
-    `:root { color-scheme: dark; ${ACCENT_DEFAULTS} ${statics.join(' ')} ${themeBlock(tokens, 'dark')} }\n` +
-    `@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { color-scheme: light; ${themeBlock(tokens, 'light')} } }\n` +
-    `:root[data-theme="light"] { color-scheme: light; ${themeBlock(tokens, 'light')} }\n` +
-    `:root[data-theme="dark"] { color-scheme: dark; ${themeBlock(tokens, 'dark')} }\n`;
+    themeRules(tokens, ':root', ':root:not([data-theme="dark"])', ':root[data-theme="light"]', ':root[data-theme="dark"]');
+}
+
+/**
+ * Permet de produire la feuille de l'écran de connexion de Torch.
+ * @param {object} tokens Contenu de tokens.json.
+ * @param {string} sheet Feuille login.css.
+ */
+function loginCss(tokens, sheet) {
+  // Thème posé en classe sur <html> : Torch lit le premier [data-theme] du document pour le sien.
+  return themeRules(tokens, '.login', 'html:not(.tsk-dark) .login', 'html.tsk-light .login', 'html.tsk-dark .login') + sheet;
 }
 
 // -- Userscript ---------------------------------------------------------------
@@ -202,6 +226,7 @@ ${appJs}
   const page = read('src', 'loader', 'skin-page.js')
     .replaceAll('/*VERSION*/', () => version)
     .replaceAll('/*CSS*/', () => jsonString(skinCss(css, bundleCss, appCss)))
+    .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginCss(tokens, read('src', 'styles', 'login.css'))))
     .replaceAll('/*BUNDLE*/', () => bundleJs)
     .replaceAll('/*APP*/', () => appJs);
 

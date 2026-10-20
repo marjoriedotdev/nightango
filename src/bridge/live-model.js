@@ -10,6 +10,14 @@ function avatarSrc(name, size) {
   return 'https://ust.chatango.com/profileimg/' + path + '/' + ((size || 36) <= 24 ? 'thumb' : 'thumb_m') + '.jpg';
 }
 
+var ACCOUNT_NAME = /^[a-z0-9_-]{1,20}$/;
+/**
+ * Permet de savoir si le mini profil d'un compte est encore attendu.
+ * @param {string} name Nom du membre.
+ * @param {Object} u Membre dans l'état.
+ */
+function isProfilePending(name, u) { return LIVE && ACCOUNT_NAME.test(name) && !u.profileLoaded && !u.profileFailed; }
+
 var VISIT_LABEL = { log: 'visited', like: 'liked profile', dislike: 'disliked profile', msg: 'commented on', refer: 'referred by' };
 var VISIT_PAGE = 16;
 /**
@@ -35,6 +43,8 @@ var PERM_MASK = Object.keys(PERM_FLAG).reduce(function (n, k) { return n | PERM_
 // Droits qui font d'un modérateur un administrateur dans le vocabulaire Chatango.
 var ADMIN_MASK = 2 | 4 | 16 | 32 | 1024 | 32768;
 var CHANNEL_FLAG = { red: 256, blue: 2048, mod: 32768 };
+// Polices Chatango dans l'ordre de leur numéro (0 à 8), celui des balises <f x…="n"> et <g x…="n">.
+var FONT_FACES = ['Arial', 'Comic Sans MS', 'Georgia', 'Lucida Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times New Roman', 'Courier New'];
 
 function flagsToPerms(flags) { var o = {}; Object.keys(PERM_FLAG).forEach(function (k) { o[k] = !!(flags & PERM_FLAG[k]); }); return o; }
 /** Applique des permissions à un masque existant sans toucher aux bits que l'interface ne gère pas. */
@@ -52,6 +62,27 @@ function livePerms(g, name) {
 }
 function channelOf(flags) { return flags & CHANNEL_FLAG.mod ? 'mod' : flags & CHANNEL_FLAG.blue ? 'blue' : flags & CHANNEL_FLAG.red ? 'red' : 'none'; }
 
+// Une session coupée ne cède la place qu'à une raison de rang égal ou supérieur.
+var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
+/**
+ * Permet de suivre la session coupée après un changement d'état d'une connexion.
+ * @param {Object} d État de l'application.
+ * @param {{gid: string, state: string}} op Connexion et son nouvel état.
+ */
+function sessionAfterConn(d, op) {
+  var s = d.session;
+  if (op.state === 'open') {
+    if (s && s.reason === 'kicked') return op.gid === 'private_message' ? null : s;
+    return s && s.reason !== 'denied' && navigator.onLine ? null : s;
+  }
+  // Réseau revenu : si les reconnexions lancées au retour échouent toutes, « offline » cède la place à « lost ».
+  if (s && !(s.reason === 'offline' && navigator.onLine)) return s;
+  var joined = Object.keys(d.groups).map(function (k) { return d.groups[k]; }).filter(function (g) { return g.joined; });
+  // Sans groupe rejoint, la connexion MP encore fermée au démarrage passerait pour une coupure.
+  var down = joined.length && d.pmConn === 'closed' && joined.every(function (g) { return g.conn === 'closed'; });
+  return down ? { reason: 'lost', attempts: 0 } : s;
+}
+
 function liveWorld(me) {
   var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
   return {
@@ -59,7 +90,8 @@ function liveWorld(me) {
     profile: { visibility: { age: true, gender: false, location: true, meet: false, fullPage: true }, colors: { bg: '#1b1c20', text: '#e6e6e6', link: '#f27a3f' } },
     account: { email: '', verified: false },
     route: { view: 'discover' }, lastChat: { view: 'discover' },
-    sections: { favorites: true, groups: true, dms: true }
+    sections: { favorites: true, groups: true, dms: true },
+    groupsSeen: false, pmLoaded: false, friendsLoaded: false
   };
 }
 function liveGroup(id, title) {
@@ -67,7 +99,7 @@ function liveGroup(id, title) {
   return {
     id: id, title: t, topic: t, joined: true, favorite: false, muted: false, unread: 0, mentions: 0, lastReadTs: Date.now(),
     members: [], guests: 0, liveCount: 0, messages: [], closed: false, discover: null, bans: [], audit: [], dismissedAnnouncement: false,
-    conn: 'open', historyDone: false,
+    conn: 'open', historyDone: false, inited: false, membersLoaded: false, loadingMore: false,
     live: { flags: 0, mods: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, bansLoaded: false },
     settings: mkSettings({ overview: { title: t, description: '', showInDiscovery: true, membersPublic: true, nsfw: false }, staff: {} })
   };

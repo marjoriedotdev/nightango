@@ -14,11 +14,12 @@ function MembersPanel(p) {
   return h('aside', { className: 'col members', 'aria-label': 'Members of ' + g.id },
     h('div', { className: 'topbar', style: { padding: '0 12px 0 16px' } }, h('h2', { className: 'grow' }, 'Members')),
     h('div', { className: 'scroll' },
-      h('div', { className: 'members-list' },
-        h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n, ROLE_LABEL[roleOf(g, n)]); }),
-        h('h3', { className: 'mlabel' }, 'Online · ' + on.length), on.map(function (n) { return row(n); }),
-        off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
-        s.prefs.safety.showGuests && g.guests ? h('p', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + g.guests) : null)));
+      LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
+        : h('div', { className: 'members-list' },
+          h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n, ROLE_LABEL[roleOf(g, n)]); }),
+          h('h3', { className: 'mlabel' }, 'Online · ' + on.length), on.map(function (n) { return row(n); }),
+          off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
+          s.prefs.safety.showGuests && g.guests ? h('p', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + g.guests) : null)));
 }
 
 /* ---------- Profil d'un membre ---------- */
@@ -36,7 +37,7 @@ function ProfileDialog(p) {
       h(T.Avatar, { name: name, size: 72, status: isMe ? s.meStatus : u.status, ring: 'var(--raised)' }),
       h('h2', null, name),
       h('span', { className: 'muted', style: { fontSize: 13 } }, [statusLabel(isMe ? s.meStatus : u.status), u.friend ? 'Friend' : null, theirRole ? ROLE_LONG[theirRole] + ' in #' + g.id : null].filter(Boolean).join(' · ')),
-      meta ? h('span', { className: 'muted', style: { fontSize: 13 } }, meta) : null),
+      profileMeta(meta, name, u)),
     profileAbout(u),
     !guest ? h('div', { style: { padding: '0 20px 4px' } }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'external', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')) : null,
     common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length), h('p', { className: 'about', style: { color: 'var(--text-2)' } }, common.map(function (c) { return '#' + c; }).join(', '))) : null,

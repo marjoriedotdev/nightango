@@ -1,0 +1,21 @@
+<!-- @dsCard group="Feedback" height=120 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Skeleton, preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>body{margin:0;padding:16px;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:1.45}.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.col{display:flex;flex-direction:column;gap:12px}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+var T = window.Torch, h = React.createElement;
+function Demo() {
+  function line(w) { return h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } }, h(T.Skeleton, { circle: true, width: 36, height: 36 }), h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, h(T.Skeleton, { width: w, height: 12 }), h(T.Skeleton, { width: w + 60, height: 10 }))); }
+  return h('div', { className: 'col', style: { maxWidth: 320 } }, line(90), line(130), line(70));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

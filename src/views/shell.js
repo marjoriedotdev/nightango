@@ -8,13 +8,21 @@ function Shell() {
   var app = useApp(), r = app.state.route, main;
   if (r.view === 'settings') return h(SettingsView, { page: r.page });
   if (r.view === 'gsettings') return h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
-  if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id });
+  if (LIVE && !app.state.groupsSeen) main = h(StartupScreen, null);
+  else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id });
   else if (r.view === 'dm') main = h(DMView, { id: r.id, tab: r.tab });
   else main = h(Discover, null);
   return h('div', { className: cx('shell', app.navOpen && 'nav-open') },
     h(Sidebar, null),
     h('div', { className: 'scrim', onClick: app.ui.closeNav }),
     main);
+}
+
+function StartupScreen() {
+  return h('main', { className: 'main' },
+    h('div', { className: 'empty', role: 'status' },
+      h('span', { className: 'brand-mark' }, h(T.Icon, { name: 'flame', size: 16, strokeWidth: 2.2 })),
+      h('p', { className: 'startup' }, h(T.Spinner, null), 'Signing in')));
 }
 
 function Sidebar() {
@@ -60,8 +68,9 @@ function Sidebar() {
       h(T.NavItem, { icon: 'users', label: 'Friends', active: r.view === 'dm' && r.tab === 'friends', trailing: onlineFriends ? h('span', { className: 'tc-msg-time' }, onlineFriends + ' online') : null, onClick: function () { app.nav({ view: 'dm', id: null, tab: 'friends' }); } }),
       h(T.NavItem, { icon: 'search', label: 'Meet people', active: r.view === 'dm' && r.tab === 'meet', onClick: function () { app.nav({ view: 'dm', id: null, tab: 'meet' }); } }),
       favs.length ? section('favorites', 'Favorites', favs.map(groupItem)) : null,
-      section('groups', 'Groups', rest.length ? rest.map(groupItem) : h('p', { className: 'muted', style: { margin: '4px 10px', fontSize: 13 } }, 'Join a group from Discover.')),
-      section('dms', 'Private messages', dmNames.map(function (n) {
+      section('groups', 'Groups', LIVE && !s.groupsSeen ? h(SkeletonRows, { count: 3, avatar: 22, square: true, label: 'Loading groups' })
+        : rest.length ? rest.map(groupItem) : h('p', { className: 'muted', style: { margin: '4px 10px', fontSize: 13 } }, 'Join a group from Discover.')),
+      section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.map(function (n) {
         var u = userOf(s, n), c = s.dms[n];
         return h(T.NavItem, {
           key: n, label: n, active: r.view === 'dm' && r.id === n, unread: c.unread > 0, count: c.unread || 0,

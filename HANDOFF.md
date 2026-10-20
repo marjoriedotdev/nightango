@@ -11,7 +11,7 @@ Ce document vit à la racine du dépôt git `torch-skin`. Il donne à une nouvel
 2. laisse l'utilisateur se connecter sur l'écran de Torch ;
 3. affiche ensuite une interface refaite (React 18, dans un Shadow DOM) branchée sur le client Torch vivant.
 
-Version actuelle : **0.6.0**, en usage réel. L'utilisateur l'a installée dans Tampermonkey.
+Version actuelle : **0.7.0**. La 0.6.0 est en usage réel, installée par l'utilisateur dans Tampermonkey.
 
 ## 2. Règles non négociables
 
@@ -72,7 +72,8 @@ src/
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions, profils, recherche, historique privé, vissle, création de groupe
   views/      écrans principaux
     login, shell (barre latérale), group, message (ligne et médias), members (liste, fiche profil, bannissement, lien externe),
-    dm (Chats, Friends), meet (Meet people), profile (profil complet, panneau), new-dm, discover, palette (Ctrl K), live-joined
+    dm (Chats, Friends), meet (Meet people), profile (profil complet, panneau), new-dm, message-style (style perso), discover, palette (Ctrl K), live-joined,
+    session (fenêtre de session coupée)
   settings/   réglages
     shell, profile (Visitors compris), appearance, notifications, privacy (et Safety, compte), language-a11y-about, premium,
     group-view, group-pages, group-staff                         réglages de groupe du prototype
@@ -83,6 +84,7 @@ src/
     skin-loader.js   userscript côté bac à sable Tampermonkey : garde page d'accueil, injection du code page par <script> inline, pont vissle (GM_xmlhttpRequest), @version
     skin-page.js     code page : anti double démarrage, démarre Torch, charge React (SRI), attend Torch, monte le Shadow DOM
   styles/app.css     styles de l'application
+  styles/login.css   habillage de l'écran de login de Torch, posé par skin-page.js
 scripts/
   build.mjs          build Node : dist/torch-client.html, dist/app.js, dist/torch-skin.user.js
   ds-components.mjs  régénère README.md et preview.html des composants du design system (pnpm build:ds)
@@ -111,8 +113,8 @@ pnpm build:ds         # régénère la doc des composants du design system
 
 Suites (`tests/`, lancées par `tests/run.mjs`) :
 - `smoke` : prototype hébergé (51 étapes) ;
-- `live_ui` : mode live avec faux client Torch (98 étapes) ;
-- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage (12 étapes) ;
+- `live_ui` : mode live avec faux client Torch (104 étapes) ;
+- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login (13 étapes) ;
 - `live_login` : détection de connexion (3 étapes) ;
 - `avatar` : avatars (7 étapes) ;
 - `check_ds` : rendu des aperçus du design system.
@@ -130,6 +132,12 @@ Tous ces tests doivent rester verts. Le lanceur juge chaque suite sur son code d
 - **Envoi.** `client.socket(gid, frame, errorText)`. Pour les messages, `client.sendMessage(text, true, gid)` renvoie le corps stylé sans l'envoyer. Torch attend du HTML, donc le texte doit être échappé (`&`, `<`, `>`). Le pont y insère `<r{ref}/>` pour une réponse, puis envoie `bm:{id}:{flag}:{body}`.
 - **Références de message.** `<r…/>` et `<e…/>` : id sans le `=` final, avec `-` remplacé par `hypheN` et `_` par `underS`.
 - **Avertissements.** `client.systemMessage(...)` et `client.setNotice(...)` sont interceptés, puis affichés dans le fil ou en notification.
+- **Session et reconnexion.**
+  - `kickingoff` (table `private`) : le compte s'est connecté aux MP ailleurs. Torch ferme sa connexion privée et l'annonce par `systemMessage`. Le pont émet `session` (`kicked`) et tait cette notice. Pas de reconnexion automatique, sinon les deux fenêtres se renvoient la session.
+  - `DENIED` (table `private`) : jeton expiré. Torch répond par un `alert()` bloquant. Le pont ne l'appelle pas et émet `session` (`denied`). Seul un rechargement en sort.
+  - Torch ne se reconnecte jamais seul. À la fermeture d'un socket, il affiche « You have disconnected from #g » avec Reconnect (remonté en notification). Il occupe `window.onoffline` et `window.ononline` : le pont écoute `offline` et `online` par `addEventListener` sans y toucher.
+  - `client.connect(gid)` passe par `socketEvent`, qui ignore la demande, avec une promesse jamais réglée, tant que `gid` est dans `client.cache.connect`. Torch l'en retire après chaque tentative. Le pont fait de même autour de chacun de ses appels (`connect()` dans `live-bridge.js`), sinon un second Reconnect reste sans effet.
+  - Sources : Torch `inject.js` (`kickingoff`, `DENIED`, `socketEvent`, `window.onoffline`). Textes de la fenêtre « Connection lost » repris du client officiel.
 - **Historique privé.** Base IndexedDB `<pseudo>_history`, version 1, magasin `messages` (keyPath `ts`), index `target_idx`, `target_read_idx`, `target_ts_idx`. Torch ne l'ouvre que depuis son propre écran privé. Le pont l'ouvre avec le même schéma, puis l'assigne à `client.database.pm`.
   - Enregistrement (Torch `saveMessage`, même format que le client officiel) : `{ target, ts, data, unread }`, où `data` est la trame brute complète `msg:nom:…:ts:flags:corps`, balises comprises.
   - Aucune suppression d'historique MP n'existe côté serveur. `client.private.clearHistory(target)` efface la copie locale par curseur sur `target_idx`. Torch la définit sans l'appeler. Le bouton « Delete » du client officiel fait l'équivalent.
@@ -205,6 +213,14 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
 - Favoris, sourdines, membres ignorés et conversations masquées conservés par compte dans `localStorage` (`torch-skin:<pseudo>`).
 - Fenêtres, menus et notifications rendus dans un calque (`Portal`, `#layer`) pour ne pas déformer la mise en page.
 - **Visitors :** activité de son propre profil (visites, likes, commentaires, parrainages) dans l'écran profil, avec filtres, pagination et Refresh.
+- **0.7.0 :**
+  - composeur : un clic sur la barre place le curseur dans le champ, boutons gras, italique et lien retirés, emoji et pièce jointe seulement dans le prototype ;
+  - nouveau MP sans suggestions ;
+  - bio : line Chatango brute dans le champ, aperçu rendu ;
+  - style perso (police, taille, couleurs du texte et du nom, gras, italique, souligné) : écrit dans les champs de style de Torch juste avant chaque envoi, conservé dans `torch-skin:<pseudo>` (champ `style`), jamais enregistré chez Chatango. « Use account style » rétablit le style du compte ;
+  - écran de login de Torch habillé en CSS seul (`styles/login.css`), retiré à `__TORCH_SHOW__` ;
+  - chargements : écran de démarrage, squelettes (groupes, MP, amis, membres, profils), Spinner pour l'historique, fondu des avatars ;
+  - session coupée : fenêtre bloquante (connecté ailleurs, session expirée, hors ligne, connexion perdue) avec Reload et reconnexion. Au retour du réseau, les groupes rejoints fermés et les MP sont reconnectés.
 - **Userscript :** deux contextes. L'application tourne dans la page, et seul le pont vissle tourne dans le bac à sable (`@grant GM_xmlhttpRequest`, `@connect vissle.me`). Démarrage automatique, page d'accueil seulement (`@noframes` et vérification `pathname === '/'`), pas de double démarrage, SRI sur React.
 
 ## 8. Ce qui reste ouvert
@@ -212,7 +228,7 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
 - **Taille de police des membres :** elle est lue, mais appliquée nulle part (ni en groupe ni en MP). Torch l'applique, avec 11 = 100 %, bornée entre 82 et 200 %.
 - **Style écrasé par l'historique :** l'historique, de groupe comme de MP, fusionne de vieux styles dans l'utilisateur partagé, ce qui peut remplacer un style plus récent.
 - **Médias :** `applyEdit` gère les embeds, mais un MP envoyé localement n'a pas d'embeds tant que l'historique n'est pas rechargé. Les annonces affichent leurs médias en texte.
-- **Ton propre style :** il n'existe pas d'écran pour régler son propre style de message (police, taille, couleurs, gras, italique, souligné). Toute solution doit respecter la règle 1, donc aucun enregistrement qui ferait transiter le mot de passe.
+- **Style perso :** il reste local à ce navigateur. L'enregistrer sur le compte passe par le formulaire de style de Torch (`updatemsgstyles`), qui transmet le mot de passe : exclu par la règle 1.
 - **Groupe :** titre, description et icône non modifiables. Aucune source fiable trouvée.
 - **Profil :** photo de profil non modifiable, couleurs du profil complet non reproduites, fonds Premium des mini profils non reproduits.
 - **Réglages de Torch :** les réglages propres à Torch (qui peut écrire, groupes rejoints au démarrage) restent dans Torch.

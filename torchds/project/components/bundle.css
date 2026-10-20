@@ -57,6 +57,7 @@ select.tc-input{padding:0 10px}
 .tc-avatar{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;border-radius:50%;color:#e8eaee;font-weight:600;line-height:1;user-select:none}
 .tc-avatar-square{border-radius:var(--radius-md)}
 .tc-avatar-img{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;object-fit:cover}
+.tc-avatar-img-wait{opacity:0}
 .tc-presence{position:absolute;right:-2px;bottom:-2px;border-radius:50%;border:2px solid var(--presence-ring,var(--bg))}
 .tc-presence-online{background:var(--status-online)}
 .tc-presence-idle{background:var(--status-idle)}
@@ -111,8 +112,16 @@ label.tc-row{cursor:pointer}
 .tc-composer{border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong)}
 .tc-composer:focus-within{border-color:var(--control-strong)}
 .tc-composer textarea{display:block;width:100%;min-height:40px;max-height:160px;padding:12px 14px 4px;border:0;outline:none;resize:none;background:transparent;color:var(--text);font:400 14px/1.45 var(--font-sans)}
-.tc-composer-bar{display:flex;align-items:center;gap:2px;padding:4px 6px 6px}
+.tc-composer-bar{display:flex;align-items:center;gap:2px;padding:4px 6px 6px;cursor:text}
 .tc-composer-reply{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text-3)}
 .tc-send{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;margin-left:6px;border:0;border-radius:7px;background:var(--accent);color:var(--on-accent);cursor:pointer}
 .tc-send:disabled{opacity:.4;cursor:not-allowed}
-.tc-sep{flex:none;width:1px;height:18px;margin:0 4px;background:var(--border-strong)}
+
+.tc-skeleton{display:inline-block;flex:none;max-width:100%;vertical-align:middle;border-radius:var(--radius-sm);background:var(--selected);animation:tc-pulse 1.4s ease-in-out infinite}
+.tc-skeleton-circle{border-radius:var(--radius-full)}
+@keyframes tc-pulse{50%{opacity:.45}}
+.tc-spinner{display:inline-flex;flex:none;vertical-align:middle;animation:tc-spin .8s linear infinite}
+@keyframes tc-spin{to{transform:rotate(360deg)}}
+.tc-fade-in{animation:tc-fade-in .2s ease-out}
+@keyframes tc-fade-in{from{opacity:0}}
+@media (prefers-reduced-motion: reduce){.tc-skeleton,.tc-spinner,.tc-fade-in{animation:none}}

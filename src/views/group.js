@@ -59,9 +59,12 @@ function GroupView(p) {
     items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, onReply: setReplyTo }));
     prev = m;
   }
-  if (LIVE && !q) items.unshift(g.historyDone
-    ? h('div', { key: 'top', className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), 'This is the beginning of the history Chatango keeps for #' + g.id + '.')
-    : h('div', { key: 'top', className: 'ev' }, h('button', { type: 'button', className: 'linkbtn', onClick: function () { atBottom.current = false; app.actions.loadMore(g.id); } }, 'Load earlier messages')));
+  if (LIVE && !q) items.unshift(!g.inited && !g.messages.length
+    ? h(SkeletonRows, { key: 'top', count: 6, avatar: 36, twoLines: true, label: 'Loading messages' })
+    : g.historyDone
+      ? h('div', { key: 'top', className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), 'This is the beginning of the history Chatango keeps for #' + g.id + '.')
+      : h('div', { key: 'top', className: 'ev' }, g.loadingMore ? h(T.Spinner, { label: 'Loading earlier messages' })
+        : h('button', { type: 'button', className: 'linkbtn', onClick: function () { atBottom.current = false; app.actions.loadMore(g.id); } }, 'Load earlier messages')));
   if (q && !items.length) items.push(h('div', { key: 'none', className: 'empty' }, h('h2', null, 'No messages match'), h('p', null, 'Search looks at loaded messages in #' + g.id + '.')));
 
   var composer;
@@ -75,8 +78,9 @@ function GroupView(p) {
       placeholder: 'Message #' + g.id, replyTo: replyTo ? { author: replyTo.author, text: messagePreview(replyTo) } : null,
       onCancelReply: function () { setReplyTo(null); },
       onSend: function (text) { atBottom.current = true; app.actions.sendGroup(g.id, text, { replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: messagePreview(replyTo) } : null, channel: channel }); setReplyTo(null); },
-      onEmoji: function () { app.ui.toast('The emoji picker is not part of this prototype.'); },
-      onAttach: function () { app.ui.toast('Uploading media is not part of this prototype.'); },
+      onEmoji: LIVE ? null : function () { app.ui.toast('The emoji picker is not part of this prototype.'); },
+      onAttach: LIVE ? null : function () { app.ui.toast('Uploading media is not part of this prototype.'); },
+      beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; }).map(function (k) {
           return { label: CHANNELS[k].label + (k === 'none' ? '' : ' channel'), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { setChannel(k); } };
@@ -100,7 +104,7 @@ function GroupView(p) {
         h('p', { className: 'topic' }, g.topic),
         h('span', { className: 'grow only-mobile' }),
         h('button', { type: 'button', className: 'pillbtn hide-mobile', 'aria-pressed': String(showMembers), onClick: function () { setShowMembers(!showMembers); } },
-          h(T.Icon, { name: 'users', size: 16 }), online + ' online'),
+          h(T.Icon, { name: 'users', size: 16 }), LIVE && !g.membersLoaded && !g.liveCount ? 'Members' : online + ' online'),
         h(T.IconButton, { icon: 'search', label: 'Search in this group', pressed: search != null, onClick: function () { setSearch(search == null ? '' : null); } }),
         h(T.IconButton, { icon: g.muted ? 'volume-x' : 'bell', label: g.muted ? 'Unmute group' : 'Mute group', pressed: g.muted, onClick: function () { app.actions.toggleMute(g.id); } }),
         h(MenuButton, {

@@ -5,7 +5,7 @@ var liveBridge = (function () {
   var ENV = refs.torch && refs.torch.environment;
   var listeners = [], queue = [];
   // Face 0 : défaut que Torch envoie sans style utilisateur - la chaîne vide efface la police fusionnée d'un message précédent.
-  var FACES = ['', 'Comic Sans MS', 'Georgia', 'Lucida Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times New Roman', 'Courier New'];
+  var FACES = [''].concat(FONT_FACES.slice(1));
   var GENDERS = { M: 'Male', F: 'Female' };
   var decoder = document.createElement('textarea');
 
@@ -129,6 +129,7 @@ var liveBridge = (function () {
       case 'groupflagsupdate': emit({ op: 'flags', gid: room, flags: parseInt(data[0], 10) || 0 }); break;
       case 'inited': emit({ op: 'inited', gid: room }); break;
       case 'nomore': emit({ op: 'histEnd', gid: room }); break;
+      case 'gotmore': emit({ op: 'moreLoaded', gid: room }); break;
       case 'getannc':
         if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, enabled: false, interval: 0, text: '' });
         else {
@@ -146,7 +147,11 @@ var liveBridge = (function () {
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
       case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
       case 'updgroupinfo': emit({ op: 'info', gid: room, title: unquote(data[0]), description: unquote(data.slice(1).join(':')) }); break;
-      case 'denied': emit({ op: 'notice', gid: room, text: 'Chatango refused the connection to #' + room + '.' }); break;
+      case 'denied':
+        // Ni inited ni participants n'arriveront : le fil et les membres quittent l'attente.
+        emit({ op: 'denied', gid: room });
+        emit({ op: 'notice', gid: room, text: 'Chatango refused the connection to #' + room + '.' });
+        break;
       case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator.' }); break;
       case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions." }); break;
       case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.' }); break;
@@ -185,6 +190,8 @@ var liveBridge = (function () {
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
       case 'unblocked': emit({ op: 'pmUnblocked', name: lower(data[0]) }); break;
       case 'OK': emit({ op: 'pmReady' }); break;
+      case 'kickingoff': emit({ op: 'session', reason: 'kicked' }); break;
+      case 'DENIED': emit({ op: 'session', reason: 'denied' }); break;
       case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: 'Flood warning: slow down or Chatango may disconnect your private messages.' }); break;
       case 'toofast': emit({ op: 'notice', gid: 'private_message', text: 'You are sending private messages too fast.' }); break;
       case 'show_offline_limit': emit({ op: 'notice', gid: 'private_message', text: 'This person has too many offline messages. Try again later.' }); break;
@@ -201,6 +208,8 @@ var liveBridge = (function () {
       if (typeof orig !== 'function' || orig.__skin) return;
       var w = function (c, socket, room, data) {
         try { if (kind === 'group') tapGroup(name, room, data || []); else tapPrivate(name, data || []); } catch (e) { warn(e); }
+        // Torch répond à DENIED par un alert() bloquant : la fenêtre de session expirée le remplace.
+        if (kind === 'private' && name === 'DENIED') return;
         return orig.apply(this, arguments);
       };
       w.__skin = true;
@@ -215,7 +224,7 @@ var liveBridge = (function () {
     lastAlert = { text: op.text, at: Date.now() };
     emit(op);
   }
-  var QUIET = [/^Start a conversation/i, /^Private messages$/i];
+  var QUIET = [/^Start a conversation/i, /^Private messages$/i, /^You have logged in to private messages elsewhere/i];
   function hookNotices() {
     if (typeof C.systemMessage === 'function' && !C.systemMessage.__skin) {
       var sys = C.systemMessage;
@@ -241,7 +250,7 @@ var liveBridge = (function () {
   }
 
   /* État des connexions : Torch ne publie pas d'événement, on observe ses sockets. */
-  var connState = {}, left = {};
+  var connState = {}, pmState = null, left = {}, attempts = {};
   function stateOf(sock) { return !sock ? 'closed' : sock.readyState === 1 ? 'open' : sock.readyState === 0 ? 'connecting' : 'closed'; }
   function watchConnections() {
     setInterval(function () {
@@ -259,9 +268,28 @@ var liveBridge = (function () {
         });
         var pm = C.private && C.private.socket;
         var pst = pm ? stateOf(pm) : 'closed';
-        if (connState.__pm !== pst) { connState.__pm = pst; emit({ op: 'conn', gid: 'private_message', state: pst }); }
+        if (pmState !== pst) { pmState = pst; emit({ op: 'conn', gid: 'private_message', state: pst }); }
       } catch (e) { warn(e); }
     }, 2000);
+  }
+  /**
+   * Permet de lancer une connexion de Torch.
+   * @param {string} gid Groupe ou private_message.
+   */
+  function connect(gid) {
+    // Une seconde session MP ouverte pendant la première ferait renvoyer kickingoff à la nôtre : une seule tentative à la fois.
+    if (attempts[gid]) return attempts[gid];
+    // Torch ignore client.connect tant que gid reste dans cache.connect : comme lui, on l'en retire autour de chaque tentative.
+    function forget() { C.cache.connect = C.cache.connect.filter(function (x) { return x !== gid; }); }
+    function settle() {
+      delete attempts[gid];
+      forget();
+      // Sans nouveau socket, l'état observé ne change pas : on force sa réémission pour sortir de « connecting », y compris pour un groupe que Torch a retiré.
+      if (gid === 'private_message') pmState = null; else connState[gid] = 'connecting';
+    }
+    forget();
+    attempts[gid] = C.connect(gid).then(function (sock) { settle(); return sock; }, function (e) { settle(); throw e; });
+    return attempts[gid];
   }
 
   function send(gid, frame, failure) {
@@ -298,6 +326,43 @@ var liveBridge = (function () {
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
 
+  /*
+   * Style perso : écrit dans le formulaire de style de Torch, relu par client.sendMessage à chaque envoi.
+   * Ce formulaire n'est jamais soumis : son enregistrement (updatemsgstyles) transmet le mot de passe.
+   */
+  var accountStyle = null;
+  function styleFields() {
+    var fonts = document.querySelector('[data-preload="fonts"]');
+    function emphasis(icon) { return fonts.querySelector(icon).previousElementSibling; }
+    return {
+      bold: emphasis('.fa-bold'), italic: emphasis('.fa-italic'), underline: emphasis('.fa-underline'), strike: emphasis('.fa-strikethrough'),
+      face: document.querySelector('.font-face').firstElementChild, size: document.querySelector('.font-size .text-input'),
+      textColor: fonts.querySelector('[data-color="fontColor"]'), nameColor: fonts.querySelector('[data-color="nameColor"]'), on: fonts.querySelector('[name="stylesOn"]')
+    };
+  }
+  function readStyle(f) {
+    return {
+      face: f.face.value, size: +f.size.value, textColor: f.textColor.value, nameColor: f.nameColor.value,
+      bold: f.bold.checked, italic: f.italic.checked, underline: f.underline.checked, strike: f.strike.checked, on: f.on.checked, active: !!C.user.style
+    };
+  }
+  function writeStyle(f, v) {
+    f.face.value = v.face; f.size.value = String(v.size); f.textColor.value = v.textColor; f.nameColor.value = v.nameColor;
+    f.bold.checked = v.bold; f.italic.checked = v.italic; f.underline.checked = v.underline; f.strike.checked = v.strike; f.on.checked = v.on;
+    C.user.style = v.active;
+  }
+  /**
+   * Permet d'appliquer le style perso aux champs que Torch lit à l'envoi.
+   * @param {?Object} style Style perso, null pour revenir au style du compte.
+   */
+  function applyStyle(style) {
+    if (!style && !accountStyle) return;
+    var f = styleFields();
+    if (!style) { writeStyle(f, accountStyle); accountStyle = null; return; }
+    if (!accountStyle) accountStyle = readStyle(f);
+    writeStyle(f, Object.assign({}, style, { strike: false, on: true, active: true }));
+  }
+
   /* Réponses du pont vissle du userscript, rapprochées des demandes par identifiant */
   var vissleWaits = {};
   document.addEventListener('torch-skin:vissle-response', function (e) {
@@ -313,12 +378,16 @@ var liveBridge = (function () {
     wrapTable(C.event.private, 'private');
     hookNotices();
     watchConnections();
+    // Torch occupe window.onoffline et window.ononline : on écoute à côté sans les remplacer.
+    window.addEventListener('offline', function () { emit({ op: 'session', reason: 'offline' }); });
+    window.addEventListener('online', function () { emit({ op: 'online' }); });
     var loggedIn = false;
     var onLogin = function (catchUp) {
       if (loggedIn) return;
       loggedIn = true;
       emit({ op: 'login', me: lower(C.user.name) });
-      if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false }); });
+      // Groupes déjà connectés avant nous : leurs trames inited et participants sont passées.
+      if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
       if (typeof window.__TORCH_SHOW__ === 'function') window.__TORCH_SHOW__();
       var pmOpen = function () { return !!(C.private && C.private.socket && C.private.socket.readyState === 1); };
       if (pmOpen()) {
@@ -327,7 +396,7 @@ var liveBridge = (function () {
         send('private_message', 'wl', '');
         send('private_message', 'getblock', '');
       } else {
-        setTimeout(function () { if (!pmOpen()) { try { C.connect('private_message'); } catch (e) { warn(e); } } }, 2500);
+        setTimeout(function () { if (!pmOpen()) { try { connect('private_message').catch(warn); } catch (e) { warn(e); } } }, 2500);
       }
     };
     // client.on reçoit un CustomEvent du document, pas le client : on relit l'état sur C.
@@ -360,13 +429,13 @@ var liveBridge = (function () {
      * Permet d'envoyer un message de groupe.
      * @param {string} gid Groupe visé.
      * @param {string} text Texte saisi.
-     * @param {{replyId: ?string, channel: ?string}} opts Réponse et canal.
+     * @param {{replyId: ?string, channel: ?string, style: ?Object}} opts Réponse, canal et style perso.
      * @returns {?Object} Style propre lu dans le corps construit par Torch, null si rien n'est parti.
      */
     send: function (gid, text, opts) {
       opts = opts || {};
       var body;
-      try { body = C.sendMessage(esc(text), true, gid); } catch (e) { warn(e); return null; }
+      try { applyStyle(opts.style); body = C.sendMessage(esc(text), true, gid); } catch (e) { warn(e); return null; }
       if (typeof body !== 'string' || !body) return null;
       var style = parseContent(body).style;
       if (opts.replyId) {
@@ -381,10 +450,12 @@ var liveBridge = (function () {
      * Permet d'envoyer un message privé.
      * @param {string} user Destinataire.
      * @param {string} text Texte saisi.
+     * @param {?Object} style Style perso.
      * @returns {?Object} Style propre lu dans le corps construit par Torch, null si rien n'est parti.
      */
-    sendPm: function (user, text) {
+    sendPm: function (user, text, style) {
       try {
+        applyStyle(style);
         // Le premier appel construit le corps sans l'envoyer : seul le second émet la trame.
         var body = C.sendMessage(esc(text), true, 'private_message', user);
         if (typeof body !== 'string' || !body) return null;
@@ -392,19 +463,26 @@ var liveBridge = (function () {
         return parseContent(body).style;
       } catch (e) { warn(e); return null; }
     },
+    /**
+     * Permet de lire le style que Torch enverrait sans style perso.
+     */
+    accountStyle: function () {
+      var v = accountStyle || readStyle(styleFields());
+      return { face: v.face, size: v.size, textColor: v.textColor, nameColor: v.nameColor, bold: v.bold, italic: v.italic, underline: v.underline };
+    },
+    applyStyle: function (style) { try { applyStyle(style); } catch (e) { warn(e); } },
     focus: function (gid) { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } },
     // Torch n'archive un message privé envoyé que pour la conversation qu'il considère ouverte.
     focusPm: function (user) { try { if (C.private) C.private.focus = user || false; } catch (e) { warn(e); } },
     join: function (gid) {
       delete left[gid];
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }
-      try { C.connect(gid).then(function () { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } }, warn); } catch (e) { warn(e); }
+      try { connect(gid).then(function () { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } }, warn); } catch (e) { warn(e); }
     },
     leave: function (gid) { left[gid] = true; try { C.disconnectFrom(gid); } catch (e) { warn(e); } },
     reconnect: function (gid) {
       try {
-        var p = C.connect(gid);
-        if (p && p.then) p.then(function () { if (gid !== 'private_message') { try { C.setFocus({ group: gid, reload: true }); } catch (e) { warn(e); } } }, warn);
+        connect(gid).then(function () { if (gid !== 'private_message') { try { C.setFocus({ group: gid, reload: true }); } catch (e) { warn(e); } } }, warn);
       } catch (e) { warn(e); }
     },
     loadMore: function (gid) {
