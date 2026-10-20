@@ -1,0 +1,25 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-16T11:02:00Z" },
+  "title": "Torch Client Redesign",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Chat", "expand": "fill" },
+    "Login.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 900, "title": "Login", "expand": "fill", "is_interactive": true },
+    "Mobile.dc.html": { "x": 3040, "y": 0, "w": 390, "h": 844, "title": "Chat, mobile" },
+    "Settings.dc.html": { "x": 0, "y": 1020, "w": 1440, "h": 900, "title": "Settings, notifications", "expand": "fill" },
+    "GroupSettings.dc.html": { "x": 1520, "y": 1020, "w": 1440, "h": 900, "title": "Group settings, AutoMod", "expand": "fill" },
+    "MainLight.dc.html": { "x": 0, "y": 2040, "w": 1440, "h": 900, "title": "Chat, light theme", "expand": "fill" },
+    "PrivateMessages.dc.html": { "x": 1520, "y": 2040, "w": 1440, "h": 900, "title": "Private messages", "expand": "fill" },
+    "Profile.dc.html": { "x": 3040, "y": 2040, "w": 1440, "h": 1240, "title": "Settings, profile", "expand": "fill" },
+    "Appearance.dc.html": { "x": 0, "y": 3400, "w": 1440, "h": 1480, "title": "Settings, appearance", "expand": "fill" },
+    "Roles.dc.html": { "x": 1520, "y": 3400, "w": 1440, "h": 1560, "title": "Group settings, staff and roles", "expand": "fill" },
+    "Discover.dc.html": { "x": 3040, "y": 3400, "w": 1440, "h": 1100, "title": "Discover groups", "expand": "fill" }
+  },
+  "order": ["Main.dc.html", "Login.dc.html", "Mobile.dc.html", "Settings.dc.html", "GroupSettings.dc.html", "MainLight.dc.html", "PrivateMessages.dc.html", "Profile.dc.html", "Appearance.dc.html", "Roles.dc.html", "Discover.dc.html"],
+  "notes": {
+    "title": { "x": 0, "y": -300, "text": "Torch Client, refonte", "kind": "title1", "maxW": 4480 }
+  },
+  "designSystems": []
+}

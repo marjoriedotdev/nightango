@@ -1,0 +1,50 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Torch cover</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap">
+<style>
+html,body{margin:0;background:var(--bg)}
+.cover{position:relative;width:960px;height:288px;overflow:hidden;background:var(--bg);font-family:var(--font-sans)}
+.cover svg{position:absolute;inset:0}
+.ember{fill:var(--accent)}
+.slab{fill:var(--selected)}
+.panel{fill:var(--control-strong)}
+.ink{fill:var(--text-2)}
+.soft{fill:var(--control)}
+.tile{rx:var(--radius-xl)}
+.row{rx:var(--radius-md)}
+.pill{rx:9px}
+.name{position:absolute;left:40px;bottom:40px;max-width:440px;margin:0;color:var(--text)}
+.name h1{margin:0;font-size:120px;line-height:.92;font-weight:700;letter-spacing:-0.04em}
+.name p{margin:16px 0 0;font-size:14px;line-height:20px;color:var(--text-3)}
+</style>
+</head>
+<body>
+<div class="cover">
+<svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+<!--
+blocks: sidebar slab 200x288 (size-sidebar scaled), ember tile 160x112 radius-xl, selected rows 216x34 radius-md, ink tile 112x112 radius-xl
+arrangement: one tall slab bleeding top and bottom with stacked satellites, like the app shell: navigation column, then content
+pattern: geometric, modular, dense UI, tiles cut by radius tokens, rows two-wide like NavItem and Message
+steps: space-3 12, space-5 20, space-6 24, size-control-md 34; radii radius-md 6, radius-xl 10, count pill 9
+-->
+<rect class="slab" x="520" y="0" width="200" height="288"></rect>
+<rect class="panel row" x="532" y="44" width="176" height="34"></rect>
+<rect class="ember pill" x="676" y="52" width="20" height="18"></rect>
+<rect class="soft row" x="532" y="90" width="120" height="34"></rect>
+<rect class="soft row" x="532" y="136" width="148" height="34"></rect>
+<rect class="soft row" x="532" y="182" width="96" height="34"></rect>
+<rect class="ember tile" x="744" y="24" width="192" height="136"></rect>
+<rect class="ink tile" x="744" y="184" width="112" height="80"></rect>
+<rect class="panel tile" x="880" y="184" width="104" height="80"></rect>
+</svg>
+<div class="name">
+<h1>Torch</h1>
+<p>A calm, readable client for Chatango. Quiet surfaces, one ember accent.</p>
+</div>
+</div>
+</body>
+</html>

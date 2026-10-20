@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Torch, staff and roles for community</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+a{color:var(--text)}a:hover{color:var(--text)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.nav:hover{background:var(--hover);color:var(--text)}
+.role:hover{background:var(--hover)}
+.btn:hover{background:var(--hover-2)}
+.sw{appearance:none;-webkit-appearance:none;position:relative;width:36px;height:20px;margin:0;border-radius:10px;background:var(--control);cursor:pointer;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--knob);transition:transform .15s}
+.sw:checked{background:var(--accent)}
+.sw:checked::after{transform:translateX(16px);background:#0F1012}
+.sw:disabled{opacity:0.45;cursor:not-allowed}
+</style>
+</helmet>
+<div style="--accent: {{accent}}; --accent-soft: {{accentSoft}}; --accent-text: {{accentText}}; --bg: {{t.bg}}; --sidebar: {{t.sidebar}}; --panel: {{t.panel}}; --subtle: {{t.subtle}}; --hover: {{t.hover}}; --hover-2: {{t.hover2}}; --raised: {{t.raised}}; --selected: {{t.selected}}; --border: {{t.border}}; --border-strong: {{t.borderStrong}}; --divider: {{t.divider}}; --control: {{t.control}}; --control-strong: {{t.controlStrong}}; --knob: {{t.knob}}; --text: {{t.text}}; --text-body: {{t.body}}; --text-2: {{t.text2}}; --text-3: {{t.text3}}; --danger: {{t.danger}}; --shadow-lg: {{t.shadowLg}}; min-height: 100vh; display: flex; flex-wrap: wrap; background: var(--bg); color: var(--text); font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+<nav aria-label="Group settings" style="flex: 1 1 248px; display: flex; flex-direction: column; gap: 2px; padding: 16px 12px; background: var(--sidebar); border-right: 1px solid var(--border)">
+<a href="Main.dc.html" class="nav" style="display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none; font-size: 13.5px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+Back to chat
+</a>
+<div style="display: flex; align-items: center; gap: 10px; padding: 14px 10px 10px">
+<span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #0F1012; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none">C</span>
+<span style="display: flex; flex-direction: column; line-height: 1.25"><span style="font-weight: 600">community</span><span style="font-size: 12px; color: var(--text-3)">Group settings</span></span>
+</div>
+<h2 style="margin: 12px 10px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3)">General</h2>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Overview</a>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Announcement</a>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Emojis</a>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Privacy</a>
+<h2 style="margin: 16px 10px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3)">Moderation</h2>
+<a href="GroupSettings.dc.html" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">AutoMod</a>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Media and links</a>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Bans</a>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Audit log</a>
+<h2 style="margin: 16px 10px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-3)">People</h2>
+<a href="#" aria-current="page" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; background: var(--selected); color: var(--text); font-weight: 500; text-decoration: none">Staff and roles</a>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Members</a>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--text-2); text-decoration: none">Invites</a>
+<span style="flex: 1; min-height: 24px"></span>
+<a href="#" class="nav" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--danger); text-decoration: none">Close group</a>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 40px 48px 0; display: flex; flex-direction: column">
+<div style="max-width: 1000px; width: 100%; flex: 1">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; margin-bottom: 28px">
+<div style="flex: 1 1 360px">
+<h1 style="margin: 0 0 6px; font-size: 24px; font-weight: 600; letter-spacing: -0.01em">Staff and roles</h1>
+<p style="margin: 0; color: var(--text-2)">Choose what each role can do in community. The owner always has every permission.</p>
+</div>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; background: var(--accent); color: #0F1012; font-size: 13.5px; font-weight: 600">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+Add staff member
+</button>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px">
+<section aria-label="Roles" style="flex: 1 1 240px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); padding: 6px">
+<sc-for list="{{roles}}" as="r" hint-placeholder-count="4">
+<a href="#" class="role" aria-current="{{r.current}}" style="{{r.style}}">
+<span style="width: 28px; height: 28px; border-radius: 7px; background: var(--selected); color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; flex: none">
+<sc-if value="{{r.isOwner}}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"></path></svg></sc-if>
+<sc-if value="{{r.isStaff}}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path></svg></sc-if>
+</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+<span style="font-weight: 500; color: var(--text)">{{r.name}}</span>
+<span style="font-size: 12px; color: var(--text-3)">{{r.count}}</span>
+</span>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--text-3)"><path d="m9 18 6-6-6-6"></path></svg>
+</a>
+</sc-for>
+</section>
+
+<div style="flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<section aria-labelledby="role-h" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 16px 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel)">
+<div style="flex: 1 1 260px">
+<h2 id="role-h" style="margin: 0 0 2px; font-size: 17px; font-weight: 600">Moderator</h2>
+<p style="margin: 0; font-size: 13px; color: var(--text-3)">Keeps conversations on track. Can't change group settings.</p>
+</div>
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="display: inline-flex">
+<span style="width: 28px; height: 28px; border-radius: 50%; background: #3E5A6B; color: #DDE9F0; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--panel)">SA</span>
+<span style="width: 28px; height: 28px; margin-left: -8px; border-radius: 50%; background: #3B4A6B; color: #DCE3F2; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--panel)">VA</span>
+</span>
+<span style="font-size: 13px; color: var(--text-2)">sable, vantage</span>
+<button type="button" class="btn" style="height: 32px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--control); font-size: 13px; font-weight: 500">Manage</button>
+</div>
+</section>
+
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<section style="border: 1px solid var(--border); border-radius: 10px; background: var(--panel)">
+<div style="display: flex; align-items: center; gap: 10px; padding: 16px 20px 6px">
+<h3 style="margin: 0; flex: 1; font-size: 15px; font-weight: 600">{{g.title}}</h3>
+<sc-if value="{{g.locked}}" hint-placeholder-val="{{ false }}">
+<span style="display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; background: var(--selected); color: var(--text-2); font-size: 12px; font-weight: 500">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+Admins and above
+</span>
+</sc-if>
+</div>
+<sc-for list="{{g.perms}}" as="p" hint-placeholder-count="4">
+<label style="display: flex; align-items: center; gap: 16px; padding: 13px 20px; border-top: 1px solid var(--divider)">
+<span style="flex: 1">
+<span style="display: flex; align-items: center; gap: 8px; font-weight: 500">{{p.title}}
+<sc-if value="{{p.sensitive}}" hint-placeholder-val="{{ false }}"><span style="height: 18px; padding: 0 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent-text); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center">Sensitive</span></sc-if>
+</span>
+<span style="display: block; font-size: 12.5px; color: var(--text-3)">{{p.desc}}</span>
+</span>
+<input type="checkbox" class="sw" defaultChecked="{{p.on}}" disabled="{{p.locked}}">
+</label>
+</sc-for>
+</section>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div role="status" style="position: sticky; bottom: 16px; max-width: 1000px; width: 100%; margin: 24px 0 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 10px 12px 10px 16px; border-radius: 10px; background: var(--raised); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg)">
+<span style="flex: 1 1 220px; font-size: 13.5px; color: var(--text-body)">Moderator role changed. Applies to sable and vantage.</span>
+<button type="button" class="btn" style="height: 34px; padding: 0 14px; border-radius: 7px; color: var(--text-2); font-size: 13.5px; font-weight: 500">Discard</button>
+<button type="button" style="height: 34px; padding: 0 14px; border-radius: 7px; background: var(--accent); color: #0F1012; font-size: 13.5px; font-weight: 600">Save changes</button>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"accent":{"editor":"color","default":"#F27A3F","options":["#F27A3F","#5B8DEF","#3FB27F","#C084FC"]},"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  __parse(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+    var n = parseInt(h.slice(0, 6), 16);
+    if (isNaN(n)) n = 0xF27A3F;
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  __rgba(hex, alpha) {
+    var c = this.__parse(hex);
+    return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + alpha + ')';
+  }
+  __darken(hex, factor) {
+    var c = this.__parse(hex).map(function (v) { return Math.round(v * factor); });
+    return 'rgb(' + c[0] + ', ' + c[1] + ', ' + c[2] + ')';
+  }
+  __tk(light) {
+    return light ? {
+      bg: '#FFFFFF', sidebar: '#F6F6F7', panel: '#FAFAFA', subtle: '#F4F4F6', hover: '#EDEDF0', hover2: '#EBEBEE',
+      raised: '#FFFFFF', selected: '#E6E6EA', border: '#E4E4E8', borderStrong: '#D9D9DE', divider: '#EEEEF1',
+      control: '#C9CBD1', controlStrong: '#A9ACB4', knob: '#FFFFFF',
+      text: '#17181B', body: '#2A2C31', text2: '#5C606A', text3: '#6B6F78', danger: '#C93C3C',
+      shadowLg: '0 8px 24px rgba(16, 17, 20, 0.12)'
+    } : {
+      bg: '#16171A', sidebar: '#111214', panel: '#131417', subtle: '#1A1B1F', hover: '#1C1D21', hover2: '#1F2125',
+      raised: '#1D1F23', selected: '#23252A', border: '#26282E', borderStrong: '#2E3036', divider: '#202226',
+      control: '#3A3D44', controlStrong: '#4A4D55', knob: '#ECEDEF',
+      text: '#ECEDEF', body: '#D6D8DC', text2: '#A6A9B0', text3: '#8A8E96', danger: '#F08A8A',
+      shadowLg: '0 8px 24px rgba(0, 0, 0, 0.4)'
+    };
+  }
+  renderVals() {
+    var light = (this.props.theme ?? 'dark') === 'light';
+    var accent = this.props.accent ?? '#F27A3F';
+    var base = 'display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 7px; text-decoration: none; ';
+    function role(name, count, owner, current) {
+      return {
+        name: name, count: count, isOwner: owner, isStaff: !owner,
+        current: current ? 'page' : 'false',
+        style: base + (current ? 'background: var(--selected)' : '')
+      };
+    }
+    function p(title, desc, on, extra) {
+      extra = extra || {};
+      return { title: title, desc: desc, on: on, locked: !!extra.locked, sensitive: !!extra.sensitive };
+    }
+    var adminOnly = { locked: true };
+    return {
+      t: this.__tk(light),
+      accent: accent,
+      accentSoft: this.__rgba(accent, light ? 0.14 : 0.12),
+      accentText: light ? this.__darken(accent, 0.62) : accent,
+      roles: [
+        role('Owner', 'ember', true, false),
+        role('Co-owner', 'No members', false, false),
+        role('Admin', '1 member', false, false),
+        role('Moderator', '2 members', false, true)
+      ],
+      groups: [
+        { title: 'Visibility', locked: false, perms: [
+          p('See the member count', 'Shows how many people are in the group, guests included.', true),
+          p('See IP addresses', 'Shows the IP behind each message. Needed to ban evaders.', true, { sensitive: true }),
+          p('Access the staff channel', 'Read and post in the channel only staff can see.', true),
+          p('See the moderation log', 'Who deleted, banned or unbanned whom, and when.', true)
+        ] },
+        { title: 'Moderation', locked: false, perms: [
+          p('Post in broadcast mode', 'Keep posting while the group is limited to staff.', true),
+          p('Bypass AutoMod and rate limits', 'Messages are never filtered or slowed down.', false),
+          p('Edit banned words', 'Add or remove words that are blocked in the group.', false),
+          p('Configure AutoMod', 'Change filters and the protection level.', false),
+          p('Unban everyone', 'Lift every ban at once from the Bans page.', false)
+        ] },
+        { title: 'Administration', locked: true, perms: [
+          p('Edit group info', 'Name, title, description and icon.', false, adminOnly),
+          p('Edit the announcement', 'Text, style and how often it is posted.', false, adminOnly),
+          p('Edit restrictions', 'Media, links, proxies and verified email rules.', false, adminOnly),
+          p('Manage moderators', 'Add and remove moderators and their permissions.', false, adminOnly),
+          p('Close the group', 'Stop everyone from posting until it reopens.', false, adminOnly)
+        ] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

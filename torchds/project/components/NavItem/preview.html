@@ -1,0 +1,25 @@
+<!-- @dsCard group="Navigation" height=200 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NavItem, preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>body{margin:0;padding:16px;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:1.45}.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.col{display:flex;flex-direction:column;gap:12px}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+var T = window.Torch, h = React.createElement;
+function Demo() {
+  return h('div', { style: { width: 240, background: 'var(--sidebar)', padding: 8, borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2 } },
+    h(T.NavItem, { icon: 'message', label: 'Private messages', count: 2 }),
+    h(T.NavItem, { avatar: h(T.Avatar, { name: 'community', square: true, size: 22, color: 'var(--accent)' }), label: 'community', active: true }),
+    h(T.NavItem, { avatar: h(T.Avatar, { name: 'torchdev', square: true, size: 22 }), label: 'torchdev', count: 2, mention: true }),
+    h(T.NavItem, { avatar: h(T.Avatar, { name: 'trade', square: true, size: 22 }), label: 'trade', unread: true }),
+    h(T.NavItem, { avatar: h(T.Avatar, { name: 'artcorner', square: true, size: 22 }), label: 'artcorner', muted: true }));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>
