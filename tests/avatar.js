@@ -1,0 +1,26 @@
+const fs = require('fs');
+const { JSDOM } = require('jsdom');
+const S = process.argv[2];
+const dom = new JSDOM('<!doctype html><body><div id="r"></div></body>', { runScripts: 'outside-only', pretendToBeVisual: true });
+const w = dom.window;
+w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
+w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
+w.eval(fs.readFileSync(S + '/torchds/project/components/bundle.js', 'utf8'));
+w.__TORCH_LIVE__ = true;
+// avatarSrc + wrapper T.Avatar tels qu'assemblés dans l'app
+const { APP_SOURCES, concatSources, layerSources } = require('../scripts/build.mjs');
+const live = concatSources(S, layerSources('bridge'));
+const core = concatSources(S, APP_SOURCES.slice(0, 1)).split('\n').slice(0, 5).join('\n');
+w.eval('(function(){' + core + '\n' + live.split('var liveBridge')[0] + '\nwindow.__T = T; window.__src = avatarSrc;})()');
+const check = (c, msg) => console.log((c ? 'ok  ' : 'FAIL') + ' ' + msg);
+check(w.__src('Marjorie', 36) === 'https://ust.chatango.com/profileimg/m/a/marjorie/thumb_m.jpg', 'url thumb_m');
+check(w.__src('x', 22) === 'https://ust.chatango.com/profileimg/x/x/x/thumb.jpg', 'url 1 lettre + thumb');
+check(w.__src('_foo', 36) === 'https://ust.chatango.com/profileimg/sp/sp_foo/thumb_m.jpg', 'url sp/');
+check(w.__src('!anon1234', 36) === null && w.__src('#temp', 36) === null, 'anonymes exclus');
+const root = w.ReactDOM.createRoot(w.document.getElementById('r'));
+w.ReactDOM.flushSync(() => root.render(w.React.createElement(w.__T.Avatar, { name: 'marjorie', status: 'online' })));
+let img = w.document.querySelector('.tc-avatar-img');
+check(img && img.getAttribute('src').endsWith('/m/a/marjorie/thumb_m.jpg'), 'img rendue');
+check(w.document.querySelector('.tc-avatar').textContent === 'MA', 'initiales conservées dessous');
+w.ReactDOM.flushSync(() => img.dispatchEvent(new w.Event('error')));
+check(!w.document.querySelector('.tc-avatar-img') && w.document.querySelector('.tc-presence'), 'repli initiales après erreur, présence intacte');

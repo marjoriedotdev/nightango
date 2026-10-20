@@ -1,6 +1,6 @@
 # Passation : Torch Skin
 
-Ce document accompagne l'archive `torch-skin-src.zip`. Il donne à une nouvelle session tout le contexte pour reprendre le projet sans rien redécouvrir. Lis-le en entier avant de toucher au code.
+Ce document vit à la racine du dépôt git `torch-skin`. Il donne à une nouvelle session tout le contexte pour reprendre le projet sans rien redécouvrir. Lis-le en entier avant de toucher au code.
 
 ## 1. Le projet en deux phrases
 
@@ -31,7 +31,7 @@ Version actuelle : **0.6.0**, en usage réel. L'utilisateur l'a installée dans 
    S'il n'y a pas de source, la fonction reste marquée « not wired » et l'interface le dit honnêtement.
 3. **Aucun faux succès en mode live.** Une action qui n'est pas réellement envoyée doit être masquée, ou indiquer clairement qu'elle n'est pas disponible.
 4. **Le HTML écrit par les membres (profils) n'est jamais injecté.**
-   - Mini profil : reconstruction en éléments React d'une liste blanche de balises (`RichText`, dans `core.js`).
+   - Mini profil : reconstruction en éléments React d'une liste blanche de balises (`RichText`, dans `src/core/rich-text.js`).
    - Profil complet : `iframe` `sandbox` sans `allow-scripts` ni `allow-same-origin`, avec une politique CSP en `<meta>` (`fullProfileDoc`).
 5. **Pas de nouvelle dépendance sans validation explicite de l'utilisateur.** React 18.3.1 se charge depuis cdnjs avec SRI (empreintes vérifiées contre npm).
 6. **Visiteurs du profil : uniquement le profil de l'utilisateur connecté.** Torch propose déjà la fonction de façon native : le tracker s'installe par « Add profile tracker », et le panneau « track » l'affiche. La section Visitors l'affiche à nouveau. Le pont du loader ignore tout `profile` envoyé par la page et lit `client.user.name`. Ne jamais ajouter de consultation de l'activité d'un autre profil.
@@ -53,39 +53,71 @@ Version actuelle : **0.6.0**, en usage réel. L'utilisateur l'a installée dans 
 
 ## 4. Organisation du code
 
-Tout est en JavaScript ES5 avec des appels `h = React.createElement`, sans JSX ni bundler. Les fichiers sont concaténés par le build.
+Tout est en JavaScript ES5 avec des appels `h = React.createElement`, sans JSX ni bundler. Le build concatène les fichiers de `src/` dans une IIFE unique, dans l'ordre de `APP_SOURCES` (`scripts/build.mjs`), seul endroit qui déclare cette liste. Tous les fichiers partagent donc une portée : un nouveau fichier s'ajoute à `APP_SOURCES`, à sa place dans l'ordre.
 
-| Fichier | Rôle |
-|---|---|
-| `proto/core.js` | Utilitaires, couleurs et contraste, données d'exemple, contexte React, `MenuButton`, `Dialog`, `Toasts`, `Portal` (calque `#layer`), `RichText`, `fullProfileDoc`, `APP_VERSION` |
-| `proto/live.js` | **Le pont vers Torch** (`liveBridge`) : lecture des trames, envoi des trames, crochets sur les avertissements, surveillance des connexions, profils, recherche, historique privé, création de groupe, profil |
-| `proto/views.js` | Écrans principaux : barre latérale, groupe, ligne de message, membres, fiche profil, profil complet, messages privés (Chats, Friends, Meet people), Discover, palette Ctrl K |
-| `proto/settings.js` | Réglages utilisateur et réglages de groupe du prototype |
-| `proto/live-ui.js` | Variantes live : réglages de groupe, rôles, bannis, journal, profil, confidentialité, compte, Premium |
-| `proto/main.js` | Composant racine, état, actions, `handleLiveOp` (traduit les événements du pont en état), persistance locale |
-| `proto/app.css` | Styles de l'application |
-| `proto/skin-loader.js` | Userscript, côté bac à sable Tampermonkey : garde page d'accueil, injection du code page par `<script>` inline, pont vissle (`GM_xmlhttpRequest`) |
-| `proto/skin-page.js` | Code page : anti double démarrage, démarre Torch, charge React (SRI), attend Torch, monte le Shadow DOM |
-| `scripts/build_proto.py` | Produit `torch-prototype/torch-client.html` (prototype hébergé) et `torch-prototype/torch-skin.user.js` |
-| `torchds/project/` | Design system : tokens, `components/bundle.js` (namespace `window.Torch`), CSS, types |
-| `torch/project/` | Canevas de maquettes (11 écrans) |
-| `tools/` | Tests jsdom |
+```
+src/
+  core/       socle partagé, évalué en premier
+    globals.js       alias React, wrapper T (avatars live), hooks
+    util.js          APP_VERSION, temps, stockage local, copie
+    colors.js        couleurs et contraste, polices, canaux
+    roles.js         permissions, rôles, réglages de groupe par défaut
+    sample-data.js   données d'exemple du prototype, visites simulées
+    prefs.js         préférences par défaut
+    ui.js            contexte React, Portal (calque #layer), MenuButton, Dialog, ConfirmDialog, Toasts
+    rich-text.js     MessageText, RichText (mini profil assaini), fullProfileDoc
+    selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs
+  bridge/     le pont vers Torch
+    live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG), modèles live
+    live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions, profils, recherche, historique privé, vissle, création de groupe
+  views/      écrans principaux
+    login, shell (barre latérale), group, message (ligne et médias), members (liste, fiche profil, bannissement, lien externe),
+    dm (Chats, Friends), meet (Meet people), profile (profil complet, panneau), new-dm, discover, palette (Ctrl K), live-joined
+  settings/   réglages
+    shell, profile (Visitors compris), appearance, notifications, privacy (et Safety, compte), language-a11y-about, premium,
+    group-view, group-pages, group-staff                         réglages de groupe du prototype
+    live-group-view, live-group-pages, live-group-staff, live-account   variantes live
+  app/        racine
+    sound.js, state.js (préférences persistées), root.js (Root : état, actions, actions live, handleLiveOp), start.js (montage)
+  loader/
+    skin-loader.js   userscript côté bac à sable Tampermonkey : garde page d'accueil, injection du code page par <script> inline, pont vissle (GM_xmlhttpRequest), @version
+    skin-page.js     code page : anti double démarrage, démarre Torch, charge React (SRI), attend Torch, monte le Shadow DOM
+  styles/app.css     styles de l'application
+scripts/
+  build.mjs          build Node : dist/torch-client.html, dist/app.js, dist/torch-skin.user.js
+  ds-components.mjs  régénère README.md et preview.html des composants du design system (pnpm build:ds)
+  tokenize.py        migration ponctuelle déjà appliquée aux maquettes torch/project (couleurs codées en dur vers variables de thème), hors build
+tests/               suites jsdom et lanceur run.mjs
+torchds/project/     design system : tokens, components/bundle.js (namespace window.Torch), CSS, types
+torch/project/       canevas de maquettes (11 écrans)
+dist/                sorties du build, non versionnées
+```
 
-**Mode live et mode prototype.** `LIVE = !!window.__TORCH_LIVE__`. Le même code sert le prototype hébergé (données simulées) et le userscript. Les écarts sont gardés par `if (LIVE)`. En live, les actions de `main.js` sont surchargées par celles du bloc « Mode live ».
+`bridge/live-bridge.js` (une IIFE) et `app/root.js` (le composant `Root`) restent d'un seul tenant : leurs parties partagent une closure, les découper demande une vraie refonte.
+
+**Mode live et mode prototype.** `LIVE = !!window.__TORCH_LIVE__`. Le même code sert le prototype hébergé (données simulées) et le userscript. Les écarts sont gardés par `if (LIVE)`. En live, les actions de `app/root.js` sont surchargées par celles du bloc « Mode live ».
 
 ## 5. Build et tests
 
+Node seul, aucune autre chaîne d'outils.
+
 ```
-python3 scripts/build_proto.py .
-cd tools && pnpm install        # jsdom, react et react-dom 18.3.1
-node smoke.js ..                # prototype hébergé
-node live_ui.js ..              # mode live avec faux client Torch (98 étapes)
-node loader.js ..               # userscript : démarrage de Torch, pages ignorées, double démarrage
-node live_login.js ..           # détection de connexion
-node avatar.js ..               # avatars
+pnpm install          # jsdom 24.1.3, react et react-dom 18.3.1 (devDependencies)
+pnpm build            # écrit dist/torch-client.html, dist/app.js, dist/torch-skin.user.js
+pnpm test             # build puis toutes les suites, échoue si une suite échoue
+pnpm test live_ui     # build puis les suites nommées seulement
+pnpm build:ds         # régénère la doc des composants du design system
 ```
 
-Tous ces tests doivent rester verts. `live_ui.js` simule un client Torch, enregistre chaque trame envoyée et vérifie leur format exact. Ajoute un cas de test pour chaque correctif.
+Suites (`tests/`, lancées par `tests/run.mjs`) :
+- `smoke` : prototype hébergé (51 étapes) ;
+- `live_ui` : mode live avec faux client Torch (98 étapes) ;
+- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage (12 étapes) ;
+- `live_login` : détection de connexion (3 étapes) ;
+- `avatar` : avatars (7 étapes) ;
+- `check_ds` : rendu des aperçus du design system.
+
+Tous ces tests doivent rester verts. Le lanceur juge chaque suite sur son code de sortie et sur sa sortie (lignes `FAIL`, `CRASH`, `ERRORS:` non vide), car certaines suites sortent en 0 malgré un échec. `live_ui.js` simule un client Torch, enregistre chaque trame envoyée et vérifie leur format exact. Ajoute un cas de test pour chaque correctif.
 
 ## 6. Comment Torch fonctionne (vérifié dans son code)
 
@@ -146,7 +178,7 @@ Tous ces tests doivent rester verts. `live_ui.js` simule un client Torch, enregi
   - `block:{n}:{n}:S`, `unblock:{n}`
   - `wl`, `getblock`
 
-Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans `live.js` (`GROUP_FLAG`, `PERM_FLAG`, `CHANNEL_FLAG`), relevés dans `chatango.flags` de Torch.
+Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans `src/bridge/live-model.js` (`GROUP_FLAG`, `PERM_FLAG`, `CHANNEL_FLAG`), relevés dans `chatango.flags` de Torch.
 
 ## 7. Ce qui est fait
 
@@ -190,9 +222,9 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
 
 ## 9. Livrer une nouvelle version
 
-1. Incrémenter `@version` dans `proto/skin-loader.js`. Le build l'injecte dans `APP_VERSION`.
-2. `python3 scripts/build_proto.py .`, puis faire passer tous les tests.
-3. Envoyer `torch-prototype/torch-skin.user.js` à l'utilisateur. Il remplace le contenu du script dans Tampermonkey.
+1. Incrémenter `@version` dans `src/loader/skin-loader.js`. Le build l'injecte dans `APP_VERSION`.
+2. `pnpm test` (build compris) : toutes les suites vertes.
+3. Envoyer `dist/torch-skin.user.js` à l'utilisateur. Le nom ne change jamais d'une version à l'autre, pour l'envoi vers ses userscripts. Il remplace le contenu du script dans Tampermonkey.
 
 ## 10. Artefacts publiés (compte de l'utilisateur)
 

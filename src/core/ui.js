@@ -1,0 +1,134 @@
+/* ---------- Contexte et primitives UI ---------- */
+var Ctx = React.createContext(null);
+function useApp() { return useContext(Ctx); }
+
+/* Calque unique pour fenêtres, menus et notifications : hors du flux, ils ne déforment plus la mise en page. */
+var layerNode = null;
+function layerRoot() {
+  if (layerNode && layerNode.isConnected) return layerNode;
+  var mountEl = window.__TORCH_MOUNT__ || document.getElementById('app');
+  layerNode = document.createElement('div');
+  layerNode.id = 'layer';
+  (mountEl && mountEl.parentNode ? mountEl.parentNode : document.body).appendChild(layerNode);
+  return layerNode;
+}
+function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot()); }
+
+function useOutside(ref, open, onClose, extraRef) {
+  useEffect(function () {
+    if (!open) return;
+    function onDown(e) {
+      var path = e.composedPath ? e.composedPath() : [e.target];
+      if (ref.current && path.indexOf(ref.current) < 0 && !(extraRef && extraRef.current && path.indexOf(extraRef.current) >= 0)) onClose();
+    }
+    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown);
+    document.addEventListener('keydown', onKey);
+    return function () { document.removeEventListener('mousedown', onDown); document.removeEventListener('touchstart', onDown); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+}
+
+/* Bouton qui ouvre un menu d'actions ; items : {label, icon, onSelect, danger, checked, divider, swatch} */
+function MenuButton(p) {
+  var st = useState(false), open = st[0], setOpen = st[1];
+  var ref = useRef(null), menuRef = useRef(null);
+  function close() { setOpen(false); if (p.onOpenChange) p.onOpenChange(false); }
+  useOutside(ref, open, close, menuRef);
+  var ps = useState(null), place = ps[0], setPlace = ps[1];
+  // Position fixe calculée sur le déclencheur, retournée si le menu sortirait de l'écran.
+  useLayoutEffect(function () {
+    if (!open || !ref.current) return;
+    var r = ref.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    var mh = menuRef.current ? menuRef.current.offsetHeight : 0, up = p.up ? r.top - mh - 4 >= 8 || r.bottom + mh + 4 > vh : r.bottom + mh + 4 > vh - 8 && r.top - mh - 4 >= 8;
+    var st = { position: 'fixed' };
+    if (up) st.bottom = (vh - r.top + 4) + 'px'; else st.top = (r.bottom + 4) + 'px';
+    if (p.align === 'left') st.left = Math.max(8, r.left) + 'px'; else st.right = Math.max(8, vw - r.right) + 'px';
+    setPlace(st);
+  }, [open]);
+  useEffect(function () {
+    if (!open) return;
+    function onMove(e) { if (menuRef.current && e.target && menuRef.current.contains(e.target)) return; close(); }
+    window.addEventListener('resize', onMove);
+    document.addEventListener('scroll', onMove, true);
+    return function () { window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); };
+  }, [open]);
+  useEffect(function () {
+    if (open && menuRef.current) { var first = menuRef.current.querySelector('button'); if (first) first.focus(); }
+  }, [open]);
+  function toggle() { var n = !open; setPlace(null); setOpen(n); if (p.onOpenChange) p.onOpenChange(n); }
+  function onKey(e) {
+    if (!menuRef.current) return;
+    var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button'));
+    var i = items.indexOf(menuRef.current.getRootNode().activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  }
+  var trigger = p.renderTrigger
+    ? p.renderTrigger({ onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' })
+    : h(T.IconButton, { icon: p.icon || 'more', label: p.label, size: p.size || 32, iconSize: p.iconSize, onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' });
+  return h('div', { className: 'menu-anchor', ref: ref },
+    trigger,
+    open ? h(Portal, null, h('div', { className: 'menu floating', role: 'menu', ref: menuRef, onKeyDown: onKey, style: place || { position: 'fixed', visibility: 'hidden', top: 0, left: 0 } },
+      p.items.filter(Boolean).map(function (it, i) {
+        if (it.divider) return h('hr', { key: 'd' + i });
+        return h('button', {
+          key: i, type: 'button', role: it.checked != null ? 'menuitemradio' : 'menuitem', 'aria-checked': it.checked != null ? String(!!it.checked) : undefined,
+          className: it.danger ? 'danger' : undefined,
+          onClick: function () { close(); it.onSelect(); }
+        },
+          it.swatch ? h('span', { className: 'swatch', style: { background: it.swatch } }) : it.icon ? h(T.Icon, { name: it.icon, size: 15 }) : null,
+          h('span', { className: 'grow' }, it.label),
+          it.checked ? h(T.Icon, { name: 'check', size: 14 }) : null);
+      }))) : null);
+}
+
+function Dialog(p) {
+  var ref = useRef(null);
+  useEffect(function () {
+    var rootNode = ref.current ? ref.current.getRootNode() : document;
+    var prev = rootNode.activeElement;
+    var el = ref.current && ref.current.querySelector('[data-autofocus], input, textarea, select, button');
+    if (el) el.focus();
+    function onKey(e) {
+      if (e.key === 'Escape') { e.stopPropagation(); p.onClose(); }
+      if (e.key === 'Tab' && ref.current) {
+        var f = ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        var active = rootNode.activeElement;
+        if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return function () { document.removeEventListener('keydown', onKey); if (prev && prev.focus) prev.focus(); };
+  }, []);
+  return h(Portal, null, h('div', { className: 'overlay', onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
+    h('div', { className: cx('dialog', p.wide && 'wide', p.className), role: 'dialog', 'aria-modal': 'true', 'aria-label': p.label || p.title, ref: ref },
+      p.title ? h('div', { className: 'dialog-head' }, h('h2', null, p.title), p.description ? h('p', null, p.description) : null) : null,
+      p.children,
+      p.footer ? h('div', { className: 'dialog-foot' }, p.footer) : null)));
+}
+
+function ConfirmDialog(p) {
+  var c = p.confirm;
+  return h(Dialog, {
+    title: c.title, description: c.body, onClose: p.onClose,
+    footer: [
+      h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
+      h(T.Button, { key: 'o', variant: c.danger ? 'danger' : 'primary', 'data-autofocus': true, onClick: function () { p.onClose(); c.onConfirm(); } }, c.confirmLabel || 'Confirm')
+    ]
+  });
+}
+
+function Toasts(p) {
+  return h(Portal, null, h('div', { className: 'toasts', role: 'status', 'aria-live': 'polite' },
+    p.toasts.map(function (t) {
+      return h('div', { key: t.id, className: 'toast' },
+        t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
+        h('span', { className: 'grow' }, t.text),
+        t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
+        h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
+    })));
+}
