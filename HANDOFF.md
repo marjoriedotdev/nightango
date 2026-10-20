@@ -33,7 +33,7 @@ Version actuelle : **0.8.1**. La 0.6.0 est en usage réel, installée par l'util
 4. **Le HTML écrit par les membres (profils) n'est jamais injecté.**
    - Mini profil : reconstruction en éléments React d'une liste blanche de balises (`RichText`, dans `src/core/rich-text.js`).
    - Profil complet : `iframe` `sandbox` sans `allow-scripts` ni `allow-same-origin`, avec une politique CSP en `<meta>` (`fullProfileDoc`).
-5. **Pas de nouvelle dépendance sans validation explicite de l'utilisateur.** React 18.3.1 se charge depuis cdnjs avec SRI (empreintes vérifiées contre npm).
+5. **Pas de nouvelle dépendance sans validation explicite de l'utilisateur.** React 18.3.1 se charge depuis cdnjs avec SRI (empreintes vérifiées contre npm). Dépendances de développement validées : jsdom, react et react-dom (tests), esbuild (minification du userscript).
 6. **Visiteurs du profil : uniquement le profil de l'utilisateur connecté.** Torch propose déjà la fonction de façon native : le tracker s'installe par « Add profile tracker », et le panneau « track » l'affiche. La section Visitors l'affiche à nouveau. Le pont du loader ignore tout `profile` envoyé par la page et lit `client.user.name`. Ne jamais ajouter de consultation de l'activité d'un autre profil.
 
 ## 3. Préférences de l'utilisateur
@@ -86,7 +86,7 @@ src/
   styles/app.css     styles de l'application
   styles/login.css   habillage de l'écran de login de Torch, posé par skin-page.js
 scripts/
-  build.mjs          build Node : dist/torch-client.html, dist/app.js, dist/torch-skin.user.js
+  build.mjs          build Node : dist/torch-client.html, dist/app.js, dist/torch-skin.user.js, dist/torch-skin.min.user.js
   ds-components.mjs  régénère README.md et preview.html des composants du design system (pnpm build:ds)
   tokenize.py        migration ponctuelle déjà appliquée aux maquettes torch/project (couleurs codées en dur vers variables de thème), hors build
 tests/               suites jsdom et lanceur run.mjs
@@ -101,11 +101,11 @@ dist/                sorties du build, non versionnées
 
 ## 5. Build et tests
 
-Node seul, aucune autre chaîne d'outils.
+Node, plus esbuild pour la minification seule (pas de bundler : la concaténation reste celle de `build.mjs`). pnpm 10 bloque les scripts d'installation par défaut : `pnpm.onlyBuiltDependencies` dans `package.json` autorise celui d'esbuild, qui vérifie son binaire natif.
 
 ```
-pnpm install          # jsdom 24.1.3, react et react-dom 18.3.1 (devDependencies)
-pnpm build            # écrit dist/torch-client.html, dist/app.js, dist/torch-skin.user.js
+pnpm install          # jsdom 24.1.3, react et react-dom 18.3.1, esbuild 0.28.2 (devDependencies)
+pnpm build            # écrit dist/torch-client.html, dist/app.js et les deux userscripts, avec leurs tailles
 pnpm test             # build puis toutes les suites, échoue si une suite échoue
 pnpm test live_ui     # build puis les suites nommées seulement
 pnpm build:ds         # régénère la doc des composants du design system
@@ -114,10 +114,14 @@ pnpm build:ds         # régénère la doc des composants du design system
 Suites (`tests/`, lancées par `tests/run.mjs`) :
 - `smoke` : prototype hébergé (51 étapes) ;
 - `live_ui` : mode live avec faux client Torch (109 étapes) ;
-- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login (13 étapes) ;
+- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login, pont vissle (13 étapes, jouées sur chacun des deux userscripts, 26 en tout) ;
 - `live_login` : détection de connexion (3 étapes) ;
 - `avatar` : avatars (7 étapes) ;
 - `check_ds` : rendu des aperçus du design system.
+
+Deux userscripts sortent du même assemblage (`userscript()` dans `build.mjs`), qui décrit les étapes une seule fois :
+- `dist/torch-skin.user.js` : version lisible, inchangée par la minification ; c'est sur elle que tournent les autres suites ;
+- `dist/torch-skin.min.user.js` : même assemblage, avec la transformation esbuild (`transform`, cible ES5, `minify`) appliquée au code page, au code du loader et aux deux feuilles (skin et login). L'en-tête `==UserScript==` est recopié tel quel, sans source map.
 
 Tous ces tests doivent rester verts. Le lanceur juge chaque suite sur son code de sortie et sur sa sortie (lignes `FAIL`, `CRASH`, `ERRORS:` non vide), car certaines suites sortent en 0 malgré un échec. `live_ui.js` simule un client Torch, enregistre chaque trame envoyée et vérifie leur format exact. Ajoute un cas de test pour chaque correctif.
 
@@ -263,7 +267,7 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
 
 1. Incrémenter `@version` dans `src/loader/skin-loader.js`. Le build l'injecte dans `APP_VERSION`.
 2. `pnpm test` (build compris) : toutes les suites vertes.
-3. Envoyer `dist/torch-skin.user.js` à l'utilisateur. Le nom ne change jamais d'une version à l'autre, pour l'envoi vers ses userscripts. Il remplace le contenu du script dans Tampermonkey.
+3. Envoyer `dist/torch-skin.min.user.js` à l'utilisateur : c'est le fichier à uploader. Ce nom est fixe d'une version à l'autre (choix de l'utilisateur depuis la 0.8.1, il remplace `torch-skin.user.js` pour l'envoi vers ses userscripts). Il remplace le contenu du script dans Tampermonkey. `dist/torch-skin.user.js` sert au débogage et à l'audit.
 
 ## 10. Artefacts publiés (compte de l'utilisateur)
 

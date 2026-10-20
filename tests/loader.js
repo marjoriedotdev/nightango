@@ -1,9 +1,9 @@
-// Test du userscript complet : démarrage de Torch, attente, montage de l'interface, pages à ignorer.
+// Test des userscripts complets, lisible et minifié : démarrage de Torch, attente, montage de l'interface, pages à ignorer.
 const fs = require('fs');
 const vm = require('vm');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
-const userscript = fs.readFileSync(S + '/dist/torch-skin.user.js', 'utf8');
+const USERSCRIPTS = ['torch-skin.user.js', 'torch-skin.min.user.js'];
 const react = fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8');
 const rdom = fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8');
 const START = 'https://vissle.me/client/start';
@@ -11,7 +11,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const log = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 
-function page(url, before) {
+function page(userscript, url, before) {
   const vc = new VirtualConsole(); const errors = [];
   vc.on('error', e => errors.push(String(e && e.message || e)));
   const dom = new JSDOM('<!doctype html><html><head></head><body><h1>Chatango</h1><div class="login"></div></body></html>', { url, runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc });
@@ -51,9 +51,9 @@ async function deliverReact(w) {
   }
 }
 
-(async () => {
+async function suite(userscript) {
   /* Page d'accueil, Torch absent : le script le démarre */
-  const a = page('https://st.chatango.com/');
+  const a = page(userscript, 'https://st.chatango.com/');
   const starts = a.d.querySelectorAll('script[src="' + START + '"]');
   step('starts Torch once on the home page', starts.length === 1);
   step('shows the Torch loading text', a.d.querySelector('h1').textContent === 'Loading...');
@@ -99,23 +99,29 @@ async function deliverReact(w) {
   a.w.close();
 
   /* Fenêtre de discussion intégrée ailleurs : rien ne se passe */
-  const b = page('https://st.chatango.com/h5/gz/r1013231200/id.html');
+  const b = page(userscript, 'https://st.chatango.com/h5/gz/r1013231200/id.html');
   step('ignores Chatango embeds', !b.d.querySelector('script[src="' + START + '"]') && !b.d.querySelector('script[src*="cdnjs"]') && !b.w.__TORCH_SKIN__);
   b.w.close();
 
   /* Torch déjà lancé (ancien favori) : pas de second démarrage */
-  const c = page('https://st.chatango.com/', fakeTorch);
+  const c = page(userscript, 'https://st.chatango.com/', fakeTorch);
   step('does not start Torch twice', !c.d.querySelector('script[src="' + START + '"]'));
   c.w.close();
 
   /* Torch injoignable : message, pas de rechargement en boucle */
-  const e = page('https://st.chatango.com/');
+  const e = page(userscript, 'https://st.chatango.com/');
   const s = e.d.querySelector('script[src="' + START + '"]');
   s.dispatchEvent(new e.w.Event('error'));
   await wait(20);
   step('explains when Torch cannot be reached', /could not be reached/.test(e.d.querySelector('h1').textContent));
   e.w.close();
+}
 
+(async () => {
+  for (const name of USERSCRIPTS) {
+    log.push('-- dist/' + name);
+    await suite(fs.readFileSync(S + '/dist/' + name, 'utf8'));
+  }
   console.log(log.join('\n'));
   process.exit(log.some(l => l.indexOf('FAIL') === 0) ? 1 : 0);
 })().catch(err => { console.log(log.join('\n')); console.error('CRASH', err); process.exit(2); });

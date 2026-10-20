@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { transform } from 'esbuild';
 
 // -- Sources ------------------------------------------------------------------
 
@@ -167,6 +168,31 @@ function skinCss(tokens, bundle, app) {
   return css;
 }
 
+const READABLE = { js: (code) => code, css: (code) => code };
+const MINIFIED = {
+  js: async (code) => (await transform(code, { loader: 'js', target: 'es5', minify: true })).code,
+  css: async (code) => (await transform(code, { loader: 'css', minify: true })).code
+};
+
+/**
+ * Permet d'assembler le userscript.
+ * @param {object} source Gabarits et contenus à insérer.
+ * @param {{ js: Function, css: Function }} pack Transformation du code et des feuilles.
+ */
+async function userscript(source, pack) {
+  const [css, loginCss] = await Promise.all([pack.css(source.css), pack.css(source.loginCss)]);
+  // Le code page devient un littéral de chaîne, exécuté par un <script> en textContent : jamais analysé comme HTML.
+  const page = await pack.js(source.page
+    .replaceAll('/*VERSION*/', () => source.version)
+    .replaceAll('/*CSS*/', () => jsonString(css))
+    .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginCss))
+    .replaceAll('/*BUNDLE*/', () => source.bundleJs)
+    .replaceAll('/*APP*/', () => source.appJs));
+  // Tampermonkey lit l'en-tête tel quel : il reste hors de la transformation.
+  const header = /^[\s\S]*?\/\/ ==\/UserScript==\r?\n/.exec(source.loader)[0];
+  return header + await pack.js(source.loader.slice(header.length).replaceAll('/*PAGE*/', () => jsonString(page)));
+}
+
 // -- Build --------------------------------------------------------------------
 
 /**
@@ -188,7 +214,7 @@ function emit(name, content) {
   console.log(relative(ROOT, path), content.length);
 }
 
-function build() {
+async function build() {
   const tokens = JSON.parse(read('torchds', 'project', 'tokens.json'));
   const bundleJs = read('torchds', 'project', 'components', 'bundle.js');
   const bundleCss = read('torchds', 'project', 'components', 'bundle.css');
@@ -221,19 +247,21 @@ ${appJs}
 `;
 
   const loader = read('src', 'loader', 'skin-loader.js');
-  const version = /@version\s+(\S+)/.exec(loader)[1];
-  // Le code page devient un littéral de chaîne, exécuté par un <script> en textContent : jamais analysé comme HTML.
-  const page = read('src', 'loader', 'skin-page.js')
-    .replaceAll('/*VERSION*/', () => version)
-    .replaceAll('/*CSS*/', () => jsonString(skinCss(css, bundleCss, appCss)))
-    .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginCss(tokens, read('src', 'styles', 'login.css'))))
-    .replaceAll('/*BUNDLE*/', () => bundleJs)
-    .replaceAll('/*APP*/', () => appJs);
+  const source = {
+    loader,
+    page: read('src', 'loader', 'skin-page.js'),
+    version: /@version\s+(\S+)/.exec(loader)[1],
+    css: skinCss(css, bundleCss, appCss),
+    loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
+    bundleJs,
+    appJs
+  };
 
   mkdirSync(join(ROOT, 'dist'), { recursive: true });
   emit('torch-client.html', html);
   emit('app.js', appJs);
-  emit('torch-skin.user.js', loader.replaceAll('/*PAGE*/', () => jsonString(page)));
+  emit('torch-skin.user.js', await userscript(source, READABLE));
+  emit('torch-skin.min.user.js', await userscript(source, MINIFIED));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) build();
