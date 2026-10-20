@@ -364,6 +364,7 @@ function Root(props) {
   /* ---------- Mode live : actions transmises à Chatango par le client Torch ---------- */
   var localRef = useRef(blankLocal());
   var profilePending = useRef({});
+  var offlineCount = useRef(0);
   function skinKey(me) { return 'torch-skin:' + me; }
   function blankLocal() { return { fav: [], muted: [], ignored: [], hidden: [], style: null }; }
   function lastMessageOf(g, name) {
@@ -460,7 +461,7 @@ function Root(props) {
         update(function (d) {
           var u = ensureLiveUser(d, name);
           u.profileLoaded = true; u.profileMissing = !!pr.missing;
-          if (!pr.missing) { u.age = pr.age; u.gender = pr.gender; u.location = pr.location; u.aboutHtml = pr.about; u.premium = pr.premium; }
+          if (!pr.missing) { u.age = pr.age; u.gender = pr.gender; u.location = pr.location; u.aboutHtml = pr.about; u.premium = pr.premium; u.miniStyle = pr.mini; }
         });
       }, function () {
         // La fiche reste avec ce que l'on sait déjà : seule une ouverture explicite le redemande.
@@ -808,6 +809,12 @@ function Root(props) {
           if (!focused) c.unread += 1;
         });
         if (!focused && !op.offline) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
+        // Les msgoff arrivent en rafale juste après la connexion : une seule notification pour toute la rafale.
+        if (op.offline && !offlineCount.current++) setTimeout(function () {
+          var n = offlineCount.current;
+          offlineCount.current = 0;
+          notify('pm', { toast: plural(n, 'message', 'messages') + ' received while you were away.', icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'dm', id: null }); } } });
+        }, 1500);
         break;
       }
       case 'pmReady':
@@ -819,12 +826,20 @@ function Root(props) {
               if (t === d.me) return;
               ensureLiveUser(d, t);
               var c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: localRef.current.hidden.indexOf(t) >= 0 });
-              // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message.
-              function known(x) { var k = pmContentKey(x); return c.messages.some(function (y) { return y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000; }); }
+              // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
+              var shown = c.messages.slice();
+              function claim(x) {
+                var k = pmContentKey(x);
+                for (var i = 0; i < shown.length; i++) {
+                  var y = shown[i];
+                  if (y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000) { shown.splice(i, 1); return true; }
+                }
+                return false;
+              }
               hist[t].forEach(function (x) {
                 var u = ensureLiveUser(d, x.from);
                 u.style = Object.assign({}, u.style, x.style);
-                if (!known(x)) c.messages.push({ id: uid(), from: x.from, text: x.text, embeds: x.embeds, ts: x.ts });
+                if (!claim(x)) c.messages.push({ id: uid(), from: x.from, text: x.text, embeds: x.embeds, ts: x.ts });
               });
               c.messages.sort(function (a, b) { return a.ts - b.ts; });
             });

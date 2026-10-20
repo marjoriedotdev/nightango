@@ -1,10 +1,26 @@
 /** Bloc « About » : texte Chatango mis en forme en live, texte simple dans le prototype. */
 function profileAbout(u) {
   if (u.profileMissing) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'This account has no public profile.'));
-  if (u.aboutHtml) return h('div', { className: 'kv' }, h('h3', null, 'About'), h(RichText, { html: u.aboutHtml }));
+  if (u.aboutHtml) return h(RichAbout, { u: u });
   if (u.about) return h('div', { className: 'kv' }, h('h3', null, 'About'), h('p', { className: 'about' }, u.about));
   if (LIVE && !u.profileLoaded) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'Loading profile.'));
   return null;
+}
+
+/**
+ * Bloc « About » d'un mini profil Chatango.
+ * @param {Object} p.u Membre dans l'état.
+ */
+function RichAbout(p) {
+  var app = useApp(), safety = app.state.prefs.safety, mini = miniStyleOf(app.state.prefs, p.u, app.theme);
+  var r = useState(null), revealed = r[0], setRevealed = r[1];
+  var image = mini && mini.image && safety.embedImages ? mini.image : null;
+  var shown = image && (!safety.proxyMedia || revealed === image);
+  return h('div', { className: 'kv' + (mini ? ' mini-about' : ''), style: mini ? { backgroundColor: mini.bg, color: mini.text } : null },
+    shown ? h('img', { className: 'mini-about-img', src: image, alt: '', referrerPolicy: 'no-referrer' }) : null,
+    h('h3', null, 'About'),
+    h(RichText, { html: p.u.aboutHtml, bg: mini ? mini.bg : null, link: mini ? mini.link : null }),
+    image && !shown ? h('button', { type: 'button', className: 'linkbtn', style: { color: mini.link, alignSelf: 'flex-start' }, onClick: function () { setRevealed(image); } }, 'Show background') : null);
 }
 
 /**

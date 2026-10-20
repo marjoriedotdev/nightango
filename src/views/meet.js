@@ -8,19 +8,18 @@ function meetActive(f) {
   if (!f.online) out.push(['online', 'Offline included']);
   return out;
 }
-/** Texte brut d'un mini profil pour un aperçu ; le document analysé est inerte (ni script ni chargement). */
-function plainText(html) {
-  try {
-    var d = new DOMParser().parseFromString('<!doctype html><body>' + String(html).replace(/<br\s*\/?>/gi, ' '), 'text/html');
-    Array.prototype.forEach.call(d.querySelectorAll('script,style'), function (x) { x.remove(); });
-    return d.body.textContent.replace(/\s+/g, ' ').trim();
-  } catch (e) { return ''; }
-}
-function personCard(s, n, onClick) {
-  var u = userOf(s, n), isMe = n === s.me;
-  var about = u.aboutHtml ? plainText(u.aboutHtml) : u.about || '';
-  return h('button', { key: n, type: 'button', className: 'conv person', onClick: onClick },
-    h(T.Avatar, { name: n, size: 44, status: isMe ? s.meStatus : u.status, ring: 'var(--panel)' }),
+/**
+ * Carte d'une personne dans Meet people.
+ * @param {Object} s État de l'application.
+ * @param {string} n Nom du membre.
+ * @param {string} theme Thème résolu.
+ * @param {Function} onClick Ouverture de la fiche.
+ */
+function personCard(s, n, theme, onClick) {
+  var u = userOf(s, n), isMe = n === s.me, mini = miniStyleOf(s.prefs, u, theme);
+  var about = u.aboutHtml ? h(RichText, { html: u.aboutHtml, inline: true, bg: mini ? mini.bg : null }) : u.about || null;
+  return h('button', { key: n, type: 'button', className: 'conv person' + (mini ? ' mini-bg' : ''), style: mini ? { backgroundColor: mini.bg, color: mini.text } : null, onClick: onClick },
+    h(T.Avatar, { name: n, size: 44, status: isMe ? s.meStatus : u.status, ring: mini ? mini.bg : 'var(--panel)' }),
     h('span', { className: 'conv-main' },
       h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), isMe ? h(T.Badge, null, 'You') : null, u.premium ? h(T.Badge, { tone: 'accent' }, 'Premium') : null),
       personMetaLine(n, u),
@@ -103,7 +102,7 @@ function MeetPeople() {
       })) : null),
     h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
       meet && meet.error ? h('p', { className: 'pal-empty' }, meet.error) : null,
-      results.map(function (n) { return personCard(s, n, function () { app.ui.openProfile(n, null); }); }),
+      results.map(function (n) { return personCard(s, n, app.theme, function () { app.ui.openProfile(n, null); }); }),
       canLoadMore ? h('div', { ref: sentinelRef, 'aria-hidden': 'true', style: { height: 1 } }) : null,
       meet && meet.loading ? results.length ? h('div', { className: 'meet-more' }, h(T.Spinner, { label: 'Loading more people' }))
         : h('p', { className: 'pal-empty' }, 'Searching Chatango.') : null,

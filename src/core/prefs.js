@@ -1,7 +1,7 @@
 function defaultPrefs() {
   return {
     theme: 'system', accent: '#f27a3f', density: 'comfortable', textSize: 14, h24: true,
-    styles: { names: true, fonts: true, backgrounds: false },
+    styles: { names: true, fonts: true, backgrounds: false, profileBackgrounds: true },
     notify: {
       mentions: { app: true, sound: true, desktop: true, email: null },
       pm: { app: true, sound: true, desktop: true, email: false },

@@ -54,7 +54,8 @@ const styleAtBuild = [];
 function fakeGroup() { return { socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { information: { title: 'Test group', description: 'A test room' } }, load: 5 }; }
 const C = {
   // DENIED : Torch affiche un alert() bloquant.
-  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); } }) },
+  // msgoff : Torch archive le message dans sa base d'historique (saveMessage), une seule fois.
+  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msgoff() { calls.push(['archive', !!C.database.pm]); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
   emit(ev, data) { d.dispatchEvent(new w.CustomEvent('chatango_' + ev, { detail: data })); },
@@ -69,7 +70,7 @@ const C = {
   connect(gid) {
     if (C.cache.connect.includes(gid)) return new Promise(noop);
     C.cache.connect.push(gid);
-    calls.push(['connect', gid]); if (gid !== 'private_message' && !C.groups[gid]) C.groups[gid] = fakeGroup(); return Promise.resolve({});
+    calls.push(['connect', gid, !!C.database.pm]); if (gid !== 'private_message' && !C.groups[gid]) C.groups[gid] = fakeGroup(); return Promise.resolve({});
   },
   setFocus(o) { calls.push(['focus', o.group]); }, disconnectFrom(gid) { calls.push(['disconnect', gid]); delete C.groups[gid]; },
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
@@ -83,7 +84,7 @@ const C = {
 };
 const CH = {
   getAnon() { return '!anon1234'; }, path(p, sub) { return 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p; },
-  subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml' }, error: { creategroup: { groupexists: 'The group name is taken.' } }
+  subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css' }, error: { creategroup: { groupexists: 'The group name is taken.' } }
 };
 const SB = { renderGroup(dt) { calls.push(['renderGroup', dt.group]); } };
 w.__torchRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'torchenv' } };
@@ -95,10 +96,13 @@ const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img sr
 // Âge Chatango, comme Torch : année courante moins année de naissance.
 const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
 const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">');
+// Fond Premium au format réel de custom_profile.css (compte goddess). Sans fichier, Chatango renvoie une image JPEG.
+const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
+const GODDESS_CSS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
 w.fetch = (url, opts) => {
   const f = {}; if (opts && opts.body && opts.body.forEach) opts.body.forEach((v, k) => { f[k] = v; });
   fetches.push({ url, f, credentials: opts && opts.credentials });
-  let body = '';
+  let body = '', type = null, status = 200;
   if (/\/search$/.test(url)) body = searchBody;
   else if (/zoe\/mod1\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + ABOUT + '</body><s>F</s><b>' + ZOE_BIRTH + '</b><l c="FR">Lyon</l></mod>';
   else if (/zoe\/mod2\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + FULL + '</body></mod>';
@@ -107,7 +111,14 @@ w.fetch = (url, opts) => {
     const saved = posts.filter(p => /updateprofile/.test(p.url)).pop();
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent(saved ? saved.f.line : 'Old bio') + '</body><s>M</s><b>1990-01-01</b><l>Rouen</l></mod>';
   }
-  const res = { ok: true, text: () => Promise.resolve(body) };
+  else if (/\/(goddess|expired|sith|lost)\/mod1\.xml/.test(url)) {
+    const end = /expired/.test(url) ? PREMIUM_END - 60 * 86400 : PREMIUM_END;
+    body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent('Hi <a href="https://example.com/g">my page</a>') + '</body><s>F</s><b>1990-01-01</b><l>Paris</l><d>' + end + '</d></mod>';
+  }
+  else if (/goddess\/custom_profile\.css/.test(url)) { body = GODDESS_CSS; type = 'text/css'; }
+  else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
+  else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
+  const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body) };
   return searchHold && /\/search$/.test(url) ? searchHold.then(() => res) : Promise.resolve(res);
 };
 
@@ -573,6 +584,22 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('meet infinite scroll', scrollSearches.length === 2 && String(scrollSearches[0].f.f) === '40' && String(scrollSearches[0].f.t) === '80' && cards === 79
     && String(scrollSearches[1].f.f) === '80' && String(scrollSearches[1].f.t) === '120' && !byText('.convs button', 'Load more'),
     { observed, cards, requests: scrollSearches.map(x => [x.f.f, x.f.t]), loadMore: !!byText('.convs button', 'Load more') });
+
+  /* Fond Premium du mini profil : Premium actif lu dans custom_profile.css, Premium expiré jamais demandé, réponse JPEG ou 404 sans fond */
+  searchBody = 'h=goddess;1:expired;1:sith;1:lost;1';
+  click(refreshBtn()); await wait(150);
+  const personOf = n => $$('.conv.person').find(x => x.querySelector('.conv-name').textContent === n);
+  const cssAsked = n => fetches.some(x => x.url.indexOf('/' + n + '/custom_profile.css') >= 0);
+  const premiumCards = ['goddess', 'expired', 'sith', 'lost'].map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
+  if (personOf('goddess')) { click(personOf('goddess')); await wait(120); }
+  const aboutKv = $$('.dialog .kv').find(x => x.querySelector('h3') && x.querySelector('h3').textContent === 'About');
+  const aboutLink = aboutKv && aboutKv.querySelector('a');
+  const premiumAbout = aboutKv ? { bg: aboutKv.style.backgroundColor, text: aboutKv.style.color, link: aboutLink && aboutLink.style.color } : null;
+  key(d, 'Escape'); await wait(30);
+  step('premium profile background', JSON.stringify(premiumCards) === JSON.stringify([['goddess', 'rgb(158, 159, 252)'], ['expired', ''], ['sith', ''], ['lost', '']])
+    && cssAsked('goddess') && !cssAsked('expired') && cssAsked('sith') && cssAsked('lost')
+    && !!premiumAbout && premiumAbout.bg === 'rgb(158, 159, 252)' && premiumAbout.text === 'rgb(61, 61, 60)' && premiumAbout.link === 'rgb(41, 62, 62)',
+    { premiumCards, css: ['goddess', 'expired', 'sith', 'lost'].map(cssAsked), premiumAbout });
   searchBody = SEARCH_BODY;
 
   /* Statut */
@@ -682,6 +709,23 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const atGroup = styleAtBuild.filter(x => x.group === 'test').map(x => x.style), atPm = styleAtBuild.filter(x => x.group === 'private_message').map(x => x.style);
   step('own style applied locally', !!styleBtn && atGroup.length === 1 && atGroup[0] === WANT && storedStyle.includes('#9900cc') && storedStyle.includes('#3366ff') && atPm.length === 1 && atPm[0] === WANT && posts.length === postsBeforeStyle && submits === 0,
     { button: !!styleBtn, atGroup, storedStyle, atPm, posts: posts.slice(postsBeforeStyle), submits });
+
+  /* MP reçus hors ligne : base ouverte avant la connexion privée, msgoff juste après OK, deux « ok » identiques à 10 s d'écart dans l'historique */
+  pmRecords.push(
+    { target: 'gus', data: 'msg:gus:marjorie:unknown:1700000400.5:0:<n000/>ok', unread: 1 },
+    { target: 'gus', data: 'msg:gus:marjorie:unknown:1700000410.5:0:<n000/>ok', unread: 1 });
+  C.database.pm = false;
+  C.private.socket.readyState = 3; await wait(2300);
+  w.dispatchEvent(new w.Event('online')); await wait(50);
+  pm('OK', []);
+  pm('msgoff', ['gus', 'marjorie', 'unknown', '1700000420.5', '0', '<n000/>Missed you']); await wait(150);
+  const pmConnect = calls.filter(c => c[0] === 'connect' && c[1] === 'private_message').pop();
+  const archived = calls.filter(c => c[0] === 'archive');
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  click(byText('.conv', 'gus')); await wait(50);
+  const oks = $$('.thread .tc-msg-text').filter(x => x.textContent === 'ok').length;
+  step('offline messages archived', !!pmConnect && pmConnect[2] === true && archived.length === 1 && archived[0][1] === true && oks === 2, { pmConnect, archived, oks });
+  C.private.socket.readyState = 1; await wait(2300);
 
   /* Session coupée : connecté ailleurs, hors ligne, connexion perdue, session expirée */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };

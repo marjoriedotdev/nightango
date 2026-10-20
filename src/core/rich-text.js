@@ -22,19 +22,18 @@ var RICH_DROP = { script: 1, style: 1, iframe: 1, object: 1, embed: 1, noscript:
 var FONT_SIZES = [0, 10, 12, 13, 15, 18, 22, 28];
 function richStyle(el, tag, ctx) {
   var st = {}, css = String(el.getAttribute('style') || '');
-  var color = el.getAttribute('color') || (/(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(css) || [])[1];
-  if (color && /^#?[0-9a-f]{3}([0-9a-f]{3})?$/i.test(color.trim())) {
-    var hex = color.trim().charAt(0) === '#' ? color.trim() : '#' + color.trim();
-    st.color = ctx.bg ? ensureContrast(hex, ctx.bg, 4.5) : hex;
-  }
-  var size = el.getAttribute('size'), px = (/font-size\s*:\s*(\d+)px/i.exec(css) || [])[1];
-  if (size && FONT_SIZES[+size]) st.fontSize = FONT_SIZES[+size];
-  else if (px) st.fontSize = Math.max(10, Math.min(30, +px));
+  var color = cssColor(el.getAttribute('color') || (/(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(css) || [])[1]);
+  if (color) st.color = ensureContrast(color, ctx.bg, 4.5);
   var face = el.getAttribute('face');
   if (face && /^[\w ,'-]{1,40}$/.test(face)) st.fontFamily = face;
-  var align = el.getAttribute('align') || (/text-align\s*:\s*(\w+)/i.exec(css) || [])[1];
-  if (tag === 'center') st.textAlign = 'center';
-  else if (align && /^(left|right|center|justify)$/i.test(align)) st.textAlign = align.toLowerCase();
+  if (!ctx.inline) {
+    var size = el.getAttribute('size'), px = (/font-size\s*:\s*(\d+)px/i.exec(css) || [])[1];
+    if (size && FONT_SIZES[+size]) st.fontSize = FONT_SIZES[+size];
+    else if (px) st.fontSize = Math.max(10, Math.min(30, +px));
+    var align = el.getAttribute('align') || (/text-align\s*:\s*(\w+)/i.exec(css) || [])[1];
+    if (tag === 'center') st.textAlign = 'center';
+    else if (align && /^(left|right|center|justify)$/i.test(align)) st.textAlign = align.toLowerCase();
+  }
   return Object.keys(st).length ? st : null;
 }
 function richNodes(node, ctx, key) {
@@ -47,8 +46,9 @@ function richNodes(node, ctx, key) {
     if (RICH_DROP[tag]) return;
     var as = RICH_TAGS[tag];
     if (!as) { out = out.concat(richNodes(c, ctx, k)); return; }
-    if (as === 'br') { out.push(h('br', { key: k })); return; }
+    if (as === 'br') { out.push(ctx.inline ? ' ' : h('br', { key: k })); return; }
     if (as === 'img') {
+      if (ctx.inline) return;
       var src = String(c.getAttribute('src') || '');
       if (!/^https?:\/\//i.test(src)) return;
       if (!ctx.images) { out.push(h('a', { key: k, href: src, target: '_blank', rel: 'noopener noreferrer nofollow', className: 'msg-link', onClick: ctx.onLink(src) }, 'Image')); return; }
@@ -59,15 +59,23 @@ function richNodes(node, ctx, key) {
     var children = richNodes(c, ctx, k);
     if (as === 'a') {
       var href = String(c.getAttribute('href') || '');
-      if (!/^https?:\/\//i.test(href)) { out = out.concat(children); return; }
-      out.push(h('a', { key: k, href: href, target: '_blank', rel: 'noopener noreferrer nofollow', className: 'msg-link', onClick: ctx.onLink(href) }, children.length ? children : href));
+      if (ctx.inline || !/^https?:\/\//i.test(href)) { out = out.concat(children); return; }
+      out.push(h('a', { key: k, href: href, target: '_blank', rel: 'noopener noreferrer nofollow', className: 'msg-link', style: ctx.link ? { color: ctx.link } : null, onClick: ctx.onLink(href) }, children.length ? children : href));
       return;
     }
-    out.push(h.apply(null, [as, { key: k, style: richStyle(c, tag, ctx) }].concat(children)));
+    var block = ctx.inline && (as === 'p' || as === 'div');
+    out.push(h.apply(null, [block ? 'span' : as, { key: k, style: richStyle(c, tag, ctx) }].concat(children)));
+    if (block) out.push(' ');
   });
   return out;
 }
-/** Texte de profil Chatango (mini profil) rendu sans jamais injecter de HTML. */
+/**
+ * Texte de profil Chatango rendu sans jamais injecter de HTML.
+ * @param {string} p.html HTML écrit par le membre.
+ * @param {boolean} [p.inline] Rendu en ligne sans bloc ni lien ni image.
+ * @param {string} [p.bg] Fond sur lequel les couleurs du texte restent lisibles.
+ * @param {string} [p.link] Couleur des liens.
+ */
 function RichText(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var r = useState(false), revealed = r[0], setRevealed = r[1];
@@ -75,12 +83,13 @@ function RichText(p) {
   var doc;
   try { doc = new DOMParser().parseFromString('<!doctype html><body>' + html, 'text/html'); } catch (e) { return h('p', { className: 'about' }, p.html); }
   var ctx = {
-    bg: SURFACE[app.theme] ? SURFACE[app.theme].bg : null,
+    bg: p.bg || SURFACE[app.theme].bg, inline: p.inline, link: p.link,
     images: safety.embedImages, blocked: safety.proxyMedia && !revealed,
     reveal: function () { setRevealed(true); },
     onLink: function (url) { return function (e) { if (safety.warnLinks) { e.preventDefault(); app.ui.openLink(url); } }; }
   };
-  return h.apply(null, ['div', { className: 'about rich' }].concat(richNodes(doc.body, ctx, 'r')));
+  var nodes = richNodes(doc.body, ctx, 'r');
+  return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich' }].concat(nodes));
 }
 /** Document isolé pour un profil complet : pas de script, pas de formulaire, médias seulement si autorisés. */
 function fullProfileDoc(html, allowMedia) {

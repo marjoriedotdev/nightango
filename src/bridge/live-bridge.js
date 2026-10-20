@@ -100,6 +100,42 @@ var liveBridge = (function () {
   // Identifiants définitifs (trame u) arrivés avant le message (trame b) correspondant.
   var earlyIds = {}, waitingIds = {};
   var profileCache = {};
+  /**
+   * Permet de convertir une couleur de fond CSS en hex.
+   * @param {string} value Couleur CSS lue dans custom_profile.css.
+   */
+  function opaqueColor(value) {
+    var v = String(value || '').trim(), f = /^(?:rgb|hsl)a?\(([^)]*)\)$/i.exec(v), p = f ? f[1].trim().split(/\s*[,\/]\s*|\s+/) : [];
+    return p.length > 3 && parseFloat(p[3]) === 0 ? null : cssColor(v);
+  }
+  /**
+   * Permet de lire le fond Premium d'un mini profil sans jamais injecter son CSS.
+   * @param {string} css Contenu de custom_profile.css.
+   */
+  function parseMiniCss(css) {
+    var rules = Object.create(null), re = /([^{}]+)\{([^}]*)\}/g, m, unsafe = /^(?:__proto__|constructor|prototype)$/;
+    css = String(css).replace(/\/\*[\s\S]*?\*\//g, '');
+    while ((m = re.exec(css))) {
+      var decl = Object.create(null);
+      m[2].split(';').forEach(function (x) {
+        var i = x.indexOf(':'), prop = x.slice(0, i).trim().toLowerCase();
+        if (i > 0 && !unsafe.test(prop)) decl[prop] = x.slice(i + 1).replace(/!important/i, '').trim();
+      });
+      m[1].split(',').forEach(function (sel) {
+        sel = sel.trim().toLowerCase();
+        if (!unsafe.test(sel)) rules[sel] = Object.assign(rules[sel] || Object.create(null), decl);
+      });
+    }
+    var body = rules.body || {}, short = body.background || '';
+    var image = 'background-image' in body ? /^url\(\s*['"]?(https?:\/\/[^'")\s]+)['"]?\s*\)$/i.exec(body['background-image']) : /url\(\s*['"]?(https?:\/\/[^'")\s]+)['"]?\s*\)/i.exec(short);
+    var bg = 'background-color' in body ? body['background-color'] : (short.match(/[a-z-]+\([^)]*\)|[^\s()]+/gi) || []).find(cssColor);
+    return {
+      bg: opaqueColor(bg),
+      text: cssColor(body.color || (rules['.profile_text'] || {}).color),
+      link: cssColor((rules.a || {}).color),
+      image: image ? image[1].replace(/^http:/i, 'https:') : null
+    };
+  }
   function tapGroup(name, room, data) {
     if (room === ENV) return;
     switch (name) {
@@ -306,8 +342,10 @@ var liveBridge = (function () {
       // Sans nouveau socket, l'état observé ne change pas : on force sa réémission pour sortir de « connecting », y compris pour un groupe que Torch a retiré.
       if (gid === 'private_message') pmState = null; else connState[gid] = 'connecting';
     }
-    forget();
-    attempts[gid] = C.connect(gid).then(function (sock) { settle(); return sock; }, function (e) { settle(); throw e; });
+    function attempt() { forget(); return C.connect(gid); }
+    // Comme Torch, la base d'historique s'ouvre avant la connexion privée : les msgoff, livrés une seule fois juste après OK, y sont archivés.
+    var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
+    attempts[gid] = sock.then(function (s) { settle(); return s; }, function (e) { settle(); throw e; });
     return attempts[gid];
   }
 
@@ -606,17 +644,20 @@ var liveBridge = (function () {
       if (hit && Date.now() - hit.at < 300000) return Promise.resolve(hit.data);
       return fetch(CH.subdomain.mod1(n)).then(function (r) { return r.text(); }).then(function (xml) {
         var doc = new DOMParser().parseFromString(xml, 'text/xml');
-        var data;
-        if (doc.querySelector('parsererror')) data = { missing: true };
-        else {
-          var q = function (sel) { var el = doc.querySelector(sel); return el ? el.textContent.trim() : ''; };
-          var birth = new Date(q('b')).getFullYear();
-          data = {
-            missing: false, age: isNaN(birth) ? '' : String(new Date().getFullYear() - birth),
-            gender: GENDERS[q('s')] || '', location: q('l'), about: unquote(q('body')),
-            premium: (parseInt(q('d'), 10) || 0) * 1000 > Date.now()
-          };
-        }
+        if (doc.querySelector('parsererror')) return { missing: true };
+        var q = function (sel) { var el = doc.querySelector(sel); return el ? el.textContent.trim() : ''; };
+        var birth = new Date(q('b')).getFullYear();
+        var data = {
+          missing: false, age: isNaN(birth) ? '' : String(new Date().getFullYear() - birth),
+          gender: GENDERS[q('s')] || '', location: q('l'), about: unquote(q('body')),
+          premium: (parseInt(q('d'), 10) || 0) * 1000 > Date.now(), mini: null
+        };
+        if (!data.premium) return data;
+        return fetch(CH.subdomain.custom_profile(n)).then(function (r) {
+          // Sans fichier de style, Chatango répond par une petite image JPEG.
+          return r.ok && /^text\/css/.test(r.headers.get('content-type')) ? r.text().then(parseMiniCss) : null;
+        }).catch(function (e) { warn(e); return null; }).then(function (mini) { data.mini = mini; return data; });
+      }).then(function (data) {
         profileCache[n] = { at: Date.now(), data: data };
         return data;
       });

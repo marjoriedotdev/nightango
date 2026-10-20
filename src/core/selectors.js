@@ -14,3 +14,15 @@ function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idl
  * @param {string} g Genre en toutes lettres.
  */
 function genderShort(g) { return g === 'Male' ? 'M' : g === 'Female' ? 'F' : null; }
+/**
+ * Permet de lire les couleurs lisibles du fond Premium d'un mini profil.
+ * @param {Object} prefs Préférences de l'utilisateur.
+ * @param {Object} u Membre dans l'état.
+ * @param {string} theme Thème résolu.
+ */
+function miniStyleOf(prefs, u, theme) {
+  var m = u.miniStyle;
+  if (!prefs.styles.profileBackgrounds || !m || !m.bg) return null;
+  var text = ensureContrast(m.text || SURFACE[theme].body, m.bg, 4.5);
+  return { bg: m.bg, text: text, link: m.link ? ensureContrast(m.link, m.bg, 4.5) : text, image: m.image };
+}

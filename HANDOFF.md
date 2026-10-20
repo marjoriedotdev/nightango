@@ -11,7 +11,7 @@ Ce document vit à la racine du dépôt git `torch-skin`. Il donne à une nouvel
 2. laisse l'utilisateur se connecter sur l'écran de Torch ;
 3. affiche ensuite une interface refaite (React 18, dans un Shadow DOM) branchée sur le client Torch vivant.
 
-Version actuelle : **0.8.0**. La 0.6.0 est en usage réel, installée par l'utilisateur dans Tampermonkey.
+Version actuelle : **0.8.1**. La 0.6.0 est en usage réel, installée par l'utilisateur dans Tampermonkey.
 
 ## 2. Règles non négociables
 
@@ -20,7 +20,7 @@ Version actuelle : **0.8.0**. La 0.6.0 est en usage réel, installée par l'util
    - On n'appelle aucune fonction de Torch qui ajoute le mot de passe à une requête. Dans `client.post`, cela exclut toute option `credential`.
    - Les seuls appels HTTP autorisés sont les suivants :
      - `client.post(url, form, {})` ou `client.post(url, form, { cookie: true })` ;
-     - les GET publics (`mod1.xml`, `mod2.xml`) ;
+     - les GET publics (`mod1.xml`, `mod2.xml`, `custom_profile.css`) ;
      - la recherche `chatango.com/search` avec `credentials: 'include'`, comme le fait Torch ;
      - `POST https://vissle.me/track1/activity`, via le pont `GM_xmlhttpRequest` du loader, avec `anonymous: true`.
 2. **Pas de trame Chatango inventée.** Chaque trame envoyée vient du code de Torch lui-même ou d'une bibliothèque de référence maintenue :
@@ -113,7 +113,7 @@ pnpm build:ds         # régénère la doc des composants du design system
 
 Suites (`tests/`, lancées par `tests/run.mjs`) :
 - `smoke` : prototype hébergé (51 étapes) ;
-- `live_ui` : mode live avec faux client Torch (107 étapes) ;
+- `live_ui` : mode live avec faux client Torch (109 étapes) ;
 - `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login (13 étapes) ;
 - `live_login` : détection de connexion (3 étapes) ;
 - `avatar` : avatars (7 étapes) ;
@@ -165,6 +165,11 @@ Tous ces tests doivent rester verts. Le lanceur juge chaque suite sur son code d
   - `get` : `all|log|like|dislike|msg|refer`. `order` : `desc|asc`.
   - Pas de temps réel : le socket.io de vissle refuse l'origine st.chatango.com.
 - **Mini profil.** `https://ust.chatango.com/profileimg/{a}/{b}/{nom}/mod1.xml`, avec les balises `b` (date de naissance), `s`, `l`, `body` (encodé URL) et `d` (fin du Premium). Profil complet : `mod2.xml`, balise `body`.
+  - Fond Premium : `custom_profile.css` dans le même dossier, sans le préfixe `sp/sp` (Torch `chatango.subdomain.custom_profile`). Torch ne le lit que si le Premium est actif (`d` × 1000 > maintenant), le pont aussi.
+  - Sans fichier, Chatango renvoie une petite image JPEG : le pont exige `r.ok` et un `content-type` `text/css`.
+  - Format relevé (compte goddess), une règle par sélecteur, espaces et `!important` variables :
+    `body { background-color; background-image: url(…); background-repeat; color }`, `.profile_text { color }`, `a, a:visited, a:active { color; text-decoration }`, `a:hover { … }`.
+  - Le CSS n'est jamais injecté. Le pont (`parseMiniCss`) en tire `{bg, text, link, image}` : couleurs converties en hex (hex, nom CSS, `rgb()`), texte de `body` ou à défaut de `.profile_text`, image en `https` seulement (`http` réécrit). Résultat dans `u.miniStyle`, mis en cache avec le profil.
 - **Avatars.** `ust.chatango.com/profileimg/{1re}/{2e ou 1re}/{nom}/thumb.jpg` ou `thumb_m.jpg`, avec le préfixe `sp/sp{nom}` pour les noms qui commencent par `_` ou `-`.
 
 ### Trames de groupe utilisées et leur source
@@ -234,6 +239,10 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
   - Chats : compteur de non lus sur l'onglet, ligne en grille nom et heure, informations, aperçu et compteur. Actions Close et Delete par le menu « … », le clic droit ou le swipe tactile ;
   - squelettes du design system en balayage lumineux (`tc-shimmer`), coupé en mouvement réduit (préférence système ou réglage de l'application) ;
   - Meet people : cartes de hauteur constante (ligne d'informations et deux lignes de bio réservées, squelettes pendant le chargement), défilement infini (sentinelle observée par `IntersectionObserver`, Spinner en bas, plus de bouton Load more), le compte connecté apparaît avec un badge « You » et ouvre sa fiche profil.
+- **0.8.1 :**
+  - MP reçus hors ligne : la base d'historique est ouverte avant la connexion privée (les `msgoff` ne sont livrés qu'une fois, juste après `OK`), pas de doublon à la fusion avec l'historique, une seule notification « N messages received while you were away. » ;
+  - bio en couleur dans les cartes Meet (`RichText` en mode `inline` : ni bloc, ni lien, ni image, taille et alignement ignorés). `RichText` accepte les couleurs nommées et `rgb()` ;
+  - fond Premium du mini profil : couleur de fond sur la carte Meet, fond, texte et liens sur le bloc About de la fiche, avec contraste garanti. L'image de fond n'apparaît que sur la fiche, suit `embedImages` et `proxyMedia` (bouton « Show background »), sous un voile de la couleur de fond. Réglage « Profile backgrounds » dans Apparence (`styles.profileBackgrounds`).
 - **Userscript :** deux contextes. L'application tourne dans la page, et seul le pont vissle tourne dans le bac à sable (`@grant GM_xmlhttpRequest`, `@connect vissle.me`). Démarrage automatique, page d'accueil seulement (`@noframes` et vérification `pathname === '/'`), pas de double démarrage, SRI sur React.
 
 ## 8. Ce qui reste ouvert
@@ -243,7 +252,8 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
 - **Médias :** `applyEdit` gère les embeds, mais un MP envoyé localement n'a pas d'embeds tant que l'historique n'est pas rechargé. Les annonces affichent leurs médias en texte.
 - **Style perso :** il reste local à ce navigateur. L'enregistrer sur le compte passe par le formulaire de style de Torch (`updatemsgstyles`), qui transmet le mot de passe : exclu par la règle 1.
 - **Groupe :** titre, description et icône non modifiables. Aucune source fiable trouvée.
-- **Profil :** photo de profil non modifiable, couleurs du profil complet non reproduites, fonds Premium des mini profils non reproduits.
+- **Profil :** photo de profil non modifiable, couleurs du profil complet non reproduites.
+- **Fond Premium :** l'image est une `<img>` en `referrerPolicy="no-referrer"`, affichée une fois en `contain` en haut à gauche. `background-repeat` n'est pas reproduit : la répétition demanderait un fond CSS, qui envoie le referrer.
 - **Réglages de Torch :** les réglages propres à Torch (qui peut écrire, groupes rejoints au démarrage) restent dans Torch.
 - **Sons :** ils sont joués par Torch, avec ses réglages. Les nôtres restent coupés en live pour éviter le double signal.
 - **Polices de l'interface :** elles sont chargées depuis Google Fonts. L'utilisateur est sensible à la confidentialité, ce choix pourra être revu.
