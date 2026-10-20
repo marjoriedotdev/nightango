@@ -9,3 +9,8 @@ function resolvedTheme(prefs, viewerTheme) {
 }
 function dmUnreadTotal(state) { var n = 0; for (var k in state.dms) n += state.dms[k].unread || 0; return n; }
 function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
+/**
+ * Permet d'abréger le genre d'un profil.
+ * @param {string} g Genre en toutes lettres.
+ */
+function genderShort(g) { return g === 'Male' ? 'M' : g === 'Female' ? 'F' : null; }

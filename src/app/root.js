@@ -178,7 +178,7 @@ function Root(props) {
     searchPeople: function (f) {
       // Prototype : recherche parmi les membres d'exemple qui ne sont pas encore amis.
       var s0 = stateRef.current, q = String(f.query || '').toLowerCase();
-      var list = Object.keys(s0.users).filter(function (n) { var u = s0.users[n]; return n !== s0.me && !u.friend && (!q || n.indexOf(q) >= 0 || String(u.location || '').toLowerCase().indexOf(q) >= 0) && (!f.online || u.status !== 'offline'); });
+      var list = Object.keys(s0.users).filter(function (n) { var u = s0.users[n]; return !u.friend && (!q || n.indexOf(q) >= 0 || String(u.location || '').toLowerCase().indexOf(q) >= 0) && (!f.online || u.status !== 'offline'); });
       update(function (d) { d.meet = { results: list, loading: false, error: null, done: true, filters: f }; });
     },
     /**
@@ -482,18 +482,19 @@ function Root(props) {
       for (var k = 0; k < 4; k++) next();
     };
     actions.searchPeople = function (f, more) {
-      var cur = stateRef.current.meet, from = more && cur ? cur.results.length : 0;
-      update(function (d) { d.meet = Object.assign({ results: [] }, more ? d.meet : null, { loading: true, error: null, filters: f }); });
+      var cur = stateRef.current.meet, from = more && cur ? cur.next : 0, token = (cur && cur.token || 0) + 1;
+      update(function (d) { d.meet = Object.assign({ results: [] }, more ? d.meet : null, { loading: true, error: null, filters: f, token: token }); });
       liveBridge.searchPeople(Object.assign({}, f, { from: from, to: from + 40 })).then(function (names) {
         update(function (d) {
-          var prev = more && d.meet ? d.meet.results : [];
-          var fresh = names.filter(function (n) { return n !== d.me && prev.indexOf(n) < 0; });
+          if (d.meet.token !== token) return;
+          var prev = more ? d.meet.results : [];
+          var fresh = names.filter(function (n) { return prev.indexOf(n) < 0; });
           // Statut inconnu jusqu'à la réponse de présence : hors ligne par défaut pour un inconnu.
           fresh.forEach(function (n) { var known = !!d.users[n]; var u = ensureLiveUser(d, n); if (!known) u.status = 'offline'; });
-          d.meet = { results: prev.concat(fresh), loading: false, error: null, done: names.length < 40, filters: f };
+          d.meet = { results: prev.concat(fresh), next: from + names.length, loading: false, error: null, done: names.length < 40, filters: f, token: token };
         });
       }, function (e) {
-        update(function (d) { d.meet = Object.assign({ results: [] }, d.meet, { loading: false, error: e && e.message ? e.message : 'The search failed.' }); });
+        update(function (d) { if (d.meet.token === token) Object.assign(d.meet, { loading: false, error: e && e.message ? e.message : 'The search failed.' }); });
       });
     };
     actions.loadMore = function (gid) {
@@ -581,6 +582,15 @@ function Root(props) {
       if (localRef.current.ignored.indexOf(name) >= 0) u.ignored = true;
     }
     return u;
+  }
+  /**
+   * Permet d'appliquer à un membre une présence reçue du pont.
+   * @param {Object} u Membre dans l'état.
+   * @param {{status: string, lastOn: number}} x Présence reçue.
+   */
+  function applyPresence(u, x) {
+    u.status = x.status;
+    if (x.lastOn) u.lastOn = x.lastOn;
   }
   function setOwnStyle(style) {
     update(function (d) { var u = ensureLiveUser(d, d.me); u.style = Object.assign({}, u.style, style); });
@@ -824,21 +834,26 @@ function Root(props) {
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;
-          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; u.status = f.status; });
+          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); });
         });
         if (op.added) op.list.forEach(function (f) { toast(f.name + ' added to friends.', { icon: 'check' }); });
         break;
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
       case 'presence': {
         var before = stateRef.current.users[op.name];
-        update(function (d) { ensureLiveUser(d, op.name).status = op.status; });
-        if (before && before.friend && before.status !== op.status) {
+        var status = op.keepIdle && before && before.status === 'idle' ? 'idle' : op.status;
+        update(function (d) {
+          var u = ensureLiveUser(d, op.name);
+          applyPresence(u, { status: status, lastOn: op.lastOn });
+          if (status === 'offline' && !op.lastOn && before && before.status !== 'offline') u.lastOn = Date.now();
+        });
+        if (before && before.friend && before.status !== status) {
           var watching = stateRef.current.dms[op.name] && stateRef.current.dms[op.name].notifyOnline;
           var openDm = { label: 'Message', run: function () { actions.openDm(op.name); } };
-          if (op.status === 'online' && before.status === 'offline') {
+          if (status === 'online' && before.status === 'offline') {
             if (watching) toast(op.name + ' is online.', { icon: 'users', action: openDm });
             else notify('friendOn', { toast: op.name + ' is online.', icon: 'users', action: openDm });
-          } else if (op.status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', icon: 'users' });
+          } else if (status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', icon: 'users' });
         }
         break;
       }
@@ -846,7 +861,7 @@ function Root(props) {
         Object.keys(d.users).forEach(function (n) { if (d.users[n].blocked && op.list.indexOf(n) < 0) d.users[n].blocked = false; });
         op.list.forEach(function (n) { ensureLiveUser(d, n).blocked = true; });
       }); break;
-      case 'people': update(function (d) { op.list.forEach(function (x) { ensureLiveUser(d, x.name).status = x.status; }); }); break;
+      case 'people': update(function (d) { op.list.forEach(function (x) { applyPresence(ensureLiveUser(d, x.name), x); }); }); break;
       case 'pmUnblocked': update(function (d) { if (d.users[op.name]) d.users[op.name].blocked = false; }); break;
       default: break;
     }

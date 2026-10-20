@@ -7,7 +7,7 @@ function ProfilePage() {
   function set(k, v) { setDraft(function (d) { var n = JSON.parse(JSON.stringify(d)); setIn(n, k, v); return n; }); }
   var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
   var vis = [['age', 'Show my age', 'Displayed next to your name on your profile.'], ['gender', 'Show my gender', 'Hidden when set to Not specified.'], ['location', 'Show my location', 'Displayed next to your name on your profile.'], ['meet', 'Appear in Meet people', 'Lets other Chatango users find you by age and location.'], ['fullPage', 'Public full profile page', 'Your page on chatango.com. When off, only your mini profile is visible.']];
-  var meta = [draft.visibility.age && draft.age ? draft.age : null, draft.visibility.gender && draft.gender !== 'Not specified' ? draft.gender : null, draft.visibility.location && draft.location ? draft.location : null].filter(Boolean).join(' · ');
+  var meta = [draft.visibility.age && draft.age ? draft.age : null, draft.visibility.gender ? genderShort(draft.gender) : null, draft.visibility.location && draft.location ? draft.location : null].filter(Boolean).join(' · ');
   return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only Torch users.', wide: true },
     h('div', { className: 'split' },
       h('div', { className: 'grow' },

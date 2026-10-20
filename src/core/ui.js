@@ -29,23 +29,25 @@ function useOutside(ref, open, onClose, extraRef) {
   }, [open]);
 }
 
-/* Bouton qui ouvre un menu d'actions ; items : {label, icon, onSelect, danger, checked, divider, swatch} */
+/* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
 function MenuButton(p) {
-  var st = useState(false), open = st[0], setOpen = st[1];
+  var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
-  function close() { setOpen(false); if (p.onOpenChange) p.onOpenChange(false); }
+  function setOpen(n) { if (p.open == null) st[1](n); if (p.onOpenChange) p.onOpenChange(n); }
+  function close() { setOpen(false); }
   useOutside(ref, open, close, menuRef);
   var ps = useState(null), place = ps[0], setPlace = ps[1];
   // Position fixe calculée sur le déclencheur, retournée si le menu sortirait de l'écran.
   useLayoutEffect(function () {
     if (!open || !ref.current) return;
-    var r = ref.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    var r = p.at ? { top: p.at.y, bottom: p.at.y, left: p.at.x, right: p.at.x } : ref.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
     var mh = menuRef.current ? menuRef.current.offsetHeight : 0, up = p.up ? r.top - mh - 4 >= 8 || r.bottom + mh + 4 > vh : r.bottom + mh + 4 > vh - 8 && r.top - mh - 4 >= 8;
+    var mw = menuRef.current ? menuRef.current.offsetWidth : 0, left = p.align === 'left' && r.left + mw <= vw - 8;
     var st = { position: 'fixed' };
     if (up) st.bottom = (vh - r.top + 4) + 'px'; else st.top = (r.bottom + 4) + 'px';
-    if (p.align === 'left') st.left = Math.max(8, r.left) + 'px'; else st.right = Math.max(8, vw - r.right) + 'px';
+    if (left) st.left = Math.max(8, r.left) + 'px'; else st.right = Math.max(8, vw - r.right) + 'px';
     setPlace(st);
-  }, [open]);
+  }, [open, p.at]);
   useEffect(function () {
     if (!open) return;
     function onMove(e) { if (menuRef.current && e.target && menuRef.current.contains(e.target)) return; close(); }
@@ -56,7 +58,7 @@ function MenuButton(p) {
   useEffect(function () {
     if (open && menuRef.current) { var first = menuRef.current.querySelector('button'); if (first) first.focus(); }
   }, [open]);
-  function toggle() { var n = !open; setPlace(null); setOpen(n); if (p.onOpenChange) p.onOpenChange(n); }
+  function toggle() { setPlace(null); setOpen(!open); }
   function onKey(e) {
     if (!menuRef.current) return;
     var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button'));

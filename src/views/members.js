@@ -28,7 +28,7 @@ function ProfileDialog(p) {
   var g = p.gid ? s.groups[p.gid] : null;
   var myRole = g ? roleOf(g, s.me) : null, theirRole = g ? roleOf(g, name) : null;
   var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
-  var meta = [u.age && (isMe ? s.profile.visibility.age : true) ? u.age : null, u.gender && u.gender !== 'Not specified' ? u.gender : null, u.location || null].filter(Boolean).join(' · ');
+  var meta = [u.age && (isMe ? s.profile.visibility.age : true) ? u.age : null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
   var guest = /^[!#]/.test(name);
   useEffect(function () { if (!guest) app.actions.loadProfile(name); }, [name]);
   function go(route) { p.onClose(); app.nav(route); }

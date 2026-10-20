@@ -49,7 +49,7 @@ function FullProfileDialog(p) {
 function ProfilePanel(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name);
   var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
-  var meta = [u.age, u.gender && u.gender !== 'Not specified' ? u.gender : null, u.location].filter(Boolean).join(' · ');
+  var meta = [u.age, genderShort(u.gender), u.location].filter(Boolean).join(' · ');
   var notify = s.dms[name] && s.dms[name].notifyOnline;
   useEffect(function () { app.actions.loadProfile(name); }, [name]);
   return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + name },

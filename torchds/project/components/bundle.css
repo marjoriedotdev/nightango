@@ -117,11 +117,11 @@ label.tc-row{cursor:pointer}
 .tc-send{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;margin-left:6px;border:0;border-radius:7px;background:var(--accent);color:var(--on-accent);cursor:pointer}
 .tc-send:disabled{opacity:.4;cursor:not-allowed}
 
-.tc-skeleton{display:inline-block;flex:none;max-width:100%;vertical-align:middle;border-radius:var(--radius-sm);background:var(--selected);animation:tc-pulse 1.4s ease-in-out infinite}
+.tc-skeleton{display:inline-block;flex:none;max-width:100%;vertical-align:middle;border-radius:var(--radius-sm);background:var(--selected) linear-gradient(90deg,transparent 25%,var(--thumb) 50%,transparent 75%) no-repeat;background-size:200% 100%;background-position:150% 0;animation:tc-shimmer 1.6s ease-in-out infinite}
 .tc-skeleton-circle{border-radius:var(--radius-full)}
-@keyframes tc-pulse{50%{opacity:.45}}
+@keyframes tc-shimmer{to{background-position:-50% 0}}
 .tc-spinner{display:inline-flex;flex:none;vertical-align:middle;animation:tc-spin .8s linear infinite}
 @keyframes tc-spin{to{transform:rotate(360deg)}}
 .tc-fade-in{animation:tc-fade-in .2s ease-out}
 @keyframes tc-fade-in{from{opacity:0}}
-@media (prefers-reduced-motion: reduce){.tc-skeleton,.tc-spinner,.tc-fade-in{animation:none}}
+@media (prefers-reduced-motion: reduce){.tc-skeleton,.tc-spinner,.tc-fade-in{animation:none}.tc-skeleton{background-image:none}}

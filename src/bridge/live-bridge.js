@@ -160,6 +160,18 @@ var liveBridge = (function () {
     }
   }
   function presenceOf(state, idle) { return state === 'on' ? (+idle ? 'idle' : 'online') : state === 'app' ? 'online' : 'offline'; }
+  // Chatango envoie "None" ou 0 quand il ne connaît pas la dernière connexion.
+  function epochMs(v) { return Math.round(parseFloat(v) * 1000) || 0; }
+  /**
+   * Permet de lire la présence d'un ami dans une trame wl ou wladd.
+   * @param {string} name Nom de l'ami.
+   * @param {string} state État Chatango on, off ou app.
+   * @param {string} ts Dernière connexion en secondes.
+   * @param {string} minutes Minutes d'inactivité.
+   */
+  function friendPresence(name, state, ts, minutes) {
+    return { name: lower(name), status: presenceOf(state, minutes), lastOn: state === 'off' ? epochMs(ts) : 0 };
+  }
   function tapPrivate(name, data) {
     switch (name) {
       case 'msg': case 'msgoff': {
@@ -169,21 +181,28 @@ var liveBridge = (function () {
       }
       case 'wl': {
         var friends = [];
-        for (var i = 0; i + 3 < data.length; i += 4) if (data[i]) friends.push({ name: lower(data[i]), status: presenceOf(data[i + 2], data[i + 3]) });
+        for (var i = 0; i + 3 < data.length; i += 4) if (data[i]) friends.push(friendPresence(data[i], data[i + 2], data[i + 1], data[i + 3]));
         emit({ op: 'friends', list: friends });
         break;
       }
       case 'wladd':
         if (data[1] === 'invalid') emit({ op: 'notice', gid: 'private_message', text: 'No Chatango user named ' + lower(data[0]) + '.' });
-        else emit({ op: 'friends', added: true, list: [{ name: lower(data[0]), status: presenceOf(data[1], data[2]) }] });
+        // Triplet : la valeur vaut des minutes d'inactivité si on, un horodatage si off ou app.
+        else emit({ op: 'friends', added: true, list: [friendPresence(data[0], data[1], data[2], data[2])] });
         break;
       case 'wldelete': if (data[1] === 'deleted') emit({ op: 'unfriend', name: lower(data[0]) }); break;
-      case 'wlonline': emit({ op: 'presence', name: lower(data[0]), status: 'online' }); break;
-      case 'wloffline': emit({ op: 'presence', name: lower(data[0]), status: 'offline' }); break;
+      case 'wlonline': case 'wlapp': emit({ op: 'presence', name: lower(data[0]), status: 'online' }); break;
+      case 'wloffline': emit({ op: 'presence', name: lower(data[0]), status: 'offline', lastOn: epochMs(data[1]) }); break;
+      // La trame status ne dit pas si le compte est inactif : un état idle connu doit rester en place.
+      case 'status': emit(data[2] === 'offline' ? { op: 'presence', name: lower(data[0]), status: 'offline', lastOn: epochMs(data[1]) } : { op: 'presence', name: lower(data[0]), status: 'online', keepIdle: true }); break;
       case 'idleupdate': emit({ op: 'presence', name: lower(data[0]), status: data[1] === '0' ? 'idle' : 'online' }); break;
       case 'presence': {
         var people = [];
-        for (var j = 0; j + 2 < data.length; j += 3) if (data[j]) people.push({ name: lower(data[j]), status: +data[j + 1] > 0 ? 'idle' : data[j + 2] === 'online' || data[j + 2] === 'app' ? 'online' : 'offline' });
+        // Hors ligne, les minutes ne sont pas de l'inactivité : elles servent de dernière connexion approchée.
+        for (var j = 0; j + 2 < data.length; j += 3) if (data[j]) {
+          var on = data[j + 2] === 'online' || data[j + 2] === 'app';
+          people.push({ name: lower(data[j]), status: on ? (+data[j + 1] > 0 ? 'idle' : 'online') : 'offline', lastOn: !on && +data[j + 1] ? Date.now() - data[j + 1] * MIN : 0 });
+        }
         emit({ op: 'people', list: people });
         break;
       }

@@ -24,6 +24,14 @@ const dom = new JSDOM(`<!doctype html><html><head></head><body>
 const w = dom.window, d = w.document;
 w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 w.HTMLElement.prototype.scrollIntoView = function () {};
+w.Element.prototype.setPointerCapture = function () {};
+// jsdom n'a pas IntersectionObserver : le test déclenche lui-même l'intersection.
+const observers = [];
+w.IntersectionObserver = function (cb, opts) {
+  const o = { cb, opts, targets: [], observe(t) { o.targets.push(t); }, unobserve(t) { o.targets = o.targets.filter(x => x !== t); }, disconnect() { o.targets = []; } };
+  observers.push(o);
+  return o;
+};
 
 /* ---------- Faux client Torch ---------- */
 const sent = [], posts = [], calls = [];
@@ -81,15 +89,17 @@ const SB = { renderGroup(dt) { calls.push(['renderGroup', dt.group]); } };
 w.__torchRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'torchenv' } };
 const fetches = [];
 let searchHold = null;
+const SEARCH_BODY = 'h=zoe;1;2:yann;3:marjorie;9';
+let searchBody = SEARCH_BODY;
 const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img src="x" onerror="alert(2)"><a href="javascript:alert(3)">bad</a> <a href="https://example.com/p">good</a> <font color="#ff0000" size="5">red</font>');
 // Âge Chatango, comme Torch : année courante moins année de naissance.
-const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · Female · Lyon';
+const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
 const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">');
 w.fetch = (url, opts) => {
   const f = {}; if (opts && opts.body && opts.body.forEach) opts.body.forEach((v, k) => { f[k] = v; });
   fetches.push({ url, f, credentials: opts && opts.credentials });
   let body = '';
-  if (/\/search$/.test(url)) body = 'h=zoe;1;2:yann;3:marjorie;9';
+  if (/\/search$/.test(url)) body = searchBody;
   else if (/zoe\/mod1\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + ABOUT + '</body><s>F</s><b>' + ZOE_BIRTH + '</b><l c="FR">Lyon</l></mod>';
   else if (/zoe\/mod2\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + FULL + '</body></mod>';
   else if (/marjorie\/mod1\.xml/.test(url)) {
@@ -422,8 +432,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const hiddenStored = () => JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').hidden || [];
   const closeConv = async n => {
     const r = $$('.conv-row').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n);
-    const b = r && r.querySelector('button[aria-label="Close conversation"]');
-    if (b) { click(b); await wait(50); }
+    const b = r && r.querySelector('button[aria-label="Options for ' + n + '"]');
+    if (b) { click(b); await wait(30); }
+    if (menuItem('Close conversation')) { click(menuItem('Close conversation')); await wait(50); }
   };
   await closeConv('dave');
   const closed = { listed: listed('dave'), cleared: calls.some(c => c[0] === 'clearHistory'), hidden: hiddenStored().includes('dave') };
@@ -443,6 +454,32 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   type($('#newdm'), 'hank'); key($('#newdm'), 'Enter'); await wait(50);
   const hankHead = $('.thread .topbar h2');
   step('new dm has no suggestions', dmChips === 0 && !$('.dialog') && !!hankHead && hankHead.textContent === 'hank', { dmChips, dialog: !!$('.dialog'), head: hankHead && hankHead.textContent });
+  const convRow = n => $$('.conv-row').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n);
+  const menuLabels = () => $$('.menu button').map(x => x.textContent);
+  const hasRowItems = l => l.includes('Close conversation') && l.some(x => x.indexOf('Delete conversation') === 0);
+  const hankRow = convRow('hank');
+  if (hankRow) hankRow.querySelector('.conv').dispatchEvent(new w.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 80 }));
+  await wait(30);
+  const ctxItems = menuLabels();
+  key(d, 'Escape'); await wait(30);
+  const hankMore = hankRow && hankRow.querySelector('button[aria-label="Options for hank"]');
+  if (hankMore) { click(hankMore); await wait(30); }
+  const moreItems = menuLabels();
+  if (menuItem('Delete conversation')) { click(menuItem('Delete conversation')); await wait(30); }
+  const asked = !!$('.dialog') && !calls.some(c => c[0] === 'clearHistory' && c[1] === 'hank');
+  if (asked) { click(byText('.dialog-foot button', 'Delete')); await wait(50); }
+  const hankDeleted = calls.some(c => c[0] === 'clearHistory' && c[1] === 'hank') && !listed('hank');
+  const gusRow = convRow('gus');
+  const pointer = (type, x) => {
+    const e = new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: 100 });
+    Object.defineProperties(e, { pointerId: { value: 1 }, pointerType: { value: 'touch' } });
+    gusRow.querySelector('.conv').dispatchEvent(e);
+  };
+  pointer('pointerdown', 250); pointer('pointermove', 240); pointer('pointermove', 120); pointer('pointerup', 120);
+  click(gusRow.querySelector('.conv')); await wait(30);
+  const swipeButtons = [...gusRow.querySelectorAll('button')].filter(b => !b.closest('.conv')).map(b => b.textContent);
+  const gusOpened = !!$('.thread .topbar h2') && $('.thread .topbar h2').textContent === 'gus';
+  step('chat row actions', hasRowItems(ctxItems) && hasRowItems(moreItems) && asked && hankDeleted && swipeButtons.includes('Close') && swipeButtons.includes('Delete') && !gusOpened, { ctxItems, moreItems, asked, hankDeleted, swipeButtons, gusOpened });
 
   /* Amis et rencontres */
   click(byText('.tc-nav', 'Friends')); await wait(60);
@@ -455,13 +492,22 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const zoeRow = $$('.convs .conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === 'zoe');
   const zoeText = zoeRow ? zoeRow.textContent : '';
   step('friends rows show ASL and last message', zoeText.includes(ZOE_ASL) && zoeText.includes('See you at 8') && !zoeText.includes('Bold'), zoeText);
+  const nowS = Date.now() / 1000;
+  pm('wl', ['zoe', String(nowS), 'on', '0', 'erin', String(nowS - 3 * 86400), 'off', '0', 'frank', String(nowS - 600), 'off', '0', 'abe', 'None', 'off', '0']); await wait(60);
+  const friendMeta = () => $$('.convs .conv').map(x => [x.querySelector('.conv-name').textContent, x.querySelector('.conv-meta').textContent]);
+  const seen = friendMeta(), metaOf = n => (seen.find(x => x[0] === n) || [])[1] || '';
+  pm('presence', ['frank', '30', 'offline']); await wait(60);
+  const frankRow = $$('.convs .conv').find(x => x.querySelector('.conv-name').textContent === 'frank');
+  const frankOffline = !!frankRow && !!frankRow.querySelector('.tc-presence-offline');
+  step('friends last online and order', JSON.stringify(seen.map(x => x[0])) === JSON.stringify(['zoe', 'frank', 'erin', 'abe']) && metaOf('erin').includes('Last online') && !metaOf('abe').includes('Last online')
+    && seen.every(x => !/\b(Online|Idle|Offline)\b/.test(x[1])) && frankOffline, { seen, frankOffline });
   click(byText('.tc-nav', 'Meet people')); await wait(120);
   const search = fetches.find(x => /\/search$/.test(x.url));
   step('meet search uses Torch parameters and the browser session', !!search && search.credentials === 'include' && search.f.s === 'B' && String(search.f.o) === '1' && String(search.f.ami) === '13' && String(search.f.ama) === '99' && String(search.f.f) === '0' && String(search.f.t) === '40', search);
   step('presence requested for results', frame('getpresence:').pop() === 'getpresence:zoe;yann;marjorie');
   pm('presence', ['zoe', '0', 'online', 'yann', '5', 'online']); await wait(60);
-  const meetRows = $$('.convs .conv').map(x => x.textContent);
-  step('meet results with status, without me', meetRows.length === 2 && meetRows[0].includes('zoe') && meetRows[0].includes('Online') && meetRows[1].includes('Idle'), meetRows);
+  const meetRows = $$('.convs .conv').map(x => [x.textContent, (x.querySelector('.tc-presence') || {}).className]);
+  step('meet results with status', meetRows.length === 3 && meetRows[0][0].includes('zoe') && /tc-presence-online/.test(meetRows[0][1]) && /tc-presence-idle/.test(meetRows[1][1]), meetRows);
 
   /* Filtres de Meet people dans une fenêtre */
   const searchesBefore = fetches.filter(x => /\/search$/.test(x.url)).length;
@@ -507,6 +553,27 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   releaseSearch(); searchHold = null; await wait(80);
   const lastSearch = searches().pop();
   step('meet refresh', during.count === 1 && during.disabled && lastSearch.f.s === 'F' && String(lastSearch.f.o) === '1' && String(lastSearch.f.f) === '0' && !!refreshBtn() && !refreshBtn().disabled, { during, f: lastSearch.f });
+
+  /* Défilement infini de Meet people : pages pleines de 40 noms, la seconde reprend un nom déjà affiché, la sentinelle entre deux fois dans la zone visible */
+  const meetPage = (start, n) => Array.from({ length: n }, (_, i) => 'p' + (start + i) + ';1').join(':');
+  const reachBottom = async () => {
+    const o = observers.find(x => x.targets.length);
+    if (o) o.cb(o.targets.map(target => ({ isIntersecting: true, target })), o);
+    await wait(80);
+    return !!o;
+  };
+  searchBody = 'h=' + meetPage(0, 40);
+  click(refreshBtn()); await wait(80);
+  const searchesBeforeScroll = searches().length;
+  searchBody = 'h=p0;1:' + meetPage(40, 39);
+  const observed = [await reachBottom()];
+  const cards = $$('.conv.person').length;
+  observed.push(await reachBottom());
+  const scrollSearches = searches().slice(searchesBeforeScroll);
+  step('meet infinite scroll', scrollSearches.length === 2 && String(scrollSearches[0].f.f) === '40' && String(scrollSearches[0].f.t) === '80' && cards === 79
+    && String(scrollSearches[1].f.f) === '80' && String(scrollSearches[1].f.t) === '120' && !byText('.convs button', 'Load more'),
+    { observed, cards, requests: scrollSearches.map(x => [x.f.f, x.f.t]), loadMore: !!byText('.convs button', 'Load more') });
+  searchBody = SEARCH_BODY;
 
   /* Statut */
   click($('.me-btn')); await wait(30);

@@ -27,7 +27,7 @@ function ProfilePageLive() {
       app.ui.toast(e && e.message ? e.message : 'Chatango did not save your profile.');
     });
   }
-  var meta = [draft.age, draft.gender !== 'Not specified' ? draft.gender : null, draft.location].filter(Boolean).join(' · ');
+  var meta = [draft.age, genderShort(draft.gender), draft.location].filter(Boolean).join(' · ');
   return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only Torch users.', wide: true },
     base.loaded ? null : h(T.Banner, { tone: 'warning', icon: 'info', action: h(T.Button, { size: 'sm', onClick: reload }, 'Try again') }, "Torch hasn't loaded your profile yet. Saving stays off so nothing gets erased."),
     h('div', { className: 'split' },

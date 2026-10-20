@@ -11,7 +11,7 @@ Ce document vit à la racine du dépôt git `torch-skin`. Il donne à une nouvel
 2. laisse l'utilisateur se connecter sur l'écran de Torch ;
 3. affiche ensuite une interface refaite (React 18, dans un Shadow DOM) branchée sur le client Torch vivant.
 
-Version actuelle : **0.7.0**. La 0.6.0 est en usage réel, installée par l'utilisateur dans Tampermonkey.
+Version actuelle : **0.8.0**. La 0.6.0 est en usage réel, installée par l'utilisateur dans Tampermonkey.
 
 ## 2. Règles non négociables
 
@@ -113,7 +113,7 @@ pnpm build:ds         # régénère la doc des composants du design system
 
 Suites (`tests/`, lancées par `tests/run.mjs`) :
 - `smoke` : prototype hébergé (51 étapes) ;
-- `live_ui` : mode live avec faux client Torch (104 étapes) ;
+- `live_ui` : mode live avec faux client Torch (107 étapes) ;
 - `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login (13 étapes) ;
 - `live_login` : détection de connexion (3 étapes) ;
 - `avatar` : avatars (7 étapes) ;
@@ -148,7 +148,15 @@ Tous ces tests doivent rester verts. Le lanceur juge chaque suite sur son code d
 - **Meet people.**
   - POST sur `chatango.path('search')` avec `credentials: 'include'` et les champs `ami`, `ama`, `imc` (0 tous, 1 photos, 2 personnages), `s` (B, M ou F), `ss`, `o` (1 = en ligne seulement), `h5=1`, `f` et `t` (plage d'index début et fin, chadango `people_query.go`).
   - Réponse : `h=nom;…:nom;…`.
-  - Le pont envoie ensuite `getpresence:a;b` sur la connexion privée. Réponse `presence` : triplets nom, minutes d'inactivité, état.
+  - Pagination : la page suivante part de `meet.next` (`f` de la page précédente plus le nombre de noms reçus), pas du nombre de résultats affichés, qui écarte les doublons. Une page de moins de 40 noms termine la liste. Les résultats gardent le compte connecté, marqué « You ».
+  - Le pont envoie ensuite `getpresence:a;b` sur la connexion privée. Réponse `presence` : triplets nom, minutes, état (`online`, `app` ou `offline`).
+- **Présence des amis (connexion privée).** Les horodatages sont en secondes. `None` ou 0 veut dire inconnu.
+  - `wl` : quadruplets `nom:horodatage:état:minutes`, état `on`, `off` ou `app`. En `on`, des minutes non nulles veulent dire inactif. En `off`, l'horodatage est la dernière connexion.
+  - `wladd:nom:état:valeur` : minutes d'inactivité en `on`, horodatage en `off` ou `app`. `wladd:nom:invalid` pour un nom inconnu.
+  - `wlonline:nom`, `wlapp:nom` (connecté depuis l'application mobile), `wloffline:nom:horodatage` (ch.py).
+  - `status:nom:horodatage:état`, état `online`, `app` ou `offline` (ch.py, chatango-lib). Elle ne dit pas si le compte est inactif : un état idle connu est gardé. Torch ne s'en sert que pour son écran de MP.
+  - `presence` : en `online` ou `app`, les minutes sont de l'inactivité. En `offline`, elles donnent une dernière connexion approchée.
+  - Le pont en tire `lastOn` (millisecondes, 0 si inconnu). Un passage hors ligne sans horodatage prend l'heure courante (`app/root.js`). Un ami hors ligne affiche « Last online » avec cette date.
 - **Activité du profil (vissle).**
   - Transport : `POST https://vissle.me/track1/activity`, corps `JSON.stringify({action:'activity', profile, page, order, get})` en text/plain. Pas d'authentification (source : `vissle.me/js/track.js`).
   - Aucun en-tête CORS : la page ne peut pas lire la réponse avec `fetch`. D'où le pont `GM_xmlhttpRequest` dans le bac à sable du userscript, et l'application injectée dans la page par un `<script>` inline.
@@ -204,7 +212,7 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
 - **Messages privés :**
   - historique depuis la base de Torch, liste d'amis, ajout et retrait d'amis, blocage, statut ;
   - police et couleurs des autres membres, en direct et depuis l'historique ;
-  - « Close » : croix sur la ligne ou menu. La conversation est retirée de la liste, l'historique est gardé. Elle reste fermée (champ `hidden` de `torch-skin:<pseudo>`) jusqu'à un MP entrant ou une réouverture manuelle ;
+  - « Close » : menu de la ligne (bouton « … » ou clic droit), swipe tactile, ou menu du fil. La conversation est retirée de la liste, l'historique est gardé. Elle reste fermée (champ `hidden` de `torch-skin:<pseudo>`) jusqu'à un MP entrant ou une réouverture manuelle ;
   - « Delete » : fermer, plus effacer la copie locale de Torch (`clearHistory`), avec confirmation.
 - **Médias (groupes et MP) :** vidéos YouTube, images, photos MP. Ils suivent les réglages `embedImages`, `embedVideos` et `proxyMedia` (rien n'est chargé avant le clic). Les aperçus affichent « Video », « Image » ou « Photo ».
 - **Meet people :** cartes de mini profil, fenêtre de filtres, étiquettes retirables, bouton Refresh.
@@ -221,6 +229,11 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
   - écran de login de Torch habillé en CSS seul (`styles/login.css`), retiré à `__TORCH_SHOW__` ;
   - chargements : écran de démarrage, squelettes (groupes, MP, amis, membres, profils), Spinner pour l'historique, fondu des avatars ;
   - session coupée : fenêtre bloquante (connecté ailleurs, session expirée, hors ligne, connexion perdue) avec Reload et reconnexion. Au retour du réseau, les groupes rejoints fermés et les MP sont reconnectés.
+- **0.8.0 :**
+  - amis : dernière connexion (« Last online »), tri en ligne, inactif, puis hors ligne du plus récent au plus ancien ; genre abrégé en M ou F ; plus de texte de statut sur les lignes, la pastille suffit ;
+  - Chats : compteur de non lus sur l'onglet, ligne en grille nom et heure, informations, aperçu et compteur. Actions Close et Delete par le menu « … », le clic droit ou le swipe tactile ;
+  - squelettes du design system en balayage lumineux (`tc-shimmer`), coupé en mouvement réduit (préférence système ou réglage de l'application) ;
+  - Meet people : cartes de hauteur constante (ligne d'informations et deux lignes de bio réservées, squelettes pendant le chargement), défilement infini (sentinelle observée par `IntersectionObserver`, Spinner en bas, plus de bouton Load more), le compte connecté apparaît avec un badge « You » et ouvre sa fiche profil.
 - **Userscript :** deux contextes. L'application tourne dans la page, et seul le pont vissle tourne dans le bac à sable (`@grant GM_xmlhttpRequest`, `@connect vissle.me`). Démarrage automatique, page d'accueil seulement (`@noframes` et vérification `pathname === '/'`), pas de double démarrage, SRI sur React.
 
 ## 8. Ce qui reste ouvert

@@ -26,7 +26,7 @@ function DMView(p) {
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
-      options: [{ value: 'chats', label: 'Chats' }, { value: 'friends', label: 'Friends' }, { value: 'meet', label: 'Meet people' }]
+      options: [{ value: 'chats', label: h(Frag, null, 'Chats', h(T.CountBadge, { count: unreadCount })) }, { value: 'friends', label: 'Friends' }, { value: 'meet', label: 'Meet people' }]
     })),
     section === 'friends' ? h(FriendsList, { current: id }) : section === 'meet' ? h(MeetPeople, null) : h(Frag, null,
     h('div', { style: { padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10 } },
@@ -38,11 +38,7 @@ function DMView(p) {
         }))),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
       LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading conversations' })
-      : shown.length ? shown.map(function (n) {
-        return h('div', { key: n, className: 'conv-row' },
-          personRow(s, n, function () { app.nav({ view: 'dm', id: n }); }, id),
-          h(T.IconButton, { icon: 'x', label: 'Close conversation', size: 26, iconSize: 14, className: 'conv-close', onClick: function () { app.actions.closeDm(n); } }));
-      }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'))));
+      : shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'))));
 
   var thread;
   if (!convo) {
@@ -81,17 +77,15 @@ function DMView(p) {
         h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
         h(T.Avatar, { name: id, size: 30, status: u.status, ring: 'var(--bg)' }),
         h('h2', null, id),
-        h('span', { className: 'topic', style: { flex: 1 } }, [statusLabel(u.status), u.friend ? 'Friend' : null].filter(Boolean).join(' · ')),
+        h('span', { className: 'topic', style: { flex: 1 } }, [u.friend ? 'Friend' : null, lastOnline(u)].filter(Boolean).join(' · ')),
         h('span', { className: 'topic dm-meta', style: { flex: 1 } }, personMeta(u)),
         h(T.IconButton, { icon: 'panel', label: showProfile ? 'Hide profile' : 'Show profile', pressed: showProfile, className: 'hide-mobile', onClick: function () { setShowProfile(!showProfile); } }),
         h(MenuButton, {
           label: 'Conversation options', items: [
             { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(id, null); } },
             { label: u.friend ? 'Remove friend' : 'Add friend', icon: u.friend ? 'user-minus' : 'user-plus', onSelect: function () { app.actions.toggleUser(id, 'friend'); } },
-            { divider: true },
-            { label: 'Close conversation', icon: 'x', onSelect: function () { app.actions.closeDm(id); } },
-            { label: 'Delete conversation…', icon: 'trash', danger: true, onSelect: function () { app.ui.confirm({ title: 'Delete this conversation?', body: LIVE ? 'Removes the copy Torch keeps in this browser. Chatango does not store private messages, and ' + id + ' keeps their copy.' : 'Messages with ' + id + ' are removed from your account. ' + id + ' keeps their copy.', confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(id); } }); } }
-          ]
+            { divider: true }
+          ].concat(convActions(app, id))
         })),
       h('div', { className: 'log', role: 'log', 'aria-label': 'Messages with ' + id, ref: logRef }, h('div', { className: 'log-inner' }, rows)),
       h('div', { className: 'composer-wrap' },
@@ -105,8 +99,13 @@ function DMView(p) {
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };
 function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
+/**
+ * Permet de dater la dernière connexion d'un ami hors ligne.
+ * @param {Object} u Membre dans l'état.
+ */
+function lastOnline(u) { return u.friend && u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : null; }
 function personMeta(u) {
-  return [statusLabel(u.status), u.age || null, u.gender && u.gender !== 'Not specified' ? u.gender : null, u.location || null].filter(Boolean).join(' · ');
+  return [lastOnline(u), u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
 /**
  * Ligne d'informations d'une personne.
@@ -124,12 +123,94 @@ function personRow(s, n, onClick, current) {
   var u = userOf(s, n), c = s.dms[n], last = c && c.messages[c.messages.length - 1];
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': current === n ? 'page' : undefined, onClick: onClick },
     h(T.Avatar, { name: n, size: 36, status: u.status, ring: 'var(--panel)' }),
-    h('span', { className: 'conv-main' },
-      h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), last ? h('time', { className: 'tc-msg-time' }, shortWhen(last.ts, s.prefs.h24)) : null),
+    h('span', { className: 'conv-main conv-grid' },
+      h('span', { className: 'conv-name' }, n),
+      last ? h('time', { className: 'tc-msg-time conv-time' }, shortWhen(last.ts, s.prefs.h24)) : null,
       personMetaLine(n, u),
-      c ? h('span', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
-        h('span', { className: 'conv-prev grow' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet'),
-        c.unread ? h('span', { className: 'udot', 'aria-label': 'Unread' }) : null) : null));
+      c ? h('span', { className: 'conv-prev' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet') : null,
+      c ? h(T.CountBadge, { count: c.unread }) : null));
+}
+
+/**
+ * Permet de lister les actions de fermeture et de suppression d'une conversation.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Membre de la conversation.
+ */
+function convActions(app, name) {
+  return [
+    { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },
+    { label: 'Delete conversation…', short: 'Delete', icon: 'trash', danger: true, onSelect: function () {
+      app.ui.confirm({ title: 'Delete this conversation?', body: LIVE ? 'Removes the copy Torch keeps in this browser. Chatango does not store private messages, and ' + name + ' keeps their copy.' : 'Messages with ' + name + ' are removed from your account. ' + name + ' keeps their copy.', confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
+    } }
+  ];
+}
+
+var SWIPE_REVEAL = 144;
+/**
+ * Ligne de la liste Chats avec ses actions de conversation.
+ * @param {{name: string, current: string}} p Membre de la conversation et conversation ouverte.
+ */
+function ChatRow(p) {
+  var app = useApp(), n = p.name;
+  var m = useState(null), menu = m[0], setMenu = m[1];
+  var w = useState(null), swipe = w[0], setSwipe = w[1];
+  var rowRef = useRef(null), drag = useRef(null), swallow = useRef(false);
+  var actions = convActions(app, n);
+  // Le décalage suit le doigt hors de React : un rendu par pointermove serait trop coûteux.
+  function settle(open) { rowRef.current.style.setProperty('--swipe', (open ? -SWIPE_REVEAL : 0) + 'px'); setSwipe(open ? 'open' : null); }
+  useOutside(rowRef, swipe === 'open', function () { settle(false); });
+  function onPointerDown(e) {
+    swallow.current = false;
+    if (e.pointerType === 'mouse') return;
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, from: swipe === 'open' ? -SWIPE_REVEAL : 0, axis: null, dx: 0 };
+  }
+  function onPointerMove(e) {
+    var d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    var mx = e.clientX - d.x, my = e.clientY - d.y;
+    if (!d.axis) {
+      if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+      d.axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+      if (d.axis === 'x') { rowRef.current.setPointerCapture(e.pointerId); setSwipe('drag'); }
+    }
+    if (d.axis !== 'x') return;
+    d.dx = Math.min(0, Math.max(-SWIPE_REVEAL, d.from + mx));
+    rowRef.current.style.setProperty('--swipe', d.dx + 'px');
+  }
+  function onPointerUp(e) {
+    var d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    if (d.axis !== 'x') return;
+    swallow.current = true;
+    settle(d.dx < -SWIPE_REVEAL / 2);
+  }
+  function onPointerCancel() {
+    var d = drag.current;
+    drag.current = null;
+    if (d && d.axis === 'x') settle(false);
+  }
+  // Le click qui suit un glissement n'ouvre pas la conversation : un toucher sur une ligne ouverte la referme.
+  function onClickCapture(e) {
+    if (swallow.current) swallow.current = false;
+    else if (swipe === 'open' && e.target.closest('.conv')) settle(false);
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  return h('div', {
+    ref: rowRef, className: cx('conv-row', menu && 'menu-open', swipe === 'drag' && 'dragging', swipe === 'open' && 'swiped'),
+    onContextMenu: function (e) { e.preventDefault(); setMenu({ at: { x: e.clientX, y: e.clientY } }); },
+    onPointerDown: onPointerDown, onPointerMove: onPointerMove, onPointerUp: onPointerUp, onPointerCancel: onPointerCancel, onClickCapture: onClickCapture
+  },
+    swipe ? h('div', { className: 'conv-swipe', style: { width: SWIPE_REVEAL } }, actions.map(function (a) {
+      return h('button', { key: a.short, type: 'button', className: a.danger ? 'danger' : undefined, 'aria-label': a.label, onClick: function () { settle(false); a.onSelect(); } }, h(T.Icon, { name: a.icon, size: 16 }), a.short);
+    })) : null,
+    personRow(app.state, n, function () { app.nav({ view: 'dm', id: n }); }, p.current),
+    h('div', { className: 'conv-more' }, h(MenuButton, {
+      label: 'Options for ' + n, size: 26, iconSize: 16, items: actions, open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
+    })));
 }
 
 function FriendsList(p) {
@@ -137,7 +218,8 @@ function FriendsList(p) {
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
   var friends = Object.keys(s.users).filter(function (n) { return n !== s.me && s.users[n].friend; }).sort(function (x, y) {
-    return statusRank(s.users[x].status) - statusRank(s.users[y].status) || x.localeCompare(y);
+    var a = s.users[x], b = s.users[y], rank = statusRank(a.status);
+    return rank - statusRank(b.status) || (rank === STATUS_ORDER.offline ? (b.lastOn || 0) - (a.lastOn || 0) : 0) || x.localeCompare(y);
   });
   var online = friends.filter(function (n) { return s.users[n].status !== 'offline'; }).length;
   useProfiles(friends);

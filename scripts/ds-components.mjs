@@ -153,11 +153,11 @@ Sizes: 16 in reply previews, 22 in the sidebar, 28 in lists, 36 in messages, 64 
 - \`aside\` holds the channel picker. \`beforeSend\` holds one icon button placed right before Send, such as the message style.`,
     `  return h(T.Composer, { placeholder: 'Message #community', replyTo: { author: 'sable', text: "Known issue on server s12" }, onCancelReply: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) });`],
   ['Skeleton', 'Feedback', 120,
-    'A pulsing placeholder that holds the place of content still loading.',
+    'A shimmering placeholder that holds the place of content still loading.',
     `Pass \`width\` and \`height\` in pixels, or \`circle\` for an avatar. Compose them in the shape of the rows they replace (avatar plus one or two lines) so the layout does not jump when the content arrives. Use them only while data is on its way: an empty list says so in words.
 
 - Skeletons are hidden from assistive tech: the region that loads announces it once, in text.
-- The pulse stops when the reader asks for reduced motion.
+- The shimmer stops when the reader asks for reduced motion.
 - Add \`tc-fade-in\` on content that replaces a skeleton or appears late, such as a loaded picture.`,
     `  function line(w) { return h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } }, h(T.Skeleton, { circle: true, width: 36, height: 36 }), h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, h(T.Skeleton, { width: w, height: 12 }), h(T.Skeleton, { width: w + 60, height: 10 }))); }
   return h('div', { className: 'col', style: { maxWidth: 320 } }, line(90), line(130), line(70));`],
