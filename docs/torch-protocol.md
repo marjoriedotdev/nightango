@@ -36,7 +36,7 @@ Ce document décrit ce que Torch Skin sait du client Torch (vissle.me) et du pro
 
 ## Avertissements de Torch
 
-`client.systemMessage(...)` et `client.setNotice(...)` sont interceptés par le pont, puis affichés dans le fil ou en notification.
+`client.systemMessage(...)` et `client.setNotice(...)` sont interceptés par le pont, puis affichés en notification (toast), jamais dans le fil : Torch les adresse au groupe qu'il croit ouvert (`client.focus`), pas forcément au groupe concerné.
 
 - Présence d'un ami : Torch émet « X is now online. », « …offline. » ou « …idle… » avec `unique: "status"` et sans `group`, pour le MP qu'il croit ouvert (gestionnaires `status` et `idleupdate`, `inject.js:4187` et `inject.js:4294`). Le pont les tait : la liste d'amis montre déjà la présence.
 

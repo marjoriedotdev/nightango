@@ -258,7 +258,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* Avertissements et connexion */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await wait(50);
-  step('Torch notice shown in group', $$('.ev').some(x => x.textContent.includes('exceeded the character limit')));
+  step('Torch notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
   let reloads = 0;
   C.setNotice({ icon: 'warning', content: 'Relogin required.', button: 'Reload', action: () => { reloads++; } }); await wait(50);
   const t = byText('.toast', 'Relogin required.');

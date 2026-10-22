@@ -805,12 +805,8 @@ function Root(props) {
           if (d.session && d.session.reason === 'offline' && open) d.session = null;
         });
         break;
-      case 'notice': {
-        var gs = stateRef.current.groups[op.gid];
-        if (gs && gs.joined) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', text: op.text, ts: Date.now() }); });
-        else toast(op.text, { icon: 'info' });
-        break;
-      }
+      // Torch adresse ses notices au groupe qu'il croit ouvert : un toast évite de les écrire dans le mauvais fil.
+      case 'notice': toast(op.text, { icon: 'info' }); break;
       case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { icon: 'info', action: { label: op.button, run: op.action } } : { icon: 'info' }); break;
       case 'pm': {
         var s0 = stateRef.current;
