@@ -3,4 +3,4 @@ dist/
 /torch-skin-*.user.js
 .postman/
 postman/
-AGENTS.md
+.scratch/
