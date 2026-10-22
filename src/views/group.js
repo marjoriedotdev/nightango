@@ -8,17 +8,17 @@ function GroupView(p) {
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a7 = useState(false), jump = a7[0], setJump = a7[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
-  var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ first: null, top: 0, height: 0 });
-  var count = g ? g.messages.length : 0, firstId = count ? g.messages[0].id : null;
+  var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
+  var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
   useLayoutEffect(function () {
     var el = logRef.current; if (!el) return;
     var was = seen.current;
     if (atBottom.current) el.scrollTop = el.scrollHeight;
     // Position absolue : le navigateur a pu ancrer le défilement lui-même, l'ajouter au sien doublerait le décalage.
-    else if (firstId !== was.first) el.scrollTop = was.top + el.scrollHeight - was.height;
+    else if (firstTs < was.firstTs) el.scrollTop = was.top + el.scrollHeight - was.height;
     else setJump(true);
-    seen.current = { first: firstId, top: el.scrollTop, height: el.scrollHeight };
+    seen.current = { firstTs: firstTs, top: el.scrollTop, height: el.scrollHeight };
   }, [count, !!search]);
   var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open');
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
