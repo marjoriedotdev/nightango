@@ -606,7 +606,12 @@ function Root(props) {
     u.styleTs = ts;
   }
   function setOwnStyle(style) {
-    update(function (d) { mergeStyle(ensureLiveUser(d, d.me), style, Date.now()); });
+    update(function (d) {
+      var u = ensureLiveUser(d, d.me);
+      // Fusion sans mergeStyle : l'horloge locale peut retarder sur l'horodatage serveur des messages reçus.
+      u.style = Object.assign({}, u.style, style);
+      u.styleTs = Math.max(u.styleTs || 0, Date.now());
+    });
   }
   /** Traduit l'état Chatango d'un groupe (drapeaux, modérateurs, annonce) dans le modèle de l'interface. */
   function deriveLive(g) {
