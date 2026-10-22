@@ -110,6 +110,11 @@ h1,h2,h3{text-wrap:balance}
 .overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:max(72px,env(safe-area-inset-top,0px)) 16px 16px;background:rgba(8,9,11,.55)}
 .dialog{width:100%;max-width:440px;max-height:calc(100% - 24px);overflow:auto;border-radius:12px;background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating)}
 .dialog.wide{max-width:560px}
+.overlay.sheet{padding:0;align-items:stretch}
+.dialog.sheet{max-width:none;max-height:none;display:flex;flex-direction:column;border:0;border-radius:0;background:var(--panel);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.dialog.sheet .topbar{padding:0 6px 0 16px}
+.dialog.sheet .kv{padding:14px 16px 0}
+.dialog.sheet .kv:first-child{border-top:0}
 .dialog-head{padding:18px 20px 2px}
 .dialog-head h2{margin:0;font-size:17px;line-height:24px;font-weight:600}
 .dialog-head p{margin:6px 0 0;color:var(--text-2);font-size:13.5px}

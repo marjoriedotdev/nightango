@@ -143,8 +143,8 @@ function Dialog(p) {
       if (prev && prev.focus) prev.focus();
     };
   }, []);
-  return h(Portal, null, h('div', { className: 'overlay', onMouseDown: function (e) { if (e.target === e.currentTarget && p.onClose) p.onClose(); } },
-    h('div', { className: cx('dialog', p.wide && 'wide', p.className), role: p.role || 'dialog', 'aria-modal': 'true', 'aria-label': p.label || p.title, style: p.style, ref: ref },
+  return h(Portal, null, h('div', { className: cx('overlay', p.sheet && 'sheet'), onMouseDown: function (e) { if (e.target === e.currentTarget && p.onClose) p.onClose(); } },
+    h('div', { className: cx('dialog', p.wide && 'wide', p.sheet && 'sheet', p.className), role: p.role || 'dialog', 'aria-modal': 'true', 'aria-label': p.label || p.title, style: p.style, ref: ref },
       p.title ? h('div', { className: 'dialog-head' }, h('h2', null, p.title), p.description ? h('p', null, p.description) : null) : null,
       p.children,
       p.footer ? h('div', { className: 'dialog-foot' }, p.footer) : null)));

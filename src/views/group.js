@@ -7,6 +7,7 @@ function GroupView(p) {
   var a4 = useState('none'), channel = a4[0], setChannel = a4[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a7 = useState(false), jump = a7[0], setJump = a7[1];
+  var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var logRef = useRef(null), atBottom = useRef(true);
   var count = g ? g.messages.length : 0;
   useLayoutEffect(function () {
@@ -99,6 +100,7 @@ function GroupView(p) {
         h('span', { className: 'grow only-mobile' }),
         h('button', { type: 'button', className: 'pillbtn hide-mobile', 'aria-pressed': String(showMembers), onClick: function () { setShowMembers(!showMembers); } },
           h(T.Icon, { name: 'users', size: 16 }), LIVE && !g.membersLoaded && !g.liveCount ? 'Members' : online + ' online'),
+        h(T.IconButton, { icon: 'info', label: 'Group info and members', className: 'only-mobile', onClick: function () { setInfoOpen(true); } }),
         h(T.IconButton, { icon: 'search', label: 'Search in this group', pressed: search != null, onClick: function () { setSearch(search == null ? '' : null); } }),
         h(T.IconButton, { icon: g.muted ? 'volume-x' : 'bell', label: g.muted ? 'Unmute group' : 'Mute group', pressed: g.muted, onClick: function () { app.actions.toggleMute(g.id); } }),
         h(MenuButton, {
@@ -127,5 +129,6 @@ function GroupView(p) {
       h('div', { className: 'composer-wrap' },
         h('p', { className: 'typing', 'aria-live': 'polite' }, typing.length ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, typing.join(', ')), typing.length > 1 ? ' are typing' : ' is typing') : null),
         composer)),
-    showMembers ? h(MembersPanel, { g: g }) : null);
+    showMembers ? h(MembersPanel, { g: g }) : null,
+    infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null);
 }

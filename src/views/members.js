@@ -1,4 +1,8 @@
-function MembersPanel(p) {
+/**
+ * Liste des membres d'un groupe.
+ * @param {{g: Object}} p Groupe affiché.
+ */
+function MembersList(p) {
   var app = useApp(), s = app.state, g = p.g;
   var staff = g.members.filter(function (n) { return roleOf(g, n); });
   var others = g.members.filter(function (n) { return !roleOf(g, n); });
@@ -11,15 +15,39 @@ function MembersPanel(p) {
       h('span', { className: 'grow', style: u.status === 'offline' && n !== s.me ? { color: 'var(--text-3)' } : null }, n + (n === s.me ? ' (you)' : '')),
       aside ? h('span', { style: { fontSize: 11.5, color: 'var(--text-3)' } }, aside) : null);
   }
-  return h('aside', { className: 'col members', 'aria-label': 'Members of ' + g.id },
+  return LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
+    : h('div', { className: 'members-list' },
+      h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n, ROLE_LABEL[roleOf(g, n)]); }),
+      h('h3', { className: 'mlabel' }, 'Online · ' + on.length), on.map(function (n) { return row(n); }),
+      off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
+      s.prefs.safety.showGuests && g.guests ? h('p', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + g.guests) : null);
+}
+
+/**
+ * Colonne des membres d'un groupe.
+ * @param {{g: Object}} p Groupe affiché.
+ */
+function MembersPanel(p) {
+  return h('aside', { className: 'col members', 'aria-label': 'Members of ' + p.g.id },
     h('div', { className: 'topbar', style: { padding: '0 12px 0 16px' } }, h('h2', { className: 'grow' }, 'Members')),
+    h('div', { className: 'scroll' }, h(MembersList, { g: p.g })));
+}
+
+/**
+ * Feuille plein écran qui montre la description et les membres d'un groupe.
+ * @param {{g: Object, onClose: Function}} p Groupe affiché et fermeture de la feuille.
+ */
+function GroupInfoSheet(p) {
+  var g = p.g;
+  return h(Dialog, { label: 'About #' + g.id, sheet: true, onClose: p.onClose },
+    h('div', { className: 'topbar' },
+      h(T.Icon, { name: 'hash', size: 18, style: { color: 'var(--text-3)' } }),
+      h('h2', { className: 'grow' }, g.id),
+      h(T.IconButton, { icon: 'x', label: 'Close', onClick: p.onClose })),
     h('div', { className: 'scroll' },
-      LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
-        : h('div', { className: 'members-list' },
-          h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n, ROLE_LABEL[roleOf(g, n)]); }),
-          h('h3', { className: 'mlabel' }, 'Online · ' + on.length), on.map(function (n) { return row(n); }),
-          off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
-          s.prefs.safety.showGuests && g.guests ? h('p', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + g.guests) : null)));
+      g.topic ? h('div', { className: 'kv' }, h('h3', null, 'Description'), h('p', { className: 'about' }, g.topic)) : null,
+      h('div', { className: 'kv' }, h('h3', null, 'Members')),
+      h(MembersList, { g: g })));
 }
 
 /* ---------- Profil d'un membre ---------- */
