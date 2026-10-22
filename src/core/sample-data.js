@@ -20,7 +20,6 @@ function seedWorld(me) {
   var now = Date.now();
   function t(m) { return now - m * MIN; }
   function msg(author, text, m, extra) { return Object.assign({ id: uid(), kind: 'msg', author: author, text: text, ts: t(m) }, extra || {}); }
-  function ev(type, user, m) { return { id: uid(), kind: 'event', type: type, user: user, ts: t(m) }; }
   var users = {
     ember: { status: 'online', age: 31, location: 'Bristol, UK', about: "Started Torch. Breaks things on purpose so you don't have to.", style: { nameColor: '#ff5f1f', font: 'Georgia', textColor: '#ffd9c2' } },
     sable: { status: 'online', age: 24, location: 'Lyon, France', about: 'Moderator in community. Night shifts, mostly. Ask before posting links.', friend: true, style: { nameColor: '#3f7fff', textColor: '#cfe0ff' } },
@@ -70,7 +69,6 @@ function seedWorld(me) {
       msg('kestrel', 'Anyone else getting dropped from #trade every few minutes since this morning?', 19),
       msg('sable', "Known issue on server s12, it's on Chatango's side. Reconnecting twice usually sticks.", 18),
       msg('sable', "I've put a note in the group announcement until it's fixed.", 18),
-      ev('join', 'drift', 17), ev('join', 'rook', 17), ev('join', 'tallow', 16), ev('leave', 'petrichor', 16),
       msg('quill', 'Confirmed, the second reconnect held. Thanks.', 16, { replyTo: { author: 'sable', text: "Known issue on server s12, it's on Chatango's side." } }),
       msg('marrow', "Here's what the reconnect loop looks like on my side:", 14, { embeds: [{ kind: 'image', url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#0d0e10"/><g font-family="monospace" font-size="11" fill="#8a8e96"><text x="14" y="26">[ws] connecting s12.chatango.com:8081</text><text x="14" y="46" fill="#f08a8a">[ws] closed (1006) after 41s</text><text x="14" y="66">[ws] reconnect 1/3</text><text x="14" y="86" fill="#f08a8a">[ws] closed (1006) after 2s</text><text x="14" y="106">[ws] reconnect 2/3</text><text x="14" y="126" fill="#3fb27f">[ws] connected, joined #community</text></g></svg>') }] }),
       msg('nightowl', '@' + me + ' the theme you exported imports cleanly now, nice work.', 12),

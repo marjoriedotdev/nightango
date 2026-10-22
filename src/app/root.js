@@ -221,7 +221,7 @@ function Root(props) {
       var me = stateRef.current.me;
       update(function (d) {
         var g = d.groups[gid];
-        if (!g.joined) { g.joined = true; if (g.members.indexOf(me) < 0) g.members.push(me); g.messages.push({ id: uid(), kind: 'event', type: 'join', user: me, ts: Date.now() }); }
+        if (!g.joined) { g.joined = true; if (g.members.indexOf(me) < 0) g.members.push(me); }
       });
       nav({ view: 'group', id: gid });
     },
@@ -264,7 +264,7 @@ function Root(props) {
         g.bans.unshift({ name: name, by: me, at: now, reason: reason || 'Spam', ip: (40 + Math.floor(Math.random() * 180)) + '.' + Math.floor(Math.random() * 255) + '.x.x' });
         g.members = g.members.filter(function (n) { return n !== name; });
         if (g.settings.staff[name]) delete g.settings.staff[name];
-        g.messages.push({ id: uid(), kind: 'event', type: 'ban', user: name, ts: now });
+        g.messages.push({ id: uid(), kind: 'ban', user: name, ts: now });
         g.audit.push({ id: uid(), at: now, actor: me, text: 'Banned ' + name + ' for ' + String(reason || 'spam').toLowerCase() });
       });
       toast(name + ' was banned from #' + gid + '.', { action: { label: 'Undo', run: function () { actions.unban(gid, name, true); } } });
@@ -330,10 +330,10 @@ function Root(props) {
         var leaving = g2.members.filter(function (n) { return n !== me && !roleOf(g2, n); });
         if (outside.length && (Math.random() < 0.6 || !leaving.length)) {
           var who = pick(outside);
-          update(function (d) { var x = d.groups[gid2]; x.members.push(who); x.messages.push({ id: uid(), kind: 'event', type: 'join', user: who, ts: Date.now() }); });
+          update(function (d) { d.groups[gid2].members.push(who); });
         } else if (leaving.length) {
           var who2 = pick(leaving);
-          update(function (d) { var x = d.groups[gid2]; x.members = x.members.filter(function (n) { return n !== who2; }); x.messages.push({ id: uid(), kind: 'event', type: 'leave', user: who2, ts: Date.now() }); });
+          update(function (d) { var x = d.groups[gid2]; x.members = x.members.filter(function (n) { return n !== who2; }); });
         }
       } else if (r < 0.84) {
         var senders = ['kestrel', 'sable', 'quill'].filter(function (n) { var u = userOf(s0, n); return !u.blocked && u.status !== 'offline'; });
@@ -733,8 +733,8 @@ function Root(props) {
         list.forEach(function (n) { var u = ensureLiveUser(d, n); if (u.status === 'offline' && !u.friend) u.status = 'online'; });
       }); break;
       case 'member': groupUpdate(op.gid, function (g, d) {
-        if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensureLiveUser(d, op.name); g.messages.push({ id: uid(), kind: 'event', type: 'join', user: op.name, ts: Date.now() }); }
-        if (op.action === 0 && g.members.indexOf(op.name) >= 0) { g.members = g.members.filter(function (n) { return n !== op.name; }); g.messages.push({ id: uid(), kind: 'event', type: 'leave', user: op.name, ts: Date.now() }); }
+        if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensureLiveUser(d, op.name); }
+        if (op.action === 0) g.members = g.members.filter(function (n) { return n !== op.name; });
       }); break;
       case 'count': groupUpdate(op.gid, function (g) { g.liveCount = op.n; }); break;
       case 'room': update(function (d) {
@@ -771,7 +771,7 @@ function Root(props) {
         var mine = op.ban.by === stateRef.current.me;
         groupUpdate(op.gid, function (g) {
           if (!g.bans.some(function (b) { return b.unid === op.ban.unid && b.ip === op.ban.ip; })) g.bans.unshift(op.ban);
-          g.messages.push({ id: uid(), kind: 'event', type: 'ban', user: op.ban.name, ts: Date.now() });
+          g.messages.push({ id: uid(), kind: 'ban', user: op.ban.name, ts: Date.now() });
         });
         if (mine) toast(op.ban.name + ' was banned from #' + op.gid + '.', { action: { label: 'Undo', run: function () { liveBridge.unban(op.gid, op.ban); } } });
         break;

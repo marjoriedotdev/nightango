@@ -167,7 +167,9 @@ var liveBridge = (function () {
       C.systemMessage = function (data) {
         try {
           var text = String(data && data.content || '').replace(/\r/g, ' ').trim();
-          if (text && !QUIET.some(function (re) { return re.test(text); })) alertOnce({ op: 'notice', gid: (data && data.group) || C.focus, text: text });
+          // Présence d'un ami (unique status) : Torch la destine au MP ouvert, sans groupe. La liste d'amis la montre déjà.
+          var presence = data && data.unique === 'status';
+          if (text && !presence && !QUIET.some(function (re) { return re.test(text); })) alertOnce({ op: 'notice', gid: (data && data.group) || C.focus, text: text });
         } catch (e) { warn(e); }
         return sys.apply(this, arguments);
       };

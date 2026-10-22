@@ -5,7 +5,6 @@ function GroupView(p) {
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
   var a3 = useState(null), replyTo = a3[0], setReplyTo = a3[1];
   var a4 = useState('none'), channel = a4[0], setChannel = a4[1];
-  var a5 = useState({}), expanded = a5[0], setExpanded = a5[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a7 = useState(false), jump = a7[0], setJump = a7[1];
   var logRef = useRef(null), atBottom = useRef(true);
@@ -39,12 +38,7 @@ function GroupView(p) {
     if (!q && prefs.markNew && !marker && s.route.markerTs && m.ts > s.route.markerTs && m.author !== me && m.kind === 'msg') {
       items.push(h('div', { key: 'n' + m.id, className: 'newmark', role: 'separator' }, 'New messages')); marker = true; prev = null;
     }
-    if (m.kind === 'event') {
-      var evs = [m];
-      while (i + 1 < msgs.length && msgs[i + 1].kind === 'event' && dayKey(msgs[i + 1].ts) === dk) evs.push(msgs[++i]);
-      items.push(h(EventRow, { key: 'e' + m.id, events: evs, open: !!expanded[m.id], onToggle: (function (id) { return function () { setExpanded(function (x) { var o = Object.assign({}, x); o[id] = !o[id]; return o; }); }; })(m.id) }));
-      prev = null; continue;
-    }
+    if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), m.user + ' was banned')); prev = null; continue; }
     if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null)); prev = null; continue; }
     var u = userOf(s, m.author);
     if ((u.ignored || (u.blocked && prefs.safety.syncBlocked)) && m.author !== me) {
@@ -134,20 +128,4 @@ function GroupView(p) {
         h('p', { className: 'typing', 'aria-live': 'polite' }, typing.length ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, typing.join(', ')), typing.length > 1 ? ' are typing' : ' is typing') : null),
         composer)),
     showMembers ? h(MembersPanel, { g: g }) : null);
-}
-
-function EventRow(p) {
-  var joined = [], left = [], banned = [];
-  p.events.forEach(function (e) { (e.type === 'join' ? joined : e.type === 'leave' ? left : banned).push(e.user); });
-  var parts = [];
-  if (joined.length) parts.push(joined.length === 1 ? joined[0] + ' joined' : joined.length + ' people joined');
-  if (left.length) parts.push(left.length === 1 && !joined.length ? left[0] + ' left' : left.length + ' left');
-  if (banned.length) parts.push(banned.length === 1 ? banned[0] + ' was banned' : banned.length + ' were banned');
-  var multi = p.events.length > 1;
-  return h('div', { className: 'ev' },
-    h(T.Icon, { name: banned.length ? 'ban' : 'user-plus', size: 14 }),
-    h('span', null, parts.join(', ')),
-    multi ? h('button', { type: 'button', className: 'linkbtn', 'aria-expanded': String(p.open), onClick: p.onToggle }, p.open ? 'Hide' : 'Show') : null,
-    multi && p.open ? h('span', { className: 'ev-list' },
-      [joined.length ? 'Joined: ' + joined.join(', ') + '.' : '', left.length ? 'Left: ' + left.join(', ') + '.' : '', banned.length ? 'Banned: ' + banned.join(', ') + '.' : ''].filter(Boolean).join(' ')) : null);
 }
