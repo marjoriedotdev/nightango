@@ -175,7 +175,9 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - `updategroupflags:{ajouts}:{retraits}`
 - `setbannedwords:{partiel}:{entier}` (encodés URL)
 - `getbannedwords`
-- `getratelimit`, `setratelimit:{s}` (`setratelimit:0` comme valeur « off » n'est pas confirmé)
+- `getratelimit`, `setratelimit:{s}`
+  - `setratelimit:0` coupe le mode lent. Dans chadango, l'action de modération `chrl` (rate limit changé) de valeur 0 prend le gabarit `flood_cont` (« flood controlled », sans mode lent), toute autre valeur `slow_mode` : [models/modaction.go](https://github.com/n0h4rt/chadango/blob/d53b02a4d1e2cc7667f61b1693c8a42a55694d1b/models/modaction.go#L251-L257).
+  - Le rôle du drapeau de groupe `RATELIMITREGIMEON` à côté de `setratelimit` n'est pas établi.
 - `addmod:{nom}:{droits}` (ajout et mise à jour)
 - `removemod:{nom}`
 - `unbanall`
