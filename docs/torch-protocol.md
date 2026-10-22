@@ -78,6 +78,7 @@ Un appel exclu pour cette raison : le formulaire de style de Torch (`updatemsgst
 - Torch n'ouvre cette base que depuis son propre écran privé. Le pont l'ouvre avec le même schéma, puis l'assigne à `client.database.pm`.
 - Enregistrement (Torch `saveMessage`, même format que le client officiel) : `{ target, ts, data, unread }`. `data` est la trame brute complète `msg:nom:…:ts:flags:corps`, balises comprises.
 - Aucune suppression d'historique MP n'existe côté serveur. `client.private.clearHistory(target)` efface la copie locale par curseur sur `target_idx`. Torch la définit sans l'appeler. Le bouton « Delete » du client officiel fait l'équivalent.
+- Fusion du style : le style le plus récent gagne. Chaque membre garde l'horodatage du message dont vient son style (`styleTs`), et une source ne fusionne le sien que si son message est plus récent (`mergeStyle` dans `app/root.js`). La règle vaut pour le direct (groupe et MP), l'historique de groupe (trames `i`, reçues du plus récent au plus ancien), l'historique privé rejoué à chaque `OK` et le style perso, daté de l'envoi. Limite acceptée : l'horodatage archivé par Torch est décalé de quelques secondes à quelques minutes, deux MP très rapprochés peuvent donc être mal ordonnés.
 
 ### MP reçus hors ligne
 

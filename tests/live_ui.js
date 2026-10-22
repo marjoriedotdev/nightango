@@ -189,6 +189,17 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await wait(80);
   step('edit replaces original text', d.body.textContent.includes('Hi everyone') && !d.body.textContent.includes('Hi all') && d.body.textContent.includes('(edited)'));
 
+  /* Style d'un membre : celui de son message le plus récent, quel que soit l'ordre d'arrivée (face 4 = Impact) */
+  const logFont = txt => { const p = $$('.log .tc-msg-text').find(x => x.textContent === txt); return p ? p.style.fontFamily : null; };
+  g('b', 'test', ['1700000280.1', 'Hana', '', 'u8', 'UNID8', 'tmp20', '2.2.2.2', '0', '', '<n000/><f x11000="4">Hana new']);
+  g('i', 'test', ['1700000150.1', 'Hana', '', 'u8', 'UNID8', 'H1=', '2.2.2.2', '0', '', '<n000/><f x11000="1">Hana old']);
+  await wait(80);
+  step('group history keeps newest style', /Impact/.test(logFont('Hana new') || ''), logFont('Hana new'));
+  g('i', 'test', ['1700000190.1', 'Ivy', '', 'u9', 'UNID9', 'H2=', '3.3.3.3', '0', '', '<n000/><f x11000="4">Ivy newer']);
+  g('i', 'test', ['1700000180.1', 'Ivy', '', 'u9', 'UNID9', 'H3=', '3.3.3.3', '0', '', '<n000/><f x11000="1">Ivy older']);
+  await wait(80);
+  step('group history batch keeps its newest style', /Impact/.test(logFont('Ivy newer') || ''), logFont('Ivy newer'));
+
   /* Envoi : échappement, réponse, canal */
   const ta = $('.tc-composer textarea'), bar = $('.tc-composer-bar');
   $('button[aria-label="Group options"]').focus();
@@ -709,6 +720,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const atGroup = styleAtBuild.filter(x => x.group === 'test').map(x => x.style), atPm = styleAtBuild.filter(x => x.group === 'private_message').map(x => x.style);
   step('own style applied locally', !!styleBtn && atGroup.length === 1 && atGroup[0] === WANT && storedStyle.includes('#9900cc') && storedStyle.includes('#3366ff') && atPm.length === 1 && atPm[0] === WANT && posts.length === postsBeforeStyle && submits === 0,
     { button: !!styleBtn, atGroup, storedStyle, atPm, posts: posts.slice(postsBeforeStyle), submits });
+
+  /* Style d'un MP : l'historique privé rejoué à OK n'écrase pas le style d'un message plus récent reçu en direct */
+  const threadFont = txt => { const p = $$('.thread .tc-msg-text').find(x => x.textContent === txt); return p ? p.style.fontFamily : null; };
+  pmRecords.push({ target: 'kim', data: 'msg:kim:marjorie:unknown:1700000700.5:0:<n000/><m v="1"><g x12s000="1">Older kim</g></m>', unread: 0 });
+  pm('msg', ['kim', 'marjorie', 'unknown', '1700000800.5', '0', '<n000/><m v="1"><g x12s000="4">Newer kim</g></m>']); await wait(50);
+  pm('OK', []); await wait(150);
+  click(byText('.conv', 'kim')); await wait(50);
+  step('pm history does not override live style', /Impact/.test(threadFont('Newer kim') || ''), threadFont('Newer kim'));
 
   /* MP reçus hors ligne : base ouverte avant la connexion privée, msgoff juste après OK, deux « ok » identiques à 10 s d'écart dans l'historique */
   pmRecords.push(

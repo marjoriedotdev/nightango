@@ -593,8 +593,19 @@ function Root(props) {
     u.status = x.status;
     if (x.lastOn) u.lastOn = x.lastOn;
   }
+  /**
+   * Permet de fusionner le style d'un message dans celui du membre.
+   * @param {Object} u Membre dans l'état.
+   * @param {?Object} style Style lu dans le message.
+   * @param {number} ts Horodatage du message en millisecondes.
+   */
+  function mergeStyle(u, style, ts) {
+    if (!style || ts <= u.styleTs) return;
+    u.style = Object.assign({}, u.style, style);
+    u.styleTs = ts;
+  }
   function setOwnStyle(style) {
-    update(function (d) { var u = ensureLiveUser(d, d.me); u.style = Object.assign({}, u.style, style); });
+    update(function (d) { mergeStyle(ensureLiveUser(d, d.me), style, Date.now()); });
   }
   /** Traduit l'état Chatango d'un groupe (drapeaux, modérateurs, annonce) dans le modèle de l'interface. */
   function deriveLive(g) {
@@ -678,7 +689,7 @@ function Root(props) {
           update(function (d) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, m.author), o = editTarget(g, m);
-            if (style) u.style = Object.assign({}, u.style, style);
+            mergeStyle(u, style, m.ts);
             if (o) { applyEdit(g, o, m); return; }
             m.edited = true; delete m.editId;
             g.messages.push(withReply(g, m));
@@ -686,7 +697,7 @@ function Root(props) {
           break;
         }
         delete m.editId;
-        update(function (d) { if (!d.auth.loggedIn) return; ensureLiveGroup(d, op.gid); var u = ensureLiveUser(d, m.author); if (style) u.style = Object.assign({}, u.style, style); });
+        update(function (d) { if (!d.auth.loggedIn) return; ensureLiveGroup(d, op.gid); mergeStyle(ensureLiveUser(d, m.author), style, m.ts); });
         receiveGroup(op.gid, m);
         break;
       }
@@ -695,7 +706,7 @@ function Root(props) {
         update(function (d) {
           if (!d.auth.loggedIn) return;
           var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, hm.author);
-          if (hs) u.style = Object.assign({}, u.style, hs);
+          mergeStyle(u, hs, hm.ts);
           if (g.messages.some(function (x) { return x.id === hm.id; })) return;
           var o = editTarget(g, hm);
           if (o) { applyEdit(g, o, hm); return; }
@@ -800,11 +811,11 @@ function Root(props) {
         var focused = s0.route.view === 'dm' && s0.route.id === op.from && document.visibilityState === 'visible';
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          var u = ensureLiveUser(d, op.from);
-          u.style = Object.assign({}, u.style, op.style);
+          var ts = op.ts || Date.now();
+          mergeStyle(ensureLiveUser(d, op.from), op.style, ts);
           var c = d.dms[op.from] || (d.dms[op.from] = { messages: [], unread: 0, lastReadTs: 0 });
           c.closed = false;
-          c.messages.push({ id: uid(), from: op.from, text: op.text, embeds: op.embeds, ts: op.ts || Date.now() });
+          c.messages.push({ id: uid(), from: op.from, text: op.text, embeds: op.embeds, ts: ts });
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
           if (!focused) c.unread += 1;
         });
@@ -837,8 +848,7 @@ function Root(props) {
                 return false;
               }
               hist[t].forEach(function (x) {
-                var u = ensureLiveUser(d, x.from);
-                u.style = Object.assign({}, u.style, x.style);
+                mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts);
                 if (!claim(x)) c.messages.push({ id: uid(), from: x.from, text: x.text, embeds: x.embeds, ts: x.ts });
               });
               c.messages.sort(function (a, b) { return a.ts - b.ts; });
