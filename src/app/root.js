@@ -795,7 +795,8 @@ function Root(props) {
         if (op.gid === 'private_message') d.pmConn = op.state;
         if (!d.auth.loggedIn) return;
         var g = d.groups[op.gid];
-        if (g && g.joined) g.conn = op.state;
+        // Une demande d'historique en cours ne reçoit plus de réponse sur un socket fermé.
+        if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') g.loadingMore = false; }
         d.session = sessionAfterConn(d, op);
       }); break;
       case 'session': update(function (d) {

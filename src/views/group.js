@@ -8,12 +8,20 @@ function GroupView(p) {
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a7 = useState(false), jump = a7[0], setJump = a7[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
-  var logRef = useRef(null), atBottom = useRef(true);
-  var count = g ? g.messages.length : 0;
+  var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ first: null, top: 0, height: 0 });
+  var count = g ? g.messages.length : 0, firstId = count ? g.messages[0].id : null;
+  var q = search ? search.trim().toLowerCase() : '';
   useLayoutEffect(function () {
     var el = logRef.current; if (!el) return;
-    if (atBottom.current) el.scrollTop = el.scrollHeight; else setJump(true);
+    var was = seen.current;
+    if (atBottom.current) el.scrollTop = el.scrollHeight;
+    // Position absolue : le navigateur a pu ancrer le défilement lui-même, l'ajouter au sien doublerait le décalage.
+    else if (firstId !== was.first) el.scrollTop = was.top + el.scrollHeight - was.height;
+    else setJump(true);
+    seen.current = { first: firstId, top: el.scrollTop, height: el.scrollHeight };
   }, [count, !!search]);
+  var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.loadingMore && g.conn === 'open');
+  useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
@@ -22,11 +30,11 @@ function GroupView(p) {
   var online = LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length;
   var typing = (s.typing[g.id] || []).filter(function (n) { return n !== me; });
   var ann = g.settings.announcement;
-  var q = search ? search.trim().toLowerCase() : '';
 
   function onScroll() {
     var el = logRef.current;
     atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    seen.current.top = el.scrollTop; seen.current.height = el.scrollHeight;
     if (atBottom.current && jump) setJump(false);
   }
   function toBottom() { var el = logRef.current; atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
@@ -58,8 +66,7 @@ function GroupView(p) {
     ? h(SkeletonRows, { key: 'top', count: 6, avatar: 36, twoLines: true, label: 'Loading messages' })
     : g.historyDone
       ? h('div', { key: 'top', className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), 'This is the beginning of the history Chatango keeps for #' + g.id + '.')
-      : h('div', { key: 'top', className: 'ev' }, g.loadingMore ? h(T.Spinner, { label: 'Loading earlier messages' })
-        : h('button', { type: 'button', className: 'linkbtn', onClick: function () { atBottom.current = false; app.actions.loadMore(g.id); } }, 'Load earlier messages')));
+      : h('div', { key: 'top', ref: sentinelRef, className: 'ev history-more' }, g.loadingMore ? h(T.Spinner, { label: 'Loading earlier messages' }) : null));
   if (q && !items.length) items.push(h('div', { key: 'none', className: 'empty' }, h('h2', null, 'No messages match'), h('p', null, 'Search looks at loaded messages in #' + g.id + '.')));
 
   var composer;

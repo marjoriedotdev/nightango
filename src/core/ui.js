@@ -29,6 +29,25 @@ function useOutside(ref, open, onClose, extraRef) {
   }, [open]);
 }
 
+/**
+ * Permet de demander la page suivante quand une sentinelle approche de la zone visible.
+ * @param {Object} rootRef Référence de la zone qui défile.
+ * @param {Object} sentinelRef Référence de la sentinelle.
+ * @param {boolean} enabled Une page suivante peut être demandée.
+ * @param {Function} onReach Demande de la page suivante.
+ * @param {string} margin Marge d'approche au format rootMargin.
+ */
+function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
+  useEffect(function () {
+    if (!enabled) return;
+    var io = new IntersectionObserver(function (entries) {
+      if (entries.some(function (e) { return e.isIntersecting; })) onReach();
+    }, { root: rootRef.current, rootMargin: margin });
+    io.observe(sentinelRef.current);
+    return function () { io.disconnect(); };
+  }, [enabled]);
+}
+
 /* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];

@@ -71,14 +71,7 @@ function MeetPeople() {
   var scrollRef = useRef(null), sentinelRef = useRef(null);
   var canLoadMore = !!(meet && !meet.loading && !meet.done && !meet.error && results.length);
   // La page suivante reprend les filtres des résultats affichés : ils ne changent pas sans passer par un chargement.
-  useEffect(function () {
-    if (!canLoadMore) return;
-    var io = new IntersectionObserver(function (entries) {
-      if (entries.some(function (e) { return e.isIntersecting; })) app.actions.searchPeople(meet.filters, true);
-    }, { root: scrollRef.current, rootMargin: '0px 0px 400px 0px' });
-    io.observe(sentinelRef.current);
-    return function () { io.disconnect(); };
-  }, [canLoadMore]);
+  useInfiniteScroll(scrollRef, sentinelRef, canLoadMore, function () { app.actions.searchPeople(meet.filters, true); }, '0px 0px 400px 0px');
   var active = meetActive(f);
   function clear(key) {
     var nf = Object.assign({}, f);

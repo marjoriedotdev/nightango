@@ -279,8 +279,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   C.groups.test.socket.readyState = 1; await wait(2300);
 
   /* Historique */
-  click(byText('button', 'Load earlier messages')); await wait(30);
-  step('get_more uses Torch counter', frame('get_more:').pop() === 'get_more:20:5');
+  const historyTop = observers.find(x => x.targets.some(t => t.closest('.log')));
+  if (historyTop) historyTop.cb(historyTop.targets.map(target => ({ isIntersecting: true, target })), historyTop);
+  await wait(30);
+  step('get_more uses Torch counter', frame('get_more:').pop() === 'get_more:20:5', { observed: !!historyTop, frames: frame('get_more:') });
   g('nomore', 'test', []); await wait(50);
   step('history end shown', d.body.textContent.includes('beginning of the history'));
 
