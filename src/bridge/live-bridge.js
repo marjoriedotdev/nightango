@@ -103,7 +103,7 @@ var liveBridge = (function () {
         break;
       }
       case 'wladd':
-        if (data[1] === 'invalid') emit({ op: 'notice', gid: 'private_message', text: 'No Chatango user named ' + lower(data[0]) + '.' });
+        if (data[1] === 'invalid') emit({ op: 'friendRefused', name: lower(data[0]) });
         // Triplet : la valeur vaut des minutes d'inactivité si on, un horodatage si off ou app.
         else emit({ op: 'friends', added: true, list: [friendPresence(data[0], data[1], data[2], data[2])] });
         break;

@@ -101,7 +101,7 @@ function liveWorld(me) {
     account: { email: '', verified: false },
     route: { view: 'discover' }, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
-    groupsSeen: false, pmLoaded: false, friendsLoaded: false
+    groupsSeen: false, pmLoaded: false, friendsLoaded: false, friendRefused: null
   };
 }
 function liveGroup(id, title) {

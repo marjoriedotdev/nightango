@@ -877,6 +877,10 @@ function Root(props) {
           op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); });
         });
         break;
+      case 'friendRefused':
+        update(function (d) { d.friendRefused = { name: op.name, ts: Date.now() }; });
+        toast('No Chatango user named ' + op.name + '.', { icon: 'info' });
+        break;
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
       case 'presence': {
         var before = stateRef.current.users[op.name];

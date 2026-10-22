@@ -52,22 +52,25 @@ function GroupInfoSheet(p) {
 
 /* ---------- Profil d'un membre ---------- */
 /**
- * Permet de suivre une demande d'ami jusqu'à sa confirmation.
+ * Permet de suivre une demande d'ami jusqu'à la réponse de Chatango.
  */
 function useFriendRequest() {
-  var app = useApp();
+  var app = useApp(), s = app.state;
   var a = useState(null), asked = a[0], setAsked = a[1];
+  // Un refus plus ancien pour le même nom ne termine pas une nouvelle demande.
+  var refused = !!(asked && s.friendRefused && s.friendRefused.name === asked.name && s.friendRefused.ts >= asked.ts);
+  if (asked && (userOf(s, asked.name).friend || refused)) setAsked(null);
   useEffect(function () {
     if (!asked) return undefined;
     var t = setTimeout(function () { setAsked(null); }, CONFIRM_TIMEOUT);
     return function () { clearTimeout(t); };
   }, [asked]);
   return {
-    pending: asked && !userOf(app.state, asked).friend ? asked : null,
+    pending: asked ? asked.name : null,
     toggle: function (name) {
-      var was = !!userOf(app.state, name).friend, sent = app.actions.toggleUser(name, 'friend');
+      var was = !!userOf(s, name).friend, sent = app.actions.toggleUser(name, 'friend');
       // Le prototype ajoute sans rien renvoyer : seul un envoi refusé en live (false) n'ouvre pas l'attente.
-      setAsked(!was && sent !== false ? name : null);
+      setAsked(!was && sent !== false ? { name: name, ts: Date.now() } : null);
     }
   };
 }
