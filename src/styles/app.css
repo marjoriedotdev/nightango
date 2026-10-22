@@ -351,6 +351,11 @@ h1,h2,h3{text-wrap:balance}
 .photo-wait{display:none}
 .photo-loading{display:inline-flex;color:var(--text-2)}
 .meet-more{display:flex;justify-content:center;padding:12px;color:var(--text-3)}
+.pull-scroll{overscroll-behavior-y:contain}
+.pull{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;color:var(--text-3);transition:height .2s ease}
+.pull.drag{height:var(--pull,0px);transition:none}
+.pull.drag .tc-icon{opacity:var(--pull-progress,0);transform:rotate(calc(var(--pull-progress,0) * 360deg))}
+.pull.refresh{height:40px}
 .dm-meta{display:none}
 .filter-chips{display:flex;flex-wrap:wrap;gap:6px}
 .seg-scroll{overflow-x:auto}

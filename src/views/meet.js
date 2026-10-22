@@ -1,4 +1,5 @@
 var MEET_DEFAULTS = { query: '', sex: 'B', ageMin: 13, ageMax: 99, online: true, avatar: 0 };
+var PULL_TRIGGER = 64, PULL_MAX = 96;
 /** Filtres qui s'écartent des valeurs par défaut de Torch, pour le compteur et les étiquettes. */
 function meetActive(f) {
   var out = [];
@@ -68,7 +69,39 @@ function MeetPeople() {
   useEffect(function () { if (!s.meet) run(f); }, []);
   var results = meet ? meet.results : [];
   useProfiles(results);
-  var scrollRef = useRef(null), sentinelRef = useRef(null);
+  var scrollRef = useRef(null), sentinelRef = useRef(null), pullRef = useRef(null);
+  var c = useState(null), pull = c[0], setPull = c[1];
+  var loading = !!(meet && meet.loading);
+  if (pull === 'refresh' && !loading) setPull(null);
+  // Le décalage suit le doigt hors de React : un rendu par touchmove serait trop coûteux.
+  function setPullOffset(dy) {
+    scrollRef.current.style.setProperty('--pull', dy + 'px');
+    scrollRef.current.style.setProperty('--pull-progress', dy / PULL_TRIGGER);
+  }
+  function onTouchStart(e) {
+    pullRef.current = !loading && scrollRef.current.scrollTop <= 0 ? { y: e.touches[0].clientY, dy: 0 } : null;
+  }
+  function onTouchMove(e) {
+    var g = pullRef.current;
+    if (!g) return;
+    var dy = e.touches[0].clientY - g.y;
+    if (dy <= 0 || scrollRef.current.scrollTop > 0) { onTouchCancel(); return; }
+    g.dy = Math.min(PULL_MAX, dy / 2);
+    setPullOffset(g.dy);
+    setPull('drag');
+  }
+  function onTouchEnd() {
+    var g = pullRef.current;
+    if (!g) return;
+    pullRef.current = null;
+    setPullOffset(0);
+    if (g.dy >= PULL_TRIGGER && !loading) { run(f); setPull('refresh'); } else setPull(null);
+  }
+  function onTouchCancel() {
+    pullRef.current = null;
+    setPullOffset(0);
+    setPull(null);
+  }
   var canLoadMore = !!(meet && !meet.loading && !meet.done && !meet.error && results.length);
   // La page suivante reprend les filtres des résultats affichés : ils ne changent pas sans passer par un chargement.
   useInfiniteScroll(scrollRef, sentinelRef, canLoadMore, function () { app.actions.searchPeople(meet.filters, true); }, '0px 0px 400px 0px');
@@ -88,12 +121,13 @@ function MeetPeople() {
         h('input', { id: 'meet-q', className: 'tc-input', type: 'search', style: { height: 34, flex: 1, minWidth: 0 }, placeholder: 'Username or keyword', value: f.query, onChange: function (e) { var v = e.target.value; setF(function (x) { return Object.assign({}, x, { query: v }); }); } }),
         h(T.Button, { size: 'sm', icon: 'sliders', style: { height: 34 }, 'aria-label': 'Filters' + (active.length ? ', ' + active.length + ' active' : ''), onClick: function () { setFiltersOpen(true); } },
           'Filters', active.length ? h('span', { className: 'filter-count', 'aria-hidden': 'true' }, active.length) : null),
-        h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', size: 34, iconSize: 15, disabled: !!(meet && meet.loading), onClick: function () { run(f); } })),
+        h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', size: 34, iconSize: 15, className: 'hide-mobile', disabled: loading, onClick: function () { run(f); } })),
       active.length ? h('div', { className: 'filter-chips' }, active.map(function (x) {
         return h('span', { key: x[0], className: 'filter-chip' }, x[1],
           h('button', { type: 'button', 'aria-label': 'Remove filter: ' + x[1], onClick: function () { clear(x[0]); } }, h(T.Icon, { name: 'x', size: 11 })));
       })) : null),
-    h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
+    h('div', { ref: scrollRef, className: 'scroll pull-scroll', style: { padding: '0 8px 12px' }, onTouchStart: onTouchStart, onTouchMove: onTouchMove, onTouchEnd: onTouchEnd, onTouchCancel: onTouchCancel },
+      h('div', { className: cx('pull', pull), 'aria-hidden': 'true' }, pull === 'refresh' ? h(T.Spinner, null) : h(T.Icon, { name: 'rotate-cw', size: 16 })),
       meet && meet.error ? h('p', { className: 'pal-empty' }, meet.error) : null,
       results.map(function (n) { return personCard(s, n, app.theme, function () { app.ui.openProfile(n, null); }); }),
       canLoadMore ? h('div', { ref: sentinelRef, 'aria-hidden': 'true', style: { height: 1 } }) : null,
