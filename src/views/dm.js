@@ -145,17 +145,31 @@ function convActions(app, name) {
   ];
 }
 
+/**
+ * Permet de lister les actions d'une ligne de la liste d'amis.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Ami de la ligne.
+ */
+function friendActions(app, name) {
+  var notify = isNotifyingOnline(app.state, name);
+  return [
+    { label: notifyOnlineLabel(notify), short: notify ? 'Notifying' : 'Notify', icon: 'bell', onSelect: function () { toggleNotifyOnline(app, name); } },
+    { label: 'Remove friend…', short: 'Remove', icon: 'user-minus', danger: true, onSelect: function () {
+      app.ui.confirm({ title: 'Remove ' + name + ' from friends?', body: "You'll stop seeing when " + name + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
+    } }
+  ];
+}
+
 var SWIPE_REVEAL = 144;
 /**
- * Ligne de la liste Chats avec ses actions de conversation.
- * @param {{name: string, current: string}} p Membre de la conversation et conversation ouverte.
+ * Ligne de liste avec ses actions par balayage et son menu.
+ * @param {{name: string, actions: Array, children: *}} p Membre de la ligne, actions de la ligne et bouton principal.
  */
-function ChatRow(p) {
-  var app = useApp(), n = p.name;
+function SwipeRow(p) {
+  var n = p.name, actions = p.actions;
   var m = useState(null), menu = m[0], setMenu = m[1];
   var w = useState(null), swipe = w[0], setSwipe = w[1];
   var rowRef = useRef(null), drag = useRef(null), swallow = useRef(false);
-  var actions = convActions(app, n);
   // Le décalage suit le doigt hors de React : un rendu par pointermove serait trop coûteux.
   function settle(open) { rowRef.current.style.setProperty('--swipe', (open ? -SWIPE_REVEAL : 0) + 'px'); setSwipe(open ? 'open' : null); }
   useOutside(rowRef, swipe === 'open', function () { settle(false); });
@@ -206,11 +220,20 @@ function ChatRow(p) {
     swipe ? h('div', { className: 'conv-swipe', style: { width: SWIPE_REVEAL } }, actions.map(function (a) {
       return h('button', { key: a.short, type: 'button', className: a.danger ? 'danger' : undefined, 'aria-label': a.label, onClick: function () { settle(false); a.onSelect(); } }, h(T.Icon, { name: a.icon, size: 16 }), a.short);
     })) : null,
-    personRow(app.state, n, function () { app.nav({ view: 'dm', id: n }); }, p.current),
+    p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
       label: 'Options for ' + n, size: 26, iconSize: 16, items: actions, open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
+}
+
+/**
+ * Ligne de la liste Chats avec ses actions de conversation.
+ * @param {{name: string, current: string}} p Membre de la conversation et conversation ouverte.
+ */
+function ChatRow(p) {
+  var app = useApp(), n = p.name;
+  return h(SwipeRow, { name: n, actions: convActions(app, n) }, personRow(app.state, n, function () { app.nav({ view: 'dm', id: n }); }, p.current));
 }
 
 function FriendsList(p) {
@@ -239,6 +262,6 @@ function FriendsList(p) {
     LIVE && !s.friendsLoaded ? null : h('p', { className: 'mlabel', style: { margin: '8px 16px 4px' } }, online + ' online · ' + plural(friends.length, 'friend', 'friends')),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading friends' })
       : friends.length
-      ? friends.map(function (n) { return personRow(s, n, function () { app.actions.openDm(n, 'friends'); }, p.current); })
+      ? friends.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(s, n, function () { app.actions.openDm(n, 'friends'); }, p.current)); })
       : h('p', { className: 'pal-empty' }, 'No friends yet. Add someone by username, or from their profile.')));
 }
