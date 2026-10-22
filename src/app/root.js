@@ -612,7 +612,7 @@ function Root(props) {
       banned: L.bw ? { part: L.bw.part, whole: L.bw.whole } : null
     });
     s.announcement = Object.assign({}, s.announcement, { broadcast: !!(f & F.BROADCAST_MODE) },
-      L.annc ? { enabled: L.annc.enabled, text: L.annc.text, interval: Math.round(L.annc.interval / 60), intervalSec: L.annc.interval } : null);
+      L.annc ? { enabled: L.annc.enabled, text: L.annc.text, displayText: L.annc.displayText, embeds: L.annc.embeds, interval: Math.round(L.annc.interval / 60), intervalSec: L.annc.interval } : null);
     g.closed = !!(f & F.IS_CLOSED);
   }
   function findMsg(g, id) {
@@ -745,8 +745,8 @@ function Root(props) {
       case 'denied': groupUpdate(op.gid, function (g) { g.inited = true; g.membersLoaded = true; }); break;
       case 'histEnd': groupUpdate(op.gid, function (g) { g.historyDone = true; g.loadingMore = false; }); break;
       case 'moreLoaded': groupUpdate(op.gid, function (g) { g.loadingMore = false; }); break;
-      case 'annc': groupUpdate(op.gid, function (g) { g.live.annc = { enabled: op.enabled, interval: op.interval, text: op.text, prefix: op.prefix || '' }; deriveLive(g); }); break;
-      case 'anncPost': if (op.text) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', text: 'Announcement: ' + op.text, ts: Date.now() }); }); break;
+      case 'annc': groupUpdate(op.gid, function (g) { g.live.annc = { enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
+      case 'anncPost': if (op.text || op.embeds.length) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
       case 'bw': groupUpdate(op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
       case 'rate': groupUpdate(op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;
       case 'bans': groupUpdate(op.gid, function (g) { g.bans = op.list; g.live.bansLoaded = true; }); break;

@@ -45,7 +45,7 @@ function GroupView(p) {
       items.push(h(EventRow, { key: 'e' + m.id, events: evs, open: !!expanded[m.id], onToggle: (function (id) { return function () { setExpanded(function (x) { var o = Object.assign({}, x); o[id] = !o[id]; return o; }); }; })(m.id) }));
       prev = null; continue;
     }
-    if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text)); prev = null; continue; }
+    if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null)); prev = null; continue; }
     var u = userOf(s, m.author);
     if ((u.ignored || (u.blocked && prefs.safety.syncBlocked)) && m.author !== me) {
       if (prefs.safety.ignoreMode === 'hide') continue;
@@ -117,7 +117,8 @@ function GroupView(p) {
           ]
         })),
       ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
-        h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } }, ann.text)) : null,
+        h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } },
+          LIVE ? ann.displayText : ann.text, LIVE && ann.embeds.length ? h(MessageEmbeds, { embeds: ann.embeds }) : null)) : null,
       search != null ? h('div', { className: 'searchbar' },
         h('label', { htmlFor: 'gsearch', className: 'tc-sr' }, 'Search messages'),
         h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),

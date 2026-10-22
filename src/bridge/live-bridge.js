@@ -56,14 +56,18 @@ var liveBridge = (function () {
       case 'nomore': emit({ op: 'histEnd', gid: room }); break;
       case 'gotmore': emit({ op: 'moreLoaded', gid: room }); break;
       case 'getannc':
-        if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, enabled: false, interval: 0, text: '' });
+        if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, enabled: false, interval: 0, text: '', displayText: '', embeds: [] });
         else {
-          var raw = data.slice(4).join(':');
+          var raw = data.slice(4).join(':'), shown = parseContent(raw, false);
           // Le style d'origine (couleurs, police) est conservé pour le prochain enregistrement, et les médias restent dans le texte renvoyé.
-          emit({ op: 'annc', gid: room, enabled: data[0] !== '0', interval: parseInt(data[3], 10) || 0, text: parseContent(raw, true).text, prefix: (/^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(raw) || [''])[0] });
+          emit({ op: 'annc', gid: room, enabled: data[0] !== '0', interval: parseInt(data[3], 10) || 0, text: parseContent(raw, true).text, displayText: shown.text, embeds: shown.embeds, prefix: (/^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(raw) || [''])[0] });
         }
         break;
-      case 'annc': emit({ op: 'anncPost', gid: room, text: parseContent(data.slice(2).join(':'), true).text }); break;
+      case 'annc': {
+        var posted = parseContent(data.slice(2).join(':'), false);
+        emit({ op: 'anncPost', gid: room, text: posted.text, embeds: posted.embeds });
+        break;
+      }
       case 'bw': emit({ op: 'bw', gid: room, part: unquote(data[0]), whole: unquote(data[1]) }); break;
       case 'getratelimit': case 'ratelimitset': emit({ op: 'rate', gid: room, seconds: parseInt(data[0], 10) || 0 }); break;
       case 'blocklist': emit({ op: 'bans', gid: room, list: parseBans(data) }); break;
