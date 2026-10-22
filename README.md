@@ -1,49 +1,101 @@
 # Torch Skin
 
-Torch Skin est un userscript Tampermonkey pour https://st.chatango.com/. Il démarre [Torch](https://vissle.me), un client web tiers pour Chatango, puis affiche par-dessus une interface refaite : thème sombre et clair, groupes, messages privés, modération, profils, Meet people.
+![A Torch Skin group chat on desktop and on a phone](docs/readme/hero.webp)
 
-La connexion se fait sur l'écran de Torch. Torch Skin ne lit jamais le mot de passe et n'envoie à Chatango que des trames déjà utilisées par Torch ou par une bibliothèque de référence.
+Torch Skin is a Tampermonkey userscript for [st.chatango.com](https://st.chatango.com/). It starts [Torch](https://vissle.me), a third-party web client for Chatango, then draws a redesigned interface on top of it: group chats, private messages, profiles, moderation and Meet people, on desktop and on phones.
 
-## Prérequis
+You sign in on Torch's own screen. Torch Skin never reads your password and only sends Chatango frames that Torch or a reference library already uses.
 
-- Node.js et pnpm
-- Tampermonkey dans le navigateur
+## Features
 
-## Construire
+**Group chats**
+- Replies, mentions and unread markers, with a "New messages" jump.
+- Red, blue and staff channels, with a color bar on every channel message.
+- Older messages load as you scroll up.
+- Errors and warnings show as short notices instead of filling the thread.
+
+**Private messages and friends**
+- Images and videos show as soon as you send them.
+- Swipe a friend to remove them or get notified when they come online.
+
+**Profiles**
+- Premium members' colors and background image cover the whole profile card.
+- Tap a profile picture to see it in full.
+- Full profiles open in an isolated frame that can't run scripts.
+
+**Moderation**
+- Bans and unbans, the moderation log, moderator roles, announcements, banned words and slow mode.
+
+**Mobile**
+- Group info and member list in a full-screen sheet, channel picker next to the message box, pull to refresh in Meet people.
+
+![Group chat in dark and light themes](docs/readme/themes.webp)
+
+![Group chat, group info and friends list on a phone](docs/readme/mobile.webp)
+
+![A Premium member's profile card](docs/readme/profile.webp)
+
+## Customisation
+
+![The same group chat in the six accent colors: Ember, Blue, Green, Violet, Pink and Slate](docs/readme/customisation.webp)
+
+Everything lives in Settings > Appearance and is saved on your device.
+
+- **Theme**: dark, light, or follow the system.
+- **Accent color**: Ember, Blue, Green, Violet, Pink, Slate, or any color you pick. Text on the accent is adjusted so it stays readable.
+- **Density**: comfortable, or compact with no avatars and the time before the name.
+- **Text size** for message text.
+- **Chatango styles**: turn members' name colors, fonts and text colors, message backgrounds and profile backgrounds on or off. Hard-to-read colors are corrected.
+- **Imported themes**: load a theme file (.json) from the old Torch theme editor and use its accent color.
+- **Message style**: pick the font, size and colors of your own messages. It applies to what you send from Torch Skin in this browser and does not change your Chatango account style.
+
+## Privacy and security
+
+- Your password stays with Torch. Torch Skin never reads, stores, logs or sends it.
+- Every HTTP call Torch Skin makes is listed in [docs/torch-protocol.md](docs/torch-protocol.md#appels-http-autorisés), and nothing outside that list is called.
+- Member HTML is rebuilt from an allow list, never injected. Full profiles render in a sandboxed frame without scripts.
+- Profile backgrounds and full-size profile pictures load without sending a referrer.
+- Fonts ship inside the userscript: no request to Google Fonts.
+- Activity on your own profile is the only visitor data Torch Skin reads.
+
+## Install
+
+1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.
+2. Download `torch-skin.min.user.js` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest), or build it yourself (see below).
+3. In Tampermonkey, create a new script, or open your existing Torch Skin script, and replace all of its content with the file. Save.
+4. Open https://st.chatango.com/ and sign in on the Torch screen. Torch Skin appears once your session is open.
+
+## Build and test
+
+Requires Node.js and pnpm.
 
 ```
 pnpm install
-pnpm build
+pnpm build            # writes dist/
+pnpm test             # build, then every jsdom suite
+pnpm test live_ui     # build, then one suite
 ```
 
-Le build écrit dans `dist/` :
+`pnpm build` writes:
+- `dist/torch-skin.min.user.js`: the userscript to install.
+- `dist/torch-skin.user.js`: the same script, readable, for review.
+- `dist/torch-client.html` and `dist/app.js`: a prototype with simulated data.
 
-- `torch-skin.min.user.js` : le userscript à installer
-- `torch-skin.user.js` : la même chose en version lisible, pour l'audit
-- `torch-client.html` et `app.js` : le prototype à données simulées
+## Fonts
 
-## Installer dans Tampermonkey
+Geist and Geist Mono are embedded in the userscript and the prototype. They are released under the SIL Open Font License 1.1: copyright notice and license in [torchds/project/fonts/OFL.txt](torchds/project/fonts/OFL.txt), copied by the build under the userscript header.
 
-1. Ouvre le tableau de bord de Tampermonkey et crée un nouveau script, ou ouvre le script Torch Skin existant.
-2. Remplace tout son contenu par celui de `dist/torch-skin.min.user.js`, puis enregistre.
-3. Ouvre https://st.chatango.com/ et connecte-toi sur l'écran de Torch. L'interface de Torch Skin s'affiche une fois la session ouverte.
+## Credits
 
-## Tester
-
-```
-pnpm test             # build puis toutes les suites jsdom
-pnpm test live_ui     # build puis une suite précise
-```
-
-## Polices
-
-Les polices Geist et Geist Mono sont embarquées dans le userscript et le prototype, sans requête vers Google Fonts. Elles sont publiées sous SIL Open Font License 1.1 : notice de copyright et licence dans [torchds/project/fonts/OFL.txt](torchds/project/fonts/OFL.txt), recopiées par le build sous l'en-tête du userscript.
+Torch Skin runs on top of [Torch](https://github.com/Vissle-Drissle/Torch-Client) by Vissle, released under the MIT license.
 
 ## Documentation
 
-- [AGENTS.md](AGENTS.md) : règles du projet, commandes, livraison d'une version
-- [GLOSSARY.md](GLOSSARY.md) : vocabulaire du domaine
-- [docs/architecture.md](docs/architecture.md) : organisation du code et du build
-- [docs/torch-protocol.md](docs/torch-protocol.md) : fonctionnement de Torch et du protocole Chatango
-- [docs/coding-conventions.md](docs/coding-conventions.md) : conventions de code et de tests
-- [docs/adr/](docs/adr/) : décisions d'architecture
+The project docs are written in French.
+
+- [AGENTS.md](AGENTS.md): project rules, commands, releasing a version
+- [GLOSSARY.md](GLOSSARY.md): domain vocabulary
+- [docs/architecture.md](docs/architecture.md): code and build layout
+- [docs/torch-protocol.md](docs/torch-protocol.md): how Torch and the Chatango protocol work
+- [docs/coding-conventions.md](docs/coding-conventions.md): code and test conventions
+- [docs/adr/](docs/adr/): architecture decisions
