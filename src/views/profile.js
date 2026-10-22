@@ -156,8 +156,7 @@ function notifyOnlineLabel(notify) { return notify ? 'Notifying when online' : '
  */
 function toggleNotifyOnline(app, name) {
   var notify = isNotifyingOnline(app.state, name);
-  // Sans conversation, l'alerte vit sur une conversation fermée : la liste Chats ne gagne pas de ligne vide.
-  app.update(function (d) { (d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: true })).notifyOnline = !notify; });
+  app.update(function (d) { d.notifyOnline[name] = !notify; });
 }
 
 function ProfilePanel(p) {

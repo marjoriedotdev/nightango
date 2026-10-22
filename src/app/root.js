@@ -346,8 +346,7 @@ function Root(props) {
         if (friends.length) {
           var f = pick(friends), cur = s0.users[f].status, next = cur === 'offline' ? 'online' : 'offline';
           update(function (d) { d.users[f].status = next; });
-          var watching = s0.dms[f] && s0.dms[f].notifyOnline;
-          if (next === 'online' && (watching || s0.prefs.notify.friendOn.app)) {
+          if (next === 'online' && (isNotifyingOnline(s0, f) || s0.prefs.notify.friendOn.app)) {
             if (s0.prefs.notify.friendOn.sound) beep(s0.prefs.volume);
             toast(f + ' is online.', { icon: 'users', action: { label: 'Message', run: function () { actions.openDm(f); } } });
           }
@@ -879,10 +878,9 @@ function Root(props) {
           if (status === 'offline' && !op.lastOn && before && before.status !== 'offline') u.lastOn = Date.now();
         });
         if (before && before.friend && before.status !== status) {
-          var watching = stateRef.current.dms[op.name] && stateRef.current.dms[op.name].notifyOnline;
           var openDm = { label: 'Message', run: function () { actions.openDm(op.name); } };
           if (status === 'online' && before.status === 'offline') {
-            if (watching) toast(op.name + ' is online.', { icon: 'users', action: openDm });
+            if (isNotifyingOnline(stateRef.current, op.name)) toast(op.name + ' is online.', { icon: 'users', action: openDm });
             else notify('friendOn', { toast: op.name + ' is online.', icon: 'users', action: openDm });
           } else if (status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', icon: 'users' });
         }

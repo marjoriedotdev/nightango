@@ -12,7 +12,7 @@ function resolvedTheme(prefs, viewerTheme) {
  * @param {Object} state État de l'application.
  * @param {string} name Membre suivi.
  */
-function isNotifyingOnline(state, name) { return !!(state.dms[name] && state.dms[name].notifyOnline); }
+function isNotifyingOnline(state, name) { return !!state.notifyOnline[name]; }
 function dmUnreadTotal(state) { var n = 0; for (var k in state.dms) n += state.dms[k].unread || 0; return n; }
 function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
 /**
