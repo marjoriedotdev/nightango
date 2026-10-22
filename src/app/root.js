@@ -510,8 +510,10 @@ function Root(props) {
       });
     };
     actions.loadMore = function (gid) {
-      var asked = liveBridge.loadMore(gid);
-      update(function (d) { var g = d.groups[gid]; if (!g) return; if (asked) g.loadingMore = true; else g.historyDone = true; });
+      var result = liveBridge.loadMore(gid);
+      // Échec : le pont l'annonce et la sentinelle reste en place pour réessayer.
+      if (result === 'failed') return;
+      update(function (d) { var g = d.groups[gid]; if (!g) return; if (result === 'sent') g.loadingMore = true; else g.historyDone = true; });
     };
     actions.toggleUser = function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];

@@ -428,9 +428,11 @@ var liveBridge = (function () {
       } catch (e) { warn(e); }
     },
     loadMore: function (gid) {
-      var g = C.groups && C.groups[gid];
-      if (!g || g.load === -1) return false;
-      return send(gid, 'get_more:20:' + (g.load || 0), 'Earlier messages could not be loaded.');
+      var g = C.groups && C.groups[gid], failure = 'Earlier messages could not be loaded.';
+      if (g && g.load === -1) return 'done';
+      if (g && send(gid, 'get_more:20:' + (g.load || 0), failure)) return 'sent';
+      emit({ op: 'notice', gid: gid, text: failure });
+      return 'failed';
     },
     /* Modération : trames identiques à celles de Torch */
     deleteMessage: function (gid, id) { return send(gid, 'delmsg:' + id, 'The message could not be deleted.'); },
