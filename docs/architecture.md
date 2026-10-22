@@ -92,7 +92,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - L'interface reste masquée tant que la session Torch n'est pas ouverte. La connexion se fait sur l'écran de Torch, habillé par `styles/login.css`.
 - À la connexion, `window.__TORCH_SHOW__` retire l'habillage du login, masque le reste de la page de Torch et affiche l'hôte.
 - Les fenêtres, menus et notifications passent par `Portal`, rendu dans un calque `#layer` voisin de `#app`, pour ne pas déformer la mise en page.
-- Les polices de l'interface (Geist, Geist Mono) sont chargées depuis Google Fonts.
+- Les polices de l'interface (Geist, Geist Mono) sont embarquées : fichiers woff2 du sous-ensemble latin dans `torchds/project/fonts/`, sous SIL OFL 1.1 (`OFL.txt`). Le build les encode en `data:` base64 dans les `@font-face` de `fonts.css`. `skin-page.js` pose ces `@font-face` dans une `<style id="torch-skin-fonts">` de `document.head`, avec l'habillage du login puis au montage : Chrome ignore un `@font-face` déclaré seulement dans le shadow root. Le prototype hébergé reçoit les mêmes `@font-face` dans sa feuille. Les aperçus du design system et les maquettes lient `fonts.css`. Aucune requête de police externe.
 
 ## Mode live et mode prototype
 
@@ -119,7 +119,7 @@ Voir [ADR-0004](adr/0004-member-html-never-injected.md).
 
 ## Design system
 
-- `torchds/project/` contient les jetons (`tokens.json`), les composants (`components/bundle.js`, namespace `window.Torch`, et `bundle.css`), leurs types (`index.d.ts`) et la charte (`README.md`).
+- `torchds/project/` contient les jetons (`tokens.json`), les composants (`components/bundle.js`, namespace `window.Torch`, et `bundle.css`), leurs types (`index.d.ts`), les polices embarquées (`fonts/`) et la charte (`README.md`).
 - `components/bundle.js` et `bundle.css` sont maintenus à la main. Le `README.md` et le `preview.html` de chaque composant sont générés par `pnpm build:ds`.
 - Le build produit la feuille des jetons depuis `tokens.json` : thème sombre par défaut, thème clair par préférence système ou par choix explicite.
 - `torch/project/` contient les maquettes (11 écrans) et leur canevas.

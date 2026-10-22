@@ -22,7 +22,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 
 ## Typography
 
-- One family, Geist (`font-sans`), loaded from Google Fonts; Geist Mono (`font-mono`) for times, counters, versions and hex values.
+- One family, Geist (`font-sans`), embedded from `fonts/fonts.css` (SIL Open Font License 1.1, see `fonts/OFL.txt`); Geist Mono (`font-mono`) for times, counters, versions and hex values.
 - Default text is `body` (14/20). Author names and unread rows use `body-strong`. Descriptions use `caption`.
 - Page titles use `title-lg`, section titles `title-sm`, profile names `title-md`. `title-xl` appears only on the login hero.
 - Timestamps are `mono-sm` in `text-3`: `12:42`, never "12:42 PM" unless the reader turns off 24-hour time.

@@ -35,6 +35,10 @@ pnpm test             # build puis toutes les suites jsdom
 pnpm test live_ui     # build puis une suite précise
 ```
 
+## Polices
+
+Les polices Geist et Geist Mono sont embarquées dans le userscript et le prototype, sans requête vers Google Fonts. Elles sont publiées sous SIL Open Font License 1.1 : notice de copyright et licence dans [torchds/project/fonts/OFL.txt](torchds/project/fonts/OFL.txt), recopiées par le build sous l'en-tête du userscript.
+
 ## Documentation
 
 - [AGENTS.md](AGENTS.md) : règles du projet, commandes, livraison d'une version

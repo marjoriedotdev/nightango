@@ -62,7 +62,6 @@ Cette liste est fermée. Elle couvre les appels que le code applicatif (pont, lo
 Ce ne sont pas des appels du code applicatif mais des ressources que le navigateur charge par une balise. Elles ne transportent ni mot de passe ni jeton. En ajouter une demande la même validation qu'un nouvel appel.
 
 - React et ReactDOM 18.3.1 depuis `cdnjs.cloudflare.com`, avec SRI (`skin-page.js`).
-- Les polices Geist et Geist Mono depuis Google Fonts (`fonts.googleapis.com`, `skin-page.js`).
 - Le script de démarrage de Torch, `https://vissle.me/client/start`, qui charge à son tour la page et le code de Torch.
 - L'iframe `www.youtube-nocookie.com/embed/`, créée seulement au clic. La miniature `i.ytimg.com` s'affiche si `embedVideos` est actif et `proxyMedia` coupé.
 - Les images de message (URL https, `chatango.com/pmmessageimg`) selon `embedImages` et `proxyMedia`.

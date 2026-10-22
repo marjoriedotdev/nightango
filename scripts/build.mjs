@@ -132,6 +132,18 @@ function loginCss(tokens, sheet) {
   return themeRules(tokens, '.login', 'html:not(.tsk-dark) .login', 'html.tsk-light .login', 'html.tsk-dark .login') + sheet;
 }
 
+// -- Polices ------------------------------------------------------------------
+
+const FONTS_DIR = join(ROOT, 'torchds', 'project', 'fonts');
+
+/**
+ * Permet de produire la feuille des polices avec les fichiers embarqués.
+ */
+function embeddedFontsCss() {
+  return readFileSync(join(FONTS_DIR, 'fonts.css'), 'utf8')
+    .replace(/url\(([\w-]+\.woff2)\)/g, (_, file) => `url(data:font/woff2;base64,${readFileSync(join(FONTS_DIR, file)).toString('base64')})`);
+}
+
 // -- Userscript ---------------------------------------------------------------
 
 const SHADOW_SELECTORS = [
@@ -181,17 +193,19 @@ const MINIFIED = {
  * @param {{ js: Function, css: Function }} pack Transformation du code et des feuilles.
  */
 async function userscript(source, pack) {
-  const [css, loginCss] = await Promise.all([pack.css(source.css), pack.css(source.loginCss)]);
+  const [css, loginCss, fontsCss] = await Promise.all([pack.css(source.css), pack.css(source.loginCss), pack.css(source.fontsCss)]);
   // Le code page devient un littéral de chaîne, exécuté par un <script> en textContent : jamais analysé comme HTML.
   const page = await pack.js(source.page
     .replaceAll('/*VERSION*/', () => source.version)
     .replaceAll('/*CSS*/', () => jsonString(css))
     .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginCss))
+    .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
     .replaceAll('/*BUNDLE*/', () => source.bundleJs)
     .replaceAll('/*APP*/', () => source.appJs));
   // Tampermonkey lit l'en-tête tel quel : il reste hors de la transformation.
   const header = /^[\s\S]*?\/\/ ==\/UserScript==\r?\n/.exec(source.loader)[0];
-  return header + await pack.js(source.loader.slice(header.length).replaceAll('/*PAGE*/', () => jsonString(page)));
+  const notice = `/*\nFonts embedded in this script: Geist and Geist Mono.\n\n${source.fontsLicense}*/\n`;
+  return header + notice + await pack.js(source.loader.slice(header.length).replaceAll('/*PAGE*/', () => jsonString(page)));
 }
 
 // -- Build --------------------------------------------------------------------
@@ -225,12 +239,11 @@ async function build() {
     if (src.toLowerCase().includes('</script')) throw new Error(`${name} contains </script`);
   }
   const css = tokensCss(tokens);
+  const fontsCss = embeddedFontsCss();
 
   const html = `<title>Torch Client</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
 <style>
+${fontsCss}
 ${css}
 ${bundleCss}
 ${appCss}
@@ -254,6 +267,8 @@ ${appJs}
     version: /@version\s+(\S+)/.exec(loader)[1],
     css: skinCss(css, bundleCss, appCss),
     loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
+    fontsCss,
+    fontsLicense: read('torchds', 'project', 'fonts', 'OFL.txt'),
     bundleJs,
     appJs
   };

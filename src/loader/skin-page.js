@@ -5,8 +5,8 @@
   window.__TORCH_SKIN_VERSION__ = '/*VERSION*/';
   var CSS = /*CSS*/;
   var LOGIN_CSS = /*LOGIN_CSS*/;
+  var FONTS_CSS = /*FONTS_CSS*/;
   var TORCH_START = 'https://vissle.me/client/start';
-  var FONT_URL = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
 
   // Bibliothèques vérifiées par empreinte : un fichier modifié sur le CDN n'est pas exécuté.
   function load(src, integrity) {
@@ -24,11 +24,12 @@
     return !!window.__torchRefs;
   }
   function headline(text) { var h1 = document.querySelector('h1'); if (h1) h1.textContent = text; }
+  // Polices déclarées dans le document : Chrome ignore un @font-face posé seulement dans le shadow root.
   function addFont() {
-    if (document.querySelector('link[href="' + FONT_URL + '"]')) return;
-    var font = document.createElement('link');
-    font.rel = 'stylesheet';
-    font.href = FONT_URL;
+    if (document.getElementById('torch-skin-fonts')) return;
+    var font = document.createElement('style');
+    font.id = 'torch-skin-fonts';
+    font.textContent = FONTS_CSS;
     document.head.appendChild(font);
   }
 
