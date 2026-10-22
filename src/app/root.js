@@ -202,20 +202,21 @@ function Root(props) {
       var r = stateRef.current.route;
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
     },
-    deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); toast('Conversation deleted.'); },
-    deleteAllDms: function () { update(function (d) { d.dms = {}; }); toast('All conversations deleted.'); },
-    declineRequest: function (name) { actions.closeDm(name); toast('Request from ' + name + ' declined.'); },
+    deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
+    deleteAllDms: function () { update(function (d) { d.dms = {}; }); },
+    declineRequest: function (name) { actions.closeDm(name); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
       update(function (d) { if (!d.users[name]) d.users[name] = { status: 'offline', about: '', style: {} }; d.users[name][key] = !was; });
+      if (key === 'friend' && !was) return;
       var text = {
-        friend: was ? name + ' removed from friends.' : name + ' added to friends.',
+        friend: name + ' removed from friends.',
         ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + ' in groups.',
         blocked: was ? name + ' unblocked.' : name + ' blocked.'
       }[key];
       toast(text, { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
     },
-    toggleMute: function (gid) { var was = stateRef.current.groups[gid].muted; update(function (d) { d.groups[gid].muted = !was; }); toast(was ? '#' + gid + ' unmuted.' : '#' + gid + ' muted. You still get mentions.'); },
+    toggleMute: function (gid) { update(function (d) { d.groups[gid].muted = !d.groups[gid].muted; }); },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
     joinGroup: function (gid) {
       var me = stateRef.current.me;
@@ -230,7 +231,6 @@ function Root(props) {
       update(function (d) { var g = d.groups[gid]; g.joined = false; g.favorite = false; g.members = g.members.filter(function (n) { return n !== me; }); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
-      toast('You left #' + gid + '.', { action: { label: 'Undo', run: function () { actions.joinGroup(gid); } } });
     },
     createGroup: function (name, title, desc, listed) {
       var me = stateRef.current.me, now = Date.now();
@@ -246,7 +246,7 @@ function Root(props) {
         };
       });
       nav({ view: 'group', id: name });
-      toast('#' + name + ' created. You are its owner.', { icon: 'check' });
+      return true;
     },
     deleteMessage: function (gid, mid) {
       var me = stateRef.current.me, author = null;
@@ -277,7 +277,6 @@ function Root(props) {
     unbanAll: function (gid) {
       var me = stateRef.current.me, n = stateRef.current.groups[gid].bans.length;
       update(function (d) { var g = d.groups[gid]; g.bans = []; g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Unbanned everyone (' + n + ')' }); });
-      toast(plural(n, 'member', 'members') + ' unbanned.');
     },
     setClosed: function (gid, closed) {
       var me = stateRef.current.me;
@@ -444,7 +443,6 @@ function Root(props) {
       update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = false; } });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
-      toast('You left #' + gid + '.');
     };
     actions.reconnect = function (gid) {
       liveBridge.reconnect(gid);
@@ -505,12 +503,12 @@ function Root(props) {
     };
     actions.toggleUser = function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
-      if (key === 'friend' && !was) { if (liveBridge.addFriend(name)) toast('Adding ' + name + ' to friends.'); return; }
+      if (key === 'friend' && !was) return liveBridge.addFriend(name);
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
       update(function (d) { ensureLiveUser(d, name)[key] = !was; });
       var text = {
-        friend: was ? name + ' removed from friends.' : name + ' added to friends.',
+        friend: name + ' removed from friends.',
         ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + ' in groups.',
         blocked: was ? name + ' unblocked.' : name + ' blocked.'
       }[key];
@@ -520,19 +518,16 @@ function Root(props) {
       liveBridge.clearPmHistory(name);
       actions.closeDm(name);
       update(function (d) { d.dms[name].messages = []; });
-      toast('Conversation deleted from this browser.');
     };
     actions.deleteAllDms = function () {
       Object.keys(stateRef.current.dms).forEach(function (n) { liveBridge.clearPmHistory(n); actions.closeDm(n); });
       update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; }); });
-      toast('Saved conversations deleted from this browser.');
     };
     actions.createGroup = function (name, title, desc, listed) {
-      toast('Creating #' + name + '.');
-      liveBridge.createGroup({ name: name, title: title, description: desc, discovery: listed }).then(function () {
-        toast('#' + name + ' created. You are its owner.', { icon: 'check' });
+      return liveBridge.createGroup({ name: name, title: title, description: desc, discovery: listed }).then(function () {
         actions.joinGroup(name);
-      }, function (e) { toast(e && e.message ? e.message : 'Chatango refused to create the group.'); });
+        return true;
+      }, function (e) { toast(e && e.message ? e.message : 'Chatango refused to create the group.'); return false; });
     };
     actions.deleteMessage = function (gid, mid) {
       if (String(mid).indexOf('k:') === 0) { toast('This message is still being delivered. Try again in a moment.'); return; }
@@ -779,7 +774,7 @@ function Root(props) {
       case 'unbanned': groupUpdate(op.gid, function (g) {
         g.bans = g.bans.filter(function (b) { return !op.list.some(function (x) { return x.unid === b.unid && x.ip === b.ip; }); });
       }); break;
-      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; }); toast('All bans in #' + op.gid + ' were lifted.'); break;
+      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
         var known = {}, list = (g.live.modlog || []).slice();
         list.forEach(function (x) { known[x.id] = true; });
@@ -863,7 +858,6 @@ function Root(props) {
           if (!op.added) d.friendsLoaded = true;
           op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); });
         });
-        if (op.added) op.list.forEach(function (f) { toast(f.name + ' added to friends.', { icon: 'check' }); });
         break;
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
       case 'presence': {

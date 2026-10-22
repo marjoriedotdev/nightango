@@ -70,6 +70,7 @@ function CreateGroupDialog(p) {
   var c = useState(''), desc = c[0], setDesc = c[1];
   var d = useState(true), listed = d[0], setListed = d[1];
   var e = useState({}), err = e[0], setErr = e[1];
+  var f = useState(false), busy = f[0], setBusy = f[1];
   function create() {
     var n = name.trim().toLowerCase(), x = {};
     if (LIVE ? !/^[a-z0-9_-]{1,20}$/.test(n) : !/^[a-z0-9-]{3,20}$/.test(n)) x.name = LIVE ? 'Use up to 20 letters, numbers, - or _.' : 'Use 3 to 20 lowercase letters, numbers or dashes.';
@@ -77,12 +78,12 @@ function CreateGroupDialog(p) {
     if (title.length > 60) x.title = 'Keep the title under 60 characters.';
     setErr(x);
     if (Object.keys(x).length) return;
-    p.onClose();
-    app.actions.createGroup(n, title.trim() || n, desc.trim(), listed);
+    setBusy(true);
+    Promise.resolve(app.actions.createGroup(n, title.trim() || n, desc.trim(), listed)).then(function (ok) { if (ok) p.onClose(); else setBusy(false); });
   }
   return h(Dialog, {
     title: 'Create a group', description: 'You become its owner. The name is also its address: name.chatango.com.', onClose: p.onClose,
-    footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'k', variant: 'primary', onClick: create }, 'Create group')]
+    footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'k', variant: 'primary', disabled: busy, onClick: create }, busy ? 'Creating group' : 'Create group')]
   },
     h('div', { className: 'dialog-body' },
       h(T.TextField, { id: 'cg-name', label: 'Group name', value: name, error: err.name, hint: name ? 'https://' + (parseGroupName(name) || 'name') + '.chatango.com' : 'Lowercase letters, numbers and dashes.', onChange: function (ev) { setName(ev.target.value); setErr({}); } }),

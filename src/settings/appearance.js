@@ -79,7 +79,7 @@ function AppearancePage() {
         return h('div', { key: t.id, className: 'lrow' },
           h('span', { 'aria-hidden': 'true', style: { display: 'inline-flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border-strong)' } }, t.colors.map(function (c, i) { return h('span', { key: i, style: { width: 18, height: 28, background: c } }); })),
           h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, t.name), h('span', { className: 'lrow-sub' }, 'Imported ' + new Date(t.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))),
-          h(T.Button, { size: 'sm', onClick: function () { pr.set('accent', t.accent); app.ui.toast('Applied the accent from ' + t.name + '.'); } }, 'Apply'),
+          h(T.Button, { size: 'sm', onClick: function () { pr.set('accent', t.accent); } }, 'Apply'),
           h(T.IconButton, { icon: 'trash', label: 'Delete ' + t.name, onClick: function () { app.update(function (d) { d.prefs.customThemes = d.prefs.customThemes.filter(function (x) { return x.id !== t.id; }); }); } }));
       }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, 'No imported themes.')));
 }

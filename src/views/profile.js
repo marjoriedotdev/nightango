@@ -68,6 +68,7 @@ function ProfilePanel(p) {
   var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
   var meta = [u.age, genderShort(u.gender), u.location].filter(Boolean).join(' · ');
   var notify = s.dms[name] && s.dms[name].notifyOnline;
+  var friend = useFriendAction(name, u);
   useEffect(function () { app.actions.loadProfile(name); }, [name]);
   return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + name },
     h('div', { className: 'scroll' },
@@ -79,9 +80,9 @@ function ProfilePanel(p) {
       common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length),
         common.map(function (c) { return h('button', { key: c, type: 'button', className: 'mrow', style: { height: 32, padding: '0 4px' }, onClick: function () { app.nav({ view: 'group', id: c }); } }, h(T.Avatar, { name: c, square: true, size: 22 }), h('span', { className: 'grow' }, c)); })) : null,
       h('div', { style: { padding: '12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderTop: '1px solid var(--border)' } },
-        h('button', { type: 'button', className: 'mrow', 'aria-pressed': String(!!notify), onClick: function () { app.update(function (d) { d.dms[name].notifyOnline = !notify; }); app.ui.toast(notify ? 'You will not be notified.' : "You'll be notified when " + name + ' comes online.'); } },
+        h('button', { type: 'button', className: 'mrow', 'aria-pressed': String(!!notify), onClick: function () { app.update(function (d) { d.dms[name].notifyOnline = !notify; }); } },
           h(T.Icon, { name: 'bell', size: 15 }), h('span', { className: 'grow' }, notify ? 'Notifying when online' : 'Notify when online'), notify ? h(T.Icon, { name: 'check', size: 14 }) : null),
-        h('button', { type: 'button', className: 'mrow', onClick: function () { app.actions.toggleUser(name, 'friend'); } }, h(T.Icon, { name: u.friend ? 'user-minus' : 'user-plus', size: 15 }), h('span', { className: 'grow' }, u.friend ? 'Remove friend' : 'Add friend')),
+        h('button', { type: 'button', className: 'mrow', disabled: friend.busy, onClick: friend.run }, h(T.Icon, { name: friend.icon, size: 15 }), h('span', { className: 'grow' }, friend.label)),
         h('button', { type: 'button', className: 'mrow', onClick: function () { app.actions.toggleUser(name, 'ignored'); } }, h(T.Icon, { name: 'eye-off', size: 15 }), h('span', { className: 'grow' }, u.ignored ? 'Stop ignoring' : 'Ignore in groups')),
         h('button', { type: 'button', className: 'mrow', style: { color: 'var(--danger)' }, onClick: function () { if (u.blocked) app.actions.toggleUser(name, 'blocked'); else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } }); } },
           h(T.Icon, { name: 'ban', size: 15 }), h('span', { className: 'grow' }, u.blocked ? 'Unblock' : 'Block')))));

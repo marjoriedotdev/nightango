@@ -23,6 +23,22 @@ function MembersPanel(p) {
 }
 
 /* ---------- Profil d'un membre ---------- */
+/**
+ * Permet d'ajouter ou de retirer un ami depuis une fiche de profil.
+ * @param {string} name Nom du membre.
+ * @param {Object} u Membre dans l'état.
+ */
+function useFriendAction(name, u) {
+  var app = useApp();
+  var a = useState(false), asked = a[0], setAsked = a[1];
+  var busy = asked && !u.friend;
+  return {
+    busy: busy, icon: u.friend ? 'user-minus' : 'user-plus', label: busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend',
+    // Le prototype ajoute sans rien renvoyer : seul un envoi refusé en live (false) lève l'attente.
+    run: function () { var sent = app.actions.toggleUser(name, 'friend'); setAsked(!u.friend && sent !== false); }
+  };
+}
+
 function ProfileDialog(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), isMe = name === s.me;
   var g = p.gid ? s.groups[p.gid] : null;
@@ -30,6 +46,7 @@ function ProfileDialog(p) {
   var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
   var meta = [u.age && (isMe ? s.profile.visibility.age : true) ? u.age : null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
   var guest = /^[!#]/.test(name);
+  var friend = useFriendAction(name, u);
   useEffect(function () { if (!guest) app.actions.loadProfile(name); }, [name]);
   function go(route) { p.onClose(); app.nav(route); }
   return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose },
@@ -45,7 +62,7 @@ function ProfileDialog(p) {
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
       : LIVE && /^[!#]/.test(name) ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
         h(T.Button, { variant: 'primary', icon: 'message', disabled: u.blocked, onClick: function () { app.actions.openDm(name); p.onClose(); } }, 'Message'),
-        h(T.Button, { icon: u.friend ? 'user-minus' : 'user-plus', onClick: function () { app.actions.toggleUser(name, 'friend'); } }, u.friend ? 'Remove friend' : 'Add friend'),
+        h(T.Button, { icon: friend.icon, disabled: friend.busy, onClick: friend.run }, friend.label),
         h(MenuButton, {
           label: 'More profile actions', items: [
             { label: u.ignored ? 'Stop ignoring' : 'Ignore in groups', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } },

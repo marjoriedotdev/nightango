@@ -70,7 +70,7 @@ function DMView(p) {
     if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'ban', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
     else if (convo.request) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'info', size: 16 }), h('span', { className: 'grow' }, id + " isn't on your friends list. Accept to reply, or decline to remove the conversation."),
       h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.actions.declineRequest(id); } }, 'Decline'),
-      h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); app.ui.toast('Request accepted.'); } }, 'Accept'));
+      h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); } }, 'Accept'));
     else bottom = h(T.Composer, { key: id, placeholder: 'Message ' + id, onSend: function (text) { app.actions.sendDm(id, text); }, beforeSend: h(MessageStyleButton, null) });
     thread = h('main', { className: 'thread' },
       h('header', { className: 'topbar' },
