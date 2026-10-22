@@ -62,7 +62,10 @@ function useFriendRequest() {
   if (asked && (userOf(s, asked.name).friend || refused)) setAsked(null);
   useEffect(function () {
     if (!asked) return undefined;
-    var t = setTimeout(function () { setAsked(null); }, CONFIRM_TIMEOUT);
+    var t = setTimeout(function () {
+      setAsked(null);
+      app.ui.toast("Chatango didn't confirm adding " + asked.name + ' to friends.');
+    }, CONFIRM_TIMEOUT);
     return function () { clearTimeout(t); };
   }, [asked]);
   return {
