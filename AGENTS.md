@@ -75,6 +75,10 @@ La CI (`.github/workflows/ci.yml`) lance `pnpm test` sur chaque push et pull req
 
 Issues sur GitHub, dépôt privé `marjoriedotdev/nightango`, via le CLI `gh`. See `docs/agents/issue-tracker.md`.
 
+### Triage labels
+
+Les cinq rôles de triage sous leur nom par défaut (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
 ### Domain docs
 
 Single-context : `GLOSSARY.md` et `docs/adr/` à la racine. See `docs/agents/domain.md`.
