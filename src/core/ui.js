@@ -133,6 +133,7 @@ function SkeletonRows(p) {
   return h('div', { role: 'status' }, h('span', { className: 'tc-sr' }, p.label), rows);
 }
 
+var openDialogs = [];
 function Dialog(p) {
   var ref = useRef(null);
   useEffect(function () {
@@ -140,7 +141,10 @@ function Dialog(p) {
     var prev = rootNode.activeElement;
     var el = ref.current && ref.current.querySelector('[data-autofocus], input, textarea, select, button');
     if (el) el.focus();
+    openDialogs.push(ref);
     function onKey(e) {
+      // Toutes les fenêtres écoutent document : seule celle du dessus réagit.
+      if (openDialogs[openDialogs.length - 1] !== ref) return;
       if (e.key === 'Escape' && p.onClose) { e.stopPropagation(); p.onClose(); }
       if (e.key === 'Tab' && ref.current) {
         var f = ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
@@ -157,6 +161,7 @@ function Dialog(p) {
     document.addEventListener('keydown', onKey);
     if (blocking) document.addEventListener('keydown', onEscape, true);
     return function () {
+      openDialogs.splice(openDialogs.indexOf(ref), 1);
       document.removeEventListener('keydown', onKey);
       if (blocking) document.removeEventListener('keydown', onEscape, true);
       if (prev && prev.focus) prev.focus();
