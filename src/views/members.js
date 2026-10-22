@@ -60,9 +60,14 @@ function useFriendAction(name, u) {
   var app = useApp();
   var a = useState(false), asked = a[0], setAsked = a[1];
   var busy = asked && !u.friend;
+  useEffect(function () {
+    if (!asked) return undefined;
+    var t = setTimeout(function () { setAsked(false); }, CONFIRM_TIMEOUT);
+    return function () { clearTimeout(t); };
+  }, [asked]);
   return {
     busy: busy, icon: u.friend ? 'user-minus' : 'user-plus', label: busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend',
-    // Le prototype ajoute sans rien renvoyer : seul un envoi refusé en live (false) lève l'attente.
+    // Le prototype ajoute sans rien renvoyer : seul un envoi refusé en live (false) n'ouvre pas l'attente.
     run: function () { var sent = app.actions.toggleUser(name, 'friend'); setAsked(!u.friend && sent !== false); }
   };
 }

@@ -35,7 +35,7 @@ function GroupSettingsViewLive(p) {
       base.current = synced.current;
       setDraft(JSON.parse(synced.current));
       app.ui.toast("Chatango didn't confirm every change. The page shows the group's current settings.");
-    }, 8000);
+    }, CONFIRM_TIMEOUT);
     return function () { clearTimeout(t); };
   }, [pending]);
   if (!g || !draft) return h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: app.actions.backToChat }, 'Back to chat'));
