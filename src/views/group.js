@@ -20,7 +20,7 @@ function GroupView(p) {
     else setJump(true);
     seen.current = { first: firstId, top: el.scrollTop, height: el.scrollHeight };
   }, [count, !!search]);
-  var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.loadingMore && g.conn === 'open');
+  var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open');
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
@@ -66,6 +66,7 @@ function GroupView(p) {
     ? h(SkeletonRows, { key: 'top', count: 6, avatar: 36, twoLines: true, label: 'Loading messages' })
     : g.historyDone
       ? h('div', { key: 'top', className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), 'This is the beginning of the history Chatango keeps for #' + g.id + '.')
+      : g.historyCapped ? null
       : h('div', { key: 'top', ref: sentinelRef, className: 'ev history-more' }, g.loadingMore ? h(T.Spinner, { label: 'Loading earlier messages' }) : null));
   if (q && !items.length) items.push(h('div', { key: 'none', className: 'empty' }, h('h2', null, 'No messages match'), h('p', null, 'Search looks at loaded messages in #' + g.id + '.')));
 

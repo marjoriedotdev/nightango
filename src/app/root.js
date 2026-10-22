@@ -724,7 +724,7 @@ function Root(props) {
           delete hm.editId;
           g.messages.push(withReply(g, hm));
           g.messages.sort(function (a, b) { return a.ts - b.ts; });
-          if (g.messages.length > 500) g.messages.splice(0, g.messages.length - 500);
+          if (g.messages.length > 500) { g.messages.splice(0, g.messages.length - 500); g.historyCapped = true; }
         });
         break;
       }
