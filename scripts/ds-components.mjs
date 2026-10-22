@@ -125,7 +125,7 @@ Sizes: 16 in reply previews, 22 in the sidebar, 28 in lists, 36 in messages, 72 
     `  return h(T.DayDivider, null, 'Today');`],
   ['Banner', 'Feedback', 120,
     'A one-line notice above content: group announcements and permission warnings.',
-    `\`tone\` is \`info\` (pin icon in \`accent-text\`) or \`warning\` (alert icon in \`warning\`). Give a short \`title\`, the text as children, an optional \`action\` button and \`onDismiss\` when the reader may hide it. One banner per view.`,
+    `\`tone\` is \`info\` (pin icon in \`accent-text\`) or \`warning\` (alert icon in \`warning\`). Give a short \`title\`, the text as children, an optional \`action\` button and \`onDismiss\` when the reader may hide it. Below 860px the text goes under the title. One banner per view.`,
     `  return h('div', { className: 'col' },
     h(T.Banner, { title: 'Announcement', onDismiss: function () {} }, 'Server s12 drops connections today. Reconnect twice.'),
     h(T.Banner, { tone: 'warning', action: h(T.Button, { size: 'sm' }, 'Allow in browser') }, 'Your browser blocks desktop notifications for this site.'));`],

@@ -243,8 +243,9 @@
     var tone = props.tone || 'info';
     return h('div', { className: cx('tc-banner', 'tc-banner-' + tone, props.className), role: tone === 'warning' ? 'status' : undefined },
       h('span', { className: 'tc-banner-icon', style: { display: 'inline-flex' } }, h(Icon, { name: props.icon || (tone === 'warning' ? 'alert' : 'pin'), size: 16 })),
-      props.title ? h('span', { className: 'tc-banner-title' }, props.title) : null,
-      h('span', { className: 'tc-banner-text' }, props.children),
+      h('span', { className: 'tc-banner-body' },
+        props.title ? h('span', { className: 'tc-banner-title' }, props.title) : null,
+        h('span', { className: 'tc-banner-text' }, props.children)),
       props.action || null,
       props.onDismiss ? h(IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14, onClick: props.onDismiss }) : null);
   }
