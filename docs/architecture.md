@@ -111,7 +111,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 ## Contenu des membres
 
 - Mini profil : `RichText` reconstruit une liste blanche de balises en éléments React. Le mode `inline` (cartes Meet) ignore blocs, liens, images, taille et alignement.
-- Profil complet : `fullProfileDoc` produit un document isolé dans une `iframe` `sandbox`, avec une CSP en `<meta>`.
+- Profil complet : `fullProfileDoc` produit un document isolé dans une `iframe` `sandbox`, avec une CSP et `referrer` `no-referrer` en `<meta>`. Sous `styles.profileBackgrounds`, son `<style>` reprend le fond Premium choisi par `miniStyleOf` (couleurs hex, image `https` avec sa répétition si les médias sont autorisés), chaque valeur vérifiée avant d'être écrite.
 - Fond Premium : couleurs tirées de `custom_profile.css` par `parseMiniCss`, contraste garanti. L'image est une `<img>` en `referrerPolicy="no-referrer"`, affichée en bandeau de 120 px (`object-fit: cover`) au-dessus du texte de la fiche, qui reste sur le fond uni. Les cartes Meet n'affichent que la couleur. Elle suit les réglages de médias et `styles.profileBackgrounds`.
 - Médias des messages : rien n'est chargé avant le clic quand `embedImages`, `embedVideos` ou `proxyMedia` le demandent.
 

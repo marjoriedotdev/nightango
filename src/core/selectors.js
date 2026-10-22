@@ -24,5 +24,5 @@ function miniStyleOf(prefs, u, theme) {
   var m = u.miniStyle;
   if (!prefs.styles.profileBackgrounds || !m || !m.bg) return null;
   var text = ensureContrast(m.text || SURFACE[theme].body, m.bg, 4.5);
-  return { bg: m.bg, text: text, link: m.link ? ensureContrast(m.link, m.bg, 4.5) : text, image: m.image };
+  return { bg: m.bg, text: text, link: m.link ? ensureContrast(m.link, m.bg, 4.5) : text, image: m.image, repeat: m.repeat };
 }

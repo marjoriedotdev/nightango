@@ -116,11 +116,13 @@ function parseMiniCss(css) {
   var body = rules.body || {}, short = body.background || '';
   var image = 'background-image' in body ? /^url\(\s*['"]?(https?:\/\/[^'")\s]+)['"]?\s*\)$/i.exec(body['background-image']) : /url\(\s*['"]?(https?:\/\/[^'")\s]+)['"]?\s*\)/i.exec(short);
   var bg = 'background-color' in body ? body['background-color'] : (short.match(/[a-z-]+\([^)]*\)|[^\s()]+/gi) || []).find(cssColor);
+  var repeat = lower('background-repeat' in body ? body['background-repeat'] : (/\b(?:no-repeat|repeat-x|repeat-y|repeat)\b/i.exec(short) || [''])[0]);
   return {
     bg: opaqueColor(bg),
     text: cssColor(body.color || (rules['.profile_text'] || {}).color),
     link: cssColor((rules.a || {}).color),
-    image: image ? image[1].replace(/^http:/i, 'https:') : null
+    image: image ? image[1].replace(/^http:/i, 'https:') : null,
+    repeat: BACKGROUND_REPEAT.test(repeat) ? repeat : null
   };
 }
 

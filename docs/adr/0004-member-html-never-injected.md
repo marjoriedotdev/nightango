@@ -17,6 +17,6 @@ Les profils Chatango contiennent du HTML et du CSS écrits par leurs membres (`m
 
 ## Conséquences
 
-- Les profils complets ne sont pas reproduits à l'identique (couleurs propres au profil complet absentes).
-- L'image de fond Premium est une `<img>` en `referrerPolicy="no-referrer"`. `background-repeat` n'est pas reproduit, car un fond CSS enverrait le referrer.
+- Le profil complet reprend les couleurs et l'image de fond de `custom_profile.css`, dans le `<style>` du document de l'iframe : couleurs en hex vérifié, répétition dans une liste fermée, URL `https` refusée si elle contient `<`, `>`, guillemet, antislash, parenthèse ou espace. Le document porte `<meta name="referrer" content="no-referrer">`, car un `srcdoc` hérite sinon de la politique du parent et l'attribut `referrerPolicy` de l'iframe ne couvre pas ses sous-ressources.
+- Dans le mini profil, l'image de fond Premium est une `<img>` en `referrerPolicy="no-referrer"`. `background-repeat` n'y est pas reproduit, car un fond CSS dans la page enverrait le referrer. Il ne l'est que dans l'iframe du profil complet.
 - Une balise ou une propriété nouvelle s'ajoute à la liste blanche, jamais par un passage en HTML brut.

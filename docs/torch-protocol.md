@@ -126,7 +126,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Sans fichier, Chatango renvoie une petite image JPEG. Le pont exige `r.ok` et un `content-type` `text/css`. Compte de référence : `sith`, Premium sans `custom_profile.css`.
 - Format relevé sur le compte de référence `goddess`, une règle par sélecteur, espaces et `!important` variables :
   `body { background-color; background-image: url(…); background-repeat; color }`, `.profile_text { color }`, `a, a:visited, a:active { color; text-decoration }`, `a:hover { … }`.
-- Le CSS n'est jamais injecté ([ADR-0004](adr/0004-member-html-never-injected.md)). `parseMiniCss` en tire `{bg, text, link, image}` : couleurs converties en hex (hex, nom CSS, `rgb()`), texte de `body` ou à défaut de `.profile_text`, image en `https` seulement (`http` réécrit). Le résultat va dans `u.miniStyle`, mis en cache avec le profil.
+- Le CSS n'est jamais injecté ([ADR-0004](adr/0004-member-html-never-injected.md)). `parseMiniCss` en tire `{bg, text, link, image, repeat}` : couleurs converties en hex (hex, nom CSS, `rgb()`), texte de `body` ou à défaut de `.profile_text`, image en `https` seulement (`http` réécrit), répétition limitée à `repeat`, `repeat-x`, `repeat-y` ou `no-repeat`. Le résultat va dans `u.miniStyle`, mis en cache avec le profil.
 
 ### Son propre profil
 

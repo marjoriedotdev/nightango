@@ -91,12 +91,23 @@ function RichText(p) {
   var nodes = richNodes(doc.body, ctx, 'r');
   return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich' }].concat(nodes));
 }
-/** Document isolé pour un profil complet : pas de script, pas de formulaire, médias seulement si autorisés. */
-function fullProfileDoc(html, allowMedia) {
+var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
+var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+/**
+ * Permet de construire le document isolé d'un profil complet.
+ * @param {string} html HTML écrit par le membre.
+ * @param {boolean} allowMedia Autorise les images, dont le fond du membre.
+ * @param {?Object} [style] Fond du membre tel que le renvoie miniStyleOf.
+ */
+function fullProfileDoc(html, allowMedia, style) {
   var csp = allowMedia
     ? "default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline' https: http:; font-src https: http: data:; media-src https:"
     : "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:";
-  return '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><base target="_blank">' +
-    '<style>body{margin:16px;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1f2024;background:#fff;overflow-wrap:anywhere}img,video{max-width:100%;height:auto}</style>' +
+  var s = style || {}, bg = HEX_COLOR.test(s.bg) ? s.bg : '#fff', text = HEX_COLOR.test(s.text) ? s.text : '#1f2024';
+  // Valeurs interpolées dans le <style> : une URL avec < ou une parenthèse pourrait fermer le bloc ou la règle.
+  var image = allowMedia && /^https:\/\/[^<>"'\\()\s]+$/.test(s.image || '') ? ' url("' + s.image + '") ' + (BACKGROUND_REPEAT.test(s.repeat) ? s.repeat : '') + ' left 0 / contain' : '';
+  return '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><meta name="referrer" content="no-referrer"><base target="_blank">' +
+    '<style>body{margin:16px;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:' + text + ';background:' + bg + image + ';overflow-wrap:anywhere}img,video{max-width:100%;height:auto}' +
+    (HEX_COLOR.test(s.link) ? 'a{color:' + s.link + '}' : '') + '</style>' +
     '</head><body>' + html + '</body></html>';
 }

@@ -36,12 +36,13 @@ function profileMeta(meta, name, u) {
 
 /** Profil complet : page HTML du membre, affichée dans un cadre isolé sans script. */
 function FullProfileDialog(p) {
-  var app = useApp(), s = app.state, u = userOf(s, p.name), safety = s.prefs.safety;
+  var app = useApp(), s = app.state, u = userOf(s, p.name), safety = s.prefs.safety, mini = miniStyleOf(s.prefs, u, app.theme);
   var a = useState(LIVE ? null : ''), html = a[0], setHtml = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
   var c = useState(!safety.proxyMedia && safety.embedImages), media = c[0], setMedia = c[1];
   useEffect(function () {
     if (!LIVE) return;
+    if (isProfilePending(p.name, u)) app.actions.loadProfile(p.name);
     liveBridge.fetchFullProfile(p.name).then(setHtml, function () { setErr('Chatango did not return this profile.'); });
   }, [p.name]);
   // Prototype : page d'exemple construite à partir des données de démonstration, échappée.
@@ -59,7 +60,7 @@ function FullProfileDialog(p) {
       err ? h('p', { className: 'muted', style: { margin: 0 } }, err)
         : content === null ? h('p', { className: 'muted', style: { margin: 0 } }, 'Loading the profile from Chatango.')
           : !content ? h('p', { className: 'muted', style: { margin: 0 } }, p.name + " hasn't written a full profile.")
-            : h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', srcDoc: fullProfileDoc(content, media) })));
+            : h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(content, media, mini) })));
 }
 
 function ProfilePanel(p) {
