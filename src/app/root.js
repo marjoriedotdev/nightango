@@ -365,7 +365,7 @@ function Root(props) {
   var profilePending = useRef({});
   var offlineCount = useRef(0);
   function skinKey(me) { return 'torch-skin:' + me; }
-  function blankLocal() { return { fav: [], muted: [], ignored: [], hidden: [], style: null }; }
+  function blankLocal() { return { muted: [], ignored: [], hidden: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -438,8 +438,14 @@ function Root(props) {
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
+    actions.toggleFavorite = function (gid) {
+      var on = !stateRef.current.groups[gid].favorite;
+      if (!liveBridge.setFavorite(gid, on)) { toast('Torch could not save this favorite. Reload the page and try again.'); return; }
+      update(function (d) { d.groups[gid].favorite = on; });
+    };
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
+      if (stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) liveBridge.setFavorite(gid, false);
       update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = false; } });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
@@ -566,9 +572,8 @@ function Root(props) {
     var g = d.groups[gid];
     if (!g) {
       g = d.groups[gid] = liveGroup(gid, gid);
-      var L = localRef.current;
-      g.favorite = L.fav.indexOf(gid) >= 0;
-      g.muted = L.muted.indexOf(gid) >= 0;
+      g.favorite = (liveBridge.favoriteGroups() || []).indexOf(gid) >= 0;
+      g.muted = localRef.current.muted.indexOf(gid) >= 0;
     }
     return g;
   }
@@ -664,12 +669,16 @@ function Root(props) {
 
   function handleLiveOp(op) {
     switch (op.op) {
-      case 'login':
-        localRef.current = Object.assign(blankLocal(), storageGet(skinKey(op.me)) || {});
+      case 'login': {
+        var stored = storageGet(skinKey(op.me)) || {};
+        // Favoris d'avant la synchronisation avec Torch : versés une fois dans sa liste, puis retirés du stockage local.
+        if (stored.fav) { stored.fav.forEach(function (k) { liveBridge.setFavorite(k, true); }); delete stored.fav; storageSet(skinKey(op.me), stored); }
+        localRef.current = Object.assign(blankLocal(), stored);
         update(function (d) { Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style; d.auth = { loggedIn: true }; });
         // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
         setTimeout(function () { update(function (d) { d.groupsSeen = true; }); }, 10000);
         break;
+      }
       case 'group': {
         update(function (d) {
           if (!d.auth.loggedIn) return;
@@ -887,17 +896,16 @@ function Root(props) {
       default: break;
     }
   }
-  /* Favoris, sourdines, membres ignorés, conversations masquées et style perso, conservés par compte dans ce navigateur */
+  /* Sourdines, membres ignorés, conversations masquées et style perso, conservés par compte dans ce navigateur */
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
-    prev.fav.forEach(function (k) { if (!state.groups[k]) o.fav.push(k); });
     prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
     prev.muted.forEach(function (k) { if (!state.groups[k]) o.muted.push(k); });
     prev.ignored.forEach(function (n) { if (!state.users[n]) o.ignored.push(n); });
-    Object.keys(state.groups).forEach(function (k) { var g = state.groups[k]; if (g.favorite) o.fav.push(k); if (g.muted) o.muted.push(k); });
+    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].muted) o.muted.push(k); });
     Object.keys(state.users).forEach(function (n) { if (state.users[n].ignored) o.ignored.push(n); });
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageSet(skinKey(state.me), o); }
   });

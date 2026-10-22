@@ -105,7 +105,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 
 - `Root` (`app/root.js`) tient tout l'état de l'application. `update(fn)` clone l'état par `JSON.parse(JSON.stringify(prev))`, applique `fn` au clone, puis le remplace. L'état doit donc rester sérialisable en JSON.
 - Les préférences sont persistées dans `localStorage` sous `torch-prototype-prefs` (`app/state.js`).
-- Les données propres au compte sont persistées sous `torch-skin:<pseudo>` : favoris, sourdines, membres ignorés, conversations fermées (`hidden`) et style perso (`style`).
+- Les données propres au compte sont persistées sous `torch-skin:<pseudo>` : sourdines, membres ignorés, conversations fermées (`hidden`) et style perso (`style`). En live, les favoris sont ceux de Torch (`docs/torch-protocol.md`, Réglages de démarrage de Torch).
 - Les profils lus (mini profil, fond Premium dans `u.miniStyle`) sont mis en cache avec l'utilisateur.
 
 ## Contenu des membres

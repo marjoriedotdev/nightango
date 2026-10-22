@@ -264,6 +264,8 @@ var liveBridge = (function () {
     });
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
+  // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
+  function saveSettings() { localStorage.setItem('settings', JSON.stringify(C.settings)); }
 
   /*
    * Style perso : écrit dans le formulaire de style de Torch, relu par client.sendMessage à chaque envoi.
@@ -587,8 +589,28 @@ var liveBridge = (function () {
     setStartupSetting: function (key, value) {
       try {
         C.settings.privacy[STARTUP[key][0]][STARTUP[key][1]] = value;
-        // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
-        localStorage.setItem('settings', JSON.stringify(C.settings));
+        saveSettings();
+        return true;
+      } catch (e) { warn(e); return false; }
+    },
+    /**
+     * Permet de lire les groupes favoris de Torch.
+     * @returns {?Array<string>} Noms des groupes, null si les réglages de Torch sont illisibles.
+     */
+    favoriteGroups: function () {
+      try { return C.settings.privacy.groups.favorite.slice(); } catch (e) { warn(e); return null; }
+    },
+    /**
+     * Permet d'ajouter ou de retirer un groupe des favoris de Torch.
+     * @param {string} gid Groupe visé.
+     * @param {boolean} on Vrai pour l'ajouter.
+     */
+    setFavorite: function (gid, on) {
+      try {
+        var groups = C.settings.privacy.groups;
+        if (!on) groups.favorite = groups.favorite.filter(function (x) { return x !== gid; });
+        else if (groups.favorite.indexOf(gid) < 0) groups.favorite.push(gid);
+        saveSettings();
         return true;
       } catch (e) { warn(e); return false; }
     },
