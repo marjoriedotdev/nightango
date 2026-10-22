@@ -387,7 +387,7 @@ var liveBridge = (function () {
      * @param {string} user Destinataire.
      * @param {string} text Texte saisi.
      * @param {?Object} style Style perso.
-     * @returns {?Object} Style propre lu dans le corps construit par Torch, null si rien n'est parti.
+     * @returns {?{style: Object, text: string, embeds: Array}} Corps construit par Torch analysé comme un MP reçu, null si rien n'est parti.
      */
     sendPm: function (user, text, style) {
       try {
@@ -396,7 +396,8 @@ var liveBridge = (function () {
         var body = C.sendMessage(esc(text), true, 'private_message', user);
         if (typeof body !== 'string' || !body) return null;
         C.sendMessage(esc(text), false, 'private_message', user);
-        return parseContent(body).style;
+        var parsed = parseContent(body);
+        return { style: parsed.style, text: parsed.text, embeds: parsed.embeds };
       } catch (e) { warn(e); return null; }
     },
     /**

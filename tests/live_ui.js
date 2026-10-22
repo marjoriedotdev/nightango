@@ -62,7 +62,8 @@ const C = {
   socket(gid, frame) { sent.push([gid, frame]); },
   sendMessage(data, length, group, user) {
     if (length && styleProbe) styleAtBuild.push({ group, style: styleProbe() });
-    if (length) return group === 'private_message' ? '<n3366FF/><m v="1"><g x12s9900cc="4">' + data + '</g></m>' : '<n000/><f x11000="0">' + data;
+    // Comme Torch, le corps d'un MP remplace un lien YouTube par sa balise <i>.
+    if (length) return group === 'private_message' ? '<n3366FF/><m v="1"><g x12s9900cc="4">' + data.replace(/https:\/\/youtu\.be\/([\w-]{11})\S*/, '<i s="vid://yt:$1" w="126" h="93"/>') + '</g></m>' : '<n000/><f x11000="0">' + data;
     calls.push(['pm', group, user, data]);
   },
   // Comme socketEvent de Torch : un groupe encore dans cache.connect est ignoré, sa promesse ne se règle jamais.
@@ -728,6 +729,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('OK', []); await wait(150);
   click(byText('.conv', 'kim')); await wait(50);
   step('pm history does not override live style', /Impact/.test(threadFont('Newer kim') || ''), threadFont('Newer kim'));
+
+  /* Médias d'un MP envoyé : affichés dès l'envoi, sans doublon quand OK rejoue l'archive de Torch */
+  type($('.thread .tc-composer textarea'), 'Watch https://youtu.be/PLe_UgXBBCU'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
+  const sentVideo = $$('.thread .embed-video').length;
+  pmRecords.push({ target: 'kim', data: 'msg:marjorie:marjorie:unknown:' + (Date.now() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', unread: 0 });
+  pm('OK', []); await wait(150);
+  const watch = { sentVideo, videos: $$('.thread .embed-video').length, texts: $$('.thread .tc-msg-text').filter(x => x.textContent.indexOf('Watch') === 0).length };
+  step('own pm media shows at once and is not duplicated by history', watch.sentVideo === 1 && watch.videos === 1 && watch.texts === 1, watch);
 
   /* MP reçus hors ligne : base ouverte avant la connexion privée, msgoff juste après OK, deux « ok » identiques à 10 s d'écart dans l'historique */
   pmRecords.push(

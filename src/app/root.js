@@ -425,9 +425,10 @@ function Root(props) {
     };
     actions.sendDm = function (name, text) {
       var me = stateRef.current.me;
-      update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: text, ts: Date.now() }); });
-      var style = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
-      if (style) setOwnStyle(style); else toast('Private message not sent.');
+      var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
+      if (!sent) { toast('Private message not sent.'); return; }
+      update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: sent.text, embeds: sent.embeds, ts: Date.now() }); });
+      setOwnStyle(sent.style);
     };
     actions.setMessageStyle = function (style) {
       liveBridge.applyStyle(style);
