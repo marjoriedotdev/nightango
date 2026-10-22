@@ -19,6 +19,7 @@ export const APP_SOURCES = [
   'core/rich-text.js',
   'core/selectors.js',
   'bridge/live-model.js',
+  'bridge/live-parse.js',
   'bridge/live-bridge.js',
   'views/login.js',
   'views/shell.js',

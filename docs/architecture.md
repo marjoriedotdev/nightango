@@ -18,6 +18,8 @@ src/
     selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs
   bridge/     le pont vers Torch
     live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG), modèles live
+    live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
+                     fond Premium (parseMiniCss), présence, horodatages, références de message
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
                      profils, recherche, historique privé, vissle, création de groupe
   views/      écrans principaux
@@ -52,11 +54,13 @@ torch/project/       canevas de maquettes (11 écrans)
 dist/                sorties du build, non versionnées
 ```
 
-`bridge/live-bridge.js` (une IIFE) et `app/root.js` (le composant `Root`) restent d'un seul tenant. Leurs parties partagent une closure : les découper demande une vraie refonte, pas un déplacement de code.
+`bridge/live-parse.js` ne contient que des fonctions qui ne lisent ni le client Torch, ni `emit`, ni aucune variable de la closure du pont. Une fonction qui dépend de cette closure reste dans `bridge/live-bridge.js`. Le reste du pont (une IIFE) et `app/root.js` (le composant `Root`) restent d'un seul tenant : leurs parties partagent une closure, les découper demande une vraie refonte.
 
 ## Concaténation
 
 `scripts/build.mjs` concatène les fichiers de `src/` dans une IIFE unique, dans l'ordre de `APP_SOURCES`. C'est le seul endroit qui déclare cette liste. Tous les fichiers partagent donc une portée : un nouveau fichier s'ajoute à `APP_SOURCES`, à sa place dans l'ordre.
+
+`bridge/live-parse.js` se place juste avant `bridge/live-bridge.js`, après `bridge/live-model.js` dont il lit `FONT_FACES`. Ses fonctions deviennent des noms de la portée unique, partagés avec tous les fichiers : un nom qui en double un autre remplace le premier sans erreur.
 
 Le build refuse un code applicatif ou un bundle qui contient `</script`, et une feuille du userscript qui vise encore `:root` ou `html,body{`.
 
