@@ -5,7 +5,7 @@ var liveBridge = (function () {
   var ENV = refs.torch && refs.torch.environment;
   var listeners = [], queue = [];
   var GENDERS = { M: 'Male', F: 'Female' };
-  var STARTUP = { joinOwned: ['groups', 'connect_own'], joinRecent: ['groups', 'connect_recent'], joinFavorites: ['groups', 'connect_favorite'], openPms: ['private_messages', 'connect_start'] };
+  var STARTUP = { joinOwned: ['groups', 'connect_own'], joinRecent: ['groups', 'connect_recent'], joinFavorites: ['groups', 'connect_favorite'] };
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
@@ -568,7 +568,7 @@ var liveBridge = (function () {
     },
     /**
      * Permet de lire les réglages de démarrage de Torch.
-     * @returns {?Object} Les quatre interrupteurs, null si les réglages de Torch sont illisibles.
+     * @returns {?Object} Les trois interrupteurs, null si les réglages de Torch sont illisibles.
      */
     startupSettings: function () {
       try {

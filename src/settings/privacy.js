@@ -21,11 +21,11 @@ function PrivacyPage() {
       h(T.SettingRow, { asLabel: false, title: 'Request a copy of your data', description: 'Chatango holds your account data. Torch keeps only your encrypted sign-in and these settings.', control: h(T.Button, { size: 'sm', onClick: function () { app.ui.toast('Data requests are not part of this prototype.'); } }, 'Request') })));
 }
 
-var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups'], ['openPms', 'Connect to private messages']];
+var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
 
 /**
  * Réglages de démarrage de Torch.
- * @param {{value: Object, onChange: function}} p value porte les quatre interrupteurs, onChange reçoit la clé et la nouvelle valeur.
+ * @param {{value: Object, onChange: function}} p value porte les trois interrupteurs, onChange reçoit la clé et la nouvelle valeur.
  */
 function StartupSection(p) {
   return h(T.SettingsSection, { title: 'On startup', description: 'Torch applies these the next time it loads.' },
