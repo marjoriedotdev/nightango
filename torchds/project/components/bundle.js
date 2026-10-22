@@ -178,7 +178,7 @@
     return h('span', { className: cx('tc-avatar', props.square && 'tc-avatar-square'), style: style, 'aria-hidden': 'true' },
       props.square ? String(props.name || '?').charAt(0).toUpperCase() : initials(props.name),
       src ? h('img', { className: cx('tc-avatar-img', fadedSrc === src ? 'tc-fade-in' : !loadedAvatars[src] && 'tc-avatar-img-wait'), src: src, alt: '', loading: 'lazy', decoding: 'async', draggable: false,
-        onLoad: function () { loadedAvatars[src] = true; setFadedSrc(src); },
+        onLoad: function () { loadedAvatars[src] = true; setFadedSrc(src); if (props.onLoad) props.onLoad(); },
         onError: function () { brokenAvatars[src] = true; failed(function (n) { return n + 1; }); } }) : null,
       props.status ? h('span', { className: 'tc-presence tc-presence-' + props.status, style: { width: dot, height: dot } }) : null);
   }

@@ -68,6 +68,7 @@ Ce ne sont pas des appels du code applicatif mais des ressources que le navigate
 - L'iframe `www.youtube-nocookie.com/embed/`, créée seulement au clic. La miniature `i.ytimg.com` s'affiche si `embedVideos` est actif et `proxyMedia` coupé.
 - Les images de message (URL https, `chatango.com/pmmessageimg`) selon `embedImages` et `proxyMedia`.
 - Les avatars `ust.chatango.com/profileimg/…/thumb.jpg` ou `thumb_m.jpg`, en `<img>`.
+- La photo de profil complète `ust.chatango.com/profileimg/…/full.jpg`, en `<img>` `referrerPolicy="no-referrer"`, chargée seulement au clic sur l'avatar du mini profil.
 
 Un appel exclu pour cette raison : le formulaire de style de Torch (`updatemsgstyles`) transmet le mot de passe. Le style de message perso n'est donc jamais enregistré sur le compte ([ADR-0006](adr/0006-local-message-style.md)).
 
@@ -117,7 +118,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 ### Fichiers publics ust.chatango.com
 
 - Dossier d'un membre : `https://ust.chatango.com/profileimg/{1re lettre}/{2e lettre, ou 1re si le nom n'en a qu'une}/{nom}/`. Pour les noms qui commencent par `_` ou `-`, le chemin devient `profileimg/sp/sp{nom}/`.
-- Avatars : `thumb.jpg` (petit) ou `thumb_m.jpg` dans ce dossier.
+- Avatars : `thumb.jpg` (petit) ou `thumb_m.jpg` dans ce dossier. Photo complète : `full.jpg`, même chemin (`inject.js:226`).
 - Mini profil : `mod1.xml`, balises `b` (date de naissance), `s`, `l`, `body` (encodé URL) et `d` (fin du Premium).
 - Profil complet : `mod2.xml`, balise `body`.
 

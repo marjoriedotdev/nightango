@@ -1,26 +1,107 @@
-/** Bloc « About » : texte Chatango mis en forme en live, texte simple dans le prototype. */
-function profileAbout(u) {
+/**
+ * Bloc « About » : texte Chatango mis en forme en live, texte simple dans le prototype.
+ * @param {Object} u Membre dans l'état.
+ * @param {boolean} [skinned] Fond du membre déjà porté par le conteneur.
+ */
+function profileAbout(u, skinned) {
   if (u.profileMissing) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'This account has no public profile.'));
-  if (u.aboutHtml) return h(RichAbout, { u: u });
-  if (u.about) return h('div', { className: 'kv' }, h('h3', null, 'About'), h('p', { className: 'about' }, u.about));
+  if (u.aboutHtml) return h(RichAbout, { u: u, skinned: skinned });
+  if (u.about) return h('div', { className: 'kv' }, h('p', { className: 'about' }, u.about));
   if (LIVE && !u.profileLoaded) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'Loading profile.'));
   return null;
 }
 
 /**
- * Bloc « About » d'un mini profil Chatango.
- * @param {Object} p.u Membre dans l'état.
+ * Permet de suivre l'affichage de l'image de fond Premium selon les réglages de médias.
+ * @param {?Object} mini Fond du membre tel que le renvoie miniStyleOf.
  */
-function RichAbout(p) {
-  var app = useApp(), safety = app.state.prefs.safety, mini = miniStyleOf(app.state.prefs, p.u, app.theme);
+function useMiniCover(mini) {
+  var safety = useApp().state.prefs.safety;
   var r = useState(null), revealed = r[0], setRevealed = r[1];
   var image = mini && mini.image && safety.embedImages ? mini.image : null;
-  var shown = image && (!safety.proxyMedia || revealed === image);
-  return h('div', { className: 'kv' + (mini ? ' mini-about' : ''), style: mini ? { backgroundColor: mini.bg, color: mini.text } : null },
-    shown ? h('img', { className: 'mini-about-img', src: image, alt: '', referrerPolicy: 'no-referrer' }) : null,
-    h('h3', null, 'About'),
+  return { image: image, shown: !!image && (!safety.proxyMedia || revealed === image), reveal: function () { setRevealed(image); } };
+}
+
+/**
+ * Bouton qui charge l'image de fond Premium retenue par les réglages de médias.
+ * @param {Object} cover Image de fond telle que la renvoie useMiniCover.
+ * @param {Object} mini Fond du membre tel que le renvoie miniStyleOf.
+ */
+function coverReveal(cover, mini) {
+  return cover.image && !cover.shown ? h('button', { type: 'button', className: 'linkbtn', style: { color: mini.link }, onClick: cover.reveal }, 'Show background') : null;
+}
+
+/**
+ * Permet de reprendre les jetons de couleur d'un conteneur sur le fond Premium d'un membre.
+ * @param {Object} mini Fond du membre tel que le renvoie miniStyleOf.
+ */
+function miniSkin(mini) {
+  var soft = ensureContrast(rgbToHex(mix(hexToRgb(mini.text), hexToRgb(mini.bg), 0.3)), mini.bg, 4.5);
+  return {
+    backgroundColor: mini.bg, color: mini.text, '--raised': mini.bg, '--text': mini.text, '--text-body': mini.text, '--text-2': soft, '--text-3': soft,
+    '--border': rgba(mini.text, 0.16), '--border-strong': rgba(mini.text, 0.24), '--control': rgba(mini.text, 0.4), '--hover': rgba(mini.text, 0.08), '--hover-2': rgba(mini.text, 0.1), '--subtle': rgba(mini.text, 0.06)
+  };
+}
+
+/**
+ * Bloc « About » d'un mini profil Chatango.
+ * @param {Object} p.u Membre dans l'état.
+ * @param {boolean} [p.skinned] Fond du membre déjà porté par le conteneur.
+ */
+function RichAbout(p) {
+  var app = useApp(), mini = miniStyleOf(app.state.prefs, p.u, app.theme), cover = useMiniCover(mini);
+  var own = mini && !p.skinned;
+  return h('div', { className: 'kv' + (own ? ' mini-about' : ''), style: own ? { backgroundColor: mini.bg, color: mini.text } : null },
+    own && cover.shown ? h('img', { className: 'mini-about-img', src: cover.image, alt: '', referrerPolicy: 'no-referrer' }) : null,
     h(RichText, { html: p.u.aboutHtml, bg: mini ? mini.bg : null, link: mini ? mini.link : null }),
-    image && !shown ? h('button', { type: 'button', className: 'linkbtn', style: { color: mini.link, alignSelf: 'flex-start' }, onClick: function () { setRevealed(image); } }, 'Show background') : null);
+    own ? coverReveal(cover, mini) : null);
+}
+
+/**
+ * Avatar d'une fiche de profil qui ouvre la photo complète.
+ * @param {string} p.name Nom du membre.
+ * @param {string} p.status Présence affichée.
+ * @param {string} p.ring Couleur du fond derrière l'avatar.
+ */
+function ProfilePhoto(p) {
+  var a = useState(false), hasPhoto = a[0], setHasPhoto = a[1];
+  var b = useState(false), open = b[0], setOpen = b[1];
+  var avatar = h(T.Avatar, { name: p.name, size: 96, status: p.status, ring: p.ring, onLoad: function () { setHasPhoto(true); } });
+  if (!hasPhoto) return avatar;
+  return h(Frag, null,
+    h('button', { type: 'button', className: 'photo-btn', 'aria-label': 'View ' + p.name + "'s profile photo", onClick: function () { setOpen(true); } }, avatar),
+    open ? h(PhotoViewer, { name: p.name, onClose: function () { setOpen(false); } }) : null);
+}
+
+/**
+ * Visionneuse plein écran de la photo de profil.
+ * @param {string} p.name Nom du membre.
+ * @param {Function} p.onClose Fermeture de la visionneuse.
+ */
+function PhotoViewer(p) {
+  var ref = useRef(null), thumb = avatarSrc(p.name, 96);
+  var a = useState(profileImgSrc(p.name, 'full')), src = a[0], setSrc = a[1];
+  var b = useState(false), loaded = b[0], setLoaded = b[1];
+  useEffect(function () {
+    var prev = ref.current.getRootNode().activeElement;
+    ref.current.querySelector('button').focus();
+    // Écoute en capture : Escape et Tab s'arrêtent avant la fenêtre de profil ouverte dessous.
+    function onKey(e) {
+      if (e.key !== 'Escape' && e.key !== 'Tab') return;
+      e.stopPropagation();
+      e.preventDefault();
+      if (e.key === 'Escape') p.onClose();
+    }
+    document.addEventListener('keydown', onKey, true);
+    return function () {
+      document.removeEventListener('keydown', onKey, true);
+      if (prev && prev.focus) prev.focus();
+    };
+  }, []);
+  return h(Portal, null, h('div', { className: 'overlay photo-viewer', role: 'dialog', 'aria-modal': 'true', 'aria-label': p.name + "'s profile photo", ref: ref, onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
+    loaded ? null : h('span', { className: 'photo-loading' }, h(T.Spinner, { size: 24, label: 'Loading photo' })),
+    h('img', { className: 'photo-full' + (loaded ? '' : ' photo-wait'), src: src, alt: p.name + "'s profile photo", referrerPolicy: 'no-referrer', onLoad: function () { setLoaded(true); }, onError: function () { if (src !== thumb) setSrc(thumb); } }),
+    h(T.Button, { onClick: p.onClose }, 'Close')));
 }
 
 /**

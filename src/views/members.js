@@ -47,15 +47,18 @@ function ProfileDialog(p) {
   var meta = [u.age && (isMe ? s.profile.visibility.age : true) ? u.age : null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
   var guest = /^[!#]/.test(name);
   var friend = useFriendAction(name, u);
+  var mini = miniStyleOf(s.prefs, u, app.theme), cover = useMiniCover(mini);
   useEffect(function () { if (!guest) app.actions.loadProfile(name); }, [name]);
   function go(route) { p.onClose(); app.nav(route); }
-  return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose },
+  return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: 'profile-dialog', style: mini ? miniSkin(mini) : null },
+    cover.shown ? h('div', { className: 'profile-cover' }, h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer' })) : null,
     h('div', { className: 'profile-card' },
-      h(T.Avatar, { name: name, size: 72, status: isMe ? s.meStatus : u.status, ring: 'var(--raised)' }),
+      h(ProfilePhoto, { name: name, status: isMe ? s.meStatus : u.status, ring: 'var(--raised)' }),
       h('h2', null, name),
       h('span', { className: 'muted', style: { fontSize: 13 } }, [statusLabel(isMe ? s.meStatus : u.status), u.friend ? 'Friend' : null, theirRole ? ROLE_LONG[theirRole] + ' in #' + g.id : null].filter(Boolean).join(' · ')),
-      profileMeta(meta, name, u)),
-    profileAbout(u),
+      profileMeta(meta, name, u),
+      mini ? coverReveal(cover, mini) : null),
+    profileAbout(u, true),
     !guest ? h('div', { style: { padding: '0 20px 4px' } }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'external', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')) : null,
     common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length), h('p', { className: 'about', style: { color: 'var(--text-2)' } }, common.map(function (c) { return '#' + c; }).join(', '))) : null,
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },

@@ -605,9 +605,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const cssAsked = n => fetches.some(x => x.url.indexOf('/' + n + '/custom_profile.css') >= 0);
   const premiumCards = ['goddess', 'expired', 'sith', 'lost'].map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
   if (personOf('goddess')) { click(personOf('goddess')); await wait(120); }
-  const aboutKv = $$('.dialog .kv').find(x => x.querySelector('h3') && x.querySelector('h3').textContent === 'About');
-  const aboutLink = aboutKv && aboutKv.querySelector('a');
-  const premiumAbout = aboutKv ? { bg: aboutKv.style.backgroundColor, text: aboutKv.style.color, link: aboutLink && aboutLink.style.color } : null;
+  const profileDialog = $('.dialog.profile-dialog');
+  const aboutLink = profileDialog && profileDialog.querySelector('.about.rich a');
+  const premiumAbout = profileDialog ? { bg: profileDialog.style.backgroundColor, text: profileDialog.style.color, link: aboutLink && aboutLink.style.color } : null;
   key(d, 'Escape'); await wait(30);
   step('premium profile background', JSON.stringify(premiumCards) === JSON.stringify([['goddess', 'rgb(158, 159, 252)'], ['expired', ''], ['sith', ''], ['lost', '']])
     && cssAsked('goddess') && !cssAsked('expired') && cssAsked('sith') && cssAsked('lost')

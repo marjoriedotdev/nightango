@@ -93,11 +93,11 @@ const COMPONENTS = [
     `  return h('div', { className: 'row' }, h(T.CountBadge, { count: 2 }), h(T.CountBadge, { count: 3, mention: true }), h(T.CountBadge, { count: 140 }));`],
   ['Avatar', 'Identity', 80,
     'Profile picture or initials on a muted color derived from the username, with optional presence.',
-    `Pass \`src\` to show a profile picture. The initials stay underneath and remain visible while it loads or if it fails (account without a picture, guest); a failed URL is not requested again on the same page. The picture fades in once loaded, and shows at once when the page already loaded it.
+    `Pass \`src\` to show a profile picture. The initials stay underneath and remain visible while it loads or if it fails (account without a picture, guest); a failed URL is not requested again on the same page. The picture fades in once loaded, and shows at once when the page already loaded it. \`onLoad\` is called each time the picture loads, to offer actions that need it, such as opening the full photo.
 
 Pass \`name\`; the color comes from a fixed palette of eight muted tones so a user keeps the same color everywhere. \`status\` is online, idle or offline and must also be stated in text nearby (Online, Idle). Set \`ring\` to the surface color behind the avatar so the presence dot is cut out cleanly. \`square\` renders a group icon.
 
-Sizes: 16 in reply previews, 22 in the sidebar, 28 in lists, 36 in messages, 64 to 72 on profiles.`,
+Sizes: 16 in reply previews, 22 in the sidebar, 28 in lists, 36 in messages, 72 in the profile panel, 96 in the profile dialog.`,
     `  return h('div', { className: 'row' }, h(T.Avatar, { name: 'sable', status: 'online' }), h(T.Avatar, { name: 'quill', status: 'idle' }), h(T.Avatar, { name: 'halcyon', status: 'offline' }), h(T.Avatar, { name: 'orrin', size: 64, status: 'online' }), h(T.Avatar, { name: 'community', square: true, size: 22 }));`],
   ['NavItem', 'Navigation', 200,
     'A row in the sidebar or a list: groups, private messages, settings pages.',

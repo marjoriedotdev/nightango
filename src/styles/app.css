@@ -327,8 +327,20 @@ h1,h2,h3{text-wrap:balance}
 .conv-about.skel-about{display:flex;flex-direction:column;justify-content:space-around}
 .conv.mini-bg:hover{box-shadow:inset 0 0 0 100vmax color-mix(in srgb,currentColor 12%,transparent)}
 .conv.mini-bg .conv-name,.conv.mini-bg .conv-meta,.conv.mini-bg .conv-about{color:inherit}
-.mini-about h3,.mini-about .about{color:inherit}
+.mini-about .about{color:inherit}
+.mini-about .linkbtn{align-self:flex-start}
 .mini-about-img{display:block;width:100%;height:120px;object-fit:cover;border-radius:8px}
+.profile-dialog{position:relative}
+.profile-dialog .profile-card{position:relative}
+.profile-cover{position:absolute;top:0;left:0;right:0;height:120px;pointer-events:none}
+.profile-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.profile-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,var(--raised))}
+.photo-btn{display:inline-flex;padding:0;border:0;border-radius:50%;background:none;cursor:zoom-in}
+.photo-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.photo-viewer{z-index:55;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--bg) 94%,transparent)}
+.photo-full{display:block;min-height:0;max-width:100%;max-height:calc(100% - 64px);object-fit:contain;border-radius:8px}
+.photo-wait{display:none}
+.photo-loading{display:inline-flex;color:var(--text-2)}
 .meet-more{display:flex;justify-content:center;padding:12px;color:var(--text-3)}
 .dm-meta{display:none}
 .filter-chips{display:flex;flex-wrap:wrap;gap:6px}

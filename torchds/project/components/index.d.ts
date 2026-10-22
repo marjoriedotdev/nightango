@@ -12,7 +12,7 @@ export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> { l
 export interface SegmentedControlProps { options: Array<string | { value: string; label: ReactNode }>; value: string; onChange?: (value: string) => void; label: string; block?: boolean }
 export interface BadgeProps { tone?: 'neutral' | 'accent'; icon?: IconName; children: ReactNode }
 export interface CountBadgeProps { count: number; mention?: boolean }
-export interface AvatarProps { name: string; size?: number; status?: Presence; color?: string; ring?: string; square?: boolean; /** Photo de profil ; les initiales restent affichées si elle ne charge pas. */ src?: string | null }
+export interface AvatarProps { name: string; size?: number; status?: Presence; color?: string; ring?: string; square?: boolean; /** Photo de profil ; les initiales restent affichées si elle ne charge pas. */ src?: string | null; /** Appelé quand la photo de profil est chargée. */ onLoad?: () => void }
 export interface NavItemProps { label: ReactNode; icon?: IconName; avatar?: ReactNode; active?: boolean; unread?: boolean; count?: number; mention?: boolean; muted?: boolean; href?: string; onClick?: () => void; trailing?: ReactNode }
 export interface MessageProps { author: string; time: string; children: ReactNode; role?: 'Owner' | 'Mod' | string; continued?: boolean; mention?: boolean; reply?: { author: string; text: string }; avatarColor?: string; avatarSrc?: string | null; extra?: ReactNode; onReply?: () => void; onReact?: () => void; onMore?: () => void }
 export interface DayDividerProps { children: ReactNode }

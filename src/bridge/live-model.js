@@ -1,14 +1,20 @@
 /* ---------- Pont vers le client Torch réel (mode injecté uniquement) ---------- */
 var LIVE = !!window.__TORCH_LIVE__;
 
-/** URL de la photo de profil Chatango, sur le même schéma que le client Torch ; null hors mode live ou pour un anonyme. */
-function avatarSrc(name, size) {
+/**
+ * Permet de construire l'URL d'une photo de profil Chatango.
+ * @param {string} name Nom du compte.
+ * @param {string} file Fichier sans extension : thumb, thumb_m ou full.
+ */
+function profileImgSrc(name, file) {
   if (!LIVE) return null;
   var n = String(name || '').toLowerCase();
   if (!/^[a-z0-9_-]+$/.test(n)) return null;
   var path = /^[_-]/.test(n) ? 'sp/sp' + n : n.charAt(0) + '/' + (n.charAt(1) || n.charAt(0)) + '/' + n;
-  return 'https://ust.chatango.com/profileimg/' + path + '/' + ((size || 36) <= 24 ? 'thumb' : 'thumb_m') + '.jpg';
+  return 'https://ust.chatango.com/profileimg/' + path + '/' + file + '.jpg';
 }
+/** URL de la photo de profil Chatango, sur le même schéma que le client Torch ; null hors mode live ou pour un anonyme. */
+function avatarSrc(name, size) { return profileImgSrc(name, (size || 36) <= 24 ? 'thumb' : 'thumb_m'); }
 
 var ACCOUNT_NAME = /^[a-z0-9_-]{1,20}$/;
 /**
