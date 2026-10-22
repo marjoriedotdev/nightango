@@ -9,6 +9,8 @@ function memberStyles(style, styles, theme, mention) {
   if (styles.fonts) {
     if (style.font) out.text = Object.assign({}, out.text, { fontFamily: FONT_STACKS[style.font] || style.font });
     if (style.textColor) out.text = Object.assign({}, out.text, { color: ensureContrast(style.textColor, bg, 4.5) });
+    // Un pourcentage serait calculé sur le parent : la taille multiplie --msg-size, posée sur le même élément.
+    if (style.fontSize) out.text = Object.assign({}, out.text, { fontSize: 'calc(var(--msg-size, 14px) * ' + style.fontSize / 100 + ')' });
   }
   return out;
 }

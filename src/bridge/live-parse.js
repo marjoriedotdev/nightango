@@ -34,6 +34,8 @@ function parseContent(raw, keepMedia) {
   var f = /<f x(\d{2})?([a-f0-9]{3}|[a-f0-9]{6})?=["']([^"']*)["']>/i.exec(s) || /<g x(\d{2})?s([a-f0-9]{3}|[a-f0-9]{6})?="([^"]*)">/i.exec(s);
   if (f) {
     if (f[2]) style.textColor = '#' + f[2];
+    // Taille absente : 100 % explicite, sinon la taille fusionnée d'un message précédent resterait.
+    style.fontSize = f[1] ? fontPercent(+f[1]) : 100;
     if (f[3] !== '' && FACES[+f[3]] !== undefined) style.font = FACES[+f[3]];
     else if (f[3] && isNaN(+f[3])) style.font = f[3];
   }

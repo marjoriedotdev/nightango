@@ -55,4 +55,9 @@ function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToH
 
 var SURFACE = { dark: { bg: '#16171a', body: '#d6d8dc' }, light: { bg: '#ffffff', body: '#2a2c31' } };
 var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Georgia': 'Georgia, serif', 'Courier New': 'Typewriter, "Courier New", monospace', 'Comic Sans MS': '"Comic Sans MS", "Comic Sans", cursive', 'Lucida Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Palatino': 'Palatino, serif', 'Impact': 'Impact, sans-serif', 'Papyrus': 'Papyrus, cursive', 'Times New Roman': 'Times, serif' };
+/**
+ * Permet de convertir une taille de police Chatango en pourcentage.
+ * @param {number} size Taille Chatango, 11 vaut 100 %.
+ */
+function fontPercent(size) { return Math.round(Math.min(200, Math.max(82, size * 100 / 11))); }
 var CHANNELS = { none: { label: 'No channel', color: null }, red: { label: 'Red', color: '#e5484d' }, blue: { label: 'Blue', color: '#3e8bd8' }, mod: { label: 'Staff', color: '#8a8e96' } };

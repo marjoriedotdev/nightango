@@ -19,7 +19,7 @@ function MessageStyleDialog(p) {
   function set(k, v) { setDraft(function (d) { var n = Object.assign({}, d); n[k] = v; return n; }); }
   function save(style) { app.actions.setMessageStyle(style); p.onClose(); }
   var ms = memberStyles({ nameColor: draft.nameColor, textColor: draft.textColor, font: FONT_FACES[+draft.face] }, { names: true, fonts: true }, app.theme, false);
-  var textStyle = Object.assign({}, ms.text, { fontSize: Math.round(draft.size / 11 * 100) + '%', fontWeight: draft.bold ? 700 : 400, fontStyle: draft.italic ? 'italic' : 'normal', textDecoration: draft.underline ? 'underline' : 'none' });
+  var textStyle = Object.assign({}, ms.text, { fontSize: fontPercent(draft.size) + '%', fontWeight: draft.bold ? 700 : 400, fontStyle: draft.italic ? 'italic' : 'normal', textDecoration: draft.underline ? 'underline' : 'none' });
   return h(Dialog, {
     title: 'Message style', description: 'Applies to messages you send from Torch Skin in this browser. Your Chatango account style is not changed.', onClose: p.onClose,
     footer: [
