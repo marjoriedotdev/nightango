@@ -13,15 +13,25 @@ function PrivacyPage() {
         asLabel: false, title: 'Delete all conversations', description: 'Removes every private message from your account. Others keep their copy.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete all conversations?', body: 'Every private message is removed from your account. This cannot be undone.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
-    h(T.SettingsSection, { title: 'On startup' },
-      h(T.SettingRow, { title: 'Join groups I own', control: pr.sw('privacy.joinOwned') }),
-      h(T.SettingRow, { title: 'Join recent groups', control: pr.sw('privacy.joinRecent') }),
-      h(T.SettingRow, { title: 'Join favorite groups', control: pr.sw('privacy.joinFavorites') })),
+    h(StartupSection, { value: prefs.privacy, onChange: function (k, v) { pr.set('privacy.' + k, v); } }),
     h(T.SettingsSection, { title: 'Discoverability' },
       h(T.SettingRow, { title: 'Show my profile in Meet people', description: 'Lets other Chatango users find you by age and location.', control: pr.sw('privacy.meet') }),
       h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
     h(T.SettingsSection, { title: 'Your data' },
       h(T.SettingRow, { asLabel: false, title: 'Request a copy of your data', description: 'Chatango holds your account data. Torch keeps only your encrypted sign-in and these settings.', control: h(T.Button, { size: 'sm', onClick: function () { app.ui.toast('Data requests are not part of this prototype.'); } }, 'Request') })));
+}
+
+var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups'], ['openPms', 'Connect to private messages']];
+
+/**
+ * Réglages de démarrage de Torch.
+ * @param {{value: Object, onChange: function}} p value porte les quatre interrupteurs, onChange reçoit la clé et la nouvelle valeur.
+ */
+function StartupSection(p) {
+  return h(T.SettingsSection, { title: 'On startup', description: 'Torch applies these the next time it loads.' },
+    STARTUP_ROWS.map(function (r) {
+      return h(T.SettingRow, { key: r[0], title: r[1], control: h(T.Switch, { checked: !!p.value[r[0]], onChange: function (e) { p.onChange(r[0], e.target.checked); } }) });
+    }));
 }
 
 function SafetyPage() {

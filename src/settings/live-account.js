@@ -63,6 +63,11 @@ function ProfilePageLive() {
 
 function PrivacyPageLive() {
   var app = useApp(), pr = usePref();
+  var st = useState(function () { return liveBridge.startupSettings(); }), startup = st[0], setStartup = st[1];
+  function setStartupSetting(key, value) {
+    if (!liveBridge.setStartupSetting(key, value)) { app.ui.toast('Torch could not save this setting. Reload the page and try again.'); return; }
+    setStartup(function (x) { var n = Object.assign({}, x); n[key] = value; return n; });
+  }
   return h(Page, { title: 'Privacy', lede: 'What Torch Skin keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
       h(T.SettingRow, {
@@ -71,7 +76,8 @@ function PrivacyPageLive() {
       })),
     h(T.SettingsSection, { title: 'Browser tab' },
       h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
-    h(T.Banner, { icon: 'info' }, "Who can message you, idle visibility and the groups Torch joins at startup stay in Torch's own settings. Torch Skin doesn't change them yet."));
+    startup ? h(StartupSection, { value: startup, onChange: setStartupSetting }) : null,
+    h(T.Banner, { icon: 'info' }, "Idle visibility stays in Torch's own settings. Torch Skin doesn't change it yet."));
 }
 
 function AccountPageLive() {

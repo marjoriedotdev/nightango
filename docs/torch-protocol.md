@@ -198,7 +198,15 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 
 Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans `src/bridge/live-model.js` (`GROUP_FLAG`, `PERM_FLAG`, `CHANNEL_FLAG`). Ils ont été relevés dans `chatango.flags` de Torch.
 
+## Réglages de démarrage de Torch
+
+- `client.settings` est chargé depuis `localStorage["settings"]` (JSON, origine st.chatango.com), avec repli sur les valeurs par défaut (`inject.js:9807`). Torch le persiste en réécrivant tout l'objet : `localStorage.setItem("settings", JSON.stringify(client.settings))` (`inject.js:9845`).
+- Groupes rejoints au démarrage : `client.settings.privacy.groups.connect_own`, `connect_recent` et `connect_favorite` (booléens), lus par `logGroups` à la connexion (`inject.js:1189`). La liste `favorite[]` n'est pas gérée par Torch Skin.
+- MP au démarrage : `client.settings.privacy.private_messages.connect_start`, lu à la connexion (`inject.js:1366`).
+- Le pont lit ces quatre valeurs (`startupSettings`), écrit l'une d'elles en place dans `client.settings` (`setStartupSetting`), puis réécrit `localStorage["settings"]` comme Torch. Il n'écrit aucune autre clé. L'effet vaut au prochain chargement.
+- « Qui peut m'écrire » (`client.settings.safety.users.allow_*`, `inject.js:9648`) est déclaré dans les défauts et l'écran de Torch mais lu nulle part : il est sans effet dans Torch et Torch Skin ne le reprend pas.
+
 ## Ce qui reste dans Torch
 
-- Les réglages propres à Torch (qui peut écrire, groupes rejoints au démarrage) restent dans Torch.
+- Les autres réglages propres à Torch restent dans Torch, dont « qui peut m'écrire », sans effet dans Torch.
 - Les sons sont joués par Torch avec ses réglages. Ceux de Torch Skin restent coupés en live pour éviter le double signal.

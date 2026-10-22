@@ -5,6 +5,7 @@ var liveBridge = (function () {
   var ENV = refs.torch && refs.torch.environment;
   var listeners = [], queue = [];
   var GENDERS = { M: 'Male', F: 'Female' };
+  var STARTUP = { joinOwned: ['groups', 'connect_own'], joinRecent: ['groups', 'connect_recent'], joinFavorites: ['groups', 'connect_favorite'], openPms: ['private_messages', 'connect_start'] };
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
@@ -562,6 +563,30 @@ var liveBridge = (function () {
     },
     saveProfile: function (p) {
       return Promise.resolve().then(function () { return saveProfileNow(p); });
+    },
+    /**
+     * Permet de lire les réglages de démarrage de Torch.
+     * @returns {?Object} Les quatre interrupteurs, null si les réglages de Torch sont illisibles.
+     */
+    startupSettings: function () {
+      try {
+        var privacy = C.settings.privacy, out = {};
+        Object.keys(STARTUP).forEach(function (k) { out[k] = !!privacy[STARTUP[k][0]][STARTUP[k][1]]; });
+        return out;
+      } catch (e) { warn(e); return null; }
+    },
+    /**
+     * Permet d'enregistrer un réglage de démarrage dans les réglages de Torch.
+     * @param {string} key Clé de STARTUP.
+     * @param {boolean} value Nouvelle valeur.
+     */
+    setStartupSetting: function (key, value) {
+      try {
+        C.settings.privacy[STARTUP[key][0]][STARTUP[key][1]] = value;
+        // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
+        localStorage.setItem('settings', JSON.stringify(C.settings));
+        return true;
+      } catch (e) { warn(e); return false; }
     },
     /**
      * Permet de lire l'activité de son propre profil enregistrée par vissle.me.
