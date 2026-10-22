@@ -98,6 +98,12 @@ function Root(props) {
     }
   }
 
+  function trimThread(g, max) {
+    if (g.messages.length <= max) return;
+    g.messages.splice(0, g.messages.length - max);
+    // Le compteur get_more de Torch ignore la coupe : une reprise sauterait les messages retirés.
+    g.historyCapped = true;
+  }
   function receiveGroup(gid, msg) {
     var s0 = stateRef.current, me = s0.me;
     var mention = msg.kind === 'msg' && new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(msg.text);
@@ -107,7 +113,7 @@ function Root(props) {
       // La réponse est résolue sur l'état à jour : l'identifiant définitif de l'original peut arriver juste avant.
       if (LIVE && msg.replyId) withReply(g, msg);
       g.messages.push(msg);
-      if (g.messages.length > 300) g.messages.splice(0, g.messages.length - 300);
+      trimThread(g, 300);
       if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
       if (focused) g.lastReadTs = Date.now();
     });
@@ -724,7 +730,7 @@ function Root(props) {
           delete hm.editId;
           g.messages.push(withReply(g, hm));
           g.messages.sort(function (a, b) { return a.ts - b.ts; });
-          if (g.messages.length > 500) { g.messages.splice(0, g.messages.length - 500); g.historyCapped = true; }
+          trimThread(g, 500);
         });
         break;
       }
