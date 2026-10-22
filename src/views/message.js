@@ -41,7 +41,9 @@ function MessageRow(p) {
   var body = m.deleted
     ? h('p', { className: 'tc-msg-text deleted' }, m.deleted.by === m.author ? 'Message deleted' : 'Message deleted by ' + m.deleted.by)
     : h(MessageContent, { m: m, style: textStyle }, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null);
-  var chan = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? h('span', { className: 'chan' }, h('i', { style: { background: CHANNELS[m.channel].color } }), CHANNELS[m.channel].label + ' channel') : null;
+  var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
+  var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
+  if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
   var roleBadge = role ? h(T.Badge, { icon: role === 'owner' ? 'crown' : 'shield' }, ROLE_LABEL[role]) : null;
   var time = fmtTime(m.ts, prefs.h24);
   var reply = m.replyTo ? h('div', { className: 'tc-msg-reply' },
@@ -50,15 +52,15 @@ function MessageRow(p) {
   var authorBtn = h('button', { type: 'button', className: 'tc-msg-author linkbtn', style: Object.assign({ textDecoration: 'none', color: 'var(--text)', fontWeight: 600, fontSize: 14 }, nameStyle), onClick: function () { app.ui.openProfile(m.author, g.id); } }, m.author);
 
   if (prefs.density === 'compact') {
-    return h('article', { className: cx('cmsg', mention && 'tc-msg-mention', menuOpen && 'menu-open'), style: rowStyle },
+    return h('article', { className: cx('cmsg', mention && 'tc-msg-mention', menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle },
       h('time', { className: 'tc-msg-time' }, time), authorBtn,
       h('div', { style: { flex: 1, minWidth: 0 } }, reply, body), actions);
   }
   if (p.continued) {
-    return h('article', { className: cx('tc-msg', 'tc-msg-cont', mention && 'tc-msg-mention', menuOpen && 'menu-open'), style: rowStyle },
+    return h('article', { className: cx('tc-msg', 'tc-msg-cont', mention && 'tc-msg-mention', menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle },
       h('span', { className: 'tc-msg-gutter' }, time), h('div', { className: 'tc-msg-body' }, body), actions);
   }
-  return h('article', { className: cx('tc-msg', mention && 'tc-msg-mention', menuOpen && 'menu-open'), style: Object.assign({ marginTop: 6 }, m.replyTo ? { flexDirection: 'column' } : null, rowStyle) },
+  return h('article', { className: cx('tc-msg', mention && 'tc-msg-mention', menuOpen && 'menu-open', chanColor && 'chan-msg'), style: Object.assign({ marginTop: 6 }, m.replyTo ? { flexDirection: 'column' } : null, rowStyle) },
     reply,
     h('div', { style: { display: 'flex', gap: 12 } },
       h(T.Avatar, { name: m.author }),

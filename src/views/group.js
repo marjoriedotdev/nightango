@@ -81,9 +81,9 @@ function GroupView(p) {
           return { label: CHANNELS[k].label + (k === 'none' ? '' : ' channel'), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { setChannel(k); } };
         }),
         renderTrigger: function (tp) {
-          return h('button', Object.assign({ type: 'button', className: 'pillbtn hide-mobile', style: { height: 28, border: '1px solid var(--border-strong)', fontSize: 12 } }, tp),
+          return h('button', Object.assign({ type: 'button', className: 'pillbtn chan-trigger', 'aria-label': 'Channel: ' + CHANNELS[channel].label }, tp),
             h('span', { style: { width: 8, height: 8, borderRadius: '50%', background: CHANNELS[channel].color || 'transparent', border: CHANNELS[channel].color ? 0 : '1.5px solid var(--text-3)' } }),
-            CHANNELS[channel].label, h(T.Icon, { name: 'chevron-down', size: 12 }));
+            h('span', { className: 'hide-mobile' }, CHANNELS[channel].label), h(T.Icon, { name: 'chevron-down', size: 12, className: 'hide-mobile' }));
         }
       })
     });
