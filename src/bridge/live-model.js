@@ -13,7 +13,11 @@ function profileImgSrc(name, file) {
   var path = /^[_-]/.test(n) ? 'sp/sp' + n : n.charAt(0) + '/' + (n.charAt(1) || n.charAt(0)) + '/' + n;
   return 'https://ust.chatango.com/profileimg/' + path + '/' + file + '.jpg';
 }
-/** URL de la photo de profil Chatango, sur le même schéma que le client Torch ; null hors mode live ou pour un anonyme. */
+/**
+ * Permet de construire l'URL de la miniature de profil Chatango.
+ * @param {string} name Nom du compte.
+ * @param {number} [size] Taille d'affichage en pixels.
+ */
 function avatarSrc(name, size) { return profileImgSrc(name, (size || 36) <= 24 ? 'thumb' : 'thumb_m'); }
 
 var ACCOUNT_NAME = /^[a-z0-9_-]{1,20}$/;
