@@ -9,7 +9,6 @@ function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&
 // Références de message dans <r…/> et <e…/> : Torch retire le "=" final et protège - et _.
 function decodeRef(v) { return String(v).replace(/hypheN/g, '-').replace(/underS/g, '_') + '='; }
 function encodeRef(id) { var s = String(id); if (s.slice(-1) === '=') s = s.slice(0, -1); return s.replace(/-/g, 'hypheN').replace(/_/g, 'underS'); }
-function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
 
 // -- Contenu des messages -----------------------------------------------------
 

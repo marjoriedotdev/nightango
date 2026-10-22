@@ -261,6 +261,7 @@ var liveBridge = (function () {
       } catch (e) { warn(e); resolve(null); }
     });
   }
+  function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
 
   /*
    * Style perso : écrit dans le formulaire de style de Torch, relu par client.sendMessage à chaque envoi.
