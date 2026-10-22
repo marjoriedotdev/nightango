@@ -444,8 +444,9 @@ function Root(props) {
     };
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
-      if (stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) liveBridge.setFavorite(gid, false);
-      update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = false; } });
+      var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
+      if (kept) toast('Torch could not remove #' + gid + ' from favorites. Reload the page and try again.');
+      update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
     };
@@ -670,8 +671,8 @@ function Root(props) {
     switch (op.op) {
       case 'login': {
         var stored = storageGet(skinKey(op.me)) || {};
-        // Favoris d'avant la synchronisation avec Torch : versés une fois dans sa liste, puis retirés du stockage local.
-        if (stored.fav) { stored.fav.forEach(function (k) { liveBridge.setFavorite(k, true); }); delete stored.fav; storageSet(skinKey(op.me), stored); }
+        // Favoris d'avant la synchronisation avec Torch : versés dans sa liste, retirés du stockage local une fois tous acceptés.
+        if (stored.fav && stored.fav.map(function (k) { return liveBridge.setFavorite(k, true); }).every(Boolean)) { delete stored.fav; storageSet(skinKey(op.me), stored); }
         localRef.current = Object.assign(blankLocal(), stored);
         update(function (d) { Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style; d.auth = { loggedIn: true }; });
         // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
@@ -900,6 +901,8 @@ function Root(props) {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
+    // Favoris locaux que Torch n'a pas encore acceptés : gardés pour la prochaine connexion.
+    o.fav = prev.fav;
     prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
     prev.muted.forEach(function (k) { if (!state.groups[k]) o.muted.push(k); });
