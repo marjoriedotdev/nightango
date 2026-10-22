@@ -1,6 +1,6 @@
 /* ---------- Style perso des messages ---------- */
 var DEFAULT_MESSAGE_STYLE = { face: '0', size: 11, textColor: '#000000', nameColor: '#000000', bold: false, italic: false, underline: false };
-var FONT_SIZES = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+var MESSAGE_STYLE_SIZES = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 
 function MessageStyleButton() {
   var st = useState(false), open = st[0], setOpen = st[1];
@@ -38,7 +38,7 @@ function MessageStyleDialog(p) {
             FONT_FACES.map(function (f, i) { return h('option', { key: f, value: String(i), style: { fontFamily: FONT_STACKS[f] } }, f); }))),
         h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'ms-size' }, 'Size'),
           h('select', { id: 'ms-size', className: 'tc-input', value: draft.size, onChange: function (e) { set('size', +e.target.value); } },
-            FONT_SIZES.map(function (n) { return h('option', { key: n, value: n }, n); })))),
+            MESSAGE_STYLE_SIZES.map(function (n) { return h('option', { key: n, value: n }, n); })))),
       h('div', { className: 'grid2' },
         h(ColorField, { id: 'ms-text', label: 'Text color', value: draft.textColor, onChange: function (v) { set('textColor', v); } }),
         h(ColorField, { id: 'ms-name', label: 'Name color', value: draft.nameColor, onChange: function (v) { set('nameColor', v); } })),

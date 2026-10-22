@@ -19,7 +19,7 @@ function MessageText(p) {
    de mise en forme sont reconstruites en éléments React. Scripts, styles libres et attributs disparaissent. */
 var RICH_TAGS = { b: 'b', strong: 'b', i: 'i', em: 'i', u: 'u', s: 's', strike: 's', br: 'br', p: 'p', div: 'div', span: 'span', font: 'span', center: 'div', a: 'a', img: 'img' };
 var RICH_DROP = { script: 1, style: 1, iframe: 1, object: 1, embed: 1, noscript: 1, template: 1, svg: 1, math: 1, form: 1, input: 1, button: 1, textarea: 1, select: 1, link: 1, meta: 1, title: 1, head: 1 };
-var FONT_SIZES = [0, 10, 12, 13, 15, 18, 22, 28];
+var FONT_TAG_SIZES_PX = [0, 10, 12, 13, 15, 18, 22, 28];
 function richStyle(el, tag, ctx) {
   var st = {}, css = String(el.getAttribute('style') || '');
   var color = cssColor(el.getAttribute('color') || (/(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(css) || [])[1]);
@@ -28,7 +28,7 @@ function richStyle(el, tag, ctx) {
   if (face && /^[\w ,'-]{1,40}$/.test(face)) st.fontFamily = face;
   if (!ctx.inline) {
     var size = el.getAttribute('size'), px = (/font-size\s*:\s*(\d+)px/i.exec(css) || [])[1];
-    if (size && FONT_SIZES[+size]) st.fontSize = FONT_SIZES[+size];
+    if (size && FONT_TAG_SIZES_PX[+size]) st.fontSize = FONT_TAG_SIZES_PX[+size];
     else if (px) st.fontSize = Math.max(10, Math.min(30, +px));
     var align = el.getAttribute('align') || (/text-align\s*:\s*(\w+)/i.exec(css) || [])[1];
     if (tag === 'center') st.textAlign = 'center';
