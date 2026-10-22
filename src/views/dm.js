@@ -240,6 +240,7 @@ function FriendsList(p) {
   var app = useApp(), s = app.state;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
+  var request = useFriendRequest();
   var friends = Object.keys(s.users).filter(function (n) { return n !== s.me && s.users[n].friend; }).sort(function (x, y) {
     var a = s.users[x], b = s.users[y], rank = statusRank(a.status);
     return rank - statusRank(b.status) || (rank === STATUS_ORDER.offline ? (b.lastOn || 0) - (a.lastOn || 0) : 0) || x.localeCompare(y);
@@ -253,12 +254,12 @@ function FriendsList(p) {
     if (n === s.me) { setErr("You can't add yourself."); return; }
     if (s.users[n] && s.users[n].friend) { setErr(n + ' is already a friend.'); return; }
     setErr(''); setName('');
-    app.actions.toggleUser(n, 'friend');
+    request.toggle(n);
   }
   return h(Frag, null,
     h('form', { onSubmit: add, noValidate: true, style: { padding: '12px 12px 4px', display: 'flex', alignItems: 'flex-end', gap: 8 } },
       h('div', { style: { flex: 1 } }, h(T.TextField, { id: 'add-friend', label: 'Add a friend', placeholder: 'Username', value: name, error: err || undefined, autoComplete: 'off', onChange: function (e) { setName(e.target.value); setErr(''); } })),
-      h(T.Button, { type: 'submit', style: { height: 38 } }, 'Add')),
+      h(T.Button, { type: 'submit', style: { height: 38 }, disabled: !!request.pending }, request.pending ? 'Adding' : 'Add')),
     LIVE && !s.friendsLoaded ? null : h('p', { className: 'mlabel', style: { margin: '8px 16px 4px' } }, online + ' online · ' + plural(friends.length, 'friend', 'friends')),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading friends' })
       : friends.length

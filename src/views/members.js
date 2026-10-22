@@ -52,23 +52,36 @@ function GroupInfoSheet(p) {
 
 /* ---------- Profil d'un membre ---------- */
 /**
+ * Permet de suivre une demande d'ami jusqu'à sa confirmation.
+ */
+function useFriendRequest() {
+  var app = useApp();
+  var a = useState(null), asked = a[0], setAsked = a[1];
+  useEffect(function () {
+    if (!asked) return undefined;
+    var t = setTimeout(function () { setAsked(null); }, CONFIRM_TIMEOUT);
+    return function () { clearTimeout(t); };
+  }, [asked]);
+  return {
+    pending: asked && !userOf(app.state, asked).friend ? asked : null,
+    toggle: function (name) {
+      var was = !!userOf(app.state, name).friend, sent = app.actions.toggleUser(name, 'friend');
+      // Le prototype ajoute sans rien renvoyer : seul un envoi refusé en live (false) n'ouvre pas l'attente.
+      setAsked(!was && sent !== false ? name : null);
+    }
+  };
+}
+
+/**
  * Permet d'ajouter ou de retirer un ami depuis une fiche de profil.
  * @param {string} name Nom du membre.
  * @param {Object} u Membre dans l'état.
  */
 function useFriendAction(name, u) {
-  var app = useApp();
-  var a = useState(false), asked = a[0], setAsked = a[1];
-  var busy = asked && !u.friend;
-  useEffect(function () {
-    if (!asked) return undefined;
-    var t = setTimeout(function () { setAsked(false); }, CONFIRM_TIMEOUT);
-    return function () { clearTimeout(t); };
-  }, [asked]);
+  var request = useFriendRequest(), busy = request.pending === name;
   return {
     busy: busy, icon: u.friend ? 'user-minus' : 'user-plus', label: busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend',
-    // Le prototype ajoute sans rien renvoyer : seul un envoi refusé en live (false) n'ouvre pas l'attente.
-    run: function () { var sent = app.actions.toggleUser(name, 'friend'); setAsked(!u.friend && sent !== false); }
+    run: function () { request.toggle(name); }
   };
 }
 
