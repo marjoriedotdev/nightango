@@ -139,6 +139,7 @@ h1,h2,h3{text-wrap:balance}
 .toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(max(0px,env(safe-area-inset-top,0px)) + 64px);z-index:60;display:flex;flex-direction:column-reverse;gap:8px;width:min(380px,calc(100% - 32px))}
 .toast{display:flex;align-items:center;gap:10px;padding:10px 8px 10px 14px;border-radius:10px;background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);font-size:13.5px;color:var(--text-body);animation:toastIn .18s ease-out}
 .toast .grow{min-width:0}
+.toast-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 @keyframes toastIn{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
 
 .members-list{padding:12px 8px;display:flex;flex-direction:column;gap:2px}

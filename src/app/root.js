@@ -92,7 +92,7 @@ function Root(props) {
     if (!n) return;
     var focused = document.visibilityState === 'visible' && (typeof document.hasFocus !== 'function' || document.hasFocus());
     if (n.sound && (!p.soundFocusOnly || focused)) beep(p.volume);
-    if (n.app && info.toast) toast(info.toast, info.action ? { action: info.action, icon: info.icon } : { icon: info.icon });
+    if (n.app && info.toast) toast(info.toast, info.action ? { action: info.action, icon: info.icon, clamp: kind === 'pm' } : { icon: info.icon, clamp: kind === 'pm' });
     if (n.desktop && !focused) {
       try { if (window.Notification && window.Notification.permission === 'granted') new window.Notification('Torch', { body: info.toast }); } catch (e) { /* notifications système indisponibles */ }
     }

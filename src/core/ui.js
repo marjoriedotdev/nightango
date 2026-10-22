@@ -185,7 +185,7 @@ function Toasts(p) {
     p.toasts.map(function (t) {
       return h('div', { key: t.id, className: 'toast' },
         t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
-        h('span', { className: 'grow' }, t.text),
+        h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
         t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
         h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
     })));
