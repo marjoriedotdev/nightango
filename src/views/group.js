@@ -8,6 +8,8 @@ function GroupView(p) {
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a7 = useState(false), jump = a7[0], setJump = a7[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
+  var a9 = useState(''), draft = a9[0], setDraft = a9[1];
+  var inputRef = useRef(null);
   var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
@@ -37,6 +39,11 @@ function GroupView(p) {
     seen.current.top = el.scrollTop; seen.current.height = el.scrollHeight;
     if (atBottom.current && jump) setJump(false);
   }
+  // Comme Torch : la mention s'ajoute en fin de brouillon.
+  function mention(handle) {
+    setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
+    if (inputRef.current) inputRef.current.focus();
+  }
   function toBottom() { var el = logRef.current; atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
 
   var items = [], prev = null, lastDay = null, marker = false;
@@ -59,7 +66,7 @@ function GroupView(p) {
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted);
-    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, onReply: setReplyTo }));
+    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, onReply: setReplyTo, onMention: mention }));
     prev = m;
   }
   if (LIVE && !q) items.unshift(!g.inited && !g.messages.length
@@ -78,7 +85,7 @@ function GroupView(p) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
     composer = h(T.Composer, {
-      placeholder: 'Message #' + g.id, replyTo: replyTo ? { author: replyTo.author, text: messagePreview(replyTo) } : null,
+      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, inputRef: inputRef, replyTo: replyTo ? { author: replyTo.author, text: messagePreview(replyTo) } : null,
       onCancelReply: function () { setReplyTo(null); },
       onSend: function (text) { atBottom.current = true; app.actions.sendGroup(g.id, text, { replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: messagePreview(replyTo) } : null, channel: channel }); setReplyTo(null); },
       onEmoji: LIVE ? null : function () { app.ui.toast('The emoji picker is not part of this prototype.'); },

@@ -280,7 +280,7 @@
     var internal = React.useState('');
     var value = props.value != null ? props.value : internal[0];
     var setValue = props.onChange || internal[1];
-    var ref = React.useRef(null);
+    var own = React.useRef(null), ref = props.inputRef || own;
     var id = React.useId();
     function send() {
       var text = value.trim();
