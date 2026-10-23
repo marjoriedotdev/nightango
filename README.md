@@ -10,6 +10,7 @@ You sign in on Torch's own screen. Torch Skin never reads your password and only
 
 **Group chats**
 - Replies, mentions and unread markers, with a "New messages" jump.
+- A Mentions page lists recent messages that mention you across your groups, and jumps to each one.
 - Red, blue and staff channels, with a color bar on every channel message.
 - Older messages load as you scroll up.
 - Errors and warnings show as short notices instead of filling the thread.

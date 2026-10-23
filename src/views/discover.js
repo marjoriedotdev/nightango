@@ -36,7 +36,7 @@ function Discover() {
   }
   var topics = ['All', 'Gaming', 'Art', 'Music', 'Languages', 'Tech'];
   return h('main', { className: 'main' },
-    h('header', { className: 'topbar' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Discover groups')),
+    pageHeader('Discover groups'),
     h('div', { className: 'scroll' },
       h('div', { style: { maxWidth: 1080, margin: '0 auto', padding: '32px 24px 56px', display: 'flex', flexDirection: 'column', gap: 28 } },
         h('div', { className: 'page-head' },

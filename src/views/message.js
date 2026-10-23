@@ -35,7 +35,7 @@ function MessageRow(p) {
   var app = useApp(), s = app.state, prefs = s.prefs, m = p.m, me = s.me, g = p.g;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var u = userOf(s, m.author);
-  var mention = m.author !== me && new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(m.text);
+  var mention = m.author !== me && mentionsMe(me, m.text);
   var ms = memberStyles(u, prefs.styles, app.theme, mention, m.bg ? u.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
   var bgUnknown = u.msgBg === undefined;
   useEffect(function () { if (m.bg && prefs.styles.backgrounds && !u.unstyled && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, u.unstyled, bgUnknown]);

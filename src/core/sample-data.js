@@ -141,7 +141,7 @@ function seedWorld(me) {
     pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60), request: true }
   };
   return {
-    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, typing: {},
+    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, typing: {}, mentionLog: [],
     meStatus: 'online', awayText: '',
     profile: { visibility: { age: true, gender: false, location: true, meet: false, fullPage: true }, colors: { bg: '#1b1c20', text: '#e6e6e6', link: '#f27a3f' } },
     account: { email: 'orrin@example.com', verified: true },

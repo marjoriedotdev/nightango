@@ -176,7 +176,7 @@ function sessionAfterConn(d, op) {
 function liveWorld(me) {
   var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
   return {
-    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, typing: {}, meStatus: 'online', awayText: '',
+    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, typing: {}, mentionLog: [], meStatus: 'online', awayText: '',
     profile: { visibility: { age: true, gender: false, location: true, meet: false, fullPage: true }, colors: { bg: '#1b1c20', text: '#e6e6e6', link: '#f27a3f' } },
     account: { email: '', verified: false },
     route: { view: 'discover' }, lastChat: { view: 'discover' },

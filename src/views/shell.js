@@ -5,6 +5,14 @@ function MobileNavButton() {
 }
 
 /**
+ * En-tête titré d'une page principale, avec le bouton de navigation mobile.
+ * @param {string} title Titre de la page.
+ */
+function pageHeader(title) {
+  return h('header', { className: 'topbar' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, title));
+}
+
+/**
  * En-tête titré d'une colonne de droite.
  * @param {string} title Titre de la colonne.
  */
@@ -17,8 +25,9 @@ function Shell() {
   if (r.view === 'settings') return h(SettingsView, { page: r.page });
   if (r.view === 'gsettings') return h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
   if (LIVE && !app.state.groupsSeen) main = h(StartupScreen, null);
-  else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id });
+  else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id, msgId: r.msgId });
   else if (r.view === 'dm') main = h(DMView, { id: r.id, tab: r.tab });
+  else if (r.view === 'mentions') main = h(MentionsView, null);
   else main = h(Discover, null);
   return h('div', { className: cx('shell', app.navOpen && 'nav-open') },
     h(Sidebar, null),
@@ -74,6 +83,7 @@ function Sidebar() {
       h(T.NavItem, { icon: 'message', label: 'Private messages', active: r.view === 'dm' && !r.tab, count: unreadDmCount(s), onClick: function () { app.nav({ view: 'dm', id: null }); } }),
       h(T.NavItem, { icon: 'users', label: 'Friends', active: r.view === 'dm' && r.tab === 'friends', trailing: onlineFriends ? h('span', { className: 'tc-msg-time' }, onlineFriends + ' online') : null, onClick: function () { app.nav({ view: 'dm', id: null, tab: 'friends' }); } }),
       h(T.NavItem, { icon: 'search', label: 'Meet people', active: r.view === 'dm' && r.tab === 'meet', onClick: function () { app.nav({ view: 'dm', id: null, tab: 'meet' }); } }),
+      h(T.NavItem, { icon: 'at-sign', label: 'Mentions', active: r.view === 'mentions', onClick: function () { app.nav({ view: 'mentions' }); } }),
       favs.length ? section('favorites', 'Favorites', favs.map(groupItem)) : null,
       groupsLoading || rest.length || !joined.length ? section('groups', 'Groups', groupsLoading ? h(SkeletonRows, { count: 3, avatar: 22, square: true, label: 'Loading groups' })
         : rest.length ? rest.map(groupItem) : h('p', { className: 'pal-empty' }, 'Join a group from Discover.')) : null,

@@ -1,5 +1,6 @@
 /* ---------- Racine ---------- */
 var THREAD_MAX = 500;
+var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
 
 function Root(props) {
@@ -89,7 +90,8 @@ function Root(props) {
   function nav(route) {
     update(function (d) {
       var cur = d.route;
-      if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover')) d.lastChat = cur;
+      // Le retour au fil ne refait pas le saut vers le message ouvert depuis Mentions.
+      if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; }
       var r = Object.assign({}, route);
       if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = Date.now(); g.unread = 0; g.mentions = 0; }
       if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].unread = 0; d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
@@ -121,9 +123,47 @@ function Root(props) {
     // Le compteur get_more de Torch ignore la coupe : une reprise sauterait les messages retirés.
     g.historyCapped = true;
   }
+  /**
+   * Permet de relever pour la page Mentions un message de groupe qui mentionne l'utilisateur, le plus récent en tête.
+   * @param {Object} d État en cours de modification.
+   * @param {string} gid Groupe du message.
+   * @param {Object} m Message reçu.
+   */
+  function logMention(d, gid, m) {
+    // Une modification affichée à part rejoint son original quand il arrive : seul l'original entre dans la liste.
+    if (m.kind !== 'msg' || m.editId || m.author === d.me || userOf(d, m.author).ignored || !mentionsMe(d.me, m.text)) return;
+    if (d.mentionLog.some(function (x) { return x.gid === gid && x.id === m.id; })) return;
+    d.mentionLog.push({ gid: gid, id: m.id, author: m.author, text: messagePreview(m), ts: m.ts });
+    d.mentionLog.sort(function (a, b) { return b.ts - a.ts; });
+    d.mentionLog.splice(MENTION_MAX);
+  }
+  /**
+   * Permet de savoir si un message figure parmi des identifiants reçus de Chatango, sous son identifiant provisoire ou définitif.
+   * @param {string[]} ids Identifiants reçus.
+   * @param {string} id Identifiant du message dans l'état.
+   */
+  function idIn(ids, id) { return ids.indexOf(id) >= 0 || ids.indexOf(String(id).replace(/^k:/, '')) >= 0; }
+  /**
+   * Permet de retirer de la page Mentions les messages d'un groupe.
+   * @param {Object} d État en cours de modification.
+   * @param {string} gid Groupe visé.
+   * @param {?string[]} ids Messages retirés, null pour tout le groupe.
+   */
+  function dropMentions(d, gid, ids) {
+    d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && !idIn(ids, x.id)); });
+  }
+  /**
+   * Permet de poser le monde d'exemple du prototype, ses mentions relevées comme celles de l'historique en live.
+   * @param {Object} d État en cours de modification.
+   * @param {string} me Nom de l'utilisateur.
+   */
+  function seedState(d, me) {
+    Object.assign(d, seedWorld(me));
+    Object.keys(d.groups).forEach(function (gid) { d.groups[gid].messages.forEach(function (m) { logMention(d, gid, m); }); });
+  }
   function receiveGroup(gid, msg) {
     var s0 = stateRef.current, me = s0.me;
-    var mention = msg.kind === 'msg' && new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(msg.text);
+    var mention = msg.kind === 'msg' && mentionsMe(me, msg.text);
     // Comme dans Torch, la mention d'un groupe coupé ou d'un auteur ignoré n'alerte pas, et les compteurs changent quand même.
     var quiet = !!(s0.groups[gid] && s0.groups[gid].muted) || !!userOf(s0, msg.author).ignored;
     var focused = s0.route.view === 'group' && s0.route.id === gid && document.visibilityState === 'visible';
@@ -133,6 +173,7 @@ function Root(props) {
       if (LIVE && msg.replyId) withReply(g, msg);
       g.messages.push(msg);
       trimThread(g);
+      logMention(d, gid, msg);
       if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
       if (focused) g.lastReadTs = Date.now();
     });
@@ -179,9 +220,9 @@ function Root(props) {
   }
 
   var actions = {
-    login: function (name) { update(function (d) { Object.assign(d, seedWorld(name)); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
+    login: function (name) { update(function (d) { seedState(d, name); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
-    resetDemo: function () { update(function (d) { var me = d.me; Object.assign(d, seedWorld(me)); }); toast('Sample data restored.'); },
+    resetDemo: function () { update(function (d) { seedState(d, d.me); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
@@ -266,7 +307,7 @@ function Root(props) {
     },
     leaveGroup: function (gid) {
       var me = stateRef.current.me;
-      update(function (d) { var g = d.groups[gid]; g.joined = false; g.favorite = false; g.members = g.members.filter(function (n) { return n !== me; }); });
+      update(function (d) { var g = d.groups[gid]; g.joined = false; g.favorite = false; g.members = g.members.filter(function (n) { return n !== me; }); dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
     },
@@ -295,8 +336,9 @@ function Root(props) {
         var g = d.groups[gid];
         g.messages.forEach(function (m) { if (m.id === mid) { m.deleted = { by: me }; author = m.author; } });
         if (author && author !== me) g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Deleted a message from ' + author });
+        dropMentions(d, gid, [mid]);
       });
-      toast('Message deleted.', { action: { label: 'Undo', run: function () { update(function (d) { d.groups[gid].messages.forEach(function (m) { if (m.id === mid) m.deleted = null; }); }); } } });
+      toast('Message deleted.', { action: { label: 'Undo', run: function () { update(function (d) { d.groups[gid].messages.forEach(function (m) { if (m.id === mid) { m.deleted = null; logMention(d, gid, m); } }); }); } } });
     },
     ban: function (gid, name, reason) {
       var me = stateRef.current.me, now = Date.now();
@@ -509,7 +551,7 @@ function Root(props) {
       liveBridge.leave(gid);
       var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
       if (kept) toast('Torch could not remove #' + gid + ' from favorites. Reload the page and try again.');
-      update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } });
+      update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
     };
@@ -866,23 +908,28 @@ function Root(props) {
           g.messages.push(withReply(g, hm));
           g.messages.sort(function (a, b) { return a.ts - b.ts; });
           trimThread(g);
+          logMention(d, op.gid, hm);
         });
         break;
       }
-      case 'msgid': groupUpdate(op.gid, function (g) {
+      case 'msgid': groupUpdate(op.gid, function (g, d) {
         g.messages.forEach(function (x) {
           if (x.id === op.tmp) x.id = op.id;
           if (x.replyTo && x.replyTo.id === op.tmp) x.replyTo.id = op.id;
           if (x.editIds) x.editIds = x.editIds.map(function (id) { return id === op.tmp ? op.id : id; });
         });
+        d.mentionLog.forEach(function (x) { if (x.gid === op.gid && x.id === op.tmp) x.id = op.id; });
       }); break;
-      case 'del': groupUpdate(op.gid, function (g) {
-        function hit(id) { return op.ids.indexOf(String(id).replace(/^k:/, '')) >= 0; }
+      case 'del': groupUpdate(op.gid, function (g, d) {
         // Une modification affichée à part disparaît avec son original, même quand celui-ci n'est pas chargé.
-        g.messages = g.messages.filter(function (x) { return !(x.editId && hit(x.editId)); });
-        g.messages.forEach(function (x) { if (hit(x.id)) x.deleted = { by: 'staff' }; });
+        g.messages = g.messages.filter(function (x) { return !(x.editId && idIn(op.ids, x.editId)); });
+        g.messages.forEach(function (x) { if (idIn(op.ids, x.id)) x.deleted = { by: 'staff' }; });
+        dropMentions(d, op.gid, op.ids);
       }); break;
-      case 'cleared': groupUpdate(op.gid, function (g) { g.messages = [{ id: uid(), kind: 'system', text: 'All messages in #' + g.id + ' were cleared.', ts: Date.now() }]; }); break;
+      case 'cleared': groupUpdate(op.gid, function (g, d) {
+        g.messages = [{ id: uid(), kind: 'system', text: 'All messages in #' + g.id + ' were cleared.', ts: Date.now() }];
+        dropMentions(d, op.gid, null);
+      }); break;
       case 'members': groupUpdate(op.gid, function (g, d) {
         var list = op.names.slice(); if (list.indexOf(d.me) < 0) list.push(d.me);
         g.members = list; g.membersLoaded = true;

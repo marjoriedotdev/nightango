@@ -28,6 +28,7 @@ export const APP_SOURCES = [
   'views/members.js',
   'views/dm.js',
   'views/meet.js',
+  'views/mentions.js',
   'views/profile.js',
   'views/new-dm.js',
   'views/message-style.js',

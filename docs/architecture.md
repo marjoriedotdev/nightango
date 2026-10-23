@@ -27,7 +27,8 @@ src/
   views/      écrans principaux
     login, shell (barre latérale), group, message (ligne et médias),
     members (liste, fiche profil, bannissement, lien externe, lien de profil), dm (Chats, Friends),
-    meet (Meet people), profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
+    meet (Meet people), mentions (mentions récentes de tous les groupes),
+    profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
     commands (/join, /leave, /chat et /help des composeurs),
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages
@@ -110,6 +111,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - Les préférences sont persistées dans `localStorage` sous `torch-prototype-prefs` (`app/state.js`). En live, celles de `TORCH_PREFS` (`core/prefs.js` : messages d'invités, annonces) sont des réglages de Torch : relues dans ses réglages à la connexion, et `usePref().sw` ne les bascule qu'une fois écrites chez lui.
 - Les données propres au compte sont persistées sous `torch-skin:<pseudo>` : conversations fermées (`hidden`), canaux masqués de chaque groupe (`channels`), membres au style coupé (`unstyled`) et style perso (`style`). Le pont y pose aussi le drapeau de migration des non-lus (`pmReadMigrated`, `docs/torch-protocol.md`, Historique privé) : `Root` fusionne ses écritures avec le contenu stocké pour le garder. En live, les favoris, les sourdines de groupe et les membres ignorés sont ceux de Torch (`docs/torch-protocol.md`, Réglages de démarrage de Torch). Le prototype garde les siens dans son état.
 - Les profils lus (mini profil, fond Premium dans `u.miniStyle`) et les fonds de message (`u.msgBg`) sont mis en cache avec l'utilisateur.
+- La page Mentions lit `mentionLog` : les 100 derniers messages de groupe, en direct ou d'historique, qui mentionnent l'utilisateur, le plus récent en tête. La liste vit dans l'état seulement et repart vide à chaque chargement de la page.
 
 ## Contenu des membres
 

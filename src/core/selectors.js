@@ -9,6 +9,18 @@ function canManage(group, me) { var r = roleOf(group, me); return r === 'owner' 
 function canSeeIps(myRole, perms) { return myRole === 'owner' || !!perms.seeIps; }
 function userOf(state, name) { return state.users[name] || { status: 'offline', about: '', style: {} }; }
 /**
+ * Permet de savoir si les messages d'un membre sont masqués : membre ignoré, ou bloqué quand le blocage vaut aussi en groupe.
+ * @param {Object} state État de l'application.
+ * @param {string} name Auteur visé.
+ */
+function isHiddenAuthor(state, name) { var u = userOf(state, name); return (u.ignored || (u.blocked && state.prefs.safety.syncBlocked)) && name !== state.me; }
+/**
+ * Permet de savoir si un texte mentionne l'utilisateur par @nom.
+ * @param {string} me Nom de l'utilisateur.
+ * @param {string} text Texte du message.
+ */
+function mentionsMe(me, text) { return new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(text); }
+/**
  * Permet de retrouver un message chargé d'un groupe, par son identifiant provisoire ou définitif.
  * @param {Object} g Groupe dans l'état.
  * @param {string} id Identifiant du message.

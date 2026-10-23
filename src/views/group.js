@@ -44,6 +44,8 @@ function GroupView(p) {
     var timer = setTimeout(function () { setTarget(null); }, 1500);
     return function () { clearTimeout(timer); };
   }, [target]);
+  // Saut demandé par la page Mentions : jumpTo, déclarée plus bas, refuse un message que le fil masque.
+  useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
@@ -106,7 +108,6 @@ function GroupView(p) {
     setMode(null);
   }
   function toBottom() { var el = logRef.current; atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
-  function ignoredAuthor(m) { var u = userOf(s, m.author); return (u.ignored || (u.blocked && prefs.safety.syncBlocked)) && m.author !== me; }
   // Comme dans Torch, un message masqué compte encore dans les non-lus et les mentions.
   function shown(m) { return m.annc ? prefs.announcements : m.kind !== 'msg' || prefs.safety.guestMessages || !isGuest(m.author); }
   // Les messages d'exemple du prototype n'ont pas de canal.
@@ -114,7 +115,7 @@ function GroupView(p) {
   function jumpTo(o) {
     if (hiddenByChannel(o)) { app.ui.toast('The original message is in a channel you hide. Show that channel from the channel menu to see it.'); return; }
     if (!shown(o)) { app.ui.toast('The original message is hidden because messages from guests are off in Safety settings.'); return; }
-    if (ignoredAuthor(o) && (prefs.safety.ignoreMode === 'hide' || !revealed[o.id])) { app.ui.toast('The original message is hidden because you ignore its author.'); return; }
+    if (isHiddenAuthor(s, o.author) && (prefs.safety.ignoreMode === 'hide' || !revealed[o.id])) { app.ui.toast('The original message is hidden because you ignore its author.'); return; }
     setSearch(null);
     setTarget({ id: o.id });
   }
@@ -129,7 +130,7 @@ function GroupView(p) {
     }
     if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), m.user + ' was banned')); prev = null; continue; }
     if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null)); prev = null; continue; }
-    if (ignoredAuthor(m)) {
+    if (isHiddenAuthor(s, m.author)) {
       if (prefs.safety.ignoreMode === 'hide') continue;
       if (!revealed[m.id]) {
         items.push(h('div', { key: m.id, className: 'ignored-row' }, h(T.Icon, { name: 'eye-off', size: 14 }), 'Message from ' + m.author + ' hidden.',
