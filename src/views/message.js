@@ -50,7 +50,7 @@ function MessageRow(p) {
   var reply = m.replyTo ? { avatar: m.replyTo.author ? h(T.Avatar, { name: m.replyTo.author, size: 16 }) : null, author: m.replyTo.author, text: m.replyTo.text } : null;
   var authorBtn = handle
     ? h('button', { type: 'button', className: 'tc-msg-author linkbtn', title: 'Mention ' + m.author, style: Object.assign({ textDecoration: 'none', color: 'var(--text)', fontWeight: 600, fontSize: 14 }, nameStyle), onClick: function () { p.onMention(handle); } }, m.author)
-    : h('span', { className: 'tc-msg-author', style: nameStyle }, m.author);
+    : authorName(m.author, nameStyle);
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
     avatar: h(AuthorAvatar, { name: m.author, gid: g.id }), author: authorBtn, meta: h(Frag, null, roleBadge, chan), reply: reply, actions: actions,
@@ -66,6 +66,15 @@ function mentionHandle(name) {
   // Comme Torch : un nom temporaire « #nom » se mentionne sans son #.
   if (name.charAt(0) === '#') return name.slice(1);
   return name.charAt(0) === '!' ? null : name;
+}
+
+/**
+ * Nom de l'auteur d'un message, sans action.
+ * @param {string} name Nom du membre.
+ * @param {?Object} style Couleur du nom choisie par le membre.
+ */
+function authorName(name, style) {
+  return h('span', { className: 'tc-msg-author', style: style }, name);
 }
 
 /**

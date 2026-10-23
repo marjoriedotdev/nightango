@@ -53,15 +53,11 @@ function DMView(p) {
     convo.messages.forEach(function (m) {
       var dk = dayKey(m.ts);
       if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-      var cont = prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN;
-      var time = fmtTime(m.ts, s.prefs.h24);
       var ms = memberStyles(userOf(s, m.from).style || {}, s.prefs.styles, app.theme, false);
-      var content = h(MessageContent, { m: m, style: ms.text });
-      rows.push(cont
-        ? h('article', { key: m.id, className: 'tc-msg tc-msg-cont', style: ms.row }, h('span', { className: 'tc-msg-gutter' }, time), h('div', { className: 'tc-msg-body' }, content))
-        : h('article', { key: m.id, className: 'tc-msg', style: Object.assign({ marginTop: 6 }, ms.row) },
-          h(AuthorAvatar, { name: m.from }),
-          h('div', { className: 'tc-msg-body' }, h('div', { className: 'tc-msg-head' }, h('span', { className: 'tc-msg-author', style: ms.name }, m.from), h('time', { className: 'tc-msg-time' }, time)), content)));
+      rows.push(h(T.Message, {
+        key: m.id, compact: s.prefs.density === 'compact', continued: prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, time: fmtTime(m.ts, s.prefs.h24),
+        avatar: h(AuthorAvatar, { name: m.from }), author: authorName(m.from, ms.name), style: ms.row
+      }, h(MessageContent, { m: m, style: ms.text })));
       prev = m;
     });
     var lastMsg = convo.messages[convo.messages.length - 1];

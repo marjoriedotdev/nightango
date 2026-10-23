@@ -224,7 +224,7 @@
     }
     return h('article', { className: cx('tc-msg', mention, props.className), style: Object.assign({ marginTop: 6 }, reply ? { flexDirection: 'column' } : null, props.style) },
       reply,
-      h('div', { style: { display: 'flex', gap: 12 } },
+      h('div', { style: { display: 'flex', gap: 12, minWidth: 0 } },
         props.avatar,
         h('div', { className: 'tc-msg-body' }, h('div', { className: 'tc-msg-head' }, author, props.meta, time), body)),
       actions);
