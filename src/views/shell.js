@@ -68,15 +68,15 @@ function Sidebar() {
       h(T.NavItem, { icon: 'search', label: 'Meet people', active: r.view === 'dm' && r.tab === 'meet', onClick: function () { app.nav({ view: 'dm', id: null, tab: 'meet' }); } }),
       favs.length ? section('favorites', 'Favorites', favs.map(groupItem)) : null,
       section('groups', 'Groups', LIVE && !s.groupsSeen ? h(SkeletonRows, { count: 3, avatar: 22, square: true, label: 'Loading groups' })
-        : rest.length ? rest.map(groupItem) : h('p', { className: 'muted', style: { margin: '4px 10px', fontSize: 13 } }, 'Join a group from Discover.')),
-      section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.map(function (n) {
+        : rest.length ? rest.map(groupItem) : h('p', { className: 'pal-empty' }, 'Join a group from Discover.')),
+      section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.length ? dmNames.map(function (n) {
         var u = userOf(s, n), c = s.dms[n];
         return h(T.NavItem, {
           key: n, label: h(Frag, null, n, presenceSr(u.status)), active: r.view === 'dm' && r.id === n, unread: c.unread > 0, count: c.unread || 0,
           avatar: h(T.Avatar, { name: n, size: 22, status: u.status, ring: 'var(--sidebar)' }),
           onClick: function () { app.nav({ view: 'dm', id: n }); }
         });
-      }))),
+      }) : h('p', { className: 'pal-empty' }, 'No conversations yet.'))),
     h('div', { className: 'me' },
       h(MenuButton, {
         up: true, align: 'left', items: [

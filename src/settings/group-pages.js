@@ -111,7 +111,7 @@ function GSBans(p) {
           h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28 }), h('span', { className: 'lrow-sub person-sub' }, x.reason + ' · by ' + x.by + ' · ' + ago(x.at))),
           showIp ? h('span', { className: 'mono muted', style: { fontSize: 12 } }, x.ip) : null,
           h(T.Button, { size: 'sm', onClick: function () { app.actions.unban(g.id, x.name); } }, 'Unban'));
-      }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, 'Nobody is banned.')));
+      }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
 }
 
 function GSAudit(p) {

@@ -79,5 +79,5 @@ function GSStaffLive(p) {
             });
           }));
         }))
-        : h(T.SettingsSection, { padded: true }, h('p', { className: 'muted', style: { margin: 0 } }, 'No moderators yet.' + (canEdit ? ' Add one with their Chatango username.' : ''))))));
+        : h(T.SettingsSection, { padded: true }, h('p', { className: 'pal-empty' }, 'No moderators yet.' + (canEdit ? ' Add one with their Chatango username.' : ''))))));
 }

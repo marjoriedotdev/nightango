@@ -124,6 +124,7 @@ h1,h2,h3{text-wrap:balance}
 .pal-item[aria-selected="true"]{background:var(--hover);color:var(--text)}
 .pal-item .muted{margin-left:auto;font-size:12.5px}
 .pal-empty{padding:24px 16px;text-align:center;color:var(--text-3)}
+.navlist .pal-empty{margin:4px 10px;padding:0;font-size:13px;text-align:left}
 .profile-card{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:28px 20px 16px}
 .profile-card h2{margin:10px 0 0;font-size:17px;font-weight:600}
 .about{margin:0;color:var(--text-body);font-size:13.5px;white-space:pre-wrap}

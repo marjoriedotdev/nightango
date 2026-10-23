@@ -42,7 +42,7 @@ function SafetyPage() {
     return list.length ? list.map(function (n) {
       return h('div', { key: n, className: 'lrow' }, h('span', { className: 'grow' }, h(Person, { name: n, size: 28 })),
         h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(n, key); } }, action));
-    }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, empty);
+    }) : h('p', { className: 'pal-empty' }, empty);
   }
   return h(Page, { title: 'Safety', lede: 'Decide what reaches your screen.' },
     h(T.SettingsSection, { title: 'Media and links' },

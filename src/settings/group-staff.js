@@ -53,7 +53,7 @@ function ManageRoleDialog(p) {
       holders.length ? holders.map(function (n) {
         return h('div', { key: n, style: { display: 'flex', alignItems: 'center', gap: 10 } }, h(T.Avatar, { name: n, size: 28 }), h('span', { className: 'grow' }, n),
           h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { p.edit(function (d) { delete d.staff[n]; }); } }, 'Remove'));
-      }) : h('p', { className: 'muted', style: { margin: 0 } }, 'Nobody has this role yet.'),
+      }) : h('p', { className: 'pal-empty' }, 'Nobody has this role yet.'),
       h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 8 } },
         h('div', { className: 'tc-field', style: { flex: 1 } }, h('label', { className: 'tc-label', htmlFor: 'add-staff' }, 'Add a member'),
           h('select', { id: 'add-staff', className: 'tc-input', value: pickName, onChange: function (e) { setPick(e.target.value); } }, h('option', { value: '' }, 'Choose a member'), candidates.map(function (n) { return h('option', { key: n, value: n }, n); }))),

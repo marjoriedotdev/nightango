@@ -96,5 +96,5 @@ function GSBansLive(p) {
             h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28, inert: !ACCOUNT_NAME.test(x.name) }), h('span', { className: 'lrow-sub person-sub' }, (x.by ? 'by ' + x.by + ' · ' : '') + ago(x.at))),
             showIp ? h('span', { className: 'mono muted', style: { fontSize: 12 } }, x.ip) : null,
             h(T.Button, { size: 'sm', onClick: function () { app.actions.unbanEntry(g.id, x); } }, 'Unban'));
-        }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, 'Nobody is banned.')));
+        }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
 }
