@@ -17,7 +17,8 @@ function GroupView(p) {
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
   var a10 = useState(null), target = a10[0], setTarget = a10[1];
-  var inputRef = useRef(null), stash = useRef('');
+  var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
+  var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
   var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
@@ -65,6 +66,29 @@ function GroupView(p) {
   function mention(handle) {
     setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
     if (inputRef.current) inputRef.current.focus();
+  }
+  function endCompletion() { if (!completion.current) return; completion.current = null; setCompleted(''); }
+  function completeMention(e) {
+    var el = e.target, c = completion.current;
+    if (e.key !== 'Tab' || e.shiftKey || e.nativeEvent.isComposing) { endCompletion(); return; }
+    // Un seul nom : rien à faire défiler, le Tab suivant rend la main à la navigation.
+    if (c && c.names.length === 1) { endCompletion(); return; }
+    if (!c) {
+      var caret = el.selectionEnd, word = el.selectionStart === caret && /(?:^|\s)@([A-Za-z0-9_-]{1,20})$/.exec(el.value.slice(0, caret));
+      var names = word ? mentionCandidates(g, me, word[1]) : [];
+      if (!names.length) return;
+      // Comme Torch, l'espace qui suit déjà le mot est remplacée avec lui.
+      c = completion.current = { start: caret - word[1].length - 1, end: caret + (el.value.charAt(caret) === ' ' ? 1 : 0), names: names, index: -1 };
+    }
+    e.preventDefault();
+    c.index = (c.index + 1) % c.names.length;
+    var inserted = '@' + c.names[c.index] + ' ', next = el.value.slice(0, c.start) + inserted + el.value.slice(c.end);
+    c.end = c.start + inserted.length;
+    // Valeur posée sur le champ avant setDraft : React la trouve à jour et laisse le curseur après le nom.
+    el.value = next;
+    el.setSelectionRange(c.end, c.end);
+    setDraft(next);
+    setCompleted(c.names[c.index] + ', ' + (c.index + 1) + ' of ' + c.names.length);
   }
   function closeMode() { if (mode && mode.kind === 'edit') setDraft(stash.current); setMode(null); }
   function reply(m) { closeMode(); setMode({ kind: 'reply', m: m }); }
@@ -133,7 +157,7 @@ function GroupView(p) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
     composer = h(T.Composer, {
-      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, inputRef: inputRef,
+      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: completeMention, inputRef: inputRef,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
       onCancelContext: closeMode, onSend: send,
       onEmoji: LIVE ? null : function () { app.ui.toast('The emoji picker is not part of this prototype.'); },
@@ -191,11 +215,34 @@ function GroupView(p) {
         tone: 'warning', icon: 'info', title: g.conn === 'connecting' ? 'Connecting to #' + g.id : 'Disconnected from #' + g.id,
         action: g.conn === 'closed' ? h(T.Button, { size: 'sm', onClick: function () { app.actions.reconnect(g.id); } }, 'Reconnect') : null
       }, g.conn === 'connecting' ? 'Messages you send now may not arrive.' : 'New messages will not arrive until you reconnect.')) : null,
-      h('div', { className: 'composer-wrap' },
+      h('div', { className: 'composer-wrap', onMouseDown: endCompletion, onBlur: endCompletion },
         h('p', { className: 'typing', 'aria-live': 'polite' }, typing.length ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, typing.join(', ')), typing.length > 1 ? ' are typing' : ' is typing') : null),
-        composer)),
+        composer,
+        h('p', { className: 'tc-sr', 'aria-live': 'polite' }, completed))),
     showMembers ? h(MembersPanel, { g: g }) : null,
     infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null);
+}
+
+/**
+ * Permet de lister les noms qui complètent une mention : ceux qui commencent par la saisie, puis ceux qui la contiennent.
+ * @param {Object} g Groupe ouvert.
+ * @param {string} me Utilisateur connecté, jamais proposé.
+ * @param {string} typed Saisie après @.
+ */
+function mentionCandidates(g, me, typed) {
+  var q = typed.toLowerCase(), seen = Object.create(null), starts = [], contains = [];
+  var authors = g.messages.filter(function (m) { return m.kind === 'msg'; }).map(function (m) { return m.author; });
+  seen[me.toLowerCase()] = true;
+  g.members.concat(authors).forEach(function (n) {
+    var handle = mentionHandle(n), key = handle && handle.toLowerCase();
+    if (!handle || seen[key]) return;
+    seen[key] = true;
+    var at = key.indexOf(q);
+    if (at === 0) starts.push(handle); else if (at > 0) contains.push(handle);
+  });
+  // Sans doublon à la casse près : le comparateur n'a jamais deux noms égaux.
+  function byName(a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }
+  return starts.sort(byName).concat(contains.sort(byName));
 }
 
 /**

@@ -328,6 +328,8 @@
         id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value,
         onChange: function (e) { setValue(e.target.value); if (props.onTyping) props.onTyping(); },
         onKeyDown: function (e) {
+          if (props.onKeyDown) props.onKeyDown(e);
+          if (e.defaultPrevented) return;
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
           if (e.key === 'Escape' && ctx && props.onCancelContext) props.onCancelContext();
         }

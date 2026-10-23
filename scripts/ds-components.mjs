@@ -178,8 +178,10 @@ Sizes:
 - \`context\` shows the message the send relates to, above the input: \`{icon, verb, author, text, cancelLabel}\`, such as \`{icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply'}\` or \`{icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit'}\`. A new context focuses the input with the cursor at the end. Escape and the cancel button call \`onCancelContext\`.
 - \`onEmoji\` and \`onAttach\` each show their tool button; leave them out when the feature does not exist.
 - \`aside\` holds the channel picker. \`beforeSend\` holds one icon button placed right before Send, such as the message style.
-- Pass \`value\` and \`onChange\` when the view writes into the input, such as a mention, and \`inputRef\` to focus it afterwards.`,
-    `  return h(T.Composer, { placeholder: 'Message #community', context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) });`],
+- Pass \`value\` and \`onChange\` when the view writes into the input, such as a mention, and \`inputRef\` to focus it afterwards.
+- \`onKeyDown(e)\` sees each key before the composer does. Call \`e.preventDefault()\` to keep the key from it, such as Tab completing a mention. Leave Tab alone when there is nothing to complete, so focus moves on.`,
+    `  var s = React.useState('Thanks @sa');
+  return h(T.Composer, { placeholder: 'Message #community', value: s[0], onChange: s[1], onKeyDown: function (e) { if (e.key === 'Tab' && !e.shiftKey && /@sa$/.test(s[0])) { e.preventDefault(); s[1](s[0] + 'ble '); } }, context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) });`],
   ['Skeleton', 'Feedback', 120,
     'A shimmering placeholder that holds the place of content still loading.',
     `Pass \`width\` and \`height\` in pixels, or \`circle\` for an avatar. Compose them in the shape of the rows they replace (avatar plus one or two lines) so the layout does not jump when the content arrives. Use them only while data is on its way: an empty list says so in words.

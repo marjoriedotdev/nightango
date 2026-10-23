@@ -8,3 +8,4 @@ Provide `placeholder` ("Message #community", "Message sable") and `onSend(text)`
 - `onEmoji` and `onAttach` each show their tool button; leave them out when the feature does not exist.
 - `aside` holds the channel picker. `beforeSend` holds one icon button placed right before Send, such as the message style.
 - Pass `value` and `onChange` when the view writes into the input, such as a mention, and `inputRef` to focus it afterwards.
+- `onKeyDown(e)` sees each key before the composer does. Call `e.preventDefault()` to keep the key from it, such as Tab completing a mention. Leave Tab alone when there is nothing to complete, so focus moves on.
