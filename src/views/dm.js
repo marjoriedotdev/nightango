@@ -78,7 +78,7 @@ function DMView(p) {
         h(T.Avatar, { name: id, size: 30, status: u.status, ring: 'var(--bg)' }),
         h('h2', null, id),
         h('span', { className: 'topic', style: { flex: 1 } }, [u.friend ? 'Friend' : null, lastOnline(u)].filter(Boolean).join(' · ')),
-        h('span', { className: 'topic dm-meta', style: { flex: 1 } }, personMeta(u)),
+        h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [lastOnline(u), personMeta(u)].filter(Boolean).join(' · ')),
         h(T.IconButton, { icon: 'panel', label: showProfile ? 'Hide profile' : 'Show profile', pressed: showProfile, className: 'hide-mobile', onClick: function () { setShowProfile(!showProfile); } }),
         h(MenuButton, {
           label: 'Conversation options', items: [
@@ -105,7 +105,30 @@ function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
  */
 function lastOnline(u) { return u.friend && u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : null; }
 function personMeta(u) {
-  return [lastOnline(u), u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
+  return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
+}
+/**
+ * Permet de dater l'inactivité ou la dernière connexion d'un ami.
+ * @param {Object} u Membre dans l'état.
+ */
+function presenceSince(u) {
+  if (!u.friend) return null;
+  if (u.status === 'idle' && u.idleSince) return { ts: u.idleSince, text: 'Idle ' + elapsedShort(u.idleSince), title: 'Idle since ' };
+  if (u.status === 'offline' && u.lastOn) return { ts: u.lastOn, text: elapsedShort(u.lastOn) + ' ago', title: 'Last online ' };
+  return null;
+}
+/**
+ * Durée d'inactivité ou de déconnexion d'un ami, rafraîchie chaque minute.
+ * @param {{user: Object}} p Membre dans l'état.
+ */
+function PresenceTime(p) {
+  var tick = useState(0)[1];
+  useEffect(function () {
+    var timer = setInterval(function () { tick(function (n) { return n + 1; }); }, MIN);
+    return function () { clearInterval(timer); };
+  }, []);
+  var x = presenceSince(p.user);
+  return x ? h('time', { className: 'tc-msg-time conv-time', dateTime: new Date(x.ts).toISOString(), title: x.title + new Date(x.ts).toLocaleString('en-GB') }, x.text) : null;
 }
 /**
  * Ligne d'informations d'une personne.
@@ -125,7 +148,7 @@ function personRow(s, n, onClick, current) {
     h(T.Avatar, { name: n, size: 36, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
       h('span', { className: 'conv-name' }, n),
-      last ? h('time', { className: 'tc-msg-time conv-time' }, shortWhen(last.ts, s.prefs.h24)) : null,
+      presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(n, u),
       c ? h('span', { className: 'conv-prev' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));

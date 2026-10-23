@@ -366,7 +366,7 @@ function Root(props) {
         var friends = Object.keys(s0.users).filter(function (n) { return s0.users[n].friend && n !== me; });
         if (friends.length) {
           var f = pick(friends), cur = s0.users[f].status, next = cur === 'offline' ? 'online' : 'offline';
-          update(function (d) { d.users[f].status = next; d.users[f].idleSince = 0; });
+          update(function (d) { var u = d.users[f]; u.status = next; u.idleSince = 0; if (next === 'offline') u.lastOn = Date.now(); });
           if (next === 'online' && (isNotifyingOnline(s0, f) || s0.prefs.notify.friendOn.app)) {
             if (s0.prefs.notify.friendOn.sound) beep(s0.prefs.volume);
             toast(f + ' is online.', { icon: 'users', action: { label: 'Message', run: function () { actions.openDm(f); } } });

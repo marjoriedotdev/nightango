@@ -29,7 +29,7 @@ function seedWorld(me) {
     nightowl: { status: 'online', age: 26, location: 'Montréal, Canada', about: 'Themes, fonts and too much coffee.', style: { nameColor: '#9b59b6', font: 'Comic Sans MS', textColor: '#e0b0ff', bg: '#24133f' } },
     quill: { status: 'idle', idleSince: t(14), age: 23, location: 'Dublin, Ireland', about: 'Mostly in #retrogaming.', friend: true, style: { nameColor: '#e91e63' } },
     drift: { status: 'online', age: 20, location: '', about: '', style: {} },
-    halcyon: { status: 'offline', age: 28, location: 'Porto, Portugal', about: 'Runs game night.', friend: true, style: { nameColor: '#ffeb3b' } },
+    halcyon: { status: 'offline', lastOn: t(190), age: 28, location: 'Porto, Portugal', about: 'Runs game night.', friend: true, style: { nameColor: '#ffeb3b' } },
     petrichor: { status: 'offline', age: 33, location: '', about: '', style: {} },
     pixelmint: { status: 'online', age: 21, location: 'Gent, Belgium', about: 'Pixel artist.', style: { nameColor: '#00e5a0' } },
     rook: { status: 'online', age: 27, location: '', about: '', style: {} },
