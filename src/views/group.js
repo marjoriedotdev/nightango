@@ -51,6 +51,9 @@ function GroupView(p) {
   var online = LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length;
   var typing = (s.typing[g.id] || []).filter(function (n) { return n !== me; });
   var ann = g.settings.announcement;
+  var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
+  // Le canal d'envoi n'est jamais masqué, même s'il reste dans la liste gardée.
+  var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
 
   function onScroll() {
     var el = logRef.current;
@@ -82,7 +85,10 @@ function GroupView(p) {
   function ignoredAuthor(m) { var u = userOf(s, m.author); return (u.ignored || (u.blocked && prefs.safety.syncBlocked)) && m.author !== me; }
   // Comme dans Torch, un message masqué compte encore dans les non-lus et les mentions.
   function shown(m) { return m.annc ? prefs.announcements : m.kind !== 'msg' || prefs.safety.guestMessages || !isGuest(m.author); }
+  // Les messages d'exemple du prototype n'ont pas de canal.
+  function hiddenByChannel(m) { return m.kind === 'msg' && hiddenChans.indexOf(m.channel || 'none') >= 0; }
   function jumpTo(o) {
+    if (hiddenByChannel(o)) { app.ui.toast('The original message is in a channel you hide. Show that channel from the channel menu to see it.'); return; }
     if (!shown(o)) { app.ui.toast('The original message is hidden because messages from guests are off in Safety settings.'); return; }
     if (ignoredAuthor(o) && (prefs.safety.ignoreMode === 'hide' || !revealed[o.id])) { app.ui.toast('The original message is hidden because you ignore its author.'); return; }
     setSearch(null);
@@ -90,7 +96,7 @@ function GroupView(p) {
   }
 
   var items = [], prev = null, lastDay = null, marker = false;
-  var msgs = g.messages.filter(function (m) { return shown(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
+  var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
     if (dk !== lastDay) { items.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
@@ -134,13 +140,15 @@ function GroupView(p) {
       onAttach: LIVE ? null : function () { app.ui.toast('Uploading media is not part of this prototype.'); },
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
-        up: true, items: Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; }).map(function (k) {
-          return { label: CHANNELS[k].label + (k === 'none' ? '' : ' channel'), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { setChannel(k); } };
-        }),
+        up: true, items: chans.map(function (k) {
+          return { label: channelLabel(k), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { setChannel(k); } };
+        }).concat([{ divider: true }], chans.filter(function (k) { return k !== channel; }).map(function (k) {
+          return { label: (hiddenChans.indexOf(k) >= 0 ? 'Show ' : 'Hide ') + (k === 'none' ? 'messages without a channel' : channelLabel(k)), icon: 'eye-off', onSelect: function () { app.actions.toggleHiddenChannel(g.id, k); } };
+        })),
         renderTrigger: function (tp) {
-          return h('button', Object.assign({ type: 'button', className: 'pillbtn chan-trigger', 'aria-label': 'Channel: ' + CHANNELS[channel].label }, tp),
+          return h('button', Object.assign({ type: 'button', className: 'pillbtn chan-trigger', 'aria-label': 'Channel: ' + CHANNELS[channel].label + (hiddenChans.length ? '. ' + hiddenChans.length + ' hidden.' : '') }, tp),
             h('span', { style: { width: 8, height: 8, borderRadius: '50%', background: CHANNELS[channel].color || 'transparent', border: CHANNELS[channel].color ? 0 : '1.5px solid var(--text-3)' } }),
-            h('span', { className: 'hide-mobile' }, CHANNELS[channel].label), h(T.Icon, { name: 'chevron-down', size: 12, className: 'hide-mobile' }));
+            h('span', { className: 'hide-mobile' }, CHANNELS[channel].label), hiddenChans.length ? h(T.Icon, { name: 'eye-off', size: 12 }) : null, h(T.Icon, { name: 'chevron-down', size: 12, className: 'hide-mobile' }));
         }
       })
     });

@@ -61,3 +61,8 @@ var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Georgia': 'Georgia, serif', '
  */
 function fontPercent(size) { return Math.round(Math.min(200, Math.max(82, size * 100 / 11))); }
 var CHANNELS = { none: { label: 'No channel', color: null }, red: { label: 'Red', color: '#e5484d' }, blue: { label: 'Blue', color: '#3e8bd8' }, mod: { label: 'Staff', color: '#8a8e96' } };
+/**
+ * Permet de nommer un canal comme l'entrée d'envoi du menu de canal.
+ * @param {string} k Clé de CHANNELS.
+ */
+function channelLabel(k) { return k === 'none' ? CHANNELS.none.label : CHANNELS[k].label + ' channel'; }

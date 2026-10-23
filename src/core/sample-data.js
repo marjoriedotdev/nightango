@@ -39,7 +39,7 @@ function seedWorld(me) {
 
   function group(id, o) {
     return Object.assign({
-      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, unread: 0, mentions: 0, lastReadTs: now,
+      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: now,
       members: [], guests: 0, messages: [], closed: false, discover: null, bans: [], audit: [], dismissedAnnouncement: false
     }, o);
   }

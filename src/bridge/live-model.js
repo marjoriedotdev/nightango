@@ -181,7 +181,7 @@ function liveWorld(me) {
 function liveGroup(id, title) {
   var t = title || id;
   return {
-    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, unread: 0, mentions: 0, lastReadTs: Date.now(),
+    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: Date.now(),
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, discover: null, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
     live: { flags: 0, mods: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, bansLoaded: false },

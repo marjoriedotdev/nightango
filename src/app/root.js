@@ -241,6 +241,9 @@ function Root(props) {
       toast(text, { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
     },
     toggleMute: function (gid) { update(function (d) { d.groups[gid].muted = !d.groups[gid].muted; }); },
+    toggleHiddenChannel: function (gid, k) {
+      update(function (d) { var l = d.groups[gid].hiddenChannels, i = l.indexOf(k); if (i >= 0) l.splice(i, 1); else l.push(k); });
+    },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
     joinGroup: function (gid) {
       var me = stateRef.current.me;
@@ -261,7 +264,7 @@ function Root(props) {
       update(function (d) {
         var staff = {}; staff[me] = 'owner';
         d.groups[name] = {
-          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, unread: 0, mentions: 0, lastReadTs: now,
+          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: now,
           members: [me], guests: 0, closed: false, dismissedAnnouncement: false, bans: [],
           discover: listed ? { topic: 'Other', desc: desc || title } : null,
           settings: mkSettings({ overview: { title: title, description: desc, showInDiscovery: listed, membersPublic: true, nsfw: false }, staff: staff }),
@@ -393,7 +396,7 @@ function Root(props) {
   var pmAsked = useRef(null);
   var offlineCount = useRef(0);
   function skinKey(me) { return 'torch-skin:' + me; }
-  function blankLocal() { return { hidden: [], style: null }; }
+  function blankLocal() { return { hidden: [], channels: {}, style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -661,6 +664,7 @@ function Root(props) {
       g = d.groups[gid] = liveGroup(gid, gid);
       g.favorite = (liveBridge.favoriteGroups() || []).indexOf(gid) >= 0;
       g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
+      g.hiddenChannels = localRef.current.channels[gid] || [];
     }
     return g;
   }
@@ -1069,7 +1073,7 @@ function Root(props) {
       default: break;
     }
   }
-  /* Conversations masquées et style perso, conservés par compte dans ce navigateur */
+  /* Conversations masquées, canaux masqués et style perso, conservés par compte dans ce navigateur */
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
@@ -1080,6 +1084,8 @@ function Root(props) {
     o.ignored = prev.ignored;
     prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
+    Object.keys(prev.channels).forEach(function (k) { if (!state.groups[k]) o.channels[k] = prev.channels[k]; });
+    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageSet(skinKey(state.me), o); }
   });
   useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(handleLiveOp); }, []);
