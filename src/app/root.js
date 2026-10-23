@@ -720,6 +720,13 @@ function Root(props) {
     var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
     return String(m.text).split(/\s+/).concat(media).filter(Boolean).sort().filter(function (v, i, a) { return v !== a[i - 1]; }).join(' ');
   }
+  function pmEditTarget(c, m) { return m.editId ? c.messages.find(function (x) { return x.key === m.editId && x.from === m.from; }) : null; }
+  function pmMessage(x) {
+    // Modification sans original chargé : elle prend la clé de l'original, que visent l'archive et les modifications suivantes.
+    var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts };
+    if (x.editId) m.edited = true;
+    return m;
+  }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
   /**
    * Permet de relancer les connexions fermées.
@@ -886,16 +893,19 @@ function Root(props) {
         var focused = s0.route.view === 'dm' && s0.route.id === op.from && document.visibilityState === 'visible';
         // Comme dans Torch, le MP d'un membre ignoré est reçu et archivé, sans alerte.
         var ignored = !!userOf(s0, op.from).ignored;
+        var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          var ts = op.ts || Date.now();
-          mergeStyle(ensureLiveUser(d, op.from), op.style, ts);
+          mergeStyle(ensureLiveUser(d, op.from), op.style, op.ts);
           var c = d.dms[op.from] || (d.dms[op.from] = { messages: [], unread: 0, lastReadTs: 0 });
+          var o = pmEditTarget(c, op);
+          if (o) { applyEdit(o, op); return; }
           c.closed = false;
-          c.messages.push({ id: uid(), from: op.from, text: op.text, parts: op.parts, embeds: op.embeds, ts: ts });
+          c.messages.push(pmMessage(op));
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
           if (!focused) c.unread += 1;
         });
+        if (edit) break;
         if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
         // Les msgoff arrivent en rafale juste après la connexion : une seule notification pour toute la rafale.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
@@ -920,13 +930,17 @@ function Root(props) {
                 var k = pmContentKey(x);
                 for (var i = 0; i < shown.length; i++) {
                   var y = shown[i];
-                  if (y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000) { shown.splice(i, 1); return true; }
+                  // Même clé = même message, même si une modification a changé son texte.
+                  if (x.key && y.key ? y.key === x.key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000) { shown.splice(i, 1); return true; }
                 }
                 return false;
               }
               hist[t].forEach(function (x) {
                 mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts);
-                if (!claim(x)) c.messages.push({ id: uid(), from: x.from, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts });
+                var o = pmEditTarget(c, x);
+                if (o) { applyEdit(o, x); return; }
+                var m = pmMessage(x);
+                if (!claim(m)) c.messages.push(m);
               });
               c.messages.sort(function (a, b) { return a.ts - b.ts; });
             });

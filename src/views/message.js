@@ -42,7 +42,7 @@ function MessageRow(p) {
     h(MenuButton, { label: 'More actions', size: 28, iconSize: 16, items: menuItems, onOpenChange: setMenuOpen }));
   var body = m.deleted
     ? h('p', { className: 'tc-msg-text deleted' }, m.deleted.by === m.author ? 'Message deleted' : 'Message deleted by ' + m.deleted.by)
-    : h(MessageContent, { m: m, style: textStyle, gid: g.id }, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null);
+    : h(MessageContent, { m: m, style: textStyle, gid: g.id });
   var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
@@ -80,7 +80,7 @@ function authorName(name, style) {
 
 function MessageContent(p) {
   var m = p.m;
-  return h(Frag, null, m.text ? h(MessageText, { text: m.text, parts: m.parts, style: p.style, gid: p.gid }) : null, p.children, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
+  return h(Frag, null, m.text ? h(MessageText, { text: m.text, parts: m.parts, style: p.style, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
 }
 
 function MessageEmbeds(p) {

@@ -95,7 +95,7 @@ var liveBridge = (function () {
     switch (name) {
       case 'msg': case 'msgoff': {
         var p2 = parseContent(data.slice(5).join(':'));
-        emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), offline: name === 'msgoff' });
+        emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), offline: name === 'msgoff' });
         break;
       }
       case 'wl': {
@@ -549,7 +549,7 @@ var liveBridge = (function () {
             var v = cur.value || {}, parts = String(v.data || '').split(':').slice(1), target = lower(v.target);
             if (target && parts.length > 5) {
               var body = parseContent(parts.slice(5).join(':'));
-              (out[target] = out[target] || []).push({ from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, unread: !!v.unread });
+              (out[target] = out[target] || []).push({ from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, unread: !!v.unread });
             }
             cur.continue();
           };

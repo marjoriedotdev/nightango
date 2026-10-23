@@ -38,7 +38,7 @@ function parseContent(raw, keepMedia) {
     if (f[3] !== '' && FACES[+f[3]] !== undefined) style.font = FACES[+f[3]];
     else if (f[3] && isNaN(+f[3])) style.font = f[3];
   }
-  var r = /<r([^\s<>"\/]+)\/>/.exec(s), e = /<e([^\s<>"\/]+)\/>/.exec(s);
+  var r = /<r([^\s<>"\/]+)\/>/.exec(s), e = /<e([^\s<>"\/]+)\/>/.exec(s), k = /<i([a-z0-9]{7,8})\/>/.exec(s);
   var body = s
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<i s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src) {
@@ -48,7 +48,7 @@ function parseContent(raw, keepMedia) {
     });
   var text = decodeHtml(body.replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
   (text.match(/https:\/\/\S+/g) || []).forEach(function (url) { if (IMAGE_URL.test(url)) embeds.push({ kind: 'image', url: url }); });
-  return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null };
+  return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null, key: k ? decodeRef(k[1]) : null };
 }
 /**
  * Permet de découper un corps de message en segments marqués gras, italique, souligné ou barré.

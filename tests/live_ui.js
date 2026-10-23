@@ -804,6 +804,19 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const watch = { sentVideo, videos: $$('.thread .embed-video').length, texts: $$('.thread .tc-msg-text').filter(x => x.textContent.indexOf('Watch') === 0).length };
   step('own pm media shows at once and is not duplicated by history', watch.sentVideo === 1 && watch.videos === 1 && watch.texts === 1, watch);
 
+  /* MP modifié par son auteur : l'original change à sa place, en direct puis quand OK rejoue l'archive qui contient les deux entrées */
+  const ORIG = '<n000/><iabc1234/><m v="1"><g x12s000="0">First draft</g></m>', EDIT = '<n000/><iedit5678/><m v="1"><g x12s000="0"><eabc1234/>Final text</g></m>';
+  pm('msg', ['olga', 'marjorie', 'unknown', '1700000900.5', '0', ORIG]); await wait(50);
+  pm('msg', ['olga', 'marjorie', 'unknown', '1700000960.5', '0', EDIT]); await wait(50);
+  click(byText('.conv', 'olga')); await wait(50);
+  const olgaThread = () => ({ texts: $$('.thread .tc-msg-text').map(x => x.textContent), edited: $$('.thread .tc-msg').filter(x => x.textContent.includes('(edited)')).length });
+  const editLive = olgaThread();
+  pmRecords.push({ target: 'olga', data: 'msg:olga:marjorie:unknown:1700000900.5:0:' + ORIG, unread: 1 }, { target: 'olga', data: 'msg:olga:marjorie:unknown:1700000960.5:0:' + EDIT, unread: 1 });
+  pm('OK', []); await wait(150);
+  const editHist = olgaThread();
+  const editOk = r => JSON.stringify(r) === JSON.stringify({ texts: ['Final text'], edited: 1 });
+  step('pm edit replaces the original, live and after history', editOk(editLive) && editOk(editHist), { editLive, editHist });
+
   /* MP reçus hors ligne : base ouverte avant la connexion privée, msgoff juste après OK, deux « ok » identiques à 10 s d'écart dans l'historique */
   pmRecords.push(
     { target: 'gus', data: 'msg:gus:marjorie:unknown:1700000400.5:0:<n000/>ok', unread: 1 },

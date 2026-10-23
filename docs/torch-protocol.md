@@ -86,8 +86,16 @@ Un appel exclu pour cette raison : le formulaire de style de Torch (`updatemsgst
 
 - Les trames `msgoff` ne sont livrées qu'une fois, juste après `OK` sur la connexion privée.
 - Comme Torch, le pont ouvre donc la base d'historique avant la connexion privée, pour que ces messages y soient archivés.
-- La fusion avec l'historique ne crée pas de doublon. Torch archive un horodatage différent de celui affiché : un message déjà affiché (même auteur, même contenu, à deux minutes près) couvre une seule entrée de l'historique, comparée à un instantané des messages affichés (`pmReady` dans `app/root.js`).
+- La fusion avec l'historique ne crée pas de doublon. Torch archive un horodatage différent de celui affiché : un message déjà affiché couvre une seule entrée de l'historique, comparée à un instantané des messages affichés (`pmReady` dans `app/root.js`). Quand les deux portent une clé (voir Clé et modification d'un MP), la même clé fait le même message, même si son texte a changé. Sinon, il faut le même auteur et le même contenu, à deux minutes près.
 - Une seule notification groupée les annonce : « N messages received while you were away. »
+
+### Clé et modification d'un MP
+
+- Torch identifie chaque MP qu'il envoie par `<i{base36}/>` en tête du corps (`inject.js:5177`). La clé du MP est cet identifiant suivi de `=` (`<i([a-z0-9]{7,8})\/>`, `inject.js:7842-7848`, `8950`, `9131`). `parseContent` la renvoie dans `key`, décodée comme `editId` pour que les deux se comparent directement. Le pont la transmet pour `msg`, `msgoff` et l'historique privé.
+- Une modification est un nouveau MP, avec son propre `<i…/>`, qui porte `<e{ref}/>` devant le contenu, dans le même corps `msg:` (`inject.js:5231-5241`). La ref est la clé de l'original, au format des références de message (voir Envoi).
+- À la réception, Torch l'applique à l'original de même clé et de même auteur, et masque le message de modification (`displayEdit`, `inject.js:5497-5536`). Torch Skin fait de même, en direct et dans la fusion de l'historique (`app/root.js`) : l'original garde sa place et son horodatage, prend le texte et les médias de la modification et affiche « (edited) ». En direct, une modification appliquée ne compte ni comme non-lu ni comme notification.
+- Une modification dont l'original n'est pas chargé s'affiche comme un MP reçu, marqué modifié. Elle prend la clé de l'original, que visent l'archive et les modifications suivantes.
+- Torch Skin n'envoie aucune modification de MP.
 
 ### Style d'un MP
 
