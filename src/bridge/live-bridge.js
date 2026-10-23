@@ -58,11 +58,11 @@ var liveBridge = (function () {
       case 'nomore': emit({ op: 'histEnd', gid: room }); break;
       case 'gotmore': emit({ op: 'moreLoaded', gid: room }); break;
       case 'getannc':
-        if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, enabled: false, interval: 0, text: '', displayText: '', embeds: [] });
+        if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, mode: 0, enabled: false, interval: 0, text: '', displayText: '', embeds: [] });
         else {
           var raw = data.slice(4).join(':'), shown = parseContent(raw, false);
-          // Le style d'origine (couleurs, police) est conservé pour le prochain enregistrement, et les médias restent dans le texte renvoyé.
-          emit({ op: 'annc', gid: room, enabled: data[0] !== '0', interval: parseInt(data[3], 10) || 0, text: parseContent(raw, true).text, displayText: shown.text, embeds: shown.embeds, prefix: (/^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(raw) || [''])[0] });
+          // Le style d'origine (couleurs, police, emphase posée par Torch après <f>) est conservé pour le prochain enregistrement, et les médias restent dans le texte renvoyé.
+          emit({ op: 'annc', gid: room, mode: parseInt(data[0], 10) || 0, enabled: data[0] !== '0', interval: parseInt(data[3], 10) || 0, text: parseContent(raw, true).text, displayText: shown.text, embeds: shown.embeds, prefix: (/^(<n[^>]*\/>)?(<f [^>]*>(<b>)?(<i>)?(<u>)?)?/.exec(raw) || [''])[0] });
         }
         break;
       case 'annc': {
@@ -473,9 +473,13 @@ var liveBridge = (function () {
       ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:50'].forEach(function (f) { send(gid, f, 'Group settings could not be loaded.'); });
     },
     setFlags: function (gid, add, remove) { return send(gid, 'updategroupflags:' + add + ':' + remove, 'The group settings could not be saved.'); },
-    setAnnouncement: function (gid, enabled, seconds, text, prefix) {
-      var body = (prefix || '<n000/><f x11000="0">') + esc(text).replace(/\r?\n/g, '<br/>');
-      var ok = send(gid, 'updateannouncement:' + (enabled ? 1 : 0) + ':' + seconds + ':' + body, 'The announcement could not be saved.');
+    setAnnouncement: function (gid, enabled, seconds, text, read) {
+      var prefix = read.prefix || '<n000/><f x11000="0">';
+      var close = (prefix.match(/<[biu]>/g) || []).reverse().join('').replace(/</g, '</');
+      // Mode 3 : annonce activée avec le fond de message du propriétaire, gardé tant que l'interface ne le règle pas.
+      var mode = !enabled ? 0 : read.mode === 3 ? 3 : 1;
+      var body = prefix + esc(text).replace(/\r?\n/g, '<br/>') + close;
+      var ok = send(gid, 'updateannouncement:' + mode + ':' + seconds + ':' + body, 'The announcement could not be saved.');
       setTimeout(function () { send(gid, 'getannouncement', ''); }, 1000);
       return ok;
     },

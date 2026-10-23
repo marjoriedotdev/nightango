@@ -325,6 +325,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await wait(30);
   step('announcement keeps style, escapes, keeps line breaks', frame('updateannouncement:').pop() === 'updateannouncement:1:900:<nF00/><f x12F00="1">Be kind &lt;3<br/>Thanks', frame('updateannouncement:'));
   g('getannc', 'test', ['1', 'test', '5', '900', '<nF00/><f x12F00="1">Be kind &lt;3<br/>Thanks']); await wait(80);
+  g('getannc', 'test', ['3', 'test', '5', '900', '<nF00/><f x12F00="1"><b><i>Be kind</i></b>']); await wait(80);
+  type($('#ann-int'), '30'); await wait(20);
+  click($('.tc-savebar .tc-btn-primary')); await wait(30);
+  step('announcement keeps background mode and emphasis', frame('updateannouncement:').pop() === 'updateannouncement:3:1800:<nF00/><f x12F00="1"><b><i>Be kind</i></b>', frame('updateannouncement:'));
+  g('getannc', 'test', ['3', 'test', '5', '1800', '<nF00/><f x12F00="1"><b><i>Be kind</i></b>']); await wait(80);
 
   click(byText('.tc-nav', 'Staff and roles')); await wait(50);
   step('staff list from mods frame', !!byText('.role-btn', 'alice') && !!byText('.role-btn', 'bob'));

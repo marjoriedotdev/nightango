@@ -420,7 +420,7 @@ function Root(props) {
     if (g.live.annc && (a0.enabled !== a1.enabled || a0.text !== a1.text || a0.interval !== a1.interval)) {
       // Intervalle inchangé : on renvoie la valeur exacte en secondes plutôt que l'arrondi affiché.
       var seconds = a1.interval === a0.interval && a0.intervalSec ? a0.intervalSec : a1.interval * 60;
-      count(liveBridge.setAnnouncement(g.id, a1.enabled, seconds, a1.text, g.live.annc.prefix));
+      count(liveBridge.setAnnouncement(g.id, a1.enabled, seconds, a1.text, g.live.annc));
     }
     var b0 = base.automod.banned, b1 = draft.automod.banned;
     if (b0 && b1 && (wordList(b0.part) !== wordList(b1.part) || wordList(b0.whole) !== wordList(b1.whole))) count(liveBridge.setBannedWords(g.id, wordList(b1.part), wordList(b1.whole)));
@@ -834,7 +834,7 @@ function Root(props) {
       case 'denied': groupUpdate(op.gid, function (g) { g.inited = true; g.membersLoaded = true; }); break;
       case 'histEnd': groupUpdate(op.gid, function (g) { g.historyDone = true; g.loadingMore = false; }); break;
       case 'moreLoaded': groupUpdate(op.gid, function (g) { g.loadingMore = false; }); break;
-      case 'annc': groupUpdate(op.gid, function (g) { g.live.annc = { enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
+      case 'annc': groupUpdate(op.gid, function (g) { g.live.annc = { mode: op.mode, enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
       case 'anncPost': if (op.text || op.embeds.length) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
       case 'bw': groupUpdate(op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
       case 'rate': groupUpdate(op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;

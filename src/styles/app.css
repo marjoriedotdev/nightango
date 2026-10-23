@@ -12,6 +12,7 @@ a{color:var(--accent-text)}
 .msg-link{color:var(--accent-text);text-decoration:none;overflow-wrap:anywhere}
 .msg-link:hover,.underline-links .msg-link{text-decoration:underline}
 .tc-msg-text{font-size:var(--msg-size,14px)}
+.tc-banner-text{white-space:pre-line}
 .tc-msg.menu-open .tc-msg-actions,.cmsg.menu-open .tc-msg-actions{display:flex}
 .tc-msg-actions{z-index:4}
 h1,h2,h3{text-wrap:balance}
