@@ -117,8 +117,8 @@ var liveBridge = (function () {
         var people = [];
         // Hors ligne, les minutes ne sont pas de l'inactivité : elles servent de dernière connexion approchée.
         for (var j = 0; j + 2 < data.length; j += 3) if (data[j]) {
-          var on = data[j + 2] === 'online' || data[j + 2] === 'app';
-          people.push({ name: lower(data[j]), status: on ? (+data[j + 1] > 0 ? 'idle' : 'online') : 'offline', lastOn: !on && +data[j + 1] ? Date.now() - data[j + 1] * MIN : 0 });
+          var on = data[j + 2] === 'online' || data[j + 2] === 'app', idle = on && +data[j + 1] > 0;
+          people.push({ name: lower(data[j]), status: idle ? 'idle' : on ? 'online' : 'offline', lastOn: !on && +data[j + 1] ? Date.now() - data[j + 1] * MIN : 0, idleSince: idle ? Date.now() - data[j + 1] * MIN : 0 });
         }
         emit({ op: 'people', list: people });
         break;

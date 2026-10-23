@@ -527,6 +527,15 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const frankOffline = !!frankRow && !!frankRow.querySelector('.tc-presence-offline');
   step('friends last online and order', JSON.stringify(seen.map(x => x[0])) === JSON.stringify(['zoe', 'frank', 'erin', 'abe']) && metaOf('erin').includes('Last online') && !metaOf('abe').includes('Last online')
     && seen.every(x => !/\b(Online|Idle|Offline)\b/.test(x[1])) && frankOffline, { seen, frankOffline });
+  // Idle affiché seulement après 3 minutes : kim y arrive pendant le test, par le minuteur de bascule.
+  pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.999']); pm('idleupdate', ['zoe', '0']); await wait(30);
+  const presenceRow = n => { const r = $$('.convs .conv').find(x => x.querySelector('.conv-name').textContent === n); return r ? [(r.querySelector('.tc-presence') || {}).className || '', (r.querySelector('.conv-time') || {}).textContent || ''] : []; };
+  const before3 = { ivy: presenceRow('ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
+  await wait(150);
+  const after3 = presenceRow('kim');
+  step('idle shown after three minutes', /tc-presence-idle/.test(before3.ivy[0])
+    && /tc-presence-online/.test(before3.jade[0]) && /tc-presence-online/.test(before3.kim[0]) && /tc-presence-online/.test(before3.zoe[0])
+    && /tc-presence-idle/.test(after3[0]), { before3, after3 });
   click(byText('.tc-nav', 'Meet people')); await wait(120);
   const search = fetches.find(x => /\/search$/.test(x.url));
   step('meet search uses Torch parameters and the browser session', !!search && search.credentials === 'include' && search.f.s === 'B' && String(search.f.o) === '1' && String(search.f.ami) === '13' && String(search.f.ama) === '99' && String(search.f.f) === '0' && String(search.f.t) === '40', search);

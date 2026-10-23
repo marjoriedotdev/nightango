@@ -23,17 +23,17 @@ function seedWorld(me) {
   var users = {
     ember: { status: 'online', age: 31, location: 'Bristol, UK', about: "Started Torch. Breaks things on purpose so you don't have to.", style: { nameColor: '#ff5f1f', font: 'Georgia', textColor: '#ffd9c2' } },
     sable: { status: 'online', age: 24, location: 'Lyon, France', about: 'Moderator in community. Night shifts, mostly. Ask before posting links.', friend: true, style: { nameColor: '#3f7fff', textColor: '#cfe0ff' } },
-    vantage: { status: 'idle', age: 29, location: 'Oslo, Norway', about: 'Moderator. Quiet most of the time.', style: { nameColor: '#00bcd4' } },
+    vantage: { status: 'idle', idleSince: t(40), age: 29, location: 'Oslo, Norway', about: 'Moderator. Quiet most of the time.', style: { nameColor: '#00bcd4' } },
     kestrel: { status: 'online', age: 22, location: 'Leeds, UK', about: 'Trading usernames since 2014.', style: { nameColor: '#2ecc71', font: 'Courier New' } },
     marrow: { status: 'online', age: 35, location: '', about: 'Breaks networks for a living.', style: { nameColor: '#a0522d', bg: '#3b2414' } },
     nightowl: { status: 'online', age: 26, location: 'Montréal, Canada', about: 'Themes, fonts and too much coffee.', style: { nameColor: '#9b59b6', font: 'Comic Sans MS', textColor: '#e0b0ff', bg: '#24133f' } },
-    quill: { status: 'idle', age: 23, location: 'Dublin, Ireland', about: 'Mostly in #retrogaming.', friend: true, style: { nameColor: '#e91e63' } },
+    quill: { status: 'idle', idleSince: t(14), age: 23, location: 'Dublin, Ireland', about: 'Mostly in #retrogaming.', friend: true, style: { nameColor: '#e91e63' } },
     drift: { status: 'online', age: 20, location: '', about: '', style: {} },
     halcyon: { status: 'offline', age: 28, location: 'Porto, Portugal', about: 'Runs game night.', friend: true, style: { nameColor: '#ffeb3b' } },
     petrichor: { status: 'offline', age: 33, location: '', about: '', style: {} },
     pixelmint: { status: 'online', age: 21, location: 'Gent, Belgium', about: 'Pixel artist.', style: { nameColor: '#00e5a0' } },
     rook: { status: 'online', age: 27, location: '', about: '', style: {} },
-    tallow: { status: 'idle', age: 30, location: '', about: '', style: {} }
+    tallow: { status: 'idle', idleSince: t(6), age: 30, location: '', about: '', style: {} }
   };
   users[me] = { status: 'online', age: 27, gender: 'Not specified', location: 'Rennes, France', about: 'Building themes for Torch. Usually in #community and #torchdev. Ping me for theme import issues.', style: {}, self: true };
 
