@@ -293,8 +293,9 @@
     function send() {
       var text = value.trim();
       if (!text) return;
-      if (props.onSend) props.onSend(text);
+      // Vidé avant onSend : la vue peut y remettre un brouillon mis de côté.
       setValue('');
+      if (props.onSend) props.onSend(text);
     }
     React.useEffect(function () {
       var el = ref.current;
@@ -302,7 +303,14 @@
       el.style.height = 'auto';
       el.style.height = Math.min(el.scrollHeight, 160) + 'px';
     }, [value]);
-    React.useEffect(function () { if (props.replyTo && ref.current) ref.current.focus(); }, [props.replyTo]);
+    var ctx = props.context;
+    // Clé en texte : la vue recrée l'objet du contexte à chaque rendu, le curseur sauterait à chaque frappe.
+    React.useEffect(function () {
+      var el = ref.current;
+      if (!ctx || !el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }, [ctx ? [ctx.verb, ctx.author, ctx.text].join('\n') : '']);
     function focusInput(e) {
       // Les menus et fenêtres rendus en portail remontent leurs événements React jusqu'ici sans être dans le composeur.
       if (!e.currentTarget.contains(e.target) || e.target.closest('button,a,input,select,textarea,[role=menu],[role=menuitem]')) return;
@@ -310,18 +318,18 @@
       ref.current.focus();
     }
     return h('div', { className: 'tc-composer', onMouseDown: focusInput },
-      props.replyTo ? h('div', { className: 'tc-composer-reply' },
-        h(Icon, { name: 'reply', size: 14 }),
+      ctx ? h('div', { className: 'tc-composer-context' },
+        h(Icon, { name: ctx.icon, size: 14 }),
         h('span', { style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-          'Replying to ', h('strong', { style: { color: 'var(--text-2)', fontWeight: 600 } }, props.replyTo.author), ' ', props.replyTo.text),
-        h(IconButton, { icon: 'x', label: 'Cancel reply', size: 24, iconSize: 13, onClick: props.onCancelReply })) : null,
+          ctx.verb, ' ', h('strong', { style: { color: 'var(--text-2)', fontWeight: 600 } }, ctx.author), ' ', ctx.text),
+        h(IconButton, { icon: 'x', label: ctx.cancelLabel, size: 24, iconSize: 13, onClick: props.onCancelContext })) : null,
       h('label', { htmlFor: id, className: 'tc-sr' }, props.label || 'Message'),
       h('textarea', {
         id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value,
         onChange: function (e) { setValue(e.target.value); if (props.onTyping) props.onTyping(); },
         onKeyDown: function (e) {
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
-          if (e.key === 'Escape' && props.replyTo && props.onCancelReply) props.onCancelReply();
+          if (e.key === 'Escape' && ctx && props.onCancelContext) props.onCancelContext();
         }
       }),
       h('div', { className: 'tc-composer-bar' },

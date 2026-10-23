@@ -272,6 +272,9 @@ function Root(props) {
       nav({ view: 'group', id: name });
       return true;
     },
+    editMessage: function (gid, m, text) {
+      update(function (d) { var g = d.groups[gid]; g.messages.forEach(function (o) { if (o.id === m.id) applyGroupEdit(o, { id: uid(), text: text, embeds: o.embeds }); }); });
+    },
     deleteMessage: function (gid, mid) {
       var me = stateRef.current.me, author = null;
       update(function (d) {
@@ -447,6 +450,17 @@ function Root(props) {
     if (!save(gid, on)) { toast(failure); return; }
     update(function (d) { d.groups[gid][key] = on; });
   }
+  /**
+   * Permet d'envoyer un message de groupe construit par Torch avec le style perso, puis d'en garder le style.
+   * @param {string} gid Groupe visé.
+   * @param {string} text Texte saisi.
+   * @param {{replyId: ?string, editId: ?string, channel: ?string}} opts Réponse ou original modifié, et canal.
+   * @param {string} failure Toast affiché si rien n'est parti.
+   */
+  function sendStyled(gid, text, opts, failure) {
+    var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
+    if (style) setOwnStyle(style); else toast(failure);
+  }
 
   if (LIVE) {
     actions.logout = function () { location.reload(); };
@@ -456,9 +470,10 @@ function Root(props) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
       if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return; }
-      var style = liveBridge.send(gid, text, { replyId: replyId, channel: opts.channel, style: stateRef.current.ownStyle });
-      if (style) setOwnStyle(style); else toast('Message not sent. Torch rejected it.');
+      sendStyled(gid, text, { replyId: replyId, channel: opts.channel }, 'Message not sent. Torch rejected it.');
     };
+    // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
+    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: m.editId || m.id, channel: m.channel }, 'Message not edited. Torch rejected it.'); };
     actions.sendDm = function (name, text) {
       var me = stateRef.current.me;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
@@ -607,7 +622,9 @@ function Root(props) {
     };
     actions.deleteMessage = function (gid, mid) {
       if (String(mid).indexOf('k:') === 0) { toast('This message is still being delivered. Try again in a moment.'); return; }
-      liveBridge.deleteMessage(gid, mid);
+      var m = findMsg(stateRef.current.groups[gid], mid);
+      // Comme Torch : l'original, puis chacune de ses modifications dont Chatango a donné l'identifiant définitif.
+      [mid].concat((m && m.editIds) || []).filter(liveBridge.canReply).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
     };
     actions.deleteAllFrom = function (gid, name, msg) {
       var g = stateRef.current.groups[gid], m = msg && msg.unid ? msg : g && lastMessageOf(g, name);
@@ -728,6 +745,28 @@ function Root(props) {
   }
   function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
   function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
+  /**
+   * Permet d'appliquer une modification de groupe à l'original en gardant son compte et ses identifiants.
+   * @param {Object} o Message original.
+   * @param {{id: string, text: string, parts: ?Array, embeds: ?Array}} m Message de modification.
+   * @param {boolean=} keepText Vrai pour compter la modification sans remplacer le texte.
+   */
+  function applyGroupEdit(o, m, keepText) {
+    o.editCount = (o.editCount || 0) + 1;
+    o.editIds = (o.editIds || []).concat([m.id]);
+    if (!keepText) applyEdit(o, m);
+  }
+  /**
+   * Permet de reprendre dans un original arrivé après elles ses modifications affichées à part, la plus récente en dernier.
+   * @param {Object} g Groupe dans l'état.
+   * @param {Object} o Message original, pas encore dans le fil.
+   */
+  function mergeEdits(g, o) {
+    var edits = g.messages.filter(function (x) { return x.editId === o.id && x.author === o.author; });
+    if (!edits.length) return;
+    edits.sort(function (a, b) { return a.ts - b.ts; }).forEach(function (e) { applyGroupEdit(o, e); });
+    g.messages = g.messages.filter(function (x) { return edits.indexOf(x) < 0; });
+  }
   // Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
   function pmContentKey(m) {
     var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
@@ -786,13 +825,13 @@ function Root(props) {
       case 'msg': {
         var m = Object.assign({}, op.msg), style = m.style; delete m.style;
         if (m.editId) {
-          // Modification : appliquée à l'original s'il est chargé, sinon affichée comme un message modifié.
+          // Modification : appliquée à l'original s'il est chargé, sinon affichée comme un message modifié qui garde sa référence.
           update(function (d) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, m.author), o = editTarget(g, m);
             mergeStyle(u, style, m.ts);
-            if (o) { applyEdit(o, m); return; }
-            m.edited = true; delete m.editId;
+            if (o) { applyGroupEdit(o, m); return; }
+            m.edited = true;
             g.messages.push(withReply(g, m));
           });
           break;
@@ -808,19 +847,31 @@ function Root(props) {
           if (!d.auth.loggedIn) return;
           var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, hm.author);
           mergeStyle(u, hs, hm.ts);
-          if (g.messages.some(function (x) { return x.id === hm.id; })) return;
+          if (g.messages.some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return;
           var o = editTarget(g, hm);
-          if (o) { applyEdit(o, hm); return; }
+          // Historique reçu du plus récent au plus ancien : comme Torch, un original déjà modifié garde son texte.
+          if (o) { applyGroupEdit(o, hm, o.edited); return; }
           if (hm.editId) hm.edited = true;
-          delete hm.editId;
+          else { delete hm.editId; mergeEdits(g, hm); }
           g.messages.push(withReply(g, hm));
           g.messages.sort(function (a, b) { return a.ts - b.ts; });
           trimThread(g);
         });
         break;
       }
-      case 'msgid': groupUpdate(op.gid, function (g) { g.messages.forEach(function (x) { if (x.id === op.tmp) x.id = op.id; if (x.replyTo && x.replyTo.id === op.tmp) x.replyTo.id = op.id; }); }); break;
-      case 'del': groupUpdate(op.gid, function (g) { g.messages.forEach(function (x) { if (op.ids.indexOf(x.id) >= 0 || op.ids.indexOf(String(x.id).replace(/^k:/, '')) >= 0) x.deleted = { by: 'staff' }; }); }); break;
+      case 'msgid': groupUpdate(op.gid, function (g) {
+        g.messages.forEach(function (x) {
+          if (x.id === op.tmp) x.id = op.id;
+          if (x.replyTo && x.replyTo.id === op.tmp) x.replyTo.id = op.id;
+          if (x.editIds) x.editIds = x.editIds.map(function (id) { return id === op.tmp ? op.id : id; });
+        });
+      }); break;
+      case 'del': groupUpdate(op.gid, function (g) {
+        function hit(id) { return op.ids.indexOf(String(id).replace(/^k:/, '')) >= 0; }
+        // Une modification affichée à part disparaît avec son original, même quand celui-ci n'est pas chargé.
+        g.messages = g.messages.filter(function (x) { return !(x.editId && hit(x.editId)); });
+        g.messages.forEach(function (x) { if (hit(x.id)) x.deleted = { by: 'staff' }; });
+      }); break;
       case 'cleared': groupUpdate(op.gid, function (g) { g.messages = [{ id: uid(), kind: 'system', text: 'All messages in #' + g.id + ' were cleared.', ts: Date.now() }]; }); break;
       case 'members': groupUpdate(op.gid, function (g, d) {
         var list = op.names.slice(); if (list.indexOf(d.me) < 0) list.push(d.me);

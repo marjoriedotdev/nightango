@@ -1,16 +1,23 @@
 /* ---------- Groupe ---------- */
+// Torch refuse la dixième modification d'un message.
+var EDIT_MAX = 9;
+var COMPOSER_MODES = {
+  reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply' },
+  edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit' }
+};
+
 function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
   var a1 = useState(true), showMembers = a1[0], setShowMembers = a1[1];
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
-  var a3 = useState(null), replyTo = a3[0], setReplyTo = a3[1];
+  var a3 = useState(null), mode = a3[0], setMode = a3[1];
   var a4 = useState('none'), channel = a4[0], setChannel = a4[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a7 = useState(false), jump = a7[0], setJump = a7[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
   var a10 = useState(null), target = a10[0], setTarget = a10[1];
-  var inputRef = useRef(null);
+  var inputRef = useRef(null), stash = useRef('');
   var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
@@ -56,6 +63,21 @@ function GroupView(p) {
     setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
     if (inputRef.current) inputRef.current.focus();
   }
+  function closeMode() { if (mode && mode.kind === 'edit') setDraft(stash.current); setMode(null); }
+  function reply(m) { closeMode(); setMode({ kind: 'reply', m: m }); }
+  function edit(m) {
+    if ((m.editCount || 0) >= EDIT_MAX) { app.ui.toast("You can't edit this message again. Torch allows " + EDIT_MAX + ' edits per message.'); return; }
+    if (!mode || mode.kind !== 'edit') stash.current = draft;
+    setDraft(m.text);
+    setMode({ kind: 'edit', m: m });
+  }
+  function send(text) {
+    if (mode && mode.kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
+    if (runCommand(app, text, g.id)) return;
+    atBottom.current = true;
+    app.actions.sendGroup(g.id, text, { replyTo: mode ? { id: mode.m.id } : null, channel: channel });
+    setMode(null);
+  }
   function toBottom() { var el = logRef.current; atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
   function ignoredAuthor(m) { var u = userOf(s, m.author); return (u.ignored || (u.blocked && prefs.safety.syncBlocked)) && m.author !== me; }
   // Comme dans Torch, un message masqué compte encore dans les non-lus et les mentions.
@@ -86,7 +108,7 @@ function GroupView(p) {
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted);
-    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: !!target && target.id === m.id, onReply: setReplyTo, onMention: mention, onJump: jumpTo }));
+    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: !!target && target.id === m.id, onReply: reply, onEdit: edit, onMention: mention, onJump: jumpTo }));
     prev = m;
   }
   if (LIVE && !q) items.unshift(!g.inited && !g.messages.length
@@ -105,9 +127,9 @@ function GroupView(p) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
     composer = h(T.Composer, {
-      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, inputRef: inputRef, replyTo: replyTo ? { author: replyTo.author, text: messagePreview(replyTo) } : null,
-      onCancelReply: function () { setReplyTo(null); },
-      onSend: function (text) { if (runCommand(app, text, g.id)) return; atBottom.current = true; app.actions.sendGroup(g.id, text, { replyTo: replyTo ? { id: replyTo.id } : null, channel: channel }); setReplyTo(null); },
+      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, inputRef: inputRef,
+      context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
+      onCancelContext: closeMode, onSend: send,
       onEmoji: LIVE ? null : function () { app.ui.toast('The emoji picker is not part of this prototype.'); },
       onAttach: LIVE ? null : function () { app.ui.toast('Uploading media is not part of this prototype.'); },
       beforeSend: h(MessageStyleButton, null),

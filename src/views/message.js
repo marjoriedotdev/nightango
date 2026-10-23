@@ -39,9 +39,12 @@ function MessageRow(p) {
   // Chatango ne laisse supprimer et bannir qu'au staff, à partir d'un message reçu du serveur.
   var canDelete = LIVE ? isStaffRole(myRole) : (m.author === me || isStaffRole(myRole));
   var canBan = isStaffRole(myRole) && m.author !== me && role !== 'owner' && (!LIVE || !!m.unid);
+  // Comme la réponse, la modification attend l'identifiant définitif du message.
+  var canEdit = m.author === me && (!LIVE || liveBridge.canReply(m.id));
   var handle = m.author !== me ? mentionHandle(m.author) : null;
   var deleteMessage = function () { app.actions.deleteMessage(g.id, m.id); };
   var menuItems = [
+    canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
     handle ? { label: 'Mention ' + m.author, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
     { label: 'Copy text', icon: 'copy', onSelect: function () { copyText(messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed. Select the text and copy it.'); }); } },
     m.author !== me ? viewProfileItem(app, m.author, g.id) : null,

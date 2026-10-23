@@ -475,10 +475,10 @@ var liveBridge = (function () {
     onOp: onOp,
     canReply: function (id) { return !!id && String(id).indexOf('k:') !== 0; },
     /**
-     * Permet d'envoyer un message de groupe.
+     * Permet d'envoyer un message de groupe, ou la modification d'un message.
      * @param {string} gid Groupe visé.
      * @param {string} text Texte saisi.
-     * @param {{replyId: ?string, channel: ?string, style: ?Object}} opts Réponse, canal et style perso.
+     * @param {{replyId: ?string, editId: ?string, channel: ?string, style: ?Object}} opts Réponse ou original modifié, canal et style perso.
      * @returns {?Object} Style propre lu dans le corps construit par Torch, null si rien n'est parti.
      */
     send: function (gid, text, opts) {
@@ -487,13 +487,14 @@ var liveBridge = (function () {
       try { applyStyle(opts.style); body = C.sendMessage(esc(text), true, gid); } catch (e) { warn(e); return null; }
       if (typeof body !== 'string' || !body) return null;
       var style = parseContent(body).style;
-      if (opts.replyId) {
-        var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body), cut = head ? head[0].length : 0;
-        body = body.slice(0, cut) + '<r' + encodeRef(opts.replyId) + '/>' + body.slice(cut);
-      }
+      // Comme Torch, une modification ne porte jamais de réponse.
+      var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
+      var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
+      body = head + ref + body.slice(head.length);
+      var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : 'Your message failed to be delivered.';
       var user = (C.groups[gid] && C.groups[gid].user) || {};
       var flag = (CHANNEL_FLAG[opts.channel] || 0) + (parseInt(user.badge, 10) || 0);
-      return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + body, opts.replyId ? 'Your reply could not be sent.' : 'Your message failed to be delivered.') ? style : null;
+      return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + body, failure) ? style : null;
     },
     /**
      * Permet d'envoyer un message privé.

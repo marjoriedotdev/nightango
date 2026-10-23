@@ -34,7 +34,7 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   await wait(100);
   step('sent message', d.body.textContent.includes('Hello from the smoke test'));
   click($('button[aria-label="Reply"]')); await wait(50);
-  step('reply context', !!$('.tc-composer-reply'));
+  step('reply context', !!$('.tc-composer-context'));
   click($('button[aria-label="Cancel reply"]'));
   click($('button[aria-label="More actions"]')); await wait(50);
   step('message menu', !!$('.menu'));

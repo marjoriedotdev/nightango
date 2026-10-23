@@ -307,6 +307,42 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await wait(60);
   step("Torch's environment room stays hidden", !byText('.tc-nav', 'torchenv'));
 
+  /* Modification d'un message, comme Torch : trame <e…/>, fusion de l'historique, suppression des modifications */
+  C.groups.edits = fakeGroup();
+  SB.renderGroup({ group: 'edits', header: 'Edits' });
+  g('ok', 'edits', ['marjorie', '', '', '', '1700000000', '', '', '0']);
+  g('inited', 'edits', []);
+  await wait(50);
+  click(byText('.tc-nav', 'edits')); await wait(50);
+  g('b', 'edits', ['1700000300.1', 'Marjorie', '', 'u0', 'UNID0', 'tmp30', '9.9.9.9', '0', '', '<n000/><f x11000="0">Mine typo']);
+  g('u', 'edits', ['tmp30', 'A-B_C=']);
+  await wait(50);
+  const editBox = () => $('.tc-composer textarea');
+  const openMenu = async txt => { click($$('.tc-msg').find(x => x.textContent.includes(txt)).querySelector('button[aria-label="More actions"]')); await wait(30); };
+  type(editBox(), 'my draft');
+  await openMenu('Mine typo'); click(menuItem('Edit message')); await wait(30);
+  const editing = { value: editBox().value, focused: d.activeElement === editBox(), caret: editBox().selectionStart, context: !!byText('.tc-composer', 'Editing') };
+  const bmBefore = frame('bm:').length;
+  key(editBox(), 'Enter'); await wait(30);
+  const unchanged = { sent: frame('bm:').length - bmBefore, draft: editBox().value };
+  await openMenu('Mine typo'); click(menuItem('Edit message')); await wait(30);
+  type(editBox(), 'Mine fixed'); key(editBox(), 'Enter'); await wait(30);
+  const editFrame = frame('bm:').pop() || '';
+  step('edit frame carries <e> after the style, unchanged text sends nothing',
+    editing.value === 'Mine typo' && editing.focused && editing.caret === 9 && editing.context && unchanged.sent === 0 && unchanged.draft === 'my draft'
+      && /^bm:[a-z0-9]+:0:<n000\/><f x11000="0"><eAhypheNBunderSC\/>Mine fixed$/.test(editFrame) && frame('bm:').length === bmBefore + 1 && editBox().value === 'my draft',
+    { editing, unchanged, editFrame, draft: editBox().value });
+  g('i', 'edits', ['1700000290.1', 'Dana', '', 'u7', 'UNID7', 'E-1=', '4.4.4.4', '0', '', '<n000/><f x11000="0"><eHhypheN1/>Dana fixed']);
+  g('i', 'edits', ['1700000280.1', 'Dana', '', 'u7', 'UNID7', 'H-1=', '4.4.4.4', '0', '', '<n000/><f x11000="0">Dana typo']);
+  await wait(50);
+  const danaRows = $$('.log .tc-msg').filter(x => /Dana (fixed|typo)/.test(x.textContent)).map(x => x.textContent);
+  step('history edit before its original gives one edited message', danaRows.length === 1 && danaRows[0].includes('Dana fixed') && danaRows[0].includes('(edited)'), danaRows);
+  const delBefore = frame('delmsg:').length;
+  await openMenu('Dana fixed'); click(menuItem('Delete message')); await wait(30);
+  click(byText('.dialog-foot button', 'Delete')); await wait(30);
+  step('delete also deletes the edits, like Torch', JSON.stringify(frame('delmsg:').slice(delBefore)) === JSON.stringify(['delmsg:H-1=', 'delmsg:E-1=']), frame('delmsg:').slice(delBefore));
+  click(byText('.tc-nav', 'test')); await wait(50);
+
   /* Avertissements et connexion */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await wait(50);
   step('Torch notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));

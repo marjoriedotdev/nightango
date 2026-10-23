@@ -49,6 +49,10 @@ Trames reçues seulement : rien n'est envoyé.
 - Pour un message, `client.sendMessage(text, true, gid)` renvoie le corps stylé sans l'envoyer. Torch attend du HTML : le texte doit être échappé (`&`, `<`, `>`).
 - Le pont insère `<r{ref}/>` pour une réponse, puis envoie `bm:{id}:{flag}:{body}`.
 - Références de message `<r…/>` et `<e…/>` : id sans le `=` final, `-` remplacé par `hypheN` et `_` par `underS`.
+- Modification d'un message (Torch `sendMessage`, `inject.js:5236-5241`) : `bm:{id}:{flag}:<n…/><f …><e{ref}/>{contenu}`. Le corps est celui d'un message ordinaire, style perso et emphase compris, et `<e{ref}/>` vise l'original. Le pont l'insère au même endroit que `<r…/>`, jamais avec lui, et garde le canal de l'original. Texte d'échec : « Your message could not be edited. ». Un texte inchangé ne part pas.
+  - Réception (Torch `displayEdit`, `inject.js:5497-5536`) : même auteur exigé. En direct, la modification remplace le texte de l'original. Dans l'historique, reçu du plus récent au plus ancien, elle ne le remplace que si l'original n'est pas déjà modifié. Une modification dont l'original n'est pas chargé s'affiche à part, marquée modifiée. Quand l'original arrive ensuite par l'historique, il prend le texte de la plus récente et les modifications affichées à part disparaissent.
+  - Limite propre à Torch : 9 modifications par message (`data-edits`, qui part de 1, refusé à 10, `inject.js:5466-5467`). Aucune limite de temps : Chatango ne voit qu'un nouveau message. Le rendu des modifications par le client officiel n'est pas vérifié.
+  - Suppression (action `delete` de Torch, `inject.js:7444-7448`) : `delmsg:{id}` de l'original, puis `delmsg:{id}` de chacune de ses modifications appliquées. Torch n'affiche un message qu'une fois son id définitif reçu (trame `u`) : le pont ne supprime donc que les modifications dont il connaît l'id définitif. Un `delete` reçu pour un original retire aussi du fil ses modifications affichées à part.
 
 ## Avertissements de Torch
 
@@ -209,7 +213,8 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 
 ### Groupe, source Torch
 
-- `delmsg:{id}`
+- `bm:{id}:{flag}:<n…/><f …><e{ref}/>{contenu}` (modification, `inject.js:5236-5241`, voir Envoi)
+- `delmsg:{id}`, aussi pour chaque modification d'un message supprimé (`inject.js:7444-7448`)
 - `delallmsg:{unid}:{ip}:{name}` (nom vide pour un invité)
 - `block:{unid}:{ip}:{name}`
 - `removeblock:{unid}:{ip}`
