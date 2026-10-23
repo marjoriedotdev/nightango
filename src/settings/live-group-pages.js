@@ -69,11 +69,15 @@ function GSMediaLive(p) {
 }
 
 function GSBansLive(p) {
-  var app = useApp(), g = p.g, owner = p.myRole === 'owner';
+  var app = useApp(), g = p.g, owner = p.myRole === 'owner', page = g.live.banPage;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
+  var c = useState(false), hideGuests = c[0], setHideGuests = c[1];
+  var sentinelRef = useRef(null);
   useEffect(function () { app.actions.requestBans(g.id); }, [g.id]);
+  useInfiniteScroll(p.scrollRef, sentinelRef, page.loaded && page.more && !page.loading, function () { app.actions.moreBans(g.id); }, LOAD_BELOW_MARGIN);
   var showIp = canSeeIps(p.myRole, p.perms);
+  var rows = hideGuests ? g.bans.filter(function (x) { return !x.guest; }) : g.bans;
   function ban() {
     var n = name.trim().toLowerCase();
     if (!n) { setErr('Enter a username.'); return; }
@@ -83,19 +87,21 @@ function GSBansLive(p) {
   }
   return h(Page, {
     title: 'Bans', lede: 'Banned members cannot post. Chatango bans the account and the IP of one of their messages.',
-    aside: g.bans.length && (owner || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: g.bans.length + ' members will be able to post in #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
+    aside: g.bans.length && (owner || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: page.more ? 'Everyone banned in #' + g.id + ' will be able to post again.' : g.bans.length + ' members will be able to post in #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
   },
     h(T.SettingsSection, { title: 'Ban someone', padded: true },
       h(T.TextField, {
         id: 'ban-name', label: 'Username', value: name, error: err || undefined, hint: err ? undefined : 'They need a recent message in #' + g.id + '.', onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') ban(); },
         action: h(T.Button, { variant: 'danger', icon: 'ban', onClick: ban }, 'Ban')
       })),
-    h(T.SettingsSection, { title: 'Banned · ' + g.bans.length },
-      !g.live.bansLoaded ? h(SkeletonRows, { count: 3, avatar: 28, twoLines: true, label: 'Loading the ban list from Chatango' })
-        : g.bans.length ? g.bans.map(function (x) {
-          return h('div', { key: x.unid + ':' + x.ip, className: 'lrow' },
+    h(T.SettingsSection, { title: 'Banned · ' + g.bans.length + (page.more ? '+' : '') },
+      h(T.SettingRow, { title: 'Hide guests', control: h(T.Switch, { checked: hideGuests, onChange: function (e) { setHideGuests(e.target.checked); } }) }),
+      !page.loaded ? h(SkeletonRows, { count: 3, avatar: 28, twoLines: true, label: 'Loading the ban list from Chatango' })
+        : rows.length || page.more ? rows.map(function (x) {
+          return h('div', { key: banKey(x), className: 'lrow' },
             h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28, inert: !ACCOUNT_NAME.test(x.name) }), h('span', { className: 'lrow-sub person-sub' }, (x.by ? 'by ' + x.by + ' · ' : '') + ago(x.at))),
             showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
             h(T.Button, { size: 'sm', onClick: function () { app.actions.unbanEntry(g.id, x); } }, 'Unban'));
-        }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
+        }).concat(page.more ? [h('div', { key: 'more', ref: sentinelRef, className: 'list-more' }, page.loading ? h(T.Spinner, { label: 'Loading more bans' }) : null)] : [])
+          : h('p', { className: 'pal-empty' }, g.bans.length ? 'Only guests are banned.' : 'Nobody is banned.')));
 }

@@ -702,7 +702,16 @@ function Root(props) {
     actions.setClosed = function (gid, closed) { liveBridge.setFlags(gid, closed ? GROUP_FLAG.IS_CLOSED : 0, closed ? 0 : GROUP_FLAG.IS_CLOSED); };
     actions.clearGroup = function (gid) { liveBridge.clearAll(gid); };
     actions.requestGroupSettings = function (gid) { liveBridge.requestSettings(gid); };
-    actions.requestBans = function (gid) { liveBridge.banList(gid); };
+    actions.requestBans = function (gid) {
+      // La réponse à la première page remplace la liste, même si une page suivante était attendue.
+      groupUpdate(gid, function (g) { g.live.banPage.loading = false; });
+      liveBridge.banList(gid, '0');
+    };
+    actions.moreBans = function (gid) {
+      var rows = stateRef.current.groups[gid].bans, last = rows[rows.length - 1];
+      // Une ligne ajoutée en direct n'a pas d'horodatage de Chatango : la page repart alors de la plus récente.
+      if (liveBridge.banList(gid, last && last.ts || '0')) groupUpdate(gid, function (g) { g.live.banPage.loading = true; });
+    };
     actions.saveGroupSettings = function (gid, draft, base) { return saveLiveSettings(stateRef.current.groups[gid], draft, base || stateRef.current.groups[gid].settings); };
   }
 
@@ -819,6 +828,23 @@ function Root(props) {
     if (!edits.length) return;
     edits.sort(function (a, b) { return a.ts - b.ts; }).forEach(function (e) { applyGroupEdit(o, e); });
     g.messages = g.messages.filter(function (x) { return edits.indexOf(x) < 0; });
+  }
+  /**
+   * Permet de verser une page de bannissements dans les lignes chargées.
+   * @param {Array} rows Lignes chargées.
+   * @param {{loaded: boolean, more: boolean, loading: boolean}} page État de la liste, mis à jour en place.
+   * @param {{list: Array, more: boolean}} op Page reçue du pont.
+   * @returns {Array} Lignes après la page.
+   */
+  function receiveBanPage(rows, page, op) {
+    // Seule la page suivante demandée par Torch Skin s'ajoute : un rechargement de Torch repart de la première page.
+    var next = page.loading, keep = next ? rows : [], known = {};
+    keep.forEach(function (b) { known[banKey(b)] = true; });
+    var fresh = op.list.filter(function (b) { return !known[banKey(b)]; });
+    page.more = op.more && (!next || fresh.length > 0);
+    page.loaded = true;
+    page.loading = false;
+    return keep.concat(fresh);
   }
   // Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
   function pmContentKey(m) {
@@ -974,7 +1000,7 @@ function Root(props) {
       case 'anncPost': if (op.text || op.embeds.length) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', annc: true, text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
       case 'bw': groupUpdate(op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
       case 'rate': groupUpdate(op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;
-      case 'bans': groupUpdate(op.gid, function (g) { g.bans = op.list; g.live.bansLoaded = true; }); break;
+      case 'bans': groupUpdate(op.gid, function (g) { g.bans = receiveBanPage(g.bans, g.live.banPage, op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;
         groupUpdate(op.gid, function (g) {
@@ -987,7 +1013,7 @@ function Root(props) {
       case 'unbanned': groupUpdate(op.gid, function (g) {
         g.bans = g.bans.filter(function (b) { return !op.list.some(function (x) { return x.unid === b.unid && x.ip === b.ip; }); });
       }); break;
-      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; }); break;
+      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
         var known = {}, list = (g.live.modlog || []).slice();
         list.forEach(function (x) { known[x.id] = true; });
@@ -1000,7 +1026,7 @@ function Root(props) {
         if (!d.auth.loggedIn) return;
         var g = d.groups[op.gid];
         // Une demande d'historique en cours ne reçoit plus de réponse sur un socket fermé.
-        if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') g.loadingMore = false; }
+        if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; } }
         d.session = sessionAfterConn(d, op);
       }); break;
       case 'session': update(function (d) {

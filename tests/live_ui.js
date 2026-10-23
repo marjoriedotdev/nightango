@@ -473,8 +473,26 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('mods', 'test', ['alice,' + (MOD & ~16384), 'carol,' + MOD]); await wait(80);
 
   click(byText('.tc-nav', 'Bans')); await wait(50);
-  step('ban list requested', frame('blocklist:block:0:next:500:anons:1').length >= 1);
-  g('blocklist', 'test', ['UNID1:1.2.3.4:alice:1700000300:marjorie;UNID9:9.9.9.9::1700000000:bob']); await until(() => !!byText('.lrow', 'alice'));
+  step('ban list requested', frame('blocklist:block:0:next:50:anons:1').length >= 1, frame('blocklist:'));
+  /* Bannissements par pages de 50 comme Torch : la page suivante part de l'horodatage de la dernière ligne */
+  const banTitle = () => ($$('.tc-section-title').find(x => x.textContent.indexOf('Banned') === 0) || {}).textContent || null;
+  const banObserver = () => observers.find(x => x.targets.some(t => t.closest('.spage')));
+  g('blocklist', 'test', [Array.from({ length: 50 }, (_, i) => 'PB' + i + ':10.0.0.' + i + ':user' + i + ':' + (1700001000 - i) + ':marjorie').join(';')]);
+  await until(() => banTitle() === 'Banned · 50+' && banObserver());
+  const banFirst = { title: banTitle(), observer: banObserver() };
+  if (banFirst.observer) banFirst.observer.cb(banFirst.observer.targets.map(target => ({ isIntersecting: true, target })), banFirst.observer);
+  await until(() => !!$('.spage [aria-label="Loading more bans"]'));
+  const banNext = { frame: frame('blocklist:block:').pop(), rows: $$('.spage .lrow').length, spinner: !!$('.spage [aria-label="Loading more bans"]'), root: banFirst.observer && banFirst.observer.opts.root && banFirst.observer.opts.root.className };
+  g('blocklist', 'test', ['PB49:10.0.0.49:user49:1700000951:marjorie;PB50:10.0.0.50:user50:1700000950:marjorie;PB51:10.0.0.51::1700000949:bob']);
+  await until(() => banTitle() === 'Banned · 52');
+  const banEnd = { title: banTitle(), rows: $$('.spage .lrow').length, observer: !!banObserver(), spinner: !!$('.spage [aria-label="Loading more bans"]') };
+  step('ban list loads the next page from its last row and ends on a short page',
+    banFirst.title === 'Banned · 50+' && banNext.frame === 'blocklist:block:1700000951:next:50:anons:1' && banNext.rows === 50 && banNext.spinner && banNext.root === 'spage'
+      && banEnd.title === 'Banned · 52' && banEnd.rows === 52 && !banEnd.observer && !banEnd.spinner,
+    { title: banFirst.title, banNext, banEnd });
+  g('blocklist', 'test', ['UNID1:1.2.3.4:alice:1700000300:marjorie;UNID9:9.9.9.9::1700000000:bob']);
+  await until(() => banTitle() === 'Banned · 2');
+  step('unrequested ban list replaces the loaded pages', banTitle() === 'Banned · 2' && !byText('.lrow', 'user0'), banTitle());
   step('ban list shown', !!byText('.lrow', 'alice') && !!byText('.lrow', '!anon'));
   click(byText('.lrow', 'alice').querySelector('.tc-btn')); await wait(20);
   step('unban frame', frame('removeblock:').pop() === 'removeblock:UNID1:1.2.3.4');

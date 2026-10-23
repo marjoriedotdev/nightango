@@ -104,7 +104,7 @@ function MeetPeople() {
   }
   var canLoadMore = !!(meet && !meet.loading && !meet.done && !meet.error && results.length);
   // La page suivante reprend les filtres des résultats affichés : ils ne changent pas sans passer par un chargement.
-  useInfiniteScroll(scrollRef, sentinelRef, canLoadMore, function () { app.actions.searchPeople(meet.filters, true); }, '0px 0px 400px 0px');
+  useInfiniteScroll(scrollRef, sentinelRef, canLoadMore, function () { app.actions.searchPeople(meet.filters, true); }, LOAD_BELOW_MARGIN);
   var active = meetActive(f);
   function clear(key) {
     var nf = Object.assign({}, f);
@@ -131,7 +131,7 @@ function MeetPeople() {
       meet && meet.error ? h('p', { className: 'pal-empty' }, meet.error) : null,
       results.map(function (n) { return personCard(s, n, app.theme, function () { app.ui.openProfile(n, null); }); }),
       canLoadMore ? h('div', { ref: sentinelRef, 'aria-hidden': 'true', style: { height: 1 } }) : null,
-      meet && meet.loading ? results.length ? h('div', { className: 'meet-more' }, h(T.Spinner, { label: 'Loading more people' }))
+      meet && meet.loading ? results.length ? h('div', { className: 'list-more' }, h(T.Spinner, { label: 'Loading more people' }))
         : h(SkeletonRows, { count: 5, avatar: 44, twoLines: true, label: 'Searching Chatango' }) : null,
       meet && !meet.loading && !meet.error && !results.length ? h('p', { className: 'pal-empty' }, active.length ? 'Nobody matches these filters.' : 'Nobody found.') : null),
     filtersOpen ? h(MeetFilters, { value: f, onClose: function () { setFiltersOpen(false); }, onApply: function (nf) { setFiltersOpen(false); run(Object.assign({}, nf, { query: f.query })); } }) : null);

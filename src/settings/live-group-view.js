@@ -20,6 +20,7 @@ function GroupSettingsViewLive(p) {
   // Version serveur à partir de laquelle le brouillon a été construit : seuls les écarts avec elle sont envoyés.
   var base = useRef(sig);
   var saving = useRef(false);
+  var scrollRef = useRef(null);
   useEffect(function () { if (g) app.actions.requestGroupSettings(g.id); }, [p.gid]);
   // Les réponses de Chatango arrivent après l'ouverture : on recale le brouillon tant qu'il n'est pas modifié.
   useEffect(function () {
@@ -53,10 +54,10 @@ function GroupSettingsViewLive(p) {
     if (dirty && !pending) app.ui.confirm({ title: 'Discard unsaved changes?', body: 'Your changes to #' + g.id + ' are not saved yet.', confirmLabel: 'Discard', danger: true, onConfirm: function () { app.nav({ view: 'group', id: g.id }); } });
     else app.nav({ view: 'group', id: g.id });
   }
-  var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: owner || perms.manageMods };
+  var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: owner || perms.manageMods, scrollRef: scrollRef };
   var map = { overview: GSOverviewLive, announcement: GSAnnouncementLive, automod: GSAutoModLive, media: GSMediaLive, bans: GSBansLive, audit: GSAuditLive, roles: GSStaffLive, members: GSMembers, invites: GSInvites };
   return h(SettingsShell, {
-    navLabel: 'Group settings', sections: sections, page: page, onBack: leave,
+    navLabel: 'Group settings', sections: sections, page: page, onBack: leave, scrollRef: scrollRef,
     onPage: function (pg) { app.nav({ view: 'gsettings', id: g.id, page: pg }); },
     header: h('div', { className: 'snav-head' },
       h(T.Avatar, { name: g.id, square: true, size: 32 }),

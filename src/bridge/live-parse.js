@@ -137,12 +137,18 @@ function parseMods(entries) {
   entries.forEach(function (x) { var p = String(x).split(','); if (p[0]) mods[lower(p[0])] = parseInt(p[1], 10) || 0; });
   return mods;
 }
+/**
+ * Permet de lire une page de bannissements de Torch : entrées unid:ip:nom:horodatage:auteur séparées par des points-virgules.
+ * @param {Array<string>} data Trame découpée sur :.
+ * @returns {Array<Object>} Entrées, avec l'horodatage brut (ts) qui sert de curseur à la page suivante.
+ */
 function parseBans(data) {
   var raw = data.join(':');
   if (!raw) return [];
   return raw.split(';').map(function (x) {
     var t = x.split(':');
-    return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', at: Math.round(parseFloat(t[3]) * 1000) || Date.now(), by: lower(t[4]) };
+    // Curseur converti comme Torch, qui lit l'horodatage par + avant de le renvoyer.
+    return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], ts: String(+t[3]), at: Math.round(parseFloat(t[3]) * 1000) || Date.now(), by: lower(t[4]) };
   }).filter(function (b) { return b.unid; });
 }
 function parseModLog(data) {

@@ -372,7 +372,7 @@ button.tc-mention{border:0;font-family:inherit;font-size:inherit;line-height:inh
 .photo-full{display:block;min-height:0;max-width:100%;max-height:calc(100% - 64px);object-fit:contain;border-radius:8px}
 .photo-wait{display:none}
 .photo-loading{display:inline-flex;color:var(--text-2)}
-.meet-more{display:flex;justify-content:center;padding:12px;color:var(--text-3)}
+.list-more{display:flex;justify-content:center;padding:12px;color:var(--text-3)}
 .pull-scroll{overscroll-behavior-y:contain}
 .pull{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;color:var(--text-3);transition:height .2s ease}
 .pull.drag{height:var(--pull,0px);transition:none}

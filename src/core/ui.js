@@ -29,6 +29,8 @@ function useOutside(ref, open, onClose, extraRef) {
   }, [open]);
 }
 
+var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
+
 /**
  * Permet de demander la page suivante quand une sentinelle approche de la zone visible.
  * @param {Object} rootRef Référence de la zone qui défile.

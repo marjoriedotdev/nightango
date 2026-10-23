@@ -14,6 +14,8 @@ var liveBridge = (function () {
   // Seuls réglages de son que Torch lit, avec l'objet Audio que chacun règle.
   var SOUND_KEYS = ['play_mention', 'volume_mention', 'play_online', 'volume_online'];
   var SOUND_AUDIO = { mention: 'message', online: 'play_online' };
+  // Taille des pages de bannissements demandées par Torch.
+  var BAN_PAGE = 50;
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
@@ -123,8 +125,13 @@ var liveBridge = (function () {
       }
       case 'bw': emit({ op: 'bw', gid: room, part: unquote(data[0]), whole: unquote(data[1]) }); break;
       case 'getratelimit': case 'ratelimitset': emit({ op: 'rate', gid: room, seconds: parseInt(data[0], 10) || 0 }); break;
-      case 'blocklist': emit({ op: 'bans', gid: room, list: parseBans(data) }); break;
-      case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', by: lower(data[3]), at: Date.now() } }); break;
+      case 'blocklist': {
+        var bans = parseBans(data);
+        // Comme Torch, une page incomplète est la dernière.
+        emit({ op: 'bans', gid: room, list: bans, more: bans.length >= BAN_PAGE });
+        break;
+      }
+      case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', guest: !data[2], by: lower(data[3]), at: Date.now() } }); break;
       case 'unblocked': emit({ op: 'unbanned', gid: room, list: parseBans(data) }); break;
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
       case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
@@ -605,7 +612,12 @@ var liveBridge = (function () {
     ban: function (gid, m) { return send(gid, 'block:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), 'The ban could not be sent.'); },
     unban: function (gid, b) { return send(gid, 'removeblock:' + b.unid + ':' + b.ip, 'The unban could not be sent.'); },
     unbanAll: function (gid) { return send(gid, 'unbanall', 'The unban could not be sent.'); },
-    banList: function (gid) { return send(gid, 'blocklist:block:0:next:500:anons:1', 'The ban list could not be loaded.'); },
+    /**
+     * Permet de demander une page de bannissements, comme Torch.
+     * @param {string} gid Groupe visé.
+     * @param {string} ts Horodatage de la dernière ligne chargée, 0 pour la première page.
+     */
+    banList: function (gid, ts) { return send(gid, 'blocklist:block:' + ts + ':next:' + BAN_PAGE + ':anons:1', 'The ban list could not be loaded.'); },
     clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
     /* Réglages de groupe : trames relevées dans chadango et chatango-lib */
     requestSettings: function (gid) {
