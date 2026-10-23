@@ -60,13 +60,14 @@ function RichAbout(p) {
 /**
  * Avatar d'une fiche de profil qui ouvre la photo complète.
  * @param {string} p.name Nom du membre.
+ * @param {number} p.size Taille de l'avatar.
  * @param {string} p.status Présence affichée.
  * @param {string} p.ring Couleur du fond derrière l'avatar.
  */
 function ProfilePhoto(p) {
   var a = useState(false), hasPhoto = a[0], setHasPhoto = a[1];
   var b = useState(false), open = b[0], setOpen = b[1];
-  var avatar = h(T.Avatar, { name: p.name, size: 96, status: p.status, ring: p.ring, onLoad: function () { setHasPhoto(true); } });
+  var avatar = h(T.Avatar, { name: p.name, size: p.size, status: p.status, ring: p.ring, onLoad: function () { setHasPhoto(true); } });
   if (!hasPhoto) return avatar;
   return h(Frag, null,
     h('button', { type: 'button', className: 'avatar-btn photo-btn', 'aria-label': 'View ' + p.name + "'s profile photo", onClick: function () { setOpen(true); } }, avatar),
@@ -105,22 +106,72 @@ function PhotoViewer(p) {
 }
 
 /**
- * Ligne d'informations d'une fiche de profil.
- * @param {string} meta Texte déjà composé.
+ * ASL d'une fiche de profil, ou son squelette tant que le mini profil est attendu.
+ * @param {Object} s État de l'application.
  * @param {string} name Nom du membre.
- * @param {Object} u Membre dans l'état.
  */
-function profileMeta(meta, name, u) {
-  if (meta) return h('span', { className: 'muted', style: { fontSize: 13 } }, meta);
-  return isProfilePending(name, u) ? h(T.Skeleton, { width: 120, height: 12 }) : null;
+function profileMeta(s, name) {
+  var asl = personAsl(s, name);
+  if (asl) return h('span', { className: 'muted profile-line' }, asl);
+  return isProfilePending(name, userOf(s, name)) ? h(T.Skeleton, { width: 120, height: 12 }) : null;
+}
+
+/**
+ * Résumé d'un profil commun à la fenêtre et au panneau : photo, nom, statut, ASL, About, profil complet et groupes en commun.
+ * @param {string} p.name Nom du membre.
+ * @param {?string} p.gid Groupe d'où le profil est ouvert.
+ * @param {string} p.heading Balise de titre du nom.
+ * @param {number} p.size Taille de la photo.
+ * @param {string} p.ring Couleur du fond derrière la photo.
+ * @param {?Object} p.skin Fond Premium porté par le conteneur, tel que le renvoie miniStyleOf.
+ * @param {boolean} [p.guest] Invité sans compte Chatango.
+ * @param {Function} p.nav Navigation vers un groupe en commun.
+ */
+function ProfileSummary(p) {
+  var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), cover = useMiniCover(p.skin);
+  var common = commonGroups(s, name);
+  useEffect(function () { if (!p.guest) app.actions.loadProfile(name); }, [name]);
+  return h(Frag, null,
+    cover.shown ? h('div', { className: 'profile-cover' }, h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer' })) : null,
+    h('div', { className: 'profile-card' },
+      // Clé sur le nom : le panneau garde son instance d'une conversation à l'autre.
+      h(ProfilePhoto, { key: name, name: name, size: p.size, status: name === s.me ? s.meStatus : u.status, ring: p.ring }),
+      h(p.heading, { className: 'profile-name' }, name),
+      h('span', { className: 'muted profile-line' }, personStatus(s, name, p.gid)),
+      profileMeta(s, name),
+      p.skin ? coverReveal(cover, p.skin) : null),
+    profileAbout(u, !!p.skin),
+    p.guest ? null : h('div', { className: 'profile-full' }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'id-card', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')),
+    common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length),
+      common.map(function (c) { return h('button', { key: c, type: 'button', className: 'mrow common-row', onClick: function () { p.nav({ view: 'group', id: c }); } }, h(T.Avatar, { name: c, square: true, size: 22 }), h('span', { className: 'grow' }, c)); })) : null);
+}
+
+/**
+ * Permet de retenir les images d'un profil complet tant que les réglages de médias le demandent.
+ * @returns {{on: boolean, button: ?Object}} Images autorisées et bouton qui les charge.
+ */
+function useFullProfileMedia() {
+  var safety = useApp().state.prefs.safety;
+  var c = useState(!safety.proxyMedia && safety.embedImages), on = c[0], setOn = c[1];
+  return { on: on, button: on ? null : h(T.Button, { key: 'm', variant: 'ghost', onClick: function () { setOn(true); } }, 'Load images') };
+}
+
+/**
+ * Profil complet affiché dans un cadre isolé sans script, sur le fond Premium du membre.
+ * @param {string} p.name Membre dont c'est le profil.
+ * @param {string} p.html HTML écrit par le membre.
+ * @param {boolean} p.media Images autorisées, telles que les donne useFullProfileMedia.
+ */
+function FullProfileFrame(p) {
+  var app = useApp(), mini = miniStyleOf(app.state.prefs, userOf(app.state, p.name), app.theme);
+  return h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(p.html, p.media, mini) });
 }
 
 /** Profil complet : page HTML du membre, affichée dans un cadre isolé sans script. */
 function FullProfileDialog(p) {
-  var app = useApp(), s = app.state, u = userOf(s, p.name), safety = s.prefs.safety, mini = miniStyleOf(s.prefs, u, app.theme);
+  var app = useApp(), s = app.state, u = userOf(s, p.name), media = useFullProfileMedia();
   var a = useState(LIVE ? null : ''), html = a[0], setHtml = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
-  var c = useState(!safety.proxyMedia && safety.embedImages), media = c[0], setMedia = c[1];
   useEffect(function () {
     if (!LIVE) return;
     if (isProfilePending(p.name, u)) app.actions.loadProfile(p.name);
@@ -132,7 +183,7 @@ function FullProfileDialog(p) {
   return h(Dialog, {
     title: p.name + "'s profile", wide: true, onClose: p.onClose,
     footer: [
-      !media && content ? h(T.Button, { key: 'm', variant: 'ghost', onClick: function () { setMedia(true); } }, 'Load images') : null,
+      content ? media.button : null,
       h('a', { key: 'o', className: 'tc-btn', href: 'https://' + p.name + '.chatango.com', target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, 'Open on chatango.com', h(T.Icon, { name: 'external', size: 14 })),
       h(T.Button, { key: 'c', variant: 'primary', onClick: p.onClose }, 'Close')
     ]
@@ -141,45 +192,19 @@ function FullProfileDialog(p) {
       err ? h('p', { className: 'muted', style: { margin: 0 } }, err)
         : content === null ? h('p', { className: 'muted', style: { margin: 0 } }, 'Loading the profile from Chatango.')
           : !content ? h('p', { className: 'muted', style: { margin: 0 } }, p.name + " hasn't written a full profile.")
-            : h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(content, media, mini) })));
-}
-
-/**
- * Permet de nommer l'alerte de connexion selon son état.
- * @param {boolean} notify Vrai quand l'alerte est active.
- */
-function notifyOnlineLabel(notify) { return notify ? 'Notifying when online' : 'Notify when online'; }
-/**
- * Permet de basculer l'alerte de connexion d'un membre.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Membre suivi.
- */
-function toggleNotifyOnline(app, name) {
-  var notify = isNotifyingOnline(app.state, name);
-  app.update(function (d) { d.notifyOnline[name] = !notify; });
+            : h(FullProfileFrame, { name: p.name, html: content, media: media.on })));
 }
 
 function ProfilePanel(p) {
-  var app = useApp(), s = app.state, name = p.name, u = userOf(s, name);
-  var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
-  var meta = [u.age, genderShort(u.gender), u.location].filter(Boolean).join(' · ');
-  var notify = isNotifyingOnline(s, name);
-  var friend = useFriendAction(name, u);
-  useEffect(function () { app.actions.loadProfile(name); }, [name]);
+  var app = useApp(), name = p.name;
+  var actions = useProfileActions(name, null);
   return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + name },
+    columnHeader('Profile'),
     h('div', { className: 'scroll' },
-      h('div', { className: 'profile-card' },
-        h(T.Avatar, { name: name, size: 72, status: u.status, ring: 'var(--panel)' }),
-        h('h2', null, name), profileMeta(meta, name, u)),
-      profileAbout(u),
-      h('div', { style: { padding: '0 16px 8px' } }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'external', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')),
-      common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length),
-        common.map(function (c) { return h('button', { key: c, type: 'button', className: 'mrow', style: { height: 32, padding: '0 4px' }, onClick: function () { app.nav({ view: 'group', id: c }); } }, h(T.Avatar, { name: c, square: true, size: 22 }), h('span', { className: 'grow' }, c)); })) : null,
+      h(ProfileSummary, { name: name, gid: null, heading: 'h3', size: 72, ring: 'var(--panel)', skin: null, nav: app.nav }),
       h('div', { style: { padding: '12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderTop: '1px solid var(--border)' } },
-        h('button', { type: 'button', className: 'mrow', 'aria-pressed': String(notify), onClick: function () { toggleNotifyOnline(app, name); } },
-          h(T.Icon, { name: 'bell', size: 15 }), h('span', { className: 'grow' }, notifyOnlineLabel(notify)), notify ? h(T.Icon, { name: 'check', size: 14 }) : null),
-        h('button', { type: 'button', className: 'mrow', disabled: friend.busy, onClick: friend.run }, h(T.Icon, { name: friend.icon, size: 15 }), h('span', { className: 'grow' }, friend.label)),
-        h('button', { type: 'button', className: 'mrow', onClick: function () { app.actions.toggleUser(name, 'ignored'); } }, h(T.Icon, { name: 'eye-off', size: 15 }), h('span', { className: 'grow' }, u.ignored ? 'Stop ignoring' : 'Ignore in groups')),
-        h('button', { type: 'button', className: 'mrow', style: { color: 'var(--danger)' }, onClick: function () { if (u.blocked) app.actions.toggleUser(name, 'blocked'); else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } }); } },
-          h(T.Icon, { name: 'ban', size: 15 }), h('span', { className: 'grow' }, u.blocked ? 'Unblock' : 'Block')))));
+        actions.map(function (it) {
+          return h('button', { key: it.id, type: 'button', className: 'mrow', disabled: it.disabled, 'aria-pressed': it.pressed == null ? undefined : String(it.pressed), style: it.danger ? { color: 'var(--danger)' } : null, onClick: it.onSelect },
+            h(T.Icon, { name: it.icon, size: 15 }), h('span', { className: 'grow' }, it.label), it.pressed ? h(T.Icon, { name: 'check', size: 14 }) : null);
+        }))));
 }

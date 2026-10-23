@@ -5,7 +5,7 @@ function GSOverview(p) {
     h(T.SettingsSection, { title: 'Information', padded: true },
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
         h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 } },
-          h(T.Avatar, { name: g.id, square: true, size: 56, color: g.id === 'community' ? 'var(--accent)' : undefined, style: g.id === 'community' ? { color: 'var(--on-accent)' } : null }),
+          h(T.Avatar, { name: g.id, square: true, size: 56 }),
           h('div', { className: 'btnrow' }, h(T.Button, { icon: 'upload', onClick: function () { app.ui.toast('Uploading an icon is not part of this prototype.'); } }, 'Change icon'))),
         h(T.TextField, { id: 'gs-name', label: 'Group name', value: g.id, disabled: true, hint: 'The name is the address, ' + g.id + '.chatango.com. It cannot change.' }),
         h(T.TextField, { id: 'gs-title', label: 'Title', value: o.title, maxLength: 60, onChange: function (e) { var v = e.target.value; p.edit(function (d) { d.overview.title = v; }); } }),
@@ -26,7 +26,7 @@ function GSAnnouncement(p) {
         h(T.TextField, { id: 'ann-text', label: 'Text', multiline: true, rows: 3, maxLength: 500, value: a.text, labelAside: h('span', { className: 'tc-msg-time' }, a.text.length + ' / 500'), onChange: function (e) { set('text', e.target.value); } })),
       h(T.SettingRow, {
         asLabel: false, title: 'Post it in the chat every', description: 'Only when more than 5 messages were sent since the last time.',
-        control: h('select', { className: 'tc-input', style: { width: 'auto', height: 34 }, 'aria-label': 'Repeat interval', value: a.interval, onChange: function (e) { set('interval', +e.target.value); } },
+        control: h('select', { className: 'tc-input', style: { width: 'auto' }, 'aria-label': 'Repeat interval', value: a.interval, onChange: function (e) { set('interval', +e.target.value); } },
           [[0, 'Never'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour']].map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); }))
       }),
       h(T.SettingRow, { title: 'Broadcast mode', description: 'Only staff with the broadcast permission can post. Use it for events.', control: h(T.Switch, { checked: a.broadcast, onChange: function (e) { set('broadcast', e.target.checked); } }) })),
@@ -88,7 +88,7 @@ function GSBans(p) {
   var app = useApp(), g = p.g;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
-  var showIp = p.myRole === 'owner' || p.perms.seeIps;
+  var showIp = canSeeIps(p.myRole, p.perms);
   function ban() {
     var n = name.trim().toLowerCase();
     if (!n) { setErr('Enter a username.'); return; }
@@ -102,17 +102,17 @@ function GSBans(p) {
     aside: g.bans.length && (p.myRole === 'owner' || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: g.bans.length + ' members will be able to join #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
   },
     h(T.SettingsSection, { title: 'Ban someone', padded: true },
-      h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10 } },
-        h('div', { style: { flex: '1 1 260px' } }, h(T.TextField, { id: 'ban-name', label: 'Username', value: name, error: err || undefined, onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') ban(); } })),
-        h(T.Button, { variant: 'danger', icon: 'ban', style: { height: 38 }, onClick: ban }, 'Ban'))),
+      h(T.TextField, {
+        id: 'ban-name', label: 'Username', value: name, error: err || undefined, onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') ban(); },
+        action: h(T.Button, { variant: 'danger', icon: 'ban', onClick: ban }, 'Ban')
+      })),
     h(T.SettingsSection, { title: 'Banned · ' + g.bans.length },
       g.bans.length ? g.bans.map(function (x) {
         return h('div', { key: x.name, className: 'lrow' },
-          h(T.Avatar, { name: x.name, size: 32 }),
-          h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, x.name), h('span', { className: 'lrow-sub' }, x.reason + ' · by ' + x.by + ' · ' + ago(x.at))),
-          showIp ? h('span', { className: 'mono muted', style: { fontSize: 12 } }, x.ip) : null,
+          h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28 }), h('span', { className: 'lrow-sub person-sub' }, x.reason + ' · by ' + x.by + ' · ' + ago(x.at))),
+          showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
           h(T.Button, { size: 'sm', onClick: function () { app.actions.unban(g.id, x.name); } }, 'Unban'));
-      }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, 'Nobody is banned.')));
+      }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
 }
 
 function GSAudit(p) {
@@ -123,12 +123,9 @@ function GSAudit(p) {
   return h(Page, {
     title: 'Audit log', lede: 'Every moderation and settings change in #' + g.id + ', newest first.',
     aside: h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } }, 'Staff member',
-      h('select', { className: 'tc-input', style: { width: 'auto', height: 34 }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, n); })))
+      h('select', { className: 'tc-input', style: { width: 'auto' }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, n); })))
   },
     h(T.SettingsSection, null, rows.length ? rows.map(function (x, i) {
-      return h('div', { key: x.id, className: 'lrow', style: i ? null : { borderTop: 0 } },
-        h(T.Avatar, { name: x.actor, size: 28 }),
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title', style: { fontWeight: 400 } }, h('b', { style: { fontWeight: 600 } }, x.actor), ' ', x.text.charAt(0).toLowerCase() + x.text.slice(1))),
-        h('time', { className: 'tc-msg-time', title: new Date(x.at).toLocaleString('en-GB') }, ago(x.at)));
+      return h(ActivityRow, { key: x.id, first: !i, at: x.at }, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', x.text.charAt(0).toLowerCase() + x.text.slice(1));
     }) : h('p', { className: 'pal-empty' }, 'No entries.')));
 }

@@ -10,9 +10,11 @@ You sign in on Torch's own screen. Torch Skin never reads your password and only
 
 **Group chats**
 - Replies, mentions and unread markers, with a "New messages" jump.
+- A Mentions page lists recent messages that mention you across your groups, and jumps to each one.
 - Red, blue and staff channels, with a color bar on every channel message.
 - Older messages load as you scroll up.
 - Errors and warnings show as short notices instead of filling the thread.
+- Your Torch media library: star an image to save it, insert it from the Media tab or by typing `:name` then Tab, and import or export it in Torch's format.
 
 **Private messages and friends**
 - Images and videos show as soon as you send them.
@@ -45,7 +47,7 @@ Everything lives in Settings > Appearance and is saved on your device.
 - **Accent color**: Ember, Blue, Green, Violet, Pink, Slate, or any color you pick. Text on the accent is adjusted so it stays readable.
 - **Density**: comfortable, or compact with no avatars and the time before the name.
 - **Text size** for message text.
-- **Chatango styles**: turn members' name colors, fonts and text colors, message backgrounds and profile backgrounds on or off. Hard-to-read colors are corrected.
+- **Chatango styles**: turn members' name colors, fonts and text colors, message backgrounds and profile backgrounds on or off. Hard-to-read colors are corrected. To hide the style of one member only, use Hide style in their message menu or profile.
 - **Imported themes**: load a theme file (.json) from the old Torch theme editor and use its accent color.
 - **Message style**: pick the font, size and colors of your own messages. It applies to what you send from Torch Skin in this browser and does not change your Chatango account style.
 
@@ -54,7 +56,8 @@ Everything lives in Settings > Appearance and is saved on your device.
 - Your password stays with Torch. Torch Skin never reads, stores, logs or sends it.
 - Every HTTP call Torch Skin makes is listed in [docs/torch-protocol.md](docs/torch-protocol.md#appels-http-autorisés), and nothing outside that list is called.
 - Member HTML is rebuilt from an allow list, never injected. Full profiles render in a sandboxed frame without scripts.
-- Profile backgrounds and full-size profile pictures load without sending a referrer.
+- Profile backgrounds, message backgrounds and full-size profile pictures load without sending a referrer.
+- Trusted sites, listed in Settings > Safety and shared with Torch, open without a link warning and load their images, videos and audio without a click. Other sites follow your media settings.
 - Fonts ship inside the userscript: no request to Google Fonts.
 - Activity on your own profile is the only visitor data Torch Skin reads.
 

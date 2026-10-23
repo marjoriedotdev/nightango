@@ -1,5 +1,5 @@
 /* ---------- Style perso des messages ---------- */
-var DEFAULT_MESSAGE_STYLE = { face: '0', size: 11, textColor: '#000000', nameColor: '#000000', bold: false, italic: false, underline: false };
+var DEFAULT_MESSAGE_STYLE = { face: '0', size: 11, textColor: '#000000', nameColor: '#000000', bold: false, italic: false, underline: false, strike: false };
 var MESSAGE_STYLE_SIZES = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 
 function MessageStyleButton() {
@@ -18,8 +18,8 @@ function MessageStyleDialog(p) {
   var st = useState(function () { return s.ownStyle || (LIVE ? liveBridge.accountStyle() : DEFAULT_MESSAGE_STYLE); }), draft = st[0], setDraft = st[1];
   function set(k, v) { setDraft(function (d) { var n = Object.assign({}, d); n[k] = v; return n; }); }
   function save(style) { app.actions.setMessageStyle(style); p.onClose(); }
-  var ms = memberStyles({ nameColor: draft.nameColor, textColor: draft.textColor, font: FONT_FACES[+draft.face] }, { names: true, fonts: true }, app.theme, false);
-  var textStyle = Object.assign({}, ms.text, { fontSize: fontPercent(draft.size) + '%', fontWeight: draft.bold ? 700 : 400, fontStyle: draft.italic ? 'italic' : 'normal', textDecoration: draft.underline ? 'underline' : 'none' });
+  var ms = memberStyles({ style: { nameColor: draft.nameColor, textColor: draft.textColor, font: FONT_FACES[+draft.face] } }, { names: true, fonts: true }, app.theme, false);
+  var textStyle = Object.assign({}, ms.text, { fontSize: fontPercent(draft.size) + '%', fontWeight: draft.bold ? 700 : 400, fontStyle: draft.italic ? 'italic' : 'normal', textDecoration: [draft.underline && 'underline', draft.strike && 'line-through'].filter(Boolean).join(' ') || 'none' });
   return h(Dialog, {
     title: 'Message style', description: 'Applies to messages you send from Torch Skin in this browser. Your Chatango account style is not changed.', onClose: p.onClose,
     footer: [
@@ -42,8 +42,10 @@ function MessageStyleDialog(p) {
       h('div', { className: 'grid2' },
         h(ColorField, { id: 'ms-text', label: 'Text color', value: draft.textColor, onChange: function (v) { set('textColor', v); } }),
         h(ColorField, { id: 'ms-name', label: 'Name color', value: draft.nameColor, onChange: function (v) { set('nameColor', v); } })),
-      h('div', { className: 'btnrow', style: { gap: 16 } },
-        [['bold', 'Bold'], ['italic', 'Italic'], ['underline', 'Underline']].map(function (x) {
-          return h(T.Checkbox, { key: x[0], label: x[1], checked: draft[x[0]], onChange: function (e) { set(x[0], e.target.checked); } });
-        }))));
+      h('div', { className: 'tc-field' },
+        h('div', { className: 'btnrow', style: { gap: 16 } },
+          [['bold', 'Bold'], ['italic', 'Italic'], ['underline', 'Underline'], ['strike', 'Strikethrough']].map(function (x) {
+            return h(T.Checkbox, { key: x[0], label: x[1], checked: draft[x[0]], 'aria-describedby': x[0] === 'strike' ? 'ms-strike-hint' : undefined, onChange: function (e) { set(x[0], e.target.checked); } });
+          })),
+        h('span', { id: 'ms-strike-hint', className: 'tc-hint' }, 'Strikethrough applies to private messages only.'))));
 }

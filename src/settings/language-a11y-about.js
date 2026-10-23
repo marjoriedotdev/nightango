@@ -12,7 +12,7 @@ function LanguagePage() {
           return h('button', { key: l[0], type: 'button', role: 'radio', 'aria-checked': String(on), className: 'lrow', style: { width: '100%', border: 0, borderTop: i ? '1px solid var(--divider)' : 0, background: 'none', textAlign: 'left', cursor: 'pointer', color: 'inherit' }, onClick: function () { pr.set('language', l[0]); app.ui.toast(l[1] + ' selected. This prototype stays in English.'); } },
             h('span', { className: 'radio', 'aria-hidden': 'true' }),
             h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, l[1]), h('span', { className: 'lrow-sub' }, l[2] + ' · translated by ' + l[3])),
-            h('span', { className: 'mono muted', style: { fontSize: 12 } }, l[0]));
+            h('span', { className: 'muted', style: { fontSize: 12 } }, l[0]));
         }) : h('p', { className: 'pal-empty' }, 'Language not found or not supported yet.'))));
 }
 
@@ -31,16 +31,16 @@ function AccessibilityPage() {
 function WhatsNewPage() {
   var items = [
     ['0.1.0-b', 'Redesigned interface', 'A calmer layout with one accent color, light and dark themes, and compact density.'],
-    ['0.1.0-b', 'Notification matrix', 'Choose in-app, sound, desktop and email alerts per event on one screen.'],
-    ['0.1.0-b', 'Roles and permissions', 'Every staff permission is named and explained. Admin-only rights are visible but locked.'],
-    ['0.1.0-b', 'Message requests', 'Private messages from people outside your friends list wait in Requests.'],
-    ['0.1.0-b', 'Readable Chatango styles', "Members' colors and fonts are off by default. When on, Torch fixes colors that would be hard to read."]
-  ];
+    ['0.1.0-b', 'Notification matrix', LIVE ? 'Choose in-app and desktop alerts per event on one screen.' : 'Choose in-app, sound, desktop and email alerts per event on one screen.'],
+    ['0.1.0-b', 'Roles and permissions', LIVE ? 'Every moderator permission is named and explained.' : 'Every staff permission is named and explained. Admin-only rights are visible but locked.'],
+    LIVE ? null : ['0.1.0-b', 'Message requests', 'Private messages from people outside your friends list wait in Requests.'],
+    ['0.1.0-b', 'Readable Chatango styles', "Members' colors and fonts can be turned off in Appearance. Torch fixes colors that would be hard to read."]
+  ].filter(Boolean);
   return h(Page, { title: "What's new", lede: 'Changes in the redesigned client.' },
     h(T.SettingsSection, null, items.map(function (i, k) {
       return h('div', { key: k, className: 'lrow', style: k ? null : { borderTop: 0 } },
         h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, i[1]), h('span', { className: 'lrow-sub', style: { fontSize: 13 } }, i[2])),
-        h('span', { className: 'mono muted', style: { fontSize: 12 } }, i[0]));
+        h('span', { className: 'muted', style: { fontSize: 12 } }, i[0]));
     })));
 }
 

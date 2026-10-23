@@ -125,6 +125,16 @@ _Avoid_: contact, watch list
 **Blocage**:
 Refus des MP d'un compte, côté messages privés.
 
+## Médias
+
+**Médiathèque**:
+Images favorites que Torch garde dans ce navigateur, communes à tous ses comptes, insérées dans un message par leur adresse. L'interface dit « Media ».
+_Avoid_: favoris (réservé aux groupes), galerie
+
+**Hôte de confiance**:
+Hôte exact choisi par l'utilisateur, dont les liens s'ouvrent sans avertissement et dont les images, vidéos et audios se chargent sans clic. En live, la liste est celle de Torch (`safety.whitelist.domain`). L'interface dit « Trusted sites ».
+_Avoid_: domaine de confiance, liste blanche (ambigu avec la liste de domaines que le serveur de Torch envoie)
+
 ## Présence
 
 **Présence**:
@@ -160,7 +170,7 @@ Couleurs et image de fond qu'un membre Premium attache à son mini profil.
 _Avoid_: fond de mini, thème de profil
 
 **Fond de message**:
-Fond Premium affiché derrière les messages de groupe d'un membre. Torch Skin ne le gère pas.
+Couleur et image de fond qu'un membre Premium attache à ses messages de groupe. Torch Skin affiche la couleur et l'image sous « Message backgrounds ».
 
 **Tracker vissle**:
 Service de vissle que l'utilisateur installe sur son profil pour journaliser l'activité qu'il reçoit.
@@ -173,6 +183,10 @@ _Avoid_: visites (pour la section entière), stats
 Recherche de membres de Chatango filtrée par âge, genre, photo et présence.
 _Avoid_: découverte (réservé à Discover, la liste de groupes à rejoindre)
 
+**Comptes liés**:
+Autres comptes que vissle rapproche d'un compte, rangés par niveau de rapprochement (Definite à Weak), selon une méthode que le code de Torch ne dit pas. Demandés au clic sur « Who is this », montrés à l'utilisateur seul, sans être gardés.
+_Avoid_: alts, multicomptes, doubles comptes
+
 ## Style
 
 **Style de message**:
@@ -182,8 +196,12 @@ Police, taille, couleurs du texte et du nom, gras, italique et souligné d'un me
 Style de message enregistré chez Chatango pour le compte.
 
 **Style perso**:
-Style de message choisi dans Torch Skin, gardé dans ce navigateur seulement et appliqué à chaque envoi.
+Style de message choisi dans Torch Skin, gardé dans ce navigateur seulement et appliqué à chaque envoi. Il peut aussi barrer le texte, en MP seulement.
 _Avoid_: style local, thème de message
+
+**Style coupé**:
+Style de message et fond de message d'un membre que l'utilisateur a choisi de ne plus afficher, en groupe comme en MP. Gardé avec les données du compte dans ce navigateur.
+_Avoid_: style masqué, style bloqué
 
 ## Session
 

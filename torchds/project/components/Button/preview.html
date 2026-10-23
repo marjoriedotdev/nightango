@@ -13,7 +13,7 @@
 var T = window.Torch, h = React.createElement;
 function Demo() {
   return h('div', { className: 'col' },
-    h('div', { className: 'row' }, h(T.Button, { variant: 'primary' }, 'Save changes'), h(T.Button, null, 'Manage'), h(T.Button, { variant: 'ghost' }, 'Discard'), h(T.Button, { variant: 'danger', icon: 'ban' }, 'Block')),
+    h('div', { className: 'row' }, h(T.Button, { variant: 'primary' }, 'Save changes'), h(T.Button, null, 'Manage'), h(T.Button, { variant: 'ghost' }, 'Discard'), h(T.Button, { variant: 'danger', icon: 'user-x' }, 'Block')),
     h('div', { className: 'row' }, h(T.Button, { variant: 'primary', size: 'lg', icon: 'plus' }, 'Create a group'), h(T.Button, { size: 'sm' }, 'Join'), h(T.Button, { variant: 'primary', disabled: true }, 'Disabled')));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));

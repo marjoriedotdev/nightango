@@ -20,11 +20,15 @@
     plus: [['path', { d: 'M5 12h14' }], ['path', { d: 'M12 5v14' }]],
     send: [['path', { d: 'm22 2-7 20-4-9-9-4Z' }], ['path', { d: 'M22 2 11 13' }]],
     reply: [['polyline', { points: '9 17 4 12 9 7' }], ['path', { d: 'M20 18v-2a4 4 0 0 0-4-4H4' }]],
+    quote: [['path', { d: 'M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z' }], ['path', { d: 'M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z' }]],
     smile: [['circle', { cx: 12, cy: 12, r: 10 }], ['path', { d: 'M8 14s1.5 2 4 2 4-2 4-2' }], ['line', { x1: 9, x2: 9.01, y1: 9, y2: 9 }], ['line', { x1: 15, x2: 15.01, y1: 9, y2: 9 }]],
     hash: [['line', { x1: 4, x2: 20, y1: 9, y2: 9 }], ['line', { x1: 4, x2: 20, y1: 15, y2: 15 }], ['line', { x1: 10, x2: 8, y1: 3, y2: 21 }], ['line', { x1: 16, x2: 14, y1: 3, y2: 21 }]],
+    'at-sign': [['circle', { cx: 12, cy: 12, r: 4 }], ['path', { d: 'M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8' }]],
     users: [['path', { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' }], ['circle', { cx: 9, cy: 7, r: 4 }], ['path', { d: 'M22 21v-2a4 4 0 0 0-3-3.87' }], ['path', { d: 'M16 3.13a4 4 0 0 1 0 7.75' }]],
+    user: [['path', { d: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2' }], ['circle', { cx: 12, cy: 7, r: 4 }]],
     'user-plus': [['path', { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' }], ['circle', { cx: 9, cy: 7, r: 4 }], ['path', { d: 'M19 8v6' }], ['path', { d: 'M22 11h-6' }]],
     'user-minus': [['path', { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' }], ['circle', { cx: 9, cy: 7, r: 4 }], ['path', { d: 'M22 11h-6' }]],
+    'user-x': [['path', { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' }], ['circle', { cx: 9, cy: 7, r: 4 }], ['line', { x1: 17, x2: 22, y1: 8, y2: 13 }], ['line', { x1: 22, x2: 17, y1: 8, y2: 13 }]],
     bell: [['path', { d: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9' }], ['path', { d: 'M10.3 21a1.94 1.94 0 0 0 3.4 0' }]],
     more: [['circle', { cx: 12, cy: 12, r: 1 }], ['circle', { cx: 19, cy: 12, r: 1 }], ['circle', { cx: 5, cy: 12, r: 1 }]],
     pin: [['line', { x1: 12, x2: 12, y1: 17, y2: 22 }], ['path', { d: 'M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z' }]],
@@ -37,6 +41,7 @@
     'arrow-left': [['path', { d: 'm12 19-7-7 7-7' }], ['path', { d: 'M19 12H5' }]],
     sliders: [['line', { x1: 4, x2: 4, y1: 21, y2: 14 }], ['line', { x1: 4, x2: 4, y1: 10, y2: 3 }], ['line', { x1: 12, x2: 12, y1: 21, y2: 12 }], ['line', { x1: 12, x2: 12, y1: 8, y2: 3 }], ['line', { x1: 20, x2: 20, y1: 21, y2: 16 }], ['line', { x1: 20, x2: 20, y1: 12, y2: 3 }], ['line', { x1: 2, x2: 6, y1: 14, y2: 14 }], ['line', { x1: 10, x2: 14, y1: 8, y2: 8 }], ['line', { x1: 18, x2: 22, y1: 16, y2: 16 }]],
     message: [['path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' }]],
+    'message-square-x': [['path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' }], ['path', { d: 'm14.5 7.5-5 5' }], ['path', { d: 'm9.5 7.5 5 5' }]],
     compass: [['circle', { cx: 12, cy: 12, r: 10 }], ['polygon', { points: '16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76' }]],
     flame: [['path', { d: 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z' }]],
     shield: [['path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10' }]],
@@ -48,6 +53,7 @@
     bold: [['path', { d: 'M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8' }]],
     italic: [['line', { x1: 19, x2: 10, y1: 4, y2: 4 }], ['line', { x1: 14, x2: 5, y1: 20, y2: 20 }], ['line', { x1: 15, x2: 9, y1: 4, y2: 20 }]],
     link: [['path', { d: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' }], ['path', { d: 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' }]],
+    copy: [['rect', { width: 14, height: 14, x: 8, y: 8, rx: 2, ry: 2 }], ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }]],
     upload: [['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }], ['polyline', { points: '17 8 12 3 7 8' }], ['line', { x1: 12, x2: 12, y1: 3, y2: 15 }]],
     trash: [['path', { d: 'M3 6h18' }], ['path', { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6' }], ['path', { d: 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' }]],
     volume: [['polygon', { points: '11 5 6 9 2 9 2 15 6 15 11 19 11 5' }], ['path', { d: 'M15.54 8.46a5 5 0 0 1 0 7.07' }]],
@@ -56,6 +62,7 @@
     'log-out': [['path', { d: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' }], ['polyline', { points: '16 17 21 12 16 7' }], ['line', { x1: 21, x2: 9, y1: 12, y2: 12 }]],
     edit: [['path', { d: 'M12 20h9' }], ['path', { d: 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z' }]],
     info: [['circle', { cx: 12, cy: 12, r: 10 }], ['path', { d: 'M12 16v-4' }], ['path', { d: 'M12 8h.01' }]],
+    'id-card': [['path', { d: 'M13 19a4 4 0 0 0-8 0' }], ['path', { d: 'M16 10h2' }], ['path', { d: 'M16 14h2' }], ['circle', { cx: 9, cy: 12, r: 3 }], ['rect', { x: 2, y: 5, width: 20, height: 14, rx: 2 }]],
     alert: [['circle', { cx: 12, cy: 12, r: 10 }], ['path', { d: 'M12 8v4' }], ['path', { d: 'M12 16h.01' }]],
     ban: [['circle', { cx: 12, cy: 12, r: 10 }], ['path', { d: 'm4.9 4.9 14.2 14.2' }]],
     'eye-off': [['path', { d: 'M9.88 9.88a3 3 0 1 0 4.24 4.24' }], ['path', { d: 'M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68' }], ['path', { d: 'M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61' }], ['line', { x1: 2, x2: 22, y1: 2, y2: 22 }]],
@@ -103,7 +110,7 @@
     var autoId = React.useId();
     var id = props.id || autoId;
     var hintId = id + '-hint';
-    var rest = omit(props, ['label', 'hint', 'error', 'multiline', 'id', 'className', 'labelAside']);
+    var rest = omit(props, ['label', 'hint', 'error', 'multiline', 'id', 'className', 'labelAside', 'action']);
     var describedBy = props.error || props.hint ? hintId : undefined;
     var control = h(props.multiline ? 'textarea' : 'input', Object.assign({
       id: id, className: cx('tc-input', props.className), 'aria-invalid': props.error ? 'true' : undefined, 'aria-describedby': describedBy
@@ -111,7 +118,7 @@
     return h('div', { className: 'tc-field' },
       props.label ? h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 } },
         h('label', { className: 'tc-label', htmlFor: id }, props.label), props.labelAside || null) : null,
-      control,
+      props.action ? h('div', { className: 'tc-field-row' }, control, props.action) : control,
       props.error ? h('span', { id: hintId, className: 'tc-error' }, props.error) : props.hint ? h('span', { id: hintId, className: 'tc-hint' }, props.hint) : null);
   }
 
@@ -198,40 +205,42 @@
   }
 
   function renderText(text) {
-    if (typeof text !== 'string') return text;
-    var parts = text.split(/(@[A-Za-z0-9_-]+)/g);
-    return parts.map(function (p, i) {
+    return text.split(/(@[A-Za-z0-9_-]+)/g).map(function (p, i) {
       if (p.charAt(0) === '@' && p.length > 1) return h('span', { key: i, className: 'tc-mention' }, p);
       return p;
     });
   }
 
   function Message(props) {
-    var mention = props.mention;
-    var actions = (props.onReply || props.onReact || props.onMore) ? h('div', { className: 'tc-msg-actions' },
-      props.onReact ? h(IconButton, { icon: 'smile', label: 'Add reaction', size: 28, iconSize: 16, onClick: props.onReact }) : null,
-      props.onReply ? h(IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: props.onReply }) : null,
-      props.onMore ? h(IconButton, { icon: 'more', label: 'More actions', size: 28, iconSize: 16, onClick: props.onMore }) : null) : null;
-    var text = h('p', { className: 'tc-msg-text' }, renderText(props.children));
-    if (props.continued) {
-      return h('article', { className: cx('tc-msg', 'tc-msg-cont', mention && 'tc-msg-mention') },
-        h('span', { className: 'tc-msg-gutter' }, props.time),
-        h('div', { className: 'tc-msg-body' }, text, props.extra || null), actions);
+    var mention = props.mention && 'tc-msg-mention';
+    var body = typeof props.children === 'string' ? h('p', { className: 'tc-msg-text' }, renderText(props.children)) : props.children;
+    var author = typeof props.author === 'string' ? h('span', { className: 'tc-msg-author' }, props.author) : props.author;
+    var time = h('time', { className: 'tc-msg-time' }, props.time);
+    var actions = props.actions ? h('div', { className: 'tc-msg-actions' }, props.actions) : null;
+    var reply = props.reply ? h('div', { className: 'tc-msg-reply' },
+      h(Icon, { name: 'reply', size: 14 }), props.reply.avatar,
+      props.reply.author ? h('span', { className: 'tc-msg-reply-author' }, props.reply.author) : null,
+      props.reply.onJump
+        ? h('button', { type: 'button', className: 'tc-msg-reply-text tc-msg-reply-jump', title: 'Go to the original message', onClick: props.reply.onJump }, props.reply.text)
+        : h('span', { className: 'tc-msg-reply-text' }, props.reply.text)) : null;
+    // Fond en style inline : il doit passer devant le fond du membre, lui aussi inline.
+    var highlight = props.highlight ? { background: 'var(--selected)' } : null;
+    var bg = props.background && !highlight ? h('div', { className: 'tc-msg-bg', 'aria-hidden': 'true' }, props.background) : null;
+    function row(base, style) { return { className: cx(base, mention, bg && 'tc-msg-layered', props.className), style: Object.assign({}, style, props.style, highlight), 'data-msg-id': props.msgId }; }
+    if (props.compact) {
+      // Base de 8em : sur un écran étroit, le texte passe à la ligne au lieu de s'écraser à côté du rôle et du canal.
+      return h('article', row('cmsg'),
+        bg, time, author, props.meta, h('div', { style: { flex: '1 1 8em', minWidth: 0 } }, reply, body), actions);
     }
-    var roleBadge = props.role ? h(Badge, { icon: props.role === 'Owner' ? 'crown' : 'shield' }, props.role) : null;
-    return h('article', { className: cx('tc-msg', mention && 'tc-msg-mention'), style: props.reply ? { flexDirection: 'column' } : null },
-      props.reply ? h('div', { className: 'tc-msg-reply' },
-        h(Icon, { name: 'reply', size: 14 }),
-        h(Avatar, { name: props.reply.author, size: 16 }),
-        h('span', { style: { fontWeight: 500, color: 'var(--text-2)' } }, props.reply.author),
-        h('span', { className: 'tc-msg-reply-text' }, props.reply.text)) : null,
-      h('div', { style: { display: 'flex', gap: 12 } },
-        h(Avatar, { name: props.author, color: props.avatarColor, src: props.avatarSrc }),
-        h('div', { className: 'tc-msg-body' },
-          h('div', { className: 'tc-msg-head' },
-            h('span', { className: 'tc-msg-author' }, props.author), roleBadge,
-            h('time', { className: 'tc-msg-time' }, props.time)),
-          text, props.extra || null)),
+    if (props.continued) {
+      return h('article', row('tc-msg tc-msg-cont'),
+        bg, h('span', { className: 'tc-msg-gutter' }, props.time), h('div', { className: 'tc-msg-body' }, body), actions);
+    }
+    return h('article', row('tc-msg', Object.assign({ marginTop: 6 }, reply ? { flexDirection: 'column' } : null)),
+      bg, reply,
+      h('div', { style: { display: 'flex', gap: 12, minWidth: 0 } },
+        props.avatar,
+        h('div', { className: 'tc-msg-body' }, h('div', { className: 'tc-msg-head' }, author, props.meta, time), body)),
       actions);
   }
 
@@ -281,12 +290,14 @@
     var value = props.value != null ? props.value : internal[0];
     var setValue = props.onChange || internal[1];
     var own = React.useRef(null), ref = props.inputRef || own;
-    var id = React.useId();
+    var id = React.useId(), hintId = id + '-hint';
+    var blocked = props.canSend === false;
     function send() {
       var text = value.trim();
-      if (!text) return;
-      if (props.onSend) props.onSend(text);
+      if (!text || blocked) return;
+      // Vidé avant onSend : la vue peut y remettre un brouillon mis de côté.
       setValue('');
+      if (props.onSend) props.onSend(text);
     }
     React.useEffect(function () {
       var el = ref.current;
@@ -294,7 +305,14 @@
       el.style.height = 'auto';
       el.style.height = Math.min(el.scrollHeight, 160) + 'px';
     }, [value]);
-    React.useEffect(function () { if (props.replyTo && ref.current) ref.current.focus(); }, [props.replyTo]);
+    var ctx = props.context;
+    // Clé en texte : la vue recrée l'objet du contexte à chaque rendu, le curseur sauterait à chaque frappe.
+    React.useEffect(function () {
+      var el = ref.current;
+      if (!ctx || !el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }, [ctx ? [ctx.verb, ctx.author, ctx.text].join('\n') : '']);
     function focusInput(e) {
       // Les menus et fenêtres rendus en portail remontent leurs événements React jusqu'ici sans être dans le composeur.
       if (!e.currentTarget.contains(e.target) || e.target.closest('button,a,input,select,textarea,[role=menu],[role=menuitem]')) return;
@@ -302,27 +320,33 @@
       ref.current.focus();
     }
     return h('div', { className: 'tc-composer', onMouseDown: focusInput },
-      props.replyTo ? h('div', { className: 'tc-composer-reply' },
-        h(Icon, { name: 'reply', size: 14 }),
-        h('span', { style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-          'Replying to ', h('strong', { style: { color: 'var(--text-2)', fontWeight: 600 } }, props.replyTo.author), ' ', props.replyTo.text),
-        h(IconButton, { icon: 'x', label: 'Cancel reply', size: 24, iconSize: 13, onClick: props.onCancelReply })) : null,
+      props.status ? h('div', { className: 'tc-composer-context', role: 'status' },
+        h(Spinner, { size: 14 }),
+        h('span', { className: 'tc-composer-context-text' }, props.status)) : null,
+      ctx ? h('div', { className: 'tc-composer-context' },
+        h(Icon, { name: ctx.icon, size: 14 }),
+        h('span', { className: 'tc-composer-context-text' },
+          ctx.verb, ' ', h('strong', { style: { color: 'var(--text-2)', fontWeight: 600 } }, ctx.author), ' ', ctx.text),
+        h(IconButton, { icon: 'x', label: ctx.cancelLabel, size: 24, iconSize: 13, onClick: props.onCancelContext })) : null,
       h('label', { htmlFor: id, className: 'tc-sr' }, props.label || 'Message'),
       h('textarea', {
-        id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value,
+        id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value, 'aria-describedby': props.hint ? hintId : undefined,
         onChange: function (e) { setValue(e.target.value); if (props.onTyping) props.onTyping(); },
         onKeyDown: function (e) {
+          if (props.onKeyDown) props.onKeyDown(e);
+          if (e.defaultPrevented) return;
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
-          if (e.key === 'Escape' && props.replyTo && props.onCancelReply) props.onCancelReply();
+          if (e.key === 'Escape' && ctx && props.onCancelContext) props.onCancelContext();
         }
       }),
       h('div', { className: 'tc-composer-bar' },
         props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', size: 30, iconSize: 16, onClick: props.onEmoji }) : null,
         props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach }) : null,
-        h('span', { style: { flex: 1 } }),
+        props.hint ? h('span', { id: hintId, className: cx('tc-composer-hint', props.hintTone === 'warning' && 'tc-composer-hint-warning') },
+          props.hintTone === 'warning' ? h(Icon, { name: 'alert', size: 14 }) : null, props.hint) : h('span', { style: { flex: 1 } }),
         props.aside || null,
         props.beforeSend || null,
-        h('button', { type: 'button', className: 'tc-send', 'aria-label': 'Send message', disabled: !value.trim(), onClick: send }, h(Icon, { name: 'send', size: 16 }))));
+        h('button', { type: 'button', className: 'tc-send', 'aria-label': 'Send message', disabled: !value.trim() || blocked, onClick: send }, h(Icon, { name: 'send', size: 16 }))));
   }
 
   function Skeleton(props) {

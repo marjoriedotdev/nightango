@@ -1,7 +1,7 @@
 /* ---------- Écrans du mode live : réglages branchés sur Chatango par le client Torch ---------- */
 
 function liveSelect(id, label, value, options, onChange, disabled) {
-  return h('select', { id: id, className: 'tc-input', style: { width: 'auto', height: 34 }, 'aria-label': label, value: value, disabled: !!disabled, onChange: function (e) { onChange(+e.target.value); } },
+  return h('select', { id: id, className: 'tc-input', style: { width: 'auto' }, 'aria-label': label, value: value, disabled: !!disabled, onChange: function (e) { onChange(+e.target.value); } },
     options.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); }));
 }
 function withCurrent(options, value, label) {
@@ -20,6 +20,7 @@ function GroupSettingsViewLive(p) {
   // Version serveur à partir de laquelle le brouillon a été construit : seuls les écarts avec elle sont envoyés.
   var base = useRef(sig);
   var saving = useRef(false);
+  var scrollRef = useRef(null);
   useEffect(function () { if (g) app.actions.requestGroupSettings(g.id); }, [p.gid]);
   // Les réponses de Chatango arrivent après l'ouverture : on recale le brouillon tant qu'il n'est pas modifié.
   useEffect(function () {
@@ -46,18 +47,17 @@ function GroupSettingsViewLive(p) {
     { title: 'Moderation', items: [['automod', 'AutoMod'], ['media', 'Media and links'], ['bans', 'Bans']].concat(owner || perms.modLog ? [['audit', 'Audit log']] : []) },
     { title: 'People', items: [['roles', 'Staff and roles'], ['members', 'Members'], ['invites', 'Invites']] }
   ];
-  var allowed = [].concat.apply([], sections.map(function (x) { return x.items.map(function (i) { return i[0]; }); }));
-  var page = allowed.indexOf(p.page) >= 0 ? p.page : allowed[0];
+  var page = listedPage(sections, p.page);
   var dirty = JSON.stringify(draft) !== sig;
   function edit(fn) { setDraft(function (d0) { var d1 = JSON.parse(JSON.stringify(d0)); fn(d1); return d1; }); }
   function leave() {
     if (dirty && !pending) app.ui.confirm({ title: 'Discard unsaved changes?', body: 'Your changes to #' + g.id + ' are not saved yet.', confirmLabel: 'Discard', danger: true, onConfirm: function () { app.nav({ view: 'group', id: g.id }); } });
     else app.nav({ view: 'group', id: g.id });
   }
-  var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: owner || perms.manageMods };
+  var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: owner || perms.manageMods, scrollRef: scrollRef };
   var map = { overview: GSOverviewLive, announcement: GSAnnouncementLive, automod: GSAutoModLive, media: GSMediaLive, bans: GSBansLive, audit: GSAuditLive, roles: GSStaffLive, members: GSMembers, invites: GSInvites };
   return h(SettingsShell, {
-    navLabel: 'Group settings', sections: sections, page: page, onBack: leave,
+    navLabel: 'Group settings', sections: sections, page: page, onBack: leave, scrollRef: scrollRef,
     onPage: function (pg) { app.nav({ view: 'gsettings', id: g.id, page: pg }); },
     header: h('div', { className: 'snav-head' },
       h(T.Avatar, { name: g.id, square: true, size: 32 }),

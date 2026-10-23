@@ -14,6 +14,7 @@ Les profils Chatango contiennent du HTML et du CSS écrits par leurs membres (`m
 - Mini profil : `RichText` (`src/core/rich-text.js`) reconstruit une liste blanche de balises en éléments React.
 - Profil complet : `fullProfileDoc` le rend dans une `iframe` `sandbox` sans `allow-scripts` ni `allow-same-origin`, avec une politique CSP en `<meta>`.
 - Fond Premium : `custom_profile.css` est parsé par `parseMiniCss`, qui n'en garde que des couleurs en hex et une image `https`. Le CSS lui-même n'est jamais injecté.
+- Fond de message : `msgbg.xml` est lu par `parseMsgBg`, qui n'en garde qu'une couleur hex, des opacités bornées et un alignement d'une liste fermée. L'image `msgbg.jpg` est une `<img>` `no-referrer` dont l'URL vient du nom du membre, jamais du fichier.
 
 ## Conséquences
 

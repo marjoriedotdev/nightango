@@ -2,6 +2,18 @@
 function parseGroupName(v) {
   return String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^client\.chatango\.com\/q\?/, '').replace(/\.chatango\.com.*$/, '').replace(/\/.*$/, '').replace(/^#/, '');
 }
+/**
+ * Permet de refuser, dans le prototype, un groupe absent des données d'exemple.
+ * @param {Object} s État de l'application.
+ * @param {string} id Nom du groupe lu par parseGroupName.
+ */
+function unknownGroupError(s, id) { return s.groups[id] || LIVE ? '' : 'No group named ' + id + '. Check the spelling, or create it.'; }
+function GroupJoinButton(p) {
+  var app = useApp(), g = p.group;
+  return g.joined
+    ? h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.nav({ view: 'group', id: g.id }); } }, 'Open')
+    : h(T.Button, { size: 'sm', onClick: function () { app.actions.joinGroup(g.id); } }, 'Join');
+}
 function Discover() {
   var app = useApp(), s = app.state;
   var a = useState(''), joinName = a[0], setJoinName = a[1];
@@ -18,39 +30,38 @@ function Discover() {
     e.preventDefault();
     var id = parseGroupName(joinName);
     if (!id) { setErr({ text: 'Enter a group name or a link.' }); return; }
-    if (s.groups[id] || LIVE) { setErr(null); setJoinName(''); app.actions.joinGroup(id); return; }
-    setErr({ text: 'No group named ' + id + '. Check the spelling, or create it.', name: id });
-  }
-  function joinBtn(g) {
-    return g.joined
-      ? h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.nav({ view: 'group', id: g.id }); } }, 'Open')
-      : h(T.Button, { size: 'sm', onClick: function () { app.actions.joinGroup(g.id); } }, 'Join');
+    var unknown = unknownGroupError(s, id);
+    if (unknown) { setErr({ text: unknown, name: id }); return; }
+    setErr(null); setJoinName(''); app.actions.joinGroup(id);
   }
   var topics = ['All', 'Gaming', 'Art', 'Music', 'Languages', 'Tech'];
   return h('main', { className: 'main' },
-    h('header', { className: 'topbar' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Discover groups')),
+    pageHeader('Discover groups'),
     h('div', { className: 'scroll' },
       h('div', { style: { maxWidth: 1080, margin: '0 auto', padding: '32px 24px 56px', display: 'flex', flexDirection: 'column', gap: 28 } },
         h('div', { className: 'page-head' },
           h('div', null, h('h2', { style: { margin: '0 0 6px', fontSize: 24, lineHeight: '32px', fontWeight: 600 } }, 'Find a group'), h('p', { className: 'lede', style: { margin: 0 } }, 'Join a group, or open one directly by its name.')),
           h(T.Button, { variant: 'primary', icon: 'plus', onClick: function () { app.ui.openCreate(''); } }, 'Create a group')),
-        h('form', { onSubmit: submit, className: 'tc-section', style: { padding: '16px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '10px 12px' }, noValidate: true },
-          h('div', { style: { flex: '1 1 320px' } }, h(T.TextField, { id: 'join', label: 'Join by name or link', placeholder: 'community, community.chatango.com or a full link', value: joinName, error: err ? err.text : undefined, onChange: function (e) { setJoinName(e.target.value); setErr(null); } })),
-          h(T.Button, { type: 'submit', style: { height: 38 } }, 'Join'),
-          err && err.name && !LIVE ? h(T.Button, { variant: 'ghost', icon: 'plus', style: { height: 38 }, onClick: function () { app.ui.openCreate(err.name); } }, 'Create ' + err.name) : null),
+        h('form', { onSubmit: submit, className: 'tc-section', style: { padding: '16px 20px' }, noValidate: true },
+          h(T.TextField, {
+            id: 'join', label: 'Join by name or link', placeholder: 'community, community.chatango.com or a full link', value: joinName, error: err ? err.text : undefined, onChange: function (e) { setJoinName(e.target.value); setErr(null); },
+            action: h(Frag, null,
+              h(T.Button, { type: 'submit' }, 'Join'),
+              err && err.name && !LIVE ? h(T.Button, { variant: 'ghost', icon: 'plus', onClick: function () { app.ui.openCreate(err.name); } }, 'Create ' + err.name) : null)
+          })),
         LIVE ? h(LiveJoined, null) : null,
         LIVE ? null : h('section', { 'aria-labelledby': 'off-h', style: { display: 'flex', flexDirection: 'column', gap: 12 } },
           h('h2', { id: 'off-h', className: 'tc-section-title' }, 'Official'),
           h('div', { className: 'cards small' }, official.map(function (g) {
             return h('article', { key: g.id, className: 'card row' },
-              h(T.Avatar, { name: g.id, square: true, size: 36, color: g.id === 'community' ? 'var(--accent)' : undefined, style: g.id === 'community' ? { color: 'var(--on-accent)' } : null }),
-              h('span', { className: 'card-title' }, h('strong', null, g.id), h('span', null, g.title)), joinBtn(g));
+              h(T.Avatar, { name: g.id, square: true, size: 36 }),
+              h('span', { className: 'card-title' }, h('strong', null, g.id), h('span', null, g.title)), h(GroupJoinButton, { group: g }));
           }))),
         LIVE ? null : h('section', { 'aria-labelledby': 'pop-h', style: { display: 'flex', flexDirection: 'column', gap: 14 } },
           h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 } },
             h('h2', { id: 'pop-h', className: 'tc-section-title', style: { flex: '1 1 160px' } }, 'Popular right now'),
             h('label', { htmlFor: 'find', className: 'tc-sr' }, 'Search groups'),
-            h('input', { id: 'find', className: 'tc-input', type: 'search', placeholder: 'Search groups', value: q, style: { flex: '0 1 260px', height: 34 }, onChange: function (e) { setQ(e.target.value); } })),
+            h('input', { id: 'find', className: 'tc-input', type: 'search', placeholder: 'Search groups', value: q, style: { flex: '0 1 260px' }, onChange: function (e) { setQ(e.target.value); } })),
           h('div', { className: 'chips', role: 'group', 'aria-label': 'Filter by topic' }, topics.map(function (t) {
             return h('button', { key: t, type: 'button', className: 'chip', 'aria-pressed': String(topic === t), onClick: function () { setTopic(t); } }, t);
           })),
@@ -59,7 +70,7 @@ function Discover() {
               h('div', { className: 'card-head' }, h(T.Avatar, { name: g.id, square: true, size: 40 }),
                 h('span', { className: 'card-title' }, h('strong', null, g.id), h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 6 } }, h('span', { className: 'online-dot' }), online(g) + ' online'))),
               h('p', null, g.discover.desc),
-              h('div', { className: 'card-foot' }, h('span', { className: 'grow muted', style: { fontSize: 12 } }, g.discover.topic), joinBtn(g)));
+              h('div', { className: 'card-foot' }, h('span', { className: 'grow muted', style: { fontSize: 12 } }, g.discover.topic), h(GroupJoinButton, { group: g })));
           })) : h('p', { className: 'pal-empty' }, 'No group matches. Try another topic, or create one.')))));
 }
 

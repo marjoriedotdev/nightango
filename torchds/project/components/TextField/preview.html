@@ -1,4 +1,4 @@
-<!-- @dsCard group="Forms" height=220 -->
+<!-- @dsCard group="Forms" height=310 -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,7 +14,8 @@ var T = window.Torch, h = React.createElement;
 function Demo() {
   return h('div', { className: 'col', style: { maxWidth: 360 } },
     h(T.TextField, { label: 'Username', defaultValue: 'orrin', hint: "It can't be changed later." }),
-    h(T.TextField, { label: 'Group name', defaultValue: 'my group!', error: 'Use letters, numbers and dashes only.' }));
+    h(T.TextField, { label: 'Group name', defaultValue: 'my group!', error: 'Use letters, numbers and dashes only.' }),
+    h(T.TextField, { label: 'Ban someone', placeholder: 'Username', hint: 'They need a recent message in the group.', action: h(T.Button, { variant: 'danger', icon: 'ban' }, 'Ban') }));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
 </script>

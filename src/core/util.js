@@ -36,8 +36,43 @@ function elapsedShort(ts) {
   return Math.floor(m / 1440) + ' d';
 }
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
+function isGuest(name) { return /^[!#]/.test(name); }
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* stockage indisponible : préférence non conservée */ } }
+function storageMerge(key, patch) { storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
+/**
+ * Permet de lire un fichier JSON choisi par l'utilisateur.
+ * @param {File} file Fichier choisi.
+ * @returns {Promise} Contenu analysé, rejetée si le fichier est illisible ou n'est pas du JSON.
+ */
+function readJsonFile(file) {
+  return new Promise(function (resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function () { try { resolve(JSON.parse(reader.result)); } catch (e) { reject(e); } };
+    reader.onerror = function () { reject(reader.error); };
+    reader.readAsText(file, 'utf-8');
+  });
+}
+/**
+ * Permet de lire un fichier d'export de Torch, dont le contenu est un tableau.
+ * @param {File} file Fichier choisi.
+ * @returns {Promise<?Array>} Tableau lu, null si le fichier est illisible ou ne contient pas de tableau.
+ */
+function readJsonArray(file) { return readJsonFile(file).then(function (v) { return Array.isArray(v) ? v : null; }, function () { return null; }); }
+/**
+ * Permet de faire télécharger une valeur en fichier JSON, au type text/json des exports de Torch.
+ * @param {string} name Nom du fichier.
+ * @param {*} value Valeur écrite par JSON.stringify.
+ */
+function downloadJson(name, value) {
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(value)], { type: 'text/json' }));
+  link.download = name;
+  link.click();
+  // Adresse gardée une minute : la révoquer dès le clic peut annuler le téléchargement.
+  setTimeout(function () { URL.revokeObjectURL(link.href); }, MIN);
+}
 function copyText(text, onDone) {
   function fallback() {
     var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';

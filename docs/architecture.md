@@ -8,27 +8,36 @@ Torch Skin est une seule application React 18 écrite en JavaScript ES5, sans JS
 src/
   core/       socle partagé, évalué en premier
     globals.js       alias React, wrapper T (avatars live), hooks
-    util.js          APP_VERSION, temps, stockage local, copie
+    util.js          APP_VERSION, temps, stockage local, copie, lecture d'un fichier JSON, téléchargement d'un fichier JSON
     colors.js        couleurs et contraste, polices, canaux
     roles.js         permissions, rôles, réglages de groupe par défaut
-    sample-data.js   données d'exemple du prototype, visites simulées
+    sample-data.js   données d'exemple du prototype, visites simulées, médiathèque d'exemple en mémoire
     prefs.js         préférences par défaut
-    ui.js            contexte React, Portal (calque #layer), MenuButton, Dialog, ConfirmDialog, Toasts
-    rich-text.js     MessageText, RichText (mini profil assaini), fullProfileDoc
-    selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs
+    ui.js            contexte React, Portal (calque #layer), useFloating (calque ancré à son déclencheur), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
+                     Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes,
+                     useRightColumn (seul seuil de 1180 px : colonne de droite au-dessus, plein écran en dessous)
+    rich-text.js     MessageText (emphase, citations, mentions, liens), hôtes de confiance (isTrustedUrl), RichText (mini profil assaini), fullProfileDoc
+    selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées, message affiché d'une entrée de l'historique privé
   bridge/     le pont vers Torch
-    live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG), modèles live
+    live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG),
+                     table des émoticônes (EMOTICONS), modèles live
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
-                     fond Premium (parseMiniCss), présence, horodatages, références de message
+                     fond Premium (parseMiniCss), fond de message (parseMsgBg), comptes liés (parseWho), présence, horodatages,
+                     références de message, enregistrements de l'historique privé (lecture, tri d'un import),
+                     entrées de la médiathèque (validation, ordre des pages, tri d'un import)
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
-                     profils, recherche, historique privé, vissle, création de groupe
+                     profils, recherche, historique privé, médiathèque, vissle, création de groupe
   views/      écrans principaux
-    login, shell (barre latérale), group, message (ligne et médias),
-    members (liste, fiche profil, bannissement, lien externe), dm (Chats, Friends),
-    meet (Meet people), profile (profil complet, panneau), new-dm, message-style (style perso),
+    login, shell (barre latérale), group, message (ligne, médias, saut vers un message du fil),
+    members (liste, fiche profil, comptes liés, bannissement, lien externe, lien de profil), dm (Chats et recherche dans les MP, Friends),
+    meet (Meet people), mentions (mentions récentes de tous les groupes, ligne d'un message hors de son fil),
+    profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
+    emoji-picker (sélecteur d'émoticônes et de médias des composeurs), attach (envoi de fichier des composeurs),
+    media (médiathèque de Torch : onglet Media, étoile des images de message, complétion :nom),
+    commands (/join, /leave, /chat et /help des composeurs),
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages
-    shell, profile (Visitors compris), appearance, notifications, privacy (et Safety, compte),
+    shell, profile (Visitors et tracker vissle compris), appearance, notifications, privacy (et Safety, compte),
     language-a11y-about, premium
     group-view, group-pages, group-staff                                réglages de groupe du prototype
     live-group-view, live-group-pages, live-group-staff, live-account   variantes live
@@ -99,22 +108,29 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - `LIVE = !!window.__TORCH_LIVE__` (`bridge/live-model.js`). `skin-page.js` pose le drapeau, le prototype hébergé ne le pose pas.
 - Les écarts entre les deux modes sont gardés par `if (LIVE)`.
 - En live, les actions de `app/root.js` sont surchargées par celles du bloc « Mode live ». Le pont (`liveBridge`) traduit les trames de Torch en opérations, que `handleLiveOp` applique à l'état.
-- Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens.
+- Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens. Torch Skin lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
 
 ## État React
 
 - `Root` (`app/root.js`) tient tout l'état de l'application. `update(fn)` clone l'état par `JSON.parse(JSON.stringify(prev))`, applique `fn` au clone, puis le remplace. L'état doit donc rester sérialisable en JSON.
-- Les préférences sont persistées dans `localStorage` sous `torch-prototype-prefs` (`app/state.js`).
-- Les données propres au compte sont persistées sous `torch-skin:<pseudo>` : sourdines, membres ignorés, conversations fermées (`hidden`) et style perso (`style`). En live, les favoris sont ceux de Torch (`docs/torch-protocol.md`, Réglages de démarrage de Torch).
-- Les profils lus (mini profil, fond Premium dans `u.miniStyle`) sont mis en cache avec l'utilisateur.
+- Les préférences sont persistées dans `localStorage` sous `torch-prototype-prefs` (`app/state.js`). En live, celles de `TORCH_PREFS` (`core/prefs.js` : messages d'invités, annonces) sont des réglages de Torch : relues dans ses réglages à la connexion, et `usePref().sw` ne les bascule qu'une fois écrites chez lui. Les hôtes de confiance (`safety.trustedHosts`) suivent la même règle : en live, c'est la liste de Torch, relue à la connexion (`null` si illisible) et changée par `actions.setTrustedHost` une fois écrite chez lui.
+- Les données propres au compte sont persistées sous `torch-skin:<pseudo>` : conversations fermées (`hidden`), canaux masqués de chaque groupe (`channels`), membres au style coupé (`unstyled`) et style perso (`style`). Le pont y pose aussi le drapeau de migration des non-lus (`pmReadMigrated`, `docs/torch-protocol.md`, Historique privé) : `Root` fusionne ses écritures avec le contenu stocké pour le garder. En live, les favoris, les sourdines de groupe et les membres ignorés sont ceux de Torch (`docs/torch-protocol.md`, Réglages de démarrage de Torch). Le prototype garde les siens dans son état.
+- Les profils lus (mini profil, fond Premium dans `u.miniStyle`) et les fonds de message (`u.msgBg`) sont mis en cache avec l'utilisateur.
+- La médiathèque de Torch reste hors de l'état : l'onglet Media, les étoiles et la complétion la lisent par les actions de `Root`, en live dans la base `favorite_media` de Torch (pont), en prototype dans la médiathèque d'exemple (`sampleMedia`). Chaque écriture augmente `mediaRev`, qui les fait relire (`docs/torch-protocol.md`, Médiathèque).
+- La page Mentions lit `mentionLog` : les 100 derniers messages de groupe, en direct ou d'historique, qui mentionnent l'utilisateur, le plus récent en tête. La liste vit dans l'état seulement et repart vide à chaque chargement de la page.
 
 ## Contenu des membres
 
+- Messages : `parseContent` garde le texte brut dans `text`, sans les marqueurs d'une paire `▓…▒`, et découpe le corps en segments marqués (`parts`) selon la liste blanche de Torch : `b`, `i` sans attribut, `u`, `s`, `strike` et les paires `▓…▒`. `MessageText` les reconstruit en éléments `b`, `i`, `u`, `s`, quel que soit le réglage « Fonts and text colors ». Toute autre balise est retirée.
+- Citations : dans chaque segment, `MessageText` reconnaît `` @nom: `texte` `` comme le rendu de Torch (`docs/torch-protocol.md`, Envoi) et la reconstruit en éléments React, le nom en mention et le texte cité à part.
+- Émoticônes : `parseContent` remplace une balise `<i s="sm://{nom}"/>` par l'emoji système que la table `EMOTICONS` associe au nom, dans `text` comme dans `parts`. Du membre, seul le nom est gardé et comparé à la table (`docs/torch-protocol.md`, Émoticônes).
 - Mini profil : `RichText` reconstruit une liste blanche de balises en éléments React. Le mode `inline` (cartes Meet) ignore blocs, liens, images, taille et alignement.
-- Profil complet : `fullProfileDoc` produit un document isolé dans une `iframe` `sandbox`, avec une CSP et `referrer` `no-referrer` en `<meta>`. Sous `styles.profileBackgrounds`, son `<style>` reprend le fond Premium choisi par `miniStyleOf` (couleurs hex, image `https` avec sa répétition si les médias sont autorisés), chaque valeur vérifiée avant d'être écrite.
+- Profil complet : `fullProfileDoc` produit un document isolé dans une `iframe` `sandbox`, avec une CSP et `referrer` `no-referrer` en `<meta>`. Le cadre est le composant `FullProfileFrame`, partagé par la fenêtre de profil complet et l'aperçu de la page Profile, avec `useFullProfileMedia` pour le bouton « Load images ». Sous `styles.profileBackgrounds`, son `<style>` reprend le fond Premium choisi par `miniStyleOf` (couleurs hex, image `https` avec sa répétition si les médias sont autorisés), chaque valeur vérifiée avant d'être écrite.
 - Fond Premium : couleurs tirées de `custom_profile.css` par `parseMiniCss`, contraste garanti. Dans la fenêtre de profil, `miniSkin` applique le fond, le texte et les jetons de couleur du thème (texte secondaire à 4,5:1, bordures, survols) à toute la fenêtre. L'image est une `<img>` en `referrerPolicy="no-referrer"`, en couverture de 120 px (`object-fit: cover`) derrière l'avatar, fondue vers la couleur de fond. Le panneau de profil des MP garde le fond sur le seul bloc de texte, avec l'image en bandeau au-dessus. Les cartes Meet n'affichent que la couleur. L'image du fond Premium suit les réglages de médias et `styles.profileBackgrounds`.
-- Photo de profil : l'avatar de la fenêtre de profil, une fois sa miniature chargée, ouvre une visionneuse plein écran de `full.jpg` en `<img>` `no-referrer`, avec repli sur la miniature.
-- Médias des messages : rien n'est chargé avant le clic quand `embedImages`, `embedVideos` ou `proxyMedia` le demandent.
+- Fond de message : sous `styles.backgrounds`, la couleur tirée de `msgbg.xml` par `parseMsgBg` colore la ligne d'un message de groupe marqué `bg`, texte et nom à 4,5:1. L'image `msgbg.jpg` est une `<img>` `no-referrer` derrière le texte (emplacement `background` de `T.Message`), à sa taille naturelle, placée selon l'alignement du membre, seulement si `embedImages` est actif et `proxyMedia` coupé.
+- Style coupé : « Hide style », dans le menu d'un message ou les actions sur une personne, marque le membre `unstyled`. `memberStyles` rend alors ses lignes, en groupe et en MP, comme si `styles.names`, `styles.fonts` et `styles.backgrounds` étaient coupés pour lui seul, sans lire son fond de message, et `MessageText` retire son gras, son italique et son souligné, le barré restant. Référence : `/style nom` de Torch (`inject.js:7308-7350`), qui ne touche que les messages déjà affichés et ne garde rien au rechargement.
+- Photo de profil : l'avatar de la fenêtre et du panneau de profil, une fois sa miniature chargée, ouvre une visionneuse plein écran de `full.jpg` en `<img>` `no-referrer`, avec repli sur la miniature.
+- Médias des messages : rien n'est chargé avant le clic quand `embedImages`, `embedVideos` ou `proxyMedia` le demandent. Un seul test, `waitsForClick` (`views/message.js`), décide qu'un média attend le clic : jamais pour une URL d'un hôte de confiance (`isTrustedUrl`), sinon toujours pour un fichier vidéo ou audio, et sous `proxyMedia` pour une image, la miniature YouTube, une vignette de la médiathèque ou une image du mini profil. `parseContent` relève aussi les liens YouTube, les images et les fichiers vidéo et audio tapés en texte (`docs/torch-protocol.md`, Médias). Une image affichée porte l'étoile de la médiathèque, « Add to media » ou « Remove from media ».
 
 Voir [ADR-0004](adr/0004-member-html-never-injected.md).
 

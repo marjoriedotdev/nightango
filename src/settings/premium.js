@@ -45,9 +45,10 @@ function PremiumPage() {
   if (mode === 'name') {
     body = h(T.SettingsSection, { title: 'Inactive username', description: 'Chatango sells names of accounts that expired. Check a name before buying it.', padded: true },
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
-        h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10 } },
-          h('div', { style: { flex: '1 1 240px' } }, h(T.TextField, { id: 'inact', label: 'Username', value: uname, onChange: function (ev) { setUname(ev.target.value); setCheck(null); }, onKeyDown: function (ev) { if (ev.key === 'Enter') checkName(); } })),
-          h(T.Button, { onClick: checkName, style: { height: 38 } }, 'Check')),
+        h(T.TextField, {
+          id: 'inact', label: 'Username', value: uname, onChange: function (ev) { setUname(ev.target.value); setCheck(null); }, onKeyDown: function (ev) { if (ev.key === 'Enter') checkName(); },
+          action: h(T.Button, { onClick: checkName }, 'Check')
+        }),
         check ? h(T.Banner, { tone: check.ok ? 'info' : 'warning', icon: check.ok ? 'check' : 'alert' }, check.text) : null));
   } else if (step === 'plan') {
     body = h(T.SettingsSection, {
@@ -71,9 +72,10 @@ function PremiumPage() {
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
         h(T.SegmentedControl, { label: 'Recipient', value: forWho, onChange: setForWho, options: [{ value: 'me', label: 'For me' }, { value: 'gift', label: 'As a gift' }] }),
         forWho === 'gift' ? h(Frag, null,
-          h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10 } },
-            h('div', { style: { flex: '1 1 240px' } }, h(T.TextField, { id: 'recip', label: 'Add a username', value: rin, error: rerr || undefined, onChange: function (ev) { setRin(ev.target.value); setRerr(''); }, onKeyDown: function (ev) { if (ev.key === 'Enter') addRecipient(); } })),
-            h(T.Button, { onClick: addRecipient, style: { height: 38 } }, 'Add')),
+          h(T.TextField, {
+            id: 'recip', label: 'Add a username', value: rin, error: rerr || undefined, onChange: function (ev) { setRin(ev.target.value); setRerr(''); }, onKeyDown: function (ev) { if (ev.key === 'Enter') addRecipient(); },
+            action: h(T.Button, { onClick: addRecipient }, 'Add')
+          }),
           recips.length ? h('div', { className: 'recipients' }, recips.map(function (n) {
             return h('span', { key: n, className: 'rchip' }, n, h(T.IconButton, { icon: 'x', label: 'Remove ' + n, size: 22, iconSize: 12, onClick: function () { setRecips(recips.filter(function (x) { return x !== n; })); } }));
           })) : h('p', { className: 'tc-hint', style: { margin: 0 } }, 'Gifts are split between the people you add.')) : h('p', { className: 'tc-hint', style: { margin: 0 } }, 'Premium starts on ' + s.me + ' right after payment.'),
@@ -83,9 +85,9 @@ function PremiumPage() {
   } else {
     body = h(T.SettingsSection, { title: 'Review and pay' },
       h('div', { className: 'summary' },
-        h('div', null, h('span', null, plan.label), h('span', { className: 'mono' }, money(plan.price, cur))),
+        h('div', null, h('span', null, plan.label), h('span', { className: 'tnum' }, money(plan.price, cur))),
         h('div', null, h('span', { className: 'muted' }, 'For'), h('span', null, forWho === 'me' ? s.me : recips.join(', '))),
-        h('div', { className: 'total' }, h('span', null, 'Total'), h('span', { className: 'mono' }, money(plan.price, cur)))),
+        h('div', { className: 'total' }, h('span', null, 'Total'), h('span', { className: 'tnum' }, money(plan.price, cur)))),
       h(T.SettingRow, {
         asLabel: false, title: 'Payment method', description: "You confirm and pay on chatango.com. Torch never sees your payment details.",
         control: h(T.SegmentedControl, { label: 'Payment method', value: method, onChange: setMethod, options: [{ value: 'paypal', label: 'PayPal' }, { value: 'card', label: 'Card' }] })

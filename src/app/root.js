@@ -1,5 +1,6 @@
 /* ---------- Racine ---------- */
 var THREAD_MAX = 500;
+var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
 
 function Root(props) {
@@ -16,6 +17,9 @@ function Root(props) {
   var u8 = useState(null), banCfg = u8[0], setBan = u8[1];
   var u9 = useState(false), navOpen = u9[0], setNavOpen = u9[1];
   var u11 = useState(null), fullProfile = u11[0], setFullProfile = u11[1];
+  var u12 = useState(null), profileLink = u12[0], setProfileLink = u12[1];
+  var u13 = useState({}), uploads = u13[0], setUploads = u13[1];
+  var u14 = useState(null), who = u14[0], setWho = u14[1];
   var u10 = useState(0), themeTick = u10[1];
   var prefs = state.prefs;
 
@@ -64,7 +68,7 @@ function Root(props) {
   /* Titre de l'onglet */
   useEffect(function () {
     if (!state.auth.loggedIn) { document.title = 'Torch'; return; }
-    var n = dmUnreadTotal(state);
+    var n = unreadDmCount(state);
     Object.keys(state.groups).forEach(function (k) { n += state.groups[k].mentions || 0; });
     document.title = (prefs.tabTitle && n ? '(' + n + ') ' : '') + (prefs.privacy.usernameInTitle ? state.me + ' | ' : '') + 'Torch';
   });
@@ -88,7 +92,8 @@ function Root(props) {
   function nav(route) {
     update(function (d) {
       var cur = d.route;
-      if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover')) d.lastChat = cur;
+      // Le retour au fil ne refait pas le saut vers le message ouvert depuis Mentions ou la recherche des MP.
+      if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; delete cur.seek; }
       var r = Object.assign({}, route);
       if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = Date.now(); g.unread = 0; g.mentions = 0; }
       if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].unread = 0; d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
@@ -97,6 +102,7 @@ function Root(props) {
     setNavOpen(false);
     if (LIVE) {
       if (route.view === 'group' && route.id) liveBridge.focus(route.id);
+      if (route.view === 'dm' && route.id) liveBridge.markPmRead(route.id);
       liveBridge.focusPm(route.view === 'dm' && route.id ? route.id : false);
     }
   }
@@ -119,9 +125,49 @@ function Root(props) {
     // Le compteur get_more de Torch ignore la coupe : une reprise sauterait les messages retirés.
     g.historyCapped = true;
   }
+  /**
+   * Permet de relever pour la page Mentions un message de groupe qui mentionne l'utilisateur, le plus récent en tête.
+   * @param {Object} d État en cours de modification.
+   * @param {string} gid Groupe du message.
+   * @param {Object} m Message reçu.
+   */
+  function logMention(d, gid, m) {
+    // Une modification affichée à part rejoint son original quand il arrive : seul l'original entre dans la liste.
+    if (m.kind !== 'msg' || m.editId || m.author === d.me || userOf(d, m.author).ignored || !mentionsMe(d.me, m.text)) return;
+    if (d.mentionLog.some(function (x) { return x.gid === gid && x.id === m.id; })) return;
+    d.mentionLog.push({ gid: gid, id: m.id, author: m.author, text: messagePreview(m), ts: m.ts });
+    d.mentionLog.sort(function (a, b) { return b.ts - a.ts; });
+    d.mentionLog.splice(MENTION_MAX);
+  }
+  /**
+   * Permet de savoir si un message figure parmi des identifiants reçus de Chatango, sous son identifiant provisoire ou définitif.
+   * @param {string[]} ids Identifiants reçus.
+   * @param {string} id Identifiant du message dans l'état.
+   */
+  function idIn(ids, id) { return ids.indexOf(id) >= 0 || ids.indexOf(String(id).replace(/^k:/, '')) >= 0; }
+  /**
+   * Permet de retirer de la page Mentions les messages d'un groupe.
+   * @param {Object} d État en cours de modification.
+   * @param {string} gid Groupe visé.
+   * @param {?string[]} ids Messages retirés, null pour tout le groupe.
+   */
+  function dropMentions(d, gid, ids) {
+    d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && !idIn(ids, x.id)); });
+  }
+  /**
+   * Permet de poser le monde d'exemple du prototype, ses mentions relevées comme celles de l'historique en live.
+   * @param {Object} d État en cours de modification.
+   * @param {string} me Nom de l'utilisateur.
+   */
+  function seedState(d, me) {
+    Object.assign(d, seedWorld(me));
+    Object.keys(d.groups).forEach(function (gid) { d.groups[gid].messages.forEach(function (m) { logMention(d, gid, m); }); });
+  }
   function receiveGroup(gid, msg) {
     var s0 = stateRef.current, me = s0.me;
-    var mention = msg.kind === 'msg' && new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(msg.text);
+    var mention = msg.kind === 'msg' && mentionsMe(me, msg.text);
+    // Comme dans Torch, la mention d'un groupe coupé ou d'un auteur ignoré n'alerte pas, et les compteurs changent quand même.
+    var quiet = !!(s0.groups[gid] && s0.groups[gid].muted) || !!userOf(s0, msg.author).ignored;
     var focused = s0.route.view === 'group' && s0.route.id === gid && document.visibilityState === 'visible';
     update(function (d) {
       var g = d.groups[gid]; if (!g) return;
@@ -129,16 +175,17 @@ function Root(props) {
       if (LIVE && msg.replyId) withReply(g, msg);
       g.messages.push(msg);
       trimThread(g);
+      logMention(d, gid, msg);
       if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
       if (focused) g.lastReadTs = Date.now();
     });
-    if (mention && !(s0.route.view === 'group' && s0.route.id === gid)) {
-      notify('mentions', { toast: msg.author + ' mentioned you in #' + gid, icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'group', id: gid }); } } });
+    if (mention && !quiet && !(s0.route.view === 'group' && s0.route.id === gid)) {
+      notify('mentions', { toast: msg.author + ' mentioned you in #' + gid, icon: 'at-sign', action: { label: 'Open', run: function () { nav({ view: 'group', id: gid }); } } });
     }
   }
   function receiveDm(from, text) {
     var s0 = stateRef.current;
-    var focused = s0.route.view === 'dm' && s0.route.id === from && document.visibilityState === 'visible';
+    var focused = isDmInView(s0, from);
     var isNew = !s0.dms[from];
     var friend = userOf(s0, from).friend, pmFrom = s0.prefs.privacy.pmFrom;
     var request = isNew && !friend && pmFrom !== 'everyone';
@@ -150,7 +197,30 @@ function Root(props) {
       if (!focused) c.unread += 1; else c.lastReadTs = Date.now();
       c.seenTs = Date.now();
     });
-    if (!focused) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
+    if (!focused && !userOf(s0, from).ignored) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
+  }
+  /**
+   * Permet d'annoncer le basculement d'un membre, en prototype comme en live.
+   * @param {string} name Membre visé.
+   * @param {string} key Marque basculée (friend, ignored, blocked ou unstyled).
+   * @param {boolean} was Marque avant le basculement.
+   */
+  function toggleUserText(name, key, was) {
+    return {
+      friend: name + ' removed from friends.',
+      ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + '.',
+      blocked: was ? name + ' unblocked.' : name + ' blocked.',
+      unstyled: was ? name + "'s style shown again." : name + "'s style hidden."
+    }[key];
+  }
+  /**
+   * Permet d'enlever du fil un MP retiré de ce navigateur, puis de le dire.
+   * @param {string} name Correspondant.
+   * @param {string} id Identifiant du message dans l'état.
+   */
+  function dropDmMessage(name, id) {
+    update(function (d) { var c = d.dms[name]; c.messages = c.messages.filter(function (x) { return x.id !== id; }); });
+    toast('Message removed from this browser.');
   }
   function setTyping(key, name, on) {
     update(function (d) {
@@ -160,15 +230,20 @@ function Root(props) {
     });
   }
 
+  var mediaLib = LIVE ? liveBridge : sampleMedia;
+  // Les étoiles et l'onglet Media relisent la médiathèque quand ce compteur change.
+  function mediaChanged() { update(function (d) { d.mediaRev++; }); }
+
   var actions = {
-    login: function (name) { update(function (d) { Object.assign(d, seedWorld(name)); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
+    login: function (name) { update(function (d) { seedState(d, name); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
-    resetDemo: function () { update(function (d) { var me = d.me; Object.assign(d, seedWorld(me)); }); toast('Sample data restored.'); },
+    resetDemo: function () { update(function (d) { seedState(d, d.me); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
+      text = (opts.quote || '') + text;
       update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = Date.now(); });
       var g = stateRef.current.groups[gid];
       if (gid === 'bots' && text.charAt(0) === '!') {
@@ -220,25 +295,85 @@ function Root(props) {
     },
     closeDm: function (name) {
       update(function (d) { d.dms[name].closed = true; d.dms[name].unread = 0; });
+      if (LIVE) liveBridge.markPmRead(name);
       var r = stateRef.current.route;
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
+    /**
+     * Permet de retirer un MP de sa conversation.
+     * @param {string} name Correspondant.
+     * @param {Object} m Message retiré.
+     */
+    removeDmMessage: function (name, m) { dropDmMessage(name, m.id); },
     deleteAllDms: function () { update(function (d) { d.dms = {}; }); },
+    /** Messages d'exemple au format de l'historique privé de Torch, clé ts en secondes. */
+    exportDms: function () {
+      var s0 = stateRef.current, out = [];
+      Object.keys(s0.dms).forEach(function (t) {
+        var c = s0.dms[t];
+        c.messages.forEach(function (m) {
+          var ts = m.ts / 1000;
+          out.push({ target: t, ts: ts, data: ['msg', m.from, s0.me, 'unknown', ts, 0, esc(m.text)].join(':'), unread: m.from !== s0.me && m.ts > c.lastReadTs ? 1 : 0 });
+        });
+      });
+      return Promise.resolve(out.sort(function (a, b) { return a.ts - b.ts; }));
+    },
+    /**
+     * Permet d'ajouter aux conversations les enregistrements valides d'un historique privé, comme l'import live.
+     * @param {Array} records Contenu du fichier, non fiable.
+     */
+    importDms: function (records) {
+      var s0 = stateRef.current, screened = screenPmRecords(records, s0.me), keys = {}, added = [];
+      Object.keys(s0.dms).forEach(function (t) { s0.dms[t].messages.forEach(function (m) { keys[m.ts / 1000] = true; }); });
+      screened.valid.forEach(function (r) { if (!keys[r.ts]) { keys[r.ts] = true; added.push(r); } });
+      update(function (d) {
+        added.forEach(function (r) {
+          var t = lower(r.target), c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now() });
+          c.messages.push(pmMessage(pmRecordEntry(r)));
+          c.messages.sort(function (a, b) { return a.ts - b.ts; });
+        });
+      });
+      return Promise.resolve({ added: added.length, saved: screened.valid.length - added.length, skipped: screened.skipped, foreign: screened.foreign });
+    },
+    mediaPage: function (index, after, text) { return mediaLib.mediaPage(index, after, text); },
+    searchMedia: function (text, count) { return mediaLib.searchMedia(text, count); },
+    hasMedia: function (url) { return mediaLib.hasMedia(url); },
+    /**
+     * Permet d'ajouter une image à la médiathèque, sous le nom que lui donne Torch, ou de l'en retirer.
+     * @param {string} url Adresse de l'image.
+     * @param {boolean} saved L'image est déjà dans la médiathèque.
+     */
+    toggleMedia: function (url, saved) {
+      (saved ? mediaLib.removeMedia(url) : mediaLib.addMedia({ url: url, name: mediaName(url) })).then(function () {
+        mediaChanged();
+        toast(saved ? 'Removed from your media.' : 'Added to your media.', { icon: 'check' });
+      }, function (e) { toast(e.message); });
+    },
+    exportMedia: function () { return mediaLib.exportMedia(); },
+    importMedia: function (entries) { return mediaLib.importMedia(entries).then(function (r) { mediaChanged(); return r; }); },
     declineRequest: function (name) { actions.closeDm(name); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
       update(function (d) { if (!d.users[name]) d.users[name] = { status: 'offline', about: '', style: {} }; d.users[name][key] = !was; });
       if (key === 'friend' && !was) return;
-      var text = {
-        friend: name + ' removed from friends.',
-        ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + ' in groups.',
-        blocked: was ? name + ' unblocked.' : name + ' blocked.'
-      }[key];
-      toast(text, { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
+      toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
     },
     toggleMute: function (gid) { update(function (d) { d.groups[gid].muted = !d.groups[gid].muted; }); },
+    toggleHiddenChannel: function (gid, k) {
+      update(function (d) { var l = d.groups[gid].hiddenChannels, i = l.indexOf(k); if (i >= 0) l.splice(i, 1); else l.push(k); });
+    },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
+    /**
+     * Permet d'ajouter un hôte de confiance, sans doublon, ou de le retirer.
+     * @param {string} host Hôte en minuscules, sans schéma ni chemin.
+     * @param {boolean} on Vrai pour l'ajouter.
+     * @returns {boolean} Vrai si la liste est enregistrée.
+     */
+    setTrustedHost: function (host, on) {
+      update(function (d) { var l = d.prefs.safety.trustedHosts, i = l.indexOf(host); if (!on && i >= 0) l.splice(i, 1); else if (on && i < 0) l.push(host); });
+      return true;
+    },
     joinGroup: function (gid) {
       var me = stateRef.current.me;
       update(function (d) {
@@ -249,7 +384,7 @@ function Root(props) {
     },
     leaveGroup: function (gid) {
       var me = stateRef.current.me;
-      update(function (d) { var g = d.groups[gid]; g.joined = false; g.favorite = false; g.members = g.members.filter(function (n) { return n !== me; }); });
+      update(function (d) { var g = d.groups[gid]; g.joined = false; g.favorite = false; g.members = g.members.filter(function (n) { return n !== me; }); dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
     },
@@ -258,7 +393,7 @@ function Root(props) {
       update(function (d) {
         var staff = {}; staff[me] = 'owner';
         d.groups[name] = {
-          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, unread: 0, mentions: 0, lastReadTs: now,
+          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: now,
           members: [me], guests: 0, closed: false, dismissedAnnouncement: false, bans: [],
           discover: listed ? { topic: 'Other', desc: desc || title } : null,
           settings: mkSettings({ overview: { title: title, description: desc, showInDiscovery: listed, membersPublic: true, nsfw: false }, staff: staff }),
@@ -269,14 +404,18 @@ function Root(props) {
       nav({ view: 'group', id: name });
       return true;
     },
+    editMessage: function (gid, m, text) {
+      update(function (d) { var g = d.groups[gid]; g.messages.forEach(function (o) { if (o.id === m.id) applyGroupEdit(o, { id: uid(), text: text, embeds: o.embeds }); }); });
+    },
     deleteMessage: function (gid, mid) {
       var me = stateRef.current.me, author = null;
       update(function (d) {
         var g = d.groups[gid];
         g.messages.forEach(function (m) { if (m.id === mid) { m.deleted = { by: me }; author = m.author; } });
         if (author && author !== me) g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Deleted a message from ' + author });
+        dropMentions(d, gid, [mid]);
       });
-      toast('Message deleted.', { action: { label: 'Undo', run: function () { update(function (d) { d.groups[gid].messages.forEach(function (m) { if (m.id === mid) m.deleted = null; }); }); } } });
+      toast('Message deleted.', { action: { label: 'Undo', run: function () { update(function (d) { d.groups[gid].messages.forEach(function (m) { if (m.id === mid) { m.deleted = null; logMention(d, gid, m); } }); }); } } });
     },
     ban: function (gid, name, reason) {
       var me = stateRef.current.me, now = Date.now();
@@ -382,10 +521,11 @@ function Root(props) {
 
   /* ---------- Mode live : actions transmises à Chatango par le client Torch ---------- */
   var localRef = useRef(blankLocal());
-  var profilePending = useRef({});
+  var profilePending = useRef({}), msgBgPending = useRef({});
+  // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
+  var pmAsked = useRef(null);
   var offlineCount = useRef(0);
-  function skinKey(me) { return 'torch-skin:' + me; }
-  function blankLocal() { return { muted: [], ignored: [], hidden: [], style: null }; }
+  function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -418,7 +558,7 @@ function Root(props) {
     if (g.live.annc && (a0.enabled !== a1.enabled || a0.text !== a1.text || a0.interval !== a1.interval)) {
       // Intervalle inchangé : on renvoie la valeur exacte en secondes plutôt que l'arrondi affiché.
       var seconds = a1.interval === a0.interval && a0.intervalSec ? a0.intervalSec : a1.interval * 60;
-      count(liveBridge.setAnnouncement(g.id, a1.enabled, seconds, a1.text, g.live.annc.prefix));
+      count(liveBridge.setAnnouncement(g.id, a1.enabled, seconds, a1.text, g.live.annc));
     }
     var b0 = base.automod.banned, b1 = draft.automod.banned;
     if (b0 && b1 && (wordList(b0.part) !== wordList(b1.part) || wordList(b0.whole) !== wordList(b1.whole))) count(liveBridge.setBannedWords(g.id, wordList(b1.part), wordList(b1.whole)));
@@ -430,6 +570,39 @@ function Root(props) {
     else toast(sent ? 'Changes sent to Chatango.' : 'Nothing to save.', { icon: sent ? 'check' : 'info' });
     return sent;
   }
+  /**
+   * Permet de basculer un drapeau de groupe tenu par une liste de Torch, sans rien changer si Torch ne l'enregistre pas.
+   * @param {string} gid Groupe visé.
+   * @param {string} key favorite ou muted.
+   * @param {function(string, boolean): boolean} save Écriture du pont.
+   * @param {string} failure Toast affiché si Torch n'enregistre pas.
+   */
+  function toggleTorchList(gid, key, save, failure) {
+    var on = !stateRef.current.groups[gid][key];
+    if (!save(gid, on)) { toast(failure); return; }
+    update(function (d) { d.groups[gid][key] = on; });
+  }
+  /**
+   * Permet d'envoyer un message de groupe construit par Torch avec le style perso, puis d'en garder le style.
+   * @param {string} gid Groupe visé.
+   * @param {string} text Texte saisi.
+   * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string}} opts Réponse, original modifié ou citation, et canal.
+   * @param {?string} failure Toast affiché si rien n'est parti, null quand l'appelant l'annonce lui-même.
+   * @returns {boolean} Vrai si le pont a émis la trame.
+   */
+  function sendStyled(gid, text, opts, failure) {
+    var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
+    if (style) setOwnStyle(style); else if (failure) toast(failure);
+    return !!style;
+  }
+  /**
+   * Permet de noter le fichier en cours d'envoi vers un groupe ou un MP.
+   * @param {{kind: string, id: string}} to Destination de l'envoi.
+   * @param {?string} name Nom du fichier, null une fois l'envoi fini.
+   */
+  function setUpload(to, name) {
+    setUploads(function (u) { var o = Object.assign({}, u); if (name) o[uploadKey(to)] = name; else delete o[uploadKey(to)]; return o; });
+  }
 
   if (LIVE) {
     actions.logout = function () { location.reload(); };
@@ -438,16 +611,33 @@ function Root(props) {
     actions.sendGroup = function (gid, text, opts) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
-      if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return; }
-      var style = liveBridge.send(gid, text, { replyId: replyId, channel: opts.channel, style: stateRef.current.ownStyle });
-      if (style) setOwnStyle(style); else toast('Message not sent. Torch rejected it.');
+      if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
+      return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. Torch rejected it.');
     };
-    actions.sendDm = function (name, text) {
+    // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
+    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. Torch rejected it.'); };
+    actions.sendDm = function (name, text, opts) {
       var me = stateRef.current.me;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
-      if (!sent) { toast('Private message not sent.'); return; }
-      update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: sent.text, embeds: sent.embeds, ts: Date.now() }); });
+      if (!sent) { if (!(opts && opts.quiet)) toast('Private message not sent.'); return false; }
+      update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
+      return true;
+    };
+    /**
+     * Permet d'envoyer un fichier par vissle, puis d'en publier le lien dans le groupe ou le MP choisi, jamais dans client.focus.
+     * @param {{kind: string, id: string, channel: ?string}} to Destination figée au choix du fichier.
+     * @param {File} file Fichier choisi.
+     */
+    actions.uploadFile = function (to, file) {
+      setUpload(to, file.name);
+      liveBridge.uploadFile(file).then(function (link) {
+        var sent = to.kind === 'dm' ? actions.sendDm(to.id, link, { quiet: true }) : actions.sendGroup(to.id, link, { channel: to.channel, quiet: true });
+        if (sent) { toast('File sent.', { icon: 'check' }); return; }
+        toast('The file was uploaded, but its link was not sent.', { action: { label: 'Copy link', run: function () {
+          copyText(link, function (ok) { toast(ok ? 'Link copied.' : 'Copy failed. The link is ' + link); });
+        } } });
+      }, function (e) { toast(e.message); }).then(function () { setUpload(to, null); });
     };
     actions.setMessageStyle = function (style) {
       liveBridge.applyStyle(style);
@@ -458,16 +648,18 @@ function Root(props) {
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
-    actions.toggleFavorite = function (gid) {
-      var on = !stateRef.current.groups[gid].favorite;
-      if (!liveBridge.setFavorite(gid, on)) { toast('Torch could not save this favorite. Reload the page and try again.'); return; }
-      update(function (d) { d.groups[gid].favorite = on; });
+    actions.toggleFavorite = function (gid) { toggleTorchList(gid, 'favorite', liveBridge.setFavorite, 'Torch could not save this favorite. Reload the page and try again.'); };
+    actions.toggleMute = function (gid) { toggleTorchList(gid, 'muted', liveBridge.setMuted, 'Torch could not save the mute for #' + gid + '. Reload the page and try again.'); };
+    actions.setTrustedHost = function (host, on) {
+      if (!liveBridge.setTrustedHost(host, on)) { toast(TORCH_SAVE_FAILED); return false; }
+      update(function (d) { d.prefs.safety.trustedHosts = liveBridge.trustedHosts(); });
+      return true;
     };
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
       var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
       if (kept) toast('Torch could not remove #' + gid + ' from favorites. Reload the page and try again.');
-      update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } });
+      update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
     };
@@ -496,6 +688,19 @@ function Root(props) {
       pending[name] = run;
       return run;
     };
+    /**
+     * Permet de lire le fond de message Premium d'un membre, gardé dans l'état jusqu'à ce qu'il change.
+     * @param {string} name Membre visé.
+     */
+    actions.loadMsgBg = function (name) {
+      var pending = msgBgPending.current;
+      if (pending[name]) return;
+      pending[name] = true;
+      liveBridge.fetchMsgBg(name).then(function (bg) {
+        delete pending[name];
+        update(function (d) { ensureLiveUser(d, name).msgBg = bg; });
+      });
+    };
     /** Mini profils d'une liste de résultats, quatre requêtes à la fois pour ménager Chatango. */
     actions.loadProfiles = function (names) {
       var pending = profilePending.current;
@@ -508,6 +713,16 @@ function Root(props) {
       }
       for (var k = 0; k < 4; k++) next();
     };
+    /**
+     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme Torch avant de l'ouvrir.
+     * @param {string} name Correspondant visé.
+     * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
+     */
+    actions.checkPm = function (name) {
+      if (!liveBridge.connectPm(name)) return false;
+      pmAsked.current = name;
+      return true;
+    };
     actions.searchPeople = function (f, more) {
       var cur = stateRef.current.meet, from = more && cur ? cur.next : 0, token = (cur && cur.token || 0) + 1;
       update(function (d) { d.meet = Object.assign({ results: [] }, more ? d.meet : null, { loading: true, error: null, filters: f, token: token }); });
@@ -516,12 +731,27 @@ function Root(props) {
           if (d.meet.token !== token) return;
           var prev = more ? d.meet.results : [];
           var fresh = names.filter(function (n) { return prev.indexOf(n) < 0; });
-          // Statut inconnu jusqu'à la réponse de présence : hors ligne par défaut pour un inconnu.
-          fresh.forEach(function (n) { var known = !!d.users[n]; var u = ensureLiveUser(d, n); if (!known) u.status = 'offline'; });
+          fresh.forEach(function (n) { ensureUnseenUser(d, n); });
           d.meet = { results: prev.concat(fresh), next: from + names.length, loading: false, error: null, done: names.length < 40, filters: f, token: token };
         });
       }, function (e) {
         update(function (d) { if (d.meet.token === token) Object.assign(d.meet, { loading: false, error: e && e.message ? e.message : 'The search failed.' }); });
+      });
+    };
+    /**
+     * Permet de charger les messages privés archivés avant le plus ancien message chargé d'une conversation.
+     * @param {string} name Membre de la conversation.
+     */
+    actions.loadOlderDm = function (name) {
+      var keys = stateRef.current.dms[name].messages.map(function (m) { return m.archiveTs; }).filter(Boolean);
+      update(function (d) { Object.assign(d.dms[name], { loadingOlder: true, olderFailed: false }); });
+      liveBridge.pmOlder(name, Math.min.apply(null, keys), 50).then(function (page) {
+        // Une page plus ancienne ne change aucun compteur de non-lus.
+        update(function (d) { var c = d.dms[name]; mergePmHistory(d, c, page.list); c.olderMore = page.more; c.loadingOlder = false; });
+      }, function (e) {
+        warn(e);
+        update(function (d) { Object.assign(d.dms[name], { loadingOlder: false, olderFailed: true }); });
+        toast('Earlier messages could not be loaded.');
       });
     };
     actions.loadMore = function (gid) {
@@ -532,26 +762,39 @@ function Root(props) {
     };
     actions.toggleUser = function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
-      if (key === 'friend' && !was) return liveBridge.addFriend(name);
+      if (key === 'friend' && !was) {
+        if (!liveBridge.addFriend(name)) return;
+        var asked = Date.now();
+        update(function (d) { d.friendAdds[name] = asked; });
+        setTimeout(function () {
+          if (stateRef.current.friendAdds[name] !== asked) return;
+          update(function (d) { delete d.friendAdds[name]; });
+          toast("Chatango didn't confirm adding " + name + ' to friends.');
+        }, CONFIRM_TIMEOUT);
+        return;
+      }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
+      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('Torch could not save its ignore list. Reload the page and try again.'); return; }
       update(function (d) { ensureLiveUser(d, name)[key] = !was; });
-      var text = {
-        friend: name + ' removed from friends.',
-        ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + ' in groups.',
-        blocked: was ? name + ' unblocked.' : name + ' blocked.'
-      }[key];
-      toast(text, { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
+      toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
     actions.deleteDm = function (name) {
       liveBridge.clearPmHistory(name);
       actions.closeDm(name);
-      update(function (d) { d.dms[name].messages = []; });
+      update(function (d) { d.dms[name].messages = []; d.dms[name].olderMore = false; });
+    };
+    actions.removeDmMessage = function (name, m) {
+      liveBridge.removePm(name, m).then(function (ok) {
+        if (ok) dropDmMessage(name, m.id); else toast('This message could not be removed. Reload the page and try again.');
+      });
     };
     actions.deleteAllDms = function () {
       Object.keys(stateRef.current.dms).forEach(function (n) { liveBridge.clearPmHistory(n); actions.closeDm(n); });
-      update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; }); });
+      update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; d.dms[n].olderMore = false; }); });
     };
+    actions.exportDms = function () { return liveBridge.exportPm(); };
+    actions.importDms = function (records) { return liveBridge.importPm(records).then(function (r) { loadPmHistory(true); return r; }); };
     actions.createGroup = function (name, title, desc, listed) {
       return liveBridge.createGroup({ name: name, title: title, description: desc, discovery: listed }).then(function () {
         actions.joinGroup(name);
@@ -560,7 +803,9 @@ function Root(props) {
     };
     actions.deleteMessage = function (gid, mid) {
       if (String(mid).indexOf('k:') === 0) { toast('This message is still being delivered. Try again in a moment.'); return; }
-      liveBridge.deleteMessage(gid, mid);
+      var m = findMsg(stateRef.current.groups[gid], mid);
+      // Comme Torch : l'original, puis chacune de ses modifications dont Chatango a donné l'identifiant définitif.
+      [mid].concat((m && m.editIds) || []).filter(liveBridge.canReply).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
     };
     actions.deleteAllFrom = function (gid, name, msg) {
       var g = stateRef.current.groups[gid], m = msg && msg.unid ? msg : g && lastMessageOf(g, name);
@@ -587,7 +832,26 @@ function Root(props) {
     actions.setClosed = function (gid, closed) { liveBridge.setFlags(gid, closed ? GROUP_FLAG.IS_CLOSED : 0, closed ? 0 : GROUP_FLAG.IS_CLOSED); };
     actions.clearGroup = function (gid) { liveBridge.clearAll(gid); };
     actions.requestGroupSettings = function (gid) { liveBridge.requestSettings(gid); };
-    actions.requestBans = function (gid) { liveBridge.banList(gid); };
+    actions.requestBans = function (gid) {
+      // La réponse à la première page remplace la liste, même si une page suivante était attendue.
+      groupUpdate(gid, function (g) { g.live.banPage.loading = false; g.live.banSearch = null; });
+      liveBridge.banList(gid, 'block', '0');
+    };
+    actions.requestUnbans = function (gid) { liveBridge.banList(gid, 'unblock', '0'); };
+    actions.moreBans = function (gid, kind) {
+      var rows = banListOf(stateRef.current.groups[gid], kind).rows, last = rows[rows.length - 1];
+      // Une ligne ajoutée en direct n'a pas d'horodatage de Chatango : la page repart alors de la plus récente.
+      if (liveBridge.banList(gid, kind, last && last.ts || '0')) groupUpdate(gid, function (g) { banListOf(g, kind).page.loading = true; });
+    };
+    actions.searchBans = function (gid, query) {
+      var at = Date.now();
+      if (!liveBridge.searchBans(gid, query)) return;
+      groupUpdate(gid, function (g) { g.live.banSearch = { query: query, at: at, status: 'pending', ban: null, code: '' }; });
+      setTimeout(function () {
+        groupUpdate(gid, function (g) { var s = g.live.banSearch; if (s && s.at === at && s.status === 'pending') s.status = 'timeout'; });
+      }, CONFIRM_TIMEOUT);
+    };
+    actions.clearBanSearch = function (gid) { groupUpdate(gid, function (g) { g.live.banSearch = null; }); };
     actions.saveGroupSettings = function (gid, draft, base) { return saveLiveSettings(stateRef.current.groups[gid], draft, base || stateRef.current.groups[gid].settings); };
   }
 
@@ -596,7 +860,8 @@ function Root(props) {
     if (!g) {
       g = d.groups[gid] = liveGroup(gid, gid);
       g.favorite = (liveBridge.favoriteGroups() || []).indexOf(gid) >= 0;
-      g.muted = localRef.current.muted.indexOf(gid) >= 0;
+      g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
+      g.hiddenChannels = localRef.current.channels[gid] || [];
     }
     return g;
   }
@@ -604,9 +869,27 @@ function Root(props) {
     var u = d.users[name];
     if (!u) {
       u = d.users[name] = { status: 'online', about: '', style: {} };
-      if (localRef.current.ignored.indexOf(name) >= 0) u.ignored = true;
+      if ((liveBridge.ignoredUsers() || []).indexOf(name) >= 0) u.ignored = true;
+      if (localRef.current.unstyled.indexOf(name) >= 0) u.unstyled = true;
     }
     return u;
+  }
+  /**
+   * Permet d'ajouter un membre que l'état ne connaît pas encore, hors ligne par défaut tant que son statut est inconnu.
+   * @param {Object} d État en cours de modification.
+   * @param {string} name Membre visé.
+   */
+  function ensureUnseenUser(d, name) {
+    if (!d.users[name]) ensureLiveUser(d, name).status = 'offline';
+  }
+  /**
+   * Permet de compter en ligne un membre présent dans un groupe, sauf un ami dont la connexion privée donne la présence.
+   * @param {Object} d État en cours de modification.
+   * @param {string} name Membre visé.
+   */
+  function ensurePresentUser(d, name) {
+    var u = ensureLiveUser(d, name);
+    if (u.status === 'offline' && !u.friend) u.status = 'online';
   }
   /**
    * Permet d'appliquer à un membre une présence reçue du pont.
@@ -657,30 +940,107 @@ function Root(props) {
       L.annc ? { enabled: L.annc.enabled, text: L.annc.text, displayText: L.annc.displayText, embeds: L.annc.embeds, interval: Math.round(L.annc.interval / 60), intervalSec: L.annc.interval } : null);
     g.closed = !!(f & F.IS_CLOSED);
   }
-  function findMsg(g, id) {
-    if (!g || !id) return null;
-    var plain = String(id).replace(/^k:/, '');
-    for (var i = g.messages.length - 1; i >= 0; i--) { var x = g.messages[i]; if (x.id === plain || x.id === 'k:' + plain) return x; }
-    return null;
-  }
   function withReply(g, m) {
-    if (m.replyId) {
-      var o = findMsg(g, m.replyId);
-      m.replyTo = o ? { id: o.id, author: o.author, text: messagePreview(o) } : { id: m.replyId, author: '', text: 'an earlier message' };
-    }
+    if (m.replyId) { var o = findMsg(g, m.replyId); m.replyTo = { id: o ? o.id : m.replyId }; }
     delete m.replyId;
     return m;
   }
   function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
-  /** Applique une modification à l'original et aux citations qui le reprennent. */
-  function applyEdit(g, o, m) {
-    o.text = m.text; o.embeds = m.embeds; o.edited = true;
-    g.messages.forEach(function (x) { if (x.replyTo && x.replyTo.id === o.id) x.replyTo.text = messagePreview(o); });
+  function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
+  /**
+   * Permet d'appliquer une modification de groupe à l'original en gardant son compte et ses identifiants.
+   * @param {Object} o Message original.
+   * @param {{id: string, text: string, parts: ?Array, embeds: ?Array}} m Message de modification.
+   * @param {boolean=} keepText Vrai pour compter la modification sans remplacer le texte.
+   */
+  function applyGroupEdit(o, m, keepText) {
+    o.editCount = (o.editCount || 0) + 1;
+    o.editIds = (o.editIds || []).concat([m.id]);
+    if (!keepText) applyEdit(o, m);
   }
-  // Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
-  function pmContentKey(m) {
-    var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
-    return String(m.text).split(/\s+/).concat(media).filter(Boolean).sort().filter(function (v, i, a) { return v !== a[i - 1]; }).join(' ');
+  /**
+   * Permet de reprendre dans un original arrivé après elles ses modifications affichées à part, la plus récente en dernier.
+   * @param {Object} g Groupe dans l'état.
+   * @param {Object} o Message original, pas encore dans le fil.
+   */
+  function mergeEdits(g, o) {
+    var edits = g.messages.filter(function (x) { return x.editId === o.id && x.author === o.author; });
+    if (!edits.length) return;
+    edits.sort(function (a, b) { return a.ts - b.ts; }).forEach(function (e) { applyGroupEdit(o, e); });
+    g.messages = g.messages.filter(function (x) { return edits.indexOf(x) < 0; });
+  }
+  /**
+   * Permet de verser une page de bannissements ou de débannissements dans sa liste.
+   * @param {{rows: Array, page: Object}} list Liste lue par banListOf, mise à jour en place.
+   * @param {{list: Array, more: boolean}} op Page reçue du pont.
+   */
+  function receiveBanPage(list, op) {
+    // Seule la page suivante demandée par Torch Skin s'ajoute : un rechargement de Torch repart de la première page.
+    var next = list.page.loading, known = {};
+    if (!next) list.rows.splice(0);
+    list.rows.forEach(function (b) { known[banKey(b)] = true; });
+    var fresh = op.list.filter(function (b) { return !known[banKey(b)]; });
+    list.rows.push.apply(list.rows, fresh);
+    list.page.more = op.more && (!next || fresh.length > 0);
+    list.page.loaded = true;
+    list.page.loading = false;
+  }
+  function pmMessage(x) {
+    // Modification sans original chargé : elle prend la clé de l'original, que visent l'archive et les modifications suivantes.
+    var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
+    if (x.editId) m.edited = true;
+    return m;
+  }
+  /**
+   * Permet de fusionner des entrées de l'historique privé dans une conversation, sans doublon avec les messages affichés.
+   * @param {Object} d État en cours de modification.
+   * @param {Object} c Conversation dans cet état.
+   * @param {Array} list Entrées lues par le pont, de la plus ancienne à la plus récente.
+   * @returns {number} Entrées non lues que ne couvre aucun message affiché.
+   */
+  function mergePmHistory(d, c, list) {
+    // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
+    var shown = c.messages.slice(), fresh = 0;
+    function claim(x) {
+      var i = pmShownIndex(shown, x);
+      if (i < 0) return false;
+      shown[i].archiveTs = x.archiveTs;
+      shown.splice(i, 1);
+      return true;
+    }
+    list.forEach(function (x) {
+      mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts);
+      var o = pmEditTarget(c, x);
+      if (o) { applyEdit(o, x); return; }
+      var m = pmMessage(x);
+      if (claim(m)) return;
+      c.messages.push(m);
+      if (x.unread) fresh += 1;
+    });
+    c.messages.sort(function (a, b) { return a.ts - b.ts; });
+    return fresh;
+  }
+  /**
+   * Permet de fusionner l'historique privé de Torch aux conversations, à chaque OK et après un import, sans doublon.
+   * @param {boolean=} imported Vrai après un import, qui peut avoir ajouté des entrées plus anciennes que celles chargées.
+   */
+  function loadPmHistory(imported) {
+    liveBridge.pmHistory(100).then(function (hist) {
+      update(function (d) {
+        if (!d.auth.loggedIn) return;
+        d.pmLoaded = true;
+        Object.keys(hist).forEach(function (t) {
+          if (t === d.me) return;
+          ensureLiveUser(d, t);
+          var c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: localRef.current.hidden.indexOf(t) >= 0 });
+          // Fixé au premier OK : à une reconnexion, les 100 dernières entrées ne disent rien des pages plus anciennes déjà chargées. Un import, lui, peut en ajouter.
+          if (c.olderMore == null || (imported && hist[t].more)) c.olderMore = hist[t].more;
+          var fresh = mergePmHistory(d, c, hist[t].list);
+          // Une entrée couverte par un message affiché ne compte plus : le compteur a déjà vu ce message.
+          if (!c.closed && !isDmInView(d, t)) c.unread += fresh;
+        });
+      });
+    });
   }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
   /**
@@ -695,11 +1055,18 @@ function Root(props) {
   function handleLiveOp(op) {
     switch (op.op) {
       case 'login': {
-        var stored = storageGet(skinKey(op.me)) || {};
-        // Favoris d'avant la synchronisation avec Torch : versés dans sa liste, retirés du stockage local une fois tous acceptés.
-        if (stored.fav && stored.fav.map(function (k) { return liveBridge.setFavorite(k, true); }).every(Boolean)) { delete stored.fav; storageSet(skinKey(op.me), stored); }
+        var stored = storageGet(skinKey(op.me)) || {}, raw = JSON.stringify(stored);
+        var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
+        // Listes d'avant la synchronisation avec Torch : versées dans les siennes, retirées du stockage local une fois toutes acceptées.
+        Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
+        if (JSON.stringify(stored) !== raw) storageSet(skinKey(op.me), stored);
         localRef.current = Object.assign(blankLocal(), stored);
-        update(function (d) { Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style; d.auth = { loggedIn: true }; });
+        update(function (d) {
+          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.auth = { loggedIn: true };
+          (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n); });
+          Object.keys(TORCH_PREFS).forEach(function (path) { var v = liveBridge.setting(TORCH_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
+          d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
+        });
         // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
         setTimeout(function () { update(function (d) { d.groupsSeen = true; }); }, 10000);
         break;
@@ -711,6 +1078,8 @@ function Root(props) {
           d.groupsSeen = true;
           if (op.ready) { g.inited = true; g.membersLoaded = true; }
           if (op.title) { g.title = op.title; g.topic = op.title; }
+          // Rejoindre rappelle renderGroup avec recent: true, owned ne revient donc jamais à faux.
+          if (op.owned) g.owned = true;
           g.joined = !op.hidden;
           if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: Date.now() }; }
         });
@@ -720,13 +1089,13 @@ function Root(props) {
       case 'msg': {
         var m = Object.assign({}, op.msg), style = m.style; delete m.style;
         if (m.editId) {
-          // Modification : appliquée à l'original s'il est chargé, sinon affichée comme un message modifié.
+          // Modification : appliquée à l'original s'il est chargé, sinon affichée comme un message modifié qui garde sa référence.
           update(function (d) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, m.author), o = editTarget(g, m);
             mergeStyle(u, style, m.ts);
-            if (o) { applyEdit(g, o, m); return; }
-            m.edited = true; delete m.editId;
+            if (o) { applyGroupEdit(o, m); return; }
+            m.edited = true;
             g.messages.push(withReply(g, m));
           });
           break;
@@ -742,28 +1111,49 @@ function Root(props) {
           if (!d.auth.loggedIn) return;
           var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, hm.author);
           mergeStyle(u, hs, hm.ts);
-          if (g.messages.some(function (x) { return x.id === hm.id; })) return;
+          if (g.messages.some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return;
           var o = editTarget(g, hm);
-          if (o) { applyEdit(g, o, hm); return; }
+          // Historique reçu du plus récent au plus ancien : comme Torch, un original déjà modifié garde son texte.
+          if (o) { applyGroupEdit(o, hm, o.edited); return; }
           if (hm.editId) hm.edited = true;
-          delete hm.editId;
+          else { delete hm.editId; mergeEdits(g, hm); }
           g.messages.push(withReply(g, hm));
           g.messages.sort(function (a, b) { return a.ts - b.ts; });
           trimThread(g);
+          logMention(d, op.gid, hm);
         });
         break;
       }
-      case 'msgid': groupUpdate(op.gid, function (g) { g.messages.forEach(function (x) { if (x.id === op.tmp) x.id = op.id; if (x.replyTo && x.replyTo.id === op.tmp) x.replyTo.id = op.id; }); }); break;
-      case 'del': groupUpdate(op.gid, function (g) { g.messages.forEach(function (x) { if (op.ids.indexOf(x.id) >= 0 || op.ids.indexOf(String(x.id).replace(/^k:/, '')) >= 0) x.deleted = { by: 'staff' }; }); }); break;
-      case 'cleared': groupUpdate(op.gid, function (g) { g.messages = [{ id: uid(), kind: 'system', text: 'All messages in #' + g.id + ' were cleared.', ts: Date.now() }]; }); break;
+      case 'msgid': groupUpdate(op.gid, function (g, d) {
+        g.messages.forEach(function (x) {
+          if (x.id === op.tmp) x.id = op.id;
+          if (x.replyTo && x.replyTo.id === op.tmp) x.replyTo.id = op.id;
+          if (x.editIds) x.editIds = x.editIds.map(function (id) { return id === op.tmp ? op.id : id; });
+        });
+        d.mentionLog.forEach(function (x) { if (x.gid === op.gid && x.id === op.tmp) x.id = op.id; });
+      }); break;
+      case 'del': groupUpdate(op.gid, function (g, d) {
+        // Une modification affichée à part disparaît avec son original, même quand celui-ci n'est pas chargé.
+        g.messages = g.messages.filter(function (x) { return !(x.editId && idIn(op.ids, x.editId)); });
+        g.messages.forEach(function (x) { if (idIn(op.ids, x.id)) x.deleted = { by: 'staff' }; });
+        dropMentions(d, op.gid, op.ids);
+      }); break;
+      case 'cleared': groupUpdate(op.gid, function (g, d) {
+        g.messages = [{ id: uid(), kind: 'system', text: 'All messages in #' + g.id + ' were cleared.', ts: Date.now() }];
+        dropMentions(d, op.gid, null);
+      }); break;
       case 'members': groupUpdate(op.gid, function (g, d) {
         var list = op.names.slice(); if (list.indexOf(d.me) < 0) list.push(d.me);
-        g.members = list; g.guests = op.guests; g.membersLoaded = true;
-        list.forEach(function (n) { var u = ensureLiveUser(d, n); if (u.status === 'offline' && !u.friend) u.status = 'online'; });
+        g.members = list; g.membersLoaded = true;
+        list.forEach(function (n) { ensurePresentUser(d, n); });
+      }); break;
+      case 'guests': groupUpdate(op.gid, function (g, d) {
+        g.guestNames = op.names; g.guests = op.anons;
+        op.names.forEach(function (n) { ensurePresentUser(d, n); });
       }); break;
       case 'member': groupUpdate(op.gid, function (g, d) {
-        if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensureLiveUser(d, op.name); }
-        if (op.action === 0) g.members = g.members.filter(function (n) { return n !== op.name; });
+        if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensurePresentUser(d, op.name); }
+        if (op.action === 0 && op.name !== d.me) g.members = g.members.filter(function (n) { return n !== op.name; });
       }); break;
       case 'count': groupUpdate(op.gid, function (g) { g.liveCount = op.n; }); break;
       case 'room': update(function (d) {
@@ -791,11 +1181,11 @@ function Root(props) {
       case 'denied': groupUpdate(op.gid, function (g) { g.inited = true; g.membersLoaded = true; }); break;
       case 'histEnd': groupUpdate(op.gid, function (g) { g.historyDone = true; g.loadingMore = false; }); break;
       case 'moreLoaded': groupUpdate(op.gid, function (g) { g.loadingMore = false; }); break;
-      case 'annc': groupUpdate(op.gid, function (g) { g.live.annc = { enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
-      case 'anncPost': if (op.text || op.embeds.length) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
+      case 'annc': groupUpdate(op.gid, function (g) { g.live.annc = { mode: op.mode, enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
+      case 'anncPost': if (op.text || op.embeds.length) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', annc: true, text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
       case 'bw': groupUpdate(op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
       case 'rate': groupUpdate(op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;
-      case 'bans': groupUpdate(op.gid, function (g) { g.bans = op.list; g.live.bansLoaded = true; }); break;
+      case 'bans': groupUpdate(op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;
         groupUpdate(op.gid, function (g) {
@@ -806,9 +1196,17 @@ function Root(props) {
         break;
       }
       case 'unbanned': groupUpdate(op.gid, function (g) {
-        g.bans = g.bans.filter(function (b) { return !op.list.some(function (x) { return x.unid === b.unid && x.ip === b.ip; }); });
+        function gone(b) { return op.list.some(function (x) { return x.unid === b.unid && x.ip === b.ip; }); }
+        g.bans = g.bans.filter(function (b) { return !gone(b); });
+        var s = g.live.banSearch;
+        if (s && s.ban && gone(s.ban)) s.ban = null;
+        if (g.live.unbanPage.loaded) g.live.unbans = op.list.concat(g.live.unbans.filter(function (b) { return !gone(b); }));
       }); break;
-      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; }); break;
+      // Une réponse arrivée après le délai d'attente reste valable, mais pas après Clear search.
+      case 'banSearch': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
+      case 'banSearchRefused': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
+      // Torch ne fait que journaliser allunblocked : la liste des débannissements est redemandée à son prochain affichage.
+      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
         var known = {}, list = (g.live.modlog || []).slice();
         list.forEach(function (x) { known[x.id] = true; });
@@ -821,7 +1219,7 @@ function Root(props) {
         if (!d.auth.loggedIn) return;
         var g = d.groups[op.gid];
         // Une demande d'historique en cours ne reçoit plus de réponse sur un socket fermé.
-        if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') g.loadingMore = false; }
+        if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; } }
         d.session = sessionAfterConn(d, op);
       }); break;
       case 'session': update(function (d) {
@@ -840,64 +1238,56 @@ function Root(props) {
       case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { icon: 'info', action: { label: op.button, run: op.action } } : { icon: 'info' }); break;
       case 'pm': {
         var s0 = stateRef.current;
-        var focused = s0.route.view === 'dm' && s0.route.id === op.from && document.visibilityState === 'visible';
+        var focused = isDmInView(s0, op.from);
+        // Comme dans Torch, le MP d'un membre ignoré est reçu et archivé, sans alerte.
+        var ignored = !!userOf(s0, op.from).ignored;
+        var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          var ts = op.ts || Date.now();
-          mergeStyle(ensureLiveUser(d, op.from), op.style, ts);
+          mergeStyle(ensureLiveUser(d, op.from), op.style, op.ts);
           var c = d.dms[op.from] || (d.dms[op.from] = { messages: [], unread: 0, lastReadTs: 0 });
+          var o = pmEditTarget(c, op);
+          if (o) { applyEdit(o, op); return; }
           c.closed = false;
-          c.messages.push({ id: uid(), from: op.from, text: op.text, embeds: op.embeds, ts: ts });
+          c.messages.push(pmMessage(op));
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
           if (!focused) c.unread += 1;
         });
-        if (!focused && !op.offline) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
+        if (focused) liveBridge.markPmRead(op.from);
+        if (edit) break;
+        if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
+        // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : la route ne suffit pas.
+        if (!op.offline && !ignored && op.from !== s0.me && op.from !== liveBridge.focusedPm()) {
+          var sounds = liveBridge.torchSounds();
+          // Lecture refusée par le navigateur : silence voulu, sans toast.
+          if (sounds && sounds.play_mention) liveBridge.playTorchSound('mention').then(null, function () {});
+        }
         // Les msgoff arrivent en rafale juste après la connexion : une seule notification pour toute la rafale.
-        if (op.offline && !offlineCount.current++) setTimeout(function () {
+        if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
           offlineCount.current = 0;
           notify('pm', { toast: plural(n, 'message', 'messages') + ' received while you were away.', icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'dm', id: null }); } } });
         }, 1500);
         break;
       }
-      case 'pmReady':
-        liveBridge.pmHistory(100).then(function (hist) {
-          update(function (d) {
-            if (!d.auth.loggedIn) return;
-            d.pmLoaded = true;
-            Object.keys(hist).forEach(function (t) {
-              if (t === d.me) return;
-              ensureLiveUser(d, t);
-              var c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: localRef.current.hidden.indexOf(t) >= 0 });
-              // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
-              var shown = c.messages.slice();
-              function claim(x) {
-                var k = pmContentKey(x);
-                for (var i = 0; i < shown.length; i++) {
-                  var y = shown[i];
-                  if (y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000) { shown.splice(i, 1); return true; }
-                }
-                return false;
-              }
-              hist[t].forEach(function (x) {
-                mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts);
-                if (!claim(x)) c.messages.push({ id: uid(), from: x.from, text: x.text, embeds: x.embeds, ts: x.ts });
-              });
-              c.messages.sort(function (a, b) { return a.ts - b.ts; });
-            });
-          });
-        });
-        break;
+      case 'pmReady': loadPmHistory(); break;
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;
-          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); });
+          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
         });
         break;
       case 'friendRefused':
-        update(function (d) { d.friendRefused = { name: op.name, ts: Date.now() }; });
-        toast('No Chatango user named ' + op.name + '.', { icon: 'info' });
+        update(function (d) { delete d.friendAdds[op.name]; });
+        toast(unknownUserText(op.name), { icon: 'info' });
         break;
+      case 'pmChecked': {
+        var asked = pmAsked.current === op.name;
+        if (asked) pmAsked.current = null;
+        update(function (d) { d.pmChecked = { name: op.name, found: op.found, ts: Date.now() }; });
+        if (!op.found && !asked && stateRef.current.dms[op.name]) toast(unknownUserText(op.name), { icon: 'info' });
+        break;
+      }
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
       case 'presence': {
         var before = stateRef.current.users[op.name];
@@ -920,25 +1310,29 @@ function Root(props) {
         Object.keys(d.users).forEach(function (n) { if (d.users[n].blocked && op.list.indexOf(n) < 0) d.users[n].blocked = false; });
         op.list.forEach(function (n) { ensureLiveUser(d, n).blocked = true; });
       }); break;
+      case 'msgBgStale': update(function (d) { if (d.users[op.name]) delete d.users[op.name].msgBg; }); break;
       case 'people': update(function (d) { op.list.forEach(function (x) { applyPresence(ensureLiveUser(d, x.name), x); }); }); break;
       case 'pmUnblocked': update(function (d) { if (d.users[op.name]) d.users[op.name].blocked = false; }); break;
       default: break;
     }
   }
-  /* Sourdines, membres ignorés, conversations masquées et style perso, conservés par compte dans ce navigateur */
+  /* Conversations masquées, canaux masqués, membres au style coupé et style perso, conservés par compte dans ce navigateur */
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
-    // Favoris locaux que Torch n'a pas encore acceptés : gardés pour la prochaine connexion.
+    // Favoris, sourdines et membres ignorés locaux que Torch n'a pas encore acceptés : gardés pour la prochaine connexion.
     o.fav = prev.fav;
+    o.muted = prev.muted;
+    o.ignored = prev.ignored;
     prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
-    prev.muted.forEach(function (k) { if (!state.groups[k]) o.muted.push(k); });
-    prev.ignored.forEach(function (n) { if (!state.users[n]) o.ignored.push(n); });
-    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].muted) o.muted.push(k); });
-    Object.keys(state.users).forEach(function (n) { if (state.users[n].ignored) o.ignored.push(n); });
-    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageSet(skinKey(state.me), o); }
+    Object.keys(prev.channels).forEach(function (k) { if (!state.groups[k]) o.channels[k] = prev.channels[k]; });
+    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
+    prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
+    Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
+    // Fusion avec le stockage : le pont y pose aussi le drapeau de migration des non-lus.
+    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
   });
   useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(handleLiveOp); }, []);
 
@@ -947,7 +1341,9 @@ function Root(props) {
     confirm: setConfirm,
     openProfile: function (name, gid) { setProfile({ name: name, gid: gid }); },
     openFullProfile: function (name) { setFullProfile(name); },
+    openWho: setWho,
     openLink: setLinkUrl,
+    openProfileLink: setProfileLink,
     openPalette: function () { setPalette(true); setNavOpen(false); },
     openCreate: function (prefill) { setCreate({ prefill: prefill || '' }); setNavOpen(false); },
     openNewDm: function () { setNewDm(true); setNavOpen(false); },
@@ -955,14 +1351,16 @@ function Root(props) {
     openNav: function () { setNavOpen(true); },
     closeNav: function () { setNavOpen(false); }
   };
-  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, theme: resolvedTheme(prefs, VIEWER_THEME) };
+  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, uploads: uploads, theme: resolvedTheme(prefs, VIEWER_THEME) };
 
   return h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
     state.auth.loggedIn && profile ? h(ProfileDialog, { name: profile.name, gid: profile.gid, onClose: function () { setProfile(null); } }) : null,
     state.auth.loggedIn && banCfg ? h(BanDialog, { name: banCfg.name, gid: banCfg.gid, msg: banCfg.msg, onClose: function () { setBan(null); } }) : null,
     state.auth.loggedIn && fullProfile ? h(FullProfileDialog, { name: fullProfile, onClose: function () { setFullProfile(null); } }) : null,
+    state.auth.loggedIn && who ? h(WhoDialog, { name: who, onClose: function () { setWho(null); } }) : null,
     linkUrl ? h(LinkDialog, { url: linkUrl, onClose: function () { setLinkUrl(null); } }) : null,
+    profileLink ? h(ProfileLinkDialog, { link: profileLink, onClose: function () { setProfileLink(null); } }) : null,
     state.auth.loggedIn && palette ? h(Palette, { onClose: function () { setPalette(false); } }) : null,
     state.auth.loggedIn && create ? h(CreateGroupDialog, { prefill: create.prefill, onClose: function () { setCreate(null); } }) : null,
     state.auth.loggedIn && newDm ? h(NewDmDialog, { onClose: function () { setNewDm(false); } }) : null,

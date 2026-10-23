@@ -34,62 +34,92 @@ function ProfilePage() {
           h('div', { className: 'grid3' }, [['bg', 'Background'], ['text', 'Text'], ['link', 'Links']].map(function (c) {
             return h(ColorField, { key: c[0], id: 'pf-c-' + c[0], label: c[1], value: draft.colors[c[0]], onChange: function (v) { set('colors.' + c[0], v); } });
           }))),
-        h(VisitorsSection, null)),
+        h(VisitorsSection, { bio: me.about || '', draft: draft.about, onDraft: function (v) { set('about', v); } })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
-        h('div', { style: { border: '1px solid var(--border)', borderRadius: 12, background: 'var(--subtle)', overflow: 'hidden' } },
-          h('div', { style: { height: 64, background: 'var(--selected)' } }),
-          h('div', { style: { padding: '0 18px 18px', marginTop: -32 } },
-            h(T.Avatar, { name: s.me, size: 64, style: { border: '4px solid var(--subtle)', boxSizing: 'content-box' } }),
-            h('p', { style: { margin: '8px 0 0', fontSize: 17, fontWeight: 600 } }, s.me),
-            meta ? h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, meta) : null,
-            h('p', { className: 'about', style: { marginTop: 12 } }, draft.about || 'No bio yet.'))),
+        profilePreviewCard(s.me, meta, draft.about),
         h('p', { className: 'muted', style: { margin: 0, fontSize: 12.5 } }, 'How other members see you when they open your profile from a group or a private message.'))),
     dirty ? h(T.SaveBar, {
       onDiscard: function () { setDraft(snapshot()); },
       onSave: function () {
         if (ageErr) { app.ui.toast('Fix the age before saving.'); return; }
         if (LIVE) { app.ui.toast('Saving your profile to Chatango is not wired in this test build yet.'); return; }
-        app.update(function (d) { var u = d.users[d.me]; u.age = draft.age === '' ? '' : +draft.age; u.gender = draft.gender; u.location = draft.location; u.about = draft.about; d.profile.visibility = draft.visibility; d.profile.colors = draft.colors; });
+        app.update(function (d) { var u = d.users[d.me]; u.age = draft.age === '' ? '' : +draft.age; u.gender = draft.gender; u.location = draft.location; u.about = draft.about; u.aboutHtml = draft.about; d.profile.visibility = draft.visibility; d.profile.colors = draft.colors; });
         app.ui.toast('Profile saved to Chatango.', { icon: 'check' });
       }, saveLabel: 'Save profile'
     }, 'Unsaved changes to your Chatango profile') : null);
 }
 
+/**
+ * Permet d'afficher l'aperçu de son mini profil, bio rendue sans jamais injecter de HTML.
+ * @param {string} name Nom de l'utilisateur connecté.
+ * @param {string} meta Âge, genre et lieu déjà composés.
+ * @param {string} about Bio du brouillon.
+ */
+function profilePreviewCard(name, meta, about) {
+  return h('div', { style: { border: '1px solid var(--border)', borderRadius: 12, background: 'var(--subtle)', overflow: 'hidden' } },
+    h('div', { style: { height: 64, background: 'var(--selected)' } }),
+    h('div', { style: { padding: '0 18px 18px', marginTop: -32 } },
+      h(T.Avatar, { name: name, size: 64, style: { border: '4px solid var(--subtle)', boxSizing: 'content-box' } }),
+      h('p', { style: { margin: '8px 0 0', fontSize: 17, fontWeight: 600 } }, name),
+      meta ? h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, meta) : null,
+      about ? h('div', { style: { marginTop: 12 } }, h(RichText, { html: about })) : h('p', { className: 'about', style: { marginTop: 12 } }, 'No bio yet.')));
+}
+
+// Motifs de Torch recopiés tels quels, point de vissle.me non échappé compris (inject.js:1472, 1490).
+var VISSLE_TRACKER = /<script src="(?:https:)?\/\/vissle.me\/profile\/(\d+)"><\/script>/;
+var VISSLE_TRACKER_LINE = /(\n)?(<script src="(?:https:)?\/\/vissle.me\/profile\/\d+"><\/script>)/;
+// Barre oblique échappée : le prototype inline ce code dans une balise script que la fin de balise fermerait.
+var VISSLE_TRACKER_ADD = '\n<script src="//vissle.me/profile/512"><\/script>';
+/**
+ * Permet de lire le tracker vissle d'une bio avec le motif de Torch.
+ * @param {string} bio Bio du mini profil.
+ * @returns {?number} Le n du tracker, null sans tracker.
+ */
+function vissleTrackerOf(bio) { var m = VISSLE_TRACKER.exec(bio); return m ? +m[1] : null; }
+
 var VISIT_FILTERS = [{ value: 'all', label: 'All' }, { value: 'log', label: 'Visits' }, { value: 'like', label: 'Likes' }, { value: 'dislike', label: 'Dislikes' }, { value: 'msg', label: 'Comments' }, { value: 'refer', label: 'Referrals' }];
 /**
  * Permet d'afficher une ligne d'activité vissle.
- * @param {object} app Contexte de l'application.
  * @param {object} r Ligne produite par visitorPage.
  */
-function visitorRow(app, r) {
-  return h('div', { key: r.key, className: 'lrow' },
-    h(T.Avatar, { name: r.name, size: 32 }),
-    h('span', { className: 'grow' },
-      h('span', { className: 'lrow-title', style: { fontWeight: 400 } },
-        r.guest ? h('b', { style: { fontWeight: 600 } }, r.name)
-          : h('button', { type: 'button', className: 'linkbtn', style: { fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }, onClick: function () { app.ui.openProfile(r.user, null); } }, r.name),
-        ' ' + r.label,
-        r.guest ? h('span', { style: { marginLeft: 8 } }, h(T.Badge, null, 'Guest')) : null),
-      r.msg ? h('span', { className: 'lrow-sub' }, r.msg) : null),
-    h('time', { className: 'tc-msg-time', title: new Date(r.ts).toLocaleString('en-GB') }, ago(r.ts)));
+function visitorRow(r) {
+  return h(ActivityRow, { key: r.key, sub: r.msg, at: r.ts },
+    h(Person, { name: r.user, label: r.name, size: 28, inert: r.guest }),
+    ' ' + r.label,
+    r.guest ? h('span', { style: { marginLeft: 8 } }, h(T.Badge, null, 'Guest')) : null);
 }
 
 /**
- * Activité de son propre profil enregistrée par vissle.me.
+ * Activité de son propre profil enregistrée par vissle.me, et tracker vissle de la bio.
+ * @param {string} p.bio Bio enregistrée, qui donne le statut du tracker.
+ * @param {string} p.draft Bio du brouillon, que les boutons du tracker modifient.
+ * @param {Function} p.onDraft Reçoit la nouvelle bio du brouillon.
+ * @param {boolean} [p.disabled] Boutons du tracker désactivés.
  */
-function VisitorsSection() {
+function VisitorsSection(p) {
   var app = useApp(), v = app.state.visitors;
   var get = v ? v.get : 'all', rows = v ? v.rows : [], loading = !v || v.loading;
+  var tracked = vissleTrackerOf(p.bio) !== null, drafted = vissleTrackerOf(p.draft) !== null;
+  var invite = 'Add the vissle tracker to your bio so vissle can record who opens your profile.';
+  var inviteInList = !tracked && !rows.length && !loading && !(v && v.error);
+  function toggleTracker() {
+    if (drafted) { p.onDraft(p.draft.replace(VISSLE_TRACKER_LINE, '')); return; }
+    // Règle de Torch : la bio balise comprise reste strictement sous 2000 caractères.
+    var over = p.draft.length - (2000 - VISSLE_TRACKER_ADD.length) + 1;
+    if (over > 0) { app.ui.toast('Remove ' + over + (over === 1 ? ' character' : ' characters') + ' from your bio to make room for the tracker.'); return; }
+    p.onDraft(p.draft + VISSLE_TRACKER_ADD);
+  }
   useEffect(function () { app.actions.loadVisitors(get, false); }, []);
   return h(T.SettingsSection, {
     title: 'Visitors', description: 'Activity on your profile recorded by vissle.me.',
     headerAside: h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', size: 34, iconSize: 15, disabled: loading, onClick: function () { app.actions.loadVisitors(get, false); } })
   },
+    h(T.SettingRow, { asLabel: false, title: 'Profile tracker', description: tracked ? 'The vissle tracker is in your bio.' : inviteInList ? null : invite, control: h(T.Button, { size: 'sm', disabled: p.disabled, onClick: toggleTracker }, drafted ? 'Remove tracker' : 'Add tracker') }),
     h('div', { className: 'tc-section-pad seg-scroll' }, h(T.SegmentedControl, { label: 'Activity type', value: get, options: VISIT_FILTERS, onChange: function (g) { app.actions.loadVisitors(g, false); } })),
-    rows.map(function (r) { return visitorRow(app, r); }),
+    rows.map(visitorRow),
     v && v.error ? h('p', { className: 'pal-empty' }, v.error)
-      : loading ? h('p', { className: 'pal-empty' }, 'Loading activity from vissle.me.')
-        : !rows.length ? h('p', { className: 'pal-empty' }, 'No activity yet.')
-          : v.next ? h('div', { style: { padding: 12, display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--divider)' } }, h(T.Button, { size: 'sm', onClick: function () { app.actions.loadVisitors(get, true); } }, 'Load more')) : null);
+      : !rows.length ? loading ? h(SkeletonRows, { count: 5, avatar: 28, label: 'Loading activity from vissle.me' }) : h('p', { className: 'pal-empty' }, tracked ? 'No activity yet.' : invite)
+        : v.next ? h('div', { style: { padding: 12, display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--divider)' } },
+          loading ? h(T.Spinner, { label: 'Loading more activity' }) : h(T.Button, { size: 'sm', onClick: function () { app.actions.loadVisitors(get, true); } }, 'Load more')) : null);
 }
