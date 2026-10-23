@@ -87,6 +87,7 @@ Ce ne sont pas des appels du code applicatif mais des ressources que le navigate
 - Le script de démarrage de Torch, `https://vissle.me/client/start`, qui charge à son tour la page et le code de Torch.
 - L'iframe `www.youtube-nocookie.com/embed/`, créée seulement au clic. La miniature `i.ytimg.com` s'affiche si `embedVideos` est actif et `proxyMedia` coupé.
 - Les images de message (URL https, `chatango.com/pmmessageimg`) selon `embedImages` et `proxyMedia`.
+- Les fichiers vidéo (mp4, webm) et audio (mp3, ogg, wav) de message, en URL https d'un hôte quelconque, en `<video>` ou `<audio>` créés seulement au clic, si `embedVideos` est actif.
 - Les avatars `ust.chatango.com/profileimg/…/thumb.jpg` ou `thumb_m.jpg`, en `<img>`.
 - La photo de profil complète `ust.chatango.com/profileimg/…/full.jpg`, en `<img>` `referrerPolicy="no-referrer"`, chargée seulement au clic sur l'avatar du mini profil.
 - L'image du fond de message `ust.chatango.com/profileimg/…/msgbg.jpg`, en `<img>` `referrerPolicy="no-referrer"`, seulement si `embedImages` est actif et `proxyMedia` coupé.
@@ -152,6 +153,10 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Balise `<i s="…" [w h]/>`, en groupe comme en MP.
 - Seuls préfixes connus (client officiel) : `vid://yt:{id de 11 caractères}`, `img://cam:{id}` et `img://lib:{id}`. Les deux derniers donnent `https://chatango.com/pmmessageimg?i={id}` (Torch). Le reste, ce sont des URL https.
 - Torch charge l'oEmbed YouTube automatiquement. Torch Skin ne l'appelle jamais, et l'iframe `youtube-nocookie.com` n'est créée qu'au clic.
+- Liens YouTube en texte : Torch ne change un lien YouTube en balise `vid://yt:` qu'en MP (`inject.js:5208-5211`). En groupe, le lien arrive en texte et Torch l'intègre au rendu avec la regex `(?:https?://(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|/\w+/|/)([\w-]{11})[^<\s]*)` (`inject.js:8256-8259`). `parseContent` applique la même regex à chaque lien du texte et ajoute `{ kind: 'youtube', id }`, sauf si le message porte déjà ce média, par une balise `vid://yt:` ou un autre lien. Le lien reste dans le texte. Les paramètres `t=` et `list=` sont ignorés. Le rendu est celui de la balise : miniature et iframe au clic.
+- Fichiers vidéo et audio : Torch intègre `https?://….(mp4|wmv|webm)` en `<video controls>` sans attendre de clic (`inject.js:8089`, `crawl` `1102-1134`), et la première URL `….(mp3|ogg|wav)` d'un message en `<audio>` après un clic, sauf pour un hôte de sa liste blanche (`embedAudio`, `inject.js:6423-6642`). `parseContent` relève dans le texte les URL https qui finissent par `.mp4` ou `.webm` (`{ kind: 'video', url }`) et par `.mp3`, `.ogg` ou `.wav` (`{ kind: 'audio', url }`), requête et fragment admis, casse ignorée. Les URL `http`, `.wmv` et les autres extensions restent des liens. Le lien reste dans le texte.
+- Avec `embedVideos`, un fichier vidéo ou audio, quel que soit son hôte, s'affiche en bouton « Play video » ou « Play audio » suivi de l'hôte. Le `<video controls>` ou l'`<audio controls>` n'est créé qu'au clic, puis démarre. Sans `embedVideos`, ou si le fichier ne se charge pas, il reste un lien qui passe par l'avertissement de lien. `<video>` et `<audio>` n'acceptent pas d'attribut `referrerPolicy` : l'hôte reçoit le referrer selon la politique de la page, comme pour l'iframe YouTube. Le bouton nomme l'hôte avant le clic, qui vaut accord.
+- Torch Skin ne reprend ni l'oEmbed ni le proxy `wsrv.nl` de Torch (`inject.js:1116`).
 
 ### Émoticônes
 

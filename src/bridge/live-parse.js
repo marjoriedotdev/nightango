@@ -17,7 +17,10 @@ var FACES = [''].concat(FONT_FACES.slice(1));
 var decoder = document.createElement('textarea');
 
 function decodeHtml(html) { decoder.innerHTML = html; return decoder.value; }
-var IMAGE_URL = /^https:\/\/\S+\.(?:png|apng|jpe?g|gif|bmp|webp)(?:[?#]\S*)?$/i;
+function fileUrlPattern(extensions) { return new RegExp('^https:\\/\\/\\S+\\.(?:' + extensions + ')(?:[?#]\\S*)?$', 'i'); }
+var IMAGE_URL = fileUrlPattern('png|apng|jpe?g|gif|bmp|webp'), VIDEO_URL = fileUrlPattern('mp4|webm'), AUDIO_URL = fileUrlPattern('mp3|ogg|wav');
+// Regex de Torch (inject.js:8256) appliquée à un seul lien : sensible à la casse et ouverte à http, seul l'identifiant est gardé.
+var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|\/\w+\/|\/)([\w-]{11})/;
 // Comme renderMessage de Torch : seule une paire ▓…▒ devient un barré, un marqueur isolé reste du texte.
 var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
 function embedOf(src) {
@@ -25,6 +28,15 @@ function embedOf(src) {
   if (yt) return { kind: 'youtube', id: yt[1] };
   if (img) return { kind: 'photo', url: 'https://chatango.com/pmmessageimg?i=' + encodeURIComponent(img[1]) };
   return IMAGE_URL.test(src) ? { kind: 'image', url: src } : null;
+}
+/**
+ * Permet de reconnaître le média d'un lien tapé dans le texte : vidéo YouTube, image, fichier vidéo ou audio.
+ * @param {string} url Lien relevé dans le texte.
+ */
+function linkEmbedOf(url) {
+  var yt = YOUTUBE_LINK.exec(url);
+  if (yt) return { kind: 'youtube', id: yt[1] };
+  return VIDEO_URL.test(url) ? { kind: 'video', url: url } : AUDIO_URL.test(url) ? { kind: 'audio', url: url } : embedOf(url);
 }
 /**
  * Permet de rendre une émoticône sm:// en texte : son emoji, son premier raccourci si elle est Premium sans le drapeau, son nom seul si la table l'ignore.
@@ -66,7 +78,10 @@ function parseContent(raw, keepMedia, premium) {
     })
     .replace(STRIKE_PAIR, '<s>$1</s>');
   var text = decodeHtml(body.replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
-  (text.match(/https:\/\/\S+/g) || []).forEach(function (url) { if (IMAGE_URL.test(url)) embeds.push({ kind: 'image', url: url }); });
+  (text.match(/https?:\/\/\S+/g) || []).forEach(function (url) {
+    var m = linkEmbedOf(url);
+    if (m && !embeds.some(function (x) { return x.kind === m.kind && x.id === m.id && x.url === m.url; })) embeds.push(m);
+  });
   return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null, key: k ? decodeRef(k[1]) : null };
 }
 /**

@@ -1,4 +1,4 @@
-var EMBED_LABEL = { youtube: 'Video', image: 'Image', photo: 'Photo' };
+var EMBED_LABEL = { youtube: 'Video', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
 function messagePreview(m) { var e = m.embeds && m.embeds[0]; return m.text || (e ? EMBED_LABEL[e.kind] : ''); }
 function warnOnLink(app, url) { return function (e) { if (app.state.prefs.safety.warnLinks) { e.preventDefault(); app.ui.openLink(url); } }; }
 var CHATANGO_SERVICE_HOSTS = ['www', 'st', 'ust', 'fp', 'm1', 'client'];

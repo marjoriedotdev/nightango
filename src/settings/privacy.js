@@ -47,7 +47,7 @@ function SafetyPage() {
   return h(Page, { title: 'Safety', lede: 'Decide what reaches your screen.' },
     h(T.SettingsSection, { title: 'Media and links' },
       h(T.SettingRow, { title: 'Embed images', description: 'Shows images in messages. When off, you see a link.', control: pr.sw('safety.embedImages') }),
-      h(T.SettingRow, { title: 'Embed videos', control: pr.sw('safety.embedVideos') }),
+      h(T.SettingRow, { title: 'Embed videos', description: 'Shows videos and audio in messages. Nothing plays until you click. When off, you see a link.', control: pr.sw('safety.embedVideos') }),
       h(T.SettingRow, { title: 'Block external media until I click', description: 'Images from other sites load only when you ask, so they cannot track you.', control: pr.sw('safety.proxyMedia') }),
       h(T.SettingRow, { title: 'Warn before opening links', description: 'Shows the full address before you leave Torch.', control: pr.sw('safety.warnLinks') })),
     h(T.SettingsSection, { title: 'People' },

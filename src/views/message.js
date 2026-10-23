@@ -138,17 +138,49 @@ function MessageContent(p) {
   return h(Frag, null, m.text ? h(MessageText, { text: m.text, parts: m.parts, style: p.style, plain: p.plain, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
 }
 
+var FILE_MEDIA = { video: { icon: 'play', label: 'Play video', className: 'embed-frame' }, audio: { icon: 'volume', label: 'Play audio', className: 'embed-audio' } };
 function MessageEmbeds(p) {
   return h('div', { className: 'embeds' }, p.embeds.map(function (e, i) {
-    return e.kind === 'youtube' ? h(VideoEmbed, { key: i, id: e.id }) : h(ImageEmbed, { key: i, url: e.url, label: EMBED_LABEL[e.kind] });
+    if (e.kind === 'youtube') return h(VideoEmbed, { key: i, id: e.id });
+    return FILE_MEDIA[e.kind] ? h(FileEmbed, { key: i, kind: e.kind, url: e.url }) : h(ImageEmbed, { key: i, kind: e.kind, url: e.url });
   }));
+}
+
+/**
+ * Permet de savoir si un média de message attend un clic avant tout chargement.
+ * @param {Object} safety Réglages Safety.
+ * @param {string} kind Type du média lu par parseContent.
+ */
+function waitsForClick(safety, kind) { return !!FILE_MEDIA[kind] || safety.proxyMedia; }
+
+/**
+ * Permet de construire un lien de média qui passe par l'avertissement de lien.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} url Adresse ouverte.
+ * @param {string} className Classe du lien.
+ * @param {*} content Contenu du lien.
+ */
+function mediaLink(app, url, className, content) {
+  return h('a', { className: className, href: url, target: '_blank', rel: 'noopener noreferrer', onClick: warnOnLink(app, url) }, content);
+}
+
+/**
+ * Bouton qui charge un média au clic, suivi de l'hôte qui le sert.
+ * @param {string} p.icon Icône du média.
+ * @param {string} p.label Action du bouton.
+ * @param {string} p.url Adresse du média.
+ * @param {Function} p.onClick Chargement du média.
+ */
+function RevealButton(p) {
+  var host = (/^https:\/\/([^\/?#]+)/.exec(p.url) || [])[1];
+  return h('button', { type: 'button', className: 'embed-reveal', onClick: p.onClick }, h(T.Icon, { name: p.icon, size: 16 }), p.label, host ? h('span', null, host) : null);
 }
 
 function VideoEmbed(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var st = useState(false), playing = st[0], setPlaying = st[1];
   var watch = 'https://www.youtube.com/watch?v=' + p.id;
-  if (!safety.embedVideos) return h('a', { className: 'msg-link', href: watch, target: '_blank', rel: 'noopener noreferrer', onClick: warnOnLink(app, watch) }, watch);
+  if (!safety.embedVideos) return mediaLink(app, watch, 'msg-link', watch);
   if (playing) {
     return h('iframe', {
       className: 'embed-frame', title: 'YouTube video', src: 'https://www.youtube-nocookie.com/embed/' + p.id + '?autoplay=1',
@@ -156,19 +188,28 @@ function VideoEmbed(p) {
     });
   }
   return h('button', { type: 'button', className: 'embed-video', 'aria-label': 'Play video', onClick: function () { setPlaying(true); } },
-    safety.proxyMedia ? null : h('img', { src: 'https://i.ytimg.com/vi/' + p.id + '/hqdefault.jpg', alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' }),
+    waitsForClick(safety, 'youtube') ? null : h('img', { src: 'https://i.ytimg.com/vi/' + p.id + '/hqdefault.jpg', alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' }),
     h('span', { className: 'embed-play' }, h(T.Icon, { name: 'play', size: 22 })));
+}
+
+/**
+ * Fichier vidéo ou audio d'un hôte quelconque, dont le lecteur n'existe qu'après le clic.
+ * @param {string} p.kind video ou audio.
+ * @param {string} p.url Adresse https du fichier.
+ */
+function FileEmbed(p) {
+  var app = useApp(), safety = app.state.prefs.safety, media = FILE_MEDIA[p.kind];
+  var st = useState(false), playing = st[0], setPlaying = st[1];
+  var f = useState(false), failed = f[0], setFailed = f[1];
+  if (!safety.embedVideos || failed) return mediaLink(app, p.url, 'msg-link', p.url);
+  if (!playing && waitsForClick(safety, p.kind)) return h(RevealButton, { icon: media.icon, label: media.label, url: p.url, onClick: function () { setPlaying(true); } });
+  return h(p.kind, { className: media.className, src: p.url, controls: true, autoPlay: playing, onError: function () { setFailed(true); } });
 }
 
 function ImageEmbed(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var st = useState(false), shown = st[0], setShown = st[1];
-  var link = { href: p.url, target: '_blank', rel: 'noopener noreferrer', onClick: warnOnLink(app, p.url) };
-  var host = (/^https:\/\/([^\/?#]+)/.exec(p.url) || [])[1];
-  if (!safety.embedImages) return h('a', Object.assign({ className: 'msg-link' }, link), p.url);
-  if (safety.proxyMedia && !shown) {
-    return h('button', { type: 'button', className: 'embed-reveal', onClick: function () { setShown(true); } },
-      h(T.Icon, { name: 'image', size: 16 }), 'Show image', host ? h('span', null, host) : null);
-  }
-  return h('a', Object.assign({ className: 'embed-image' }, link), h('img', { src: p.url, alt: p.label, loading: 'lazy', referrerPolicy: 'no-referrer' }));
+  if (!safety.embedImages) return mediaLink(app, p.url, 'msg-link', p.url);
+  if (!shown && waitsForClick(safety, p.kind)) return h(RevealButton, { icon: 'image', label: 'Show image', url: p.url, onClick: function () { setShown(true); } });
+  return mediaLink(app, p.url, 'embed-image', h('img', { src: p.url, alt: EMBED_LABEL[p.kind], loading: 'lazy', referrerPolicy: 'no-referrer' }));
 }
