@@ -219,11 +219,11 @@ function friendActions(app, name) {
 
 var SWIPE_REVEAL = 144;
 /**
- * Ligne de liste avec ses actions par balayage et son menu.
+ * Ligne de liste avec ses actions par balayage et son menu, qui ouvre aussi le profil.
  * @param {{name: string, actions: Array, children: *}} p Membre de la ligne, actions de la ligne et bouton principal.
  */
 function SwipeRow(p) {
-  var n = p.name, actions = p.actions;
+  var app = useApp(), n = p.name, actions = p.actions;
   var m = useState(null), menu = m[0], setMenu = m[1];
   var w = useState(null), swipe = w[0], setSwipe = w[1];
   var rowRef = useRef(null), drag = useRef(null), swallow = useRef(false);
@@ -279,7 +279,7 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + n, size: 26, iconSize: 16, items: actions, open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + n, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null)].concat(actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
