@@ -3,7 +3,8 @@
 var EDIT_MAX = 9;
 var COMPOSER_MODES = {
   reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply' },
-  edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit' }
+  edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit' },
+  quote: { icon: 'quote', verb: 'Quoting', cancelLabel: 'Cancel quote' }
 };
 
 function GroupView(p) {
@@ -94,7 +95,8 @@ function GroupView(p) {
     setCompleted(c.names[c.index] + ', ' + (c.index + 1) + ' of ' + c.names.length);
   }
   function closeMode() { if (mode && mode.kind === 'edit') setDraft(stash.current); setMode(null); }
-  function reply(m) { closeMode(); setMode({ kind: 'reply', m: m }); }
+  function enter(kind) { return function (m) { closeMode(); setMode({ kind: kind, m: m }); }; }
+  var reply = enter('reply'), quote = enter('quote');
   function edit(m) {
     if ((m.editCount || 0) >= EDIT_MAX) { app.ui.toast("You can't edit this message again. Torch allows " + EDIT_MAX + ' edits per message.'); return; }
     if (!mode || mode.kind !== 'edit') stash.current = draft;
@@ -105,7 +107,8 @@ function GroupView(p) {
     if (mode && mode.kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
     if (runCommand(app, text, g.id)) return;
     atBottom.current = true;
-    app.actions.sendGroup(g.id, text, { replyTo: mode ? { id: mode.m.id } : null, channel: channel });
+    var kind = mode && mode.kind;
+    app.actions.sendGroup(g.id, text, { replyTo: kind === 'reply' ? { id: mode.m.id } : null, quote: kind === 'quote' ? quoteOf(mode.m) : null, channel: channel });
     setMode(null);
   }
   function toBottom() { var el = logRef.current; atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
@@ -140,7 +143,7 @@ function GroupView(p) {
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted);
-    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: !!target && target.id === m.id, onReply: reply, onEdit: edit, onMention: mention, onJump: jumpTo }));
+    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: !!target && target.id === m.id, onReply: reply, onQuote: quote, onEdit: edit, onMention: mention, onJump: jumpTo }));
     prev = m;
   }
   if (LIVE && !q) items.unshift(!g.inited && !g.messages.length

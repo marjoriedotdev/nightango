@@ -48,10 +48,12 @@ function MessageRow(p) {
   var canEdit = m.author === me && (!LIVE || liveBridge.canReply(m.id));
   var handle = m.author !== me ? mentionHandle(m.author) : null;
   var showIp = LIVE && m.ip && canSeeIps(myRole, livePerms(g, me));
+  var canQuote = !!m.text && !!mentionHandle(m.author);
   var deleteMessage = function () { app.actions.deleteMessage(g.id, m.id); };
   var menuItems = [
     canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
     handle ? { label: 'Mention ' + m.author, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
+    canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
     copyTextItem(app, m),
     showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed.'); }); } } : null,
     m.author !== me ? viewProfileItem(app, m.author, g.id) : null,
@@ -122,6 +124,14 @@ function mentionHandle(name) {
   // Comme Torch : un nom temporaire « #nom » se mentionne sans son #.
   if (name.charAt(0) === '#') return name.slice(1);
   return name.charAt(0) === '!' ? null : name;
+}
+
+/**
+ * Permet d'écrire la citation d'un message au format de Torch, en texte brut, à placer avant le texte saisi.
+ * @param {Object} m Message cité, avec du texte et un auteur mentionnable.
+ */
+function quoteOf(m) {
+  return '@' + mentionHandle(m.author) + ': `' + m.text.replace(/`/g, '').replace(/\n/g, ' ').trim() + '` ';
 }
 
 /**

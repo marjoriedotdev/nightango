@@ -228,6 +228,7 @@ function Root(props) {
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
+      text = (opts.quote || '') + text;
       update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = Date.now(); });
       var g = stateRef.current.groups[gid];
       if (gid === 'bots' && text.charAt(0) === '!') {
@@ -509,7 +510,7 @@ function Root(props) {
    * Permet d'envoyer un message de groupe construit par Torch avec le style perso, puis d'en garder le style.
    * @param {string} gid Groupe visé.
    * @param {string} text Texte saisi.
-   * @param {{replyId: ?string, editId: ?string, channel: ?string}} opts Réponse ou original modifié, et canal.
+   * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string}} opts Réponse, original modifié ou citation, et canal.
    * @param {string} failure Toast affiché si rien n'est parti.
    */
   function sendStyled(gid, text, opts, failure) {
@@ -525,7 +526,7 @@ function Root(props) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
       if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return; }
-      sendStyled(gid, text, { replyId: replyId, channel: opts.channel }, 'Message not sent. Torch rejected it.');
+      sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, 'Message not sent. Torch rejected it.');
     };
     // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
     actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: m.editId || m.id, channel: m.channel }, 'Message not edited. Torch rejected it.'); };

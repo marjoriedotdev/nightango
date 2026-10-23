@@ -507,7 +507,7 @@ var liveBridge = (function () {
      * Permet d'envoyer un message de groupe, ou la modification d'un message.
      * @param {string} gid Groupe visé.
      * @param {string} text Texte saisi.
-     * @param {{replyId: ?string, editId: ?string, channel: ?string, style: ?Object}} opts Réponse ou original modifié, canal et style perso.
+     * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string, style: ?Object}} opts Réponse, original modifié ou citation en texte brut, canal et style perso.
      * @returns {?Object} Style propre lu dans le corps construit par Torch, null si rien n'est parti.
      */
     send: function (gid, text, opts) {
@@ -520,7 +520,13 @@ var liveBridge = (function () {
       var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
       var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
       body = head + ref + body.slice(head.length);
-      var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : 'Your message failed to be delivered.';
+      if (opts.quote) {
+        // Torch place la citation juste avant le texte saisi : après l'emphase de son style, lue dans ses cases, et avant celle du Markdown.
+        var f = C.user.style ? styleFields() : null;
+        var at = head.length + (f ? (f.bold.checked ? '<b>' : '') + (f.italic.checked ? '<i>' : '') + (f.underline.checked ? '<u>' : '') : '').length;
+        body = body.slice(0, at) + esc(opts.quote) + body.slice(at);
+      }
+      var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
       var user = (C.groups[gid] && C.groups[gid].user) || {};
       var flag = (CHANNEL_FLAG[opts.channel] || 0) + (parseInt(user.badge, 10) || 0);
       return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + body, failure) ? style : null;

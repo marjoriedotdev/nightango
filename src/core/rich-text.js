@@ -27,25 +27,37 @@ function onProfileLink(app, url, name, gid) {
 
 var EMPHASIS = ['b', 'i', 'u', 's'];
 
-/* Texte de message : emphase (segments de parseContent, absents sans emphase), mentions et liens */
+// Comme le rendu de Torch : « @nom: `texte` » est une citation, qui ne traverse pas un saut de ligne.
+var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
+
+/* Texte de message : emphase (segments de parseContent, absents sans emphase), citations, mentions et liens */
 function MessageText(p) {
   var app = useApp();
   // Style coupé (plain) : comme Torch, gras, italique et souligné retombent mais le barré reste.
   var marks = p.plain ? ['s'] : EMPHASIS;
-  return h('p', { className: 'tc-msg-text', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {
-    var nodes = String(part.text).split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
+  function mention(s, key) {
+    var name = s.slice(1).toLowerCase();
+    return ACCOUNT_NAME.test(name)
+      ? h('button', { key: key, type: 'button', className: 'tc-mention', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
+      : h('span', { key: key, className: 'tc-mention' }, s);
+  }
+  function inline(text) {
+    return text.split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
       if (!s) return null;
-      if (s.charAt(0) === '@' && s.length > 1) {
-        var name = s.slice(1).toLowerCase();
-        return ACCOUNT_NAME.test(name)
-          ? h('button', { key: i, type: 'button', className: 'tc-mention', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
-          : h('span', { key: i, className: 'tc-mention' }, s);
-      }
+      if (s.charAt(0) === '@' && s.length > 1) return mention(s, i);
       if (/^https?:\/\//.test(s)) {
         var profile = profileOfLink(s);
         return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: profile ? onProfileLink(app, s, profile, p.gid || null) : warnOnLink(app, s) }, s);
       }
       return s;
+    });
+  }
+  return h('p', { className: 'tc-msg-text', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {
+    var chunks = String(part.text).split(QUOTE);
+    var nodes = chunks.map(function (s, i) {
+      if (i % 3 === 0) return inline(s);
+      if (i % 3 === 2) return null;
+      return h('span', { key: i, className: 'msg-quote' }, mention('@' + s), ': ', h('span', { className: 'msg-quote-text' }, inline(chunks[i + 1])));
     });
     return marks.reduce(function (node, mark) { return part[mark] ? h(mark, { key: k }, node) : node; }, nodes);
   }));

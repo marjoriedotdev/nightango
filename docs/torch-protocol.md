@@ -53,6 +53,9 @@ Trames reçues seulement : rien n'est envoyé.
   - Réception (Torch `displayEdit`, `inject.js:5497-5536`) : même auteur exigé. En direct, la modification remplace le texte de l'original. Dans l'historique, reçu du plus récent au plus ancien, elle ne le remplace que si l'original n'est pas déjà modifié. Une modification dont l'original n'est pas chargé s'affiche à part, marquée modifiée. Quand l'original arrive ensuite par l'historique, il prend le texte de la plus récente et les modifications affichées à part disparaissent.
   - Limite propre à Torch : 9 modifications par message (`data-edits`, qui part de 1, refusé à 10, `inject.js:5466-5467`). Aucune limite de temps : Chatango ne voit qu'un nouveau message. Le rendu des modifications par le client officiel n'est pas vérifié.
   - Suppression (action `delete` de Torch, `inject.js:7444-7448`) : `delmsg:{id}` de l'original, puis `delmsg:{id}` de chacune de ses modifications appliquées. Torch n'affiche un message qu'une fois son id définitif reçu (trame `u`) : le pont ne supprime donc que les modifications dont il connaît l'id définitif. Un `delete` reçu pour un original retire aussi du fil ses modifications affichées à part.
+- Citation d'un message (Torch `sendMessage`, `inject.js:5245-5252`) : ``bm:{id}:{flag}:<n…/><f …>{emphase}@{nom}: `{cité}` {contenu}``. Le pont construit le corps d'un message ordinaire, puis insère la citation au début du contenu : après `<n…/><f …>` et les `<b>`, `<i>`, `<u>` d'ouverture du style. `{nom}` est le nom de l'auteur tel qu'il se mentionne (sans le `#` d'un nom temporaire, aucune citation pour un anonyme), `{cité}` son texte sans accents graves, sauts de ligne remplacés par une espace, rogné, puis échappé (`&`, `<`, `>`). Pas de `<r…/>` : la citation ne pointe pas vers l'original. Texte d'échec : « Your quote could not be sent. ». Rien ne s'affiche avant le retour du message par Chatango.
+  - Torch insère la citation à `content.lastIndexOf(texte saisi)` (`inject.js:5246`). Quand son Markdown a changé le texte saisi, cet index vaut -1 et la citation part mal placée. Insérer au début du contenu donne le même résultat dans tous les autres cas. Le pont lit l'emphase du style dans les cases de Torch, comme `sendMessage` (`inject.js:5145-5150`, `5182-5184`) : une emphase Markdown en tête du texte saisi reste après la citation.
+  - Réception (Torch `renderMessage`, `inject.js:8099`) : `` @nom: `texte` `` (nom de 1 à 20 lettres ou chiffres, sans saut de ligne entre les accents graves) s'affiche en citation, le nom en mention. Torch Skin la reconstruit en éléments React à partir du texte, dans chaque segment d'emphase.
 
 ## Avertissements de Torch
 
@@ -229,6 +232,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 ### Groupe, source Torch
 
 - `bm:{id}:{flag}:<n…/><f …><e{ref}/>{contenu}` (modification, `inject.js:5236-5241`, voir Envoi)
+- ``bm:{id}:{flag}:<n…/><f …>{emphase}@{nom}: `{cité}` {contenu}`` (citation, `inject.js:5245-5252`, voir Envoi)
 - `delmsg:{id}`, aussi pour chaque modification d'un message supprimé (`inject.js:7444-7448`)
 - `delallmsg:{unid}:{ip}:{name}` (nom vide pour un invité)
 - `block:{unid}:{ip}:{name}`

@@ -278,7 +278,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => logFont('Ivy newer') !== null);
   step('group history batch keeps its newest style', /Impact/.test(logFont('Ivy newer') || ''), logFont('Ivy newer'));
 
-  /* Envoi : échappement, réponse, canal */
+  /* Envoi : échappement, réponse, citation, canal */
   const ta = $('.tc-composer textarea'), bar = $('.tc-composer-bar');
   $('button[aria-label="Group options"]').focus();
   bar.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, cancelable: true })); click(bar); await wait(20);
@@ -291,6 +291,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   type($('.tc-composer textarea'), 'yes'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
   const reply = frame('bm:').pop() || '';
   step('reply frame carries <r> after the style', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0"><rAhypheNBunderSC\/>yes$/.test(reply), reply);
+  click(aliceMsg.querySelector('button[aria-label="More actions"]')); await wait(30);
+  click(menuItem('Quote message')); await wait(30);
+  type($('.tc-composer textarea'), 'yes'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
+  const quote = frame('bm:').pop() || '';
+  step('quote frame puts the Torch quote before the text', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">@alice: `Hi everyone` yes$/.test(quote), quote);
 
   /* Modération depuis un message */
   click(aliceMsg.querySelector('button[aria-label="More actions"]')); await wait(30);

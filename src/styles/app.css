@@ -11,6 +11,8 @@ a{color:var(--accent-text)}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 .msg-link{color:var(--accent-text);text-decoration:none;overflow-wrap:anywhere}
 .msg-link:hover,.underline-links .msg-link{text-decoration:underline}
+.msg-quote{padding:0 var(--space-1);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--subtle)}
+.msg-quote-text{color:var(--text-2)}
 .tc-msg-text{font-size:var(--msg-size,14px)}
 .tc-banner-text{white-space:pre-line}
 .tc-msg.menu-open .tc-msg-actions,.cmsg.menu-open .tc-msg-actions{display:flex}
