@@ -857,6 +857,19 @@ var liveBridge = (function () {
         return memberFile(CH.subdomain.msgbg(n, 'xml'), /^text\/xml/, function (xml) { return parseMsgBg(xml, CH.subdomain.msgbg(n, 'jpg')); });
       });
     },
+    /**
+     * Permet de demander à vissle les comptes liés d'un compte, comme l'action who de Torch (inject.js:7452-7477).
+     * @param {string} name Compte visé, jamais un invité.
+     * @returns {Promise<?Array>} Niveaux lus par parseWho, null pour une réponse illisible, rejetée si vissle est injoignable.
+     */
+    fetchWho: function (name) {
+      var n = lower(name);
+      if (!ACCOUNT_NAME.test(n)) return Promise.reject(new Error('Guests have no account.'));
+      // Ni cache ni warn : la réponse n'est montrée qu'à l'utilisateur, jamais gardée ni journalisée (ADR-0010).
+      return fetch('https://vissle.me/api/v1/who/' + n).then(function (r) {
+        return r.json().then(parseWho, function () { return null; });
+      });
+    },
     fetchFullProfile: fetchFullProfile,
     /**
      * Permet de marquer lus les messages archivés d'un membre, comme Torch à l'ouverture d'une conversation.

@@ -57,6 +57,7 @@ function MessageRow(p) {
     copyTextItem(app, m),
     showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed.'); }); } } : null,
     m.author !== me ? viewProfileItem(app, m.author, g.id) : null,
+    whoItem(app, m.author),
     m.author !== me ? styleItem(app, m.author, true) : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,
     canDelete ? { label: LIVE ? 'Delete message…' : 'Delete message', icon: 'trash', danger: true, onSelect: function () { if (LIVE) app.ui.confirm({ title: 'Delete this message?', body: 'Chatango removes it from #' + g.id + " for everyone. You can't undo this.", confirmLabel: 'Delete', danger: true, onConfirm: deleteMessage }); else deleteMessage(); } } : null,

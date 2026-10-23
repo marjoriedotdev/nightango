@@ -186,6 +186,8 @@ const MSGBG = {
   trap: '<?xml version="1.0" ?><bgi bgc="red;background:url(https://evil.test/a.png)" bgalp="100" useimg="1" ialp="250" align="constructor" tile="1" url="https://evil.test/b.jpg" onload="alert(1)"/>',
   pale: '<?xml version="1.0" ?><bgi bgc="336699" bgalp="0" useimg="1" ialp="-20" align="tl" tile="0" hasrec="0" isvid="0"/>'
 };
+// Comptes liés de vissle : corps de la réponse, null pour un échec réseau, whoHold retient la réponse.
+let whoBody = '{}', whoHold = null;
 w.fetch = (url, opts) => {
   const f = {}; if (opts && opts.body && opts.body.forEach) opts.body.forEach((v, k) => { f[k] = v; });
   fetches.push({ url, f, credentials: opts && opts.credentials });
@@ -208,7 +210,9 @@ w.fetch = (url, opts) => {
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
   else if (/^https:\/\/api\.vissle\.me\/v1\/pmr\//.test(url)) { body = '{"pmr":true}'; type = 'application/json'; }
+  else if (/^https:\/\/vissle\.me\/api\/v1\/who\//.test(url)) { if (whoBody === null) return Promise.reject(new w.TypeError('Failed to fetch')); body = whoBody; type = 'application/json'; }
   const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body), json: () => Promise.resolve(body).then(JSON.parse) };
+  if (whoHold && /\/who\//.test(url)) return whoHold.then(() => res);
   return searchHold && /\/search$/.test(url) ? searchHold.then(() => res) : Promise.resolve(res);
 };
 
@@ -395,6 +399,50 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('b', 'torchenv', ['1700000260.1', 'Bot', '', 'u6', 'X', 'tmp12', '1.1.1.1', '0', '', 'env']);
   await wait(60);
   step("Torch's environment room stays hidden", !byText('.tc-nav', 'torchenv'));
+
+  /* Comptes liés : un appel par clic, sans credential, noms en texte, cinq niveaux seulement, rien de gardé */
+  const whoAsked = () => fetches.filter(x => /vissle\.me\/api\/v1\/who\//.test(x.url));
+  const whoDialog = () => $$('#layer .dialog').find(x => /^Who is /.test(x.getAttribute('aria-label') || ''));
+  const askWho = async txt => {
+    const more = () => $$('.tc-msg').find(x => x.textContent.includes(txt)).querySelector('button[aria-label="More actions"]');
+    click(more()); await wait(30);
+    const it = menuItem('Who is this');
+    click(it || more()); await wait(30);
+    return !!it;
+  };
+  const whoAnswer = async body => {
+    whoBody = body;
+    await askWho('Hi everyone'); await until(() => !!whoDialog() && !whoDialog().querySelector('.tc-spinner'));
+    const text = whoDialog() ? whoDialog().textContent : null;
+    if (whoDialog()) click(byText('#layer .dialog-foot button', 'Close'));
+    await wait(30);
+    return text;
+  };
+  const guestOffers = await askWho('First guest');
+  let releaseWho; whoHold = new Promise(r => { releaseWho = r; });
+  whoBody = JSON.stringify({ target: 'alice', definite: ['alice2', '<img src="x" onerror="alert(5)">'], linked: [], strong: ['bob', 42, { name: 'evil' }], medium: 'carl', weak: ['dave'], extra: ['zed'] });
+  const accountOffers = await askWho('Hi everyone');
+  const pendingWho = { title: whoDialog() && whoDialog().getAttribute('aria-label'), spinner: !!(whoDialog() && whoDialog().querySelector('.tc-spinner')) };
+  releaseWho(); whoHold = null;
+  await until(() => !!whoDialog() && !whoDialog().querySelector('.tc-spinner'));
+  const whoShown = whoDialog() ? { text: whoDialog().textContent, levels: [...whoDialog().querySelectorAll('h3')].map(x => x.textContent), injected: !!whoDialog().querySelector('img') } : null;
+  const firstCall = whoAsked()[0] || {};
+  if (whoDialog()) { click(byText('#layer .dialog-foot button', 'Close')); await wait(30); }
+  const stored = Array.from({ length: w.localStorage.length }, (_, i) => w.localStorage.getItem(w.localStorage.key(i))).join('\n');
+  step('who is this asks vissle once per click, for accounts only, without credentials',
+    !guestOffers && accountOffers && whoAsked().length === 1 && firstCall.url === 'https://vissle.me/api/v1/who/alice' && (!firstCall.credentials || firstCall.credentials === 'omit'),
+    { guestOffers, accountOffers, calls: whoAsked() });
+  step('who is this shows the five levels as text and keeps nothing',
+    pendingWho.title === 'Who is alice' && pendingWho.spinner && !!whoShown && JSON.stringify(whoShown.levels) === '["Definite","Strong","Weak"]'
+      && whoShown.text.includes('4 linked accounts for alice.') && whoShown.text.includes('alice2, <img src="x" onerror="alert(5)">') && !whoShown.injected
+      && whoShown.text.includes('bob') && !/42|evil|object|carl|zed/.test(whoShown.text) && /vissle's estimate/.test(whoShown.text)
+      && !whoDialog() && !/alice2|dave/.test(stored),
+    { pendingWho, whoShown, open: !!whoDialog() });
+  const whoReplies = [await whoAnswer(JSON.stringify({ target: 'alice', definite: [], weak: [7] })), await whoAnswer('{"definite":["x"]}'), await whoAnswer('<html>'), await whoAnswer(null)];
+  step('who is this says when vissle has nothing, an unreadable answer or no answer',
+    /vissle has no linked accounts for alice\./.test(whoReplies[0]) && /vissle sent an answer Torch Skin can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])
+      && /vissle could not be reached\. Try again later\./.test(whoReplies[3]) && whoAsked().length === 5,
+    { whoReplies, calls: whoAsked().length });
 
   /* Modification d'un message, comme Torch : trame <e…/>, fusion de l'historique, suppression des modifications */
   C.groups.edits = fakeGroup();
@@ -651,7 +699,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Restriction des MP de son compte : demandée avant la connexion privée, lue chez vissle une seule fois après elle */
   C.settings.privacy.private_messages = { check_pmr: true };
   const pmrRow = () => $$('section[aria-label="Private messages"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === 'Check my private message status');
-  const pmrView = () => { const r = pmrRow(); return r && { on: r.querySelector('[role=switch]').checked, status: (r.querySelector('.tc-row-desc') || {}).textContent || null, asked: fetches.filter(x => /vissle\.me/.test(x.url)).map(x => x.url) }; };
+  const pmrView = () => { const r = pmrRow(); return r && { on: r.querySelector('[role=switch]').checked, status: (r.querySelector('.tc-row-desc') || {}).textContent || null, asked: fetches.filter(x => /api\.vissle\.me/.test(x.url)).map(x => x.url) }; };
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow()); await wait(50);
   const pmrSeen = [pmrView()];

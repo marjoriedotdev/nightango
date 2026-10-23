@@ -84,6 +84,7 @@ Cette liste est fermée. Elle couvre les appels que le code applicatif (pont, lo
 - `client.post('https://vissle.me/chatango/upload', form, { key: true })`, et cette URL seulement : envoi de fichiers par vissle. Torch ajoute au formulaire la clé de session vissle (`inject.js:4744-4745`), que notre code ne lit jamais. Jamais l'option `progress`, dont la branche publie elle-même le lien dans `client.focus` (`inject.js:4758-4787`). Source de l'appel : `inject.js:7551`, `inject.js:11048-11067`. Détail dans Envoi de fichiers (vissle).
 - Jamais d'option `credential`, qui ajoute le mot de passe.
 - `GET https://api.vissle.me/v1/pmr/{nom}` par `fetch`, sans cookie ni credential, `{nom}` lu par le pont dans `client.user.name`, seulement si `client.settings.privacy.private_messages.check_pmr` est actif : restriction des MP de son propre compte (voir Restriction des MP). Source : `inject.js:10631-10643`.
+- `GET https://vissle.me/api/v1/who/{nom}` par `fetch`, sans cookie ni credential, `{nom}` validé par `ACCOUNT_NAME` (`src/bridge/live-model.js`), un appel par clic sur « Who is this » : comptes liés d'un compte, montrés à l'utilisateur seul ([ADR-0010](adr/0010-linked-accounts-on-request.md), voir Comptes liés). Source : `inject.js:7452-7477`.
 - Les GET publics sur `ust.chatango.com` : `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml`.
 - La recherche `chatango.com/search` avec `credentials: 'include'`, comme le fait Torch.
 - `POST https://vissle.me/track1/activity`, par le pont `GM_xmlhttpRequest` du loader, avec `anonymous: true`.
@@ -127,7 +128,7 @@ Un appel exclu par décision du propriétaire (2026-10-23, #96) : `GET https://a
 - Les deux appels qui transportent le mot de passe, `vissle.me/client/login` et `script/setcookies`, appartiennent à la connexion de Torch, sur son écran. Notre code n'y touche pas.
 - Torch Skin neutralise ceux qui contredisent ses réglages de médias : à la connexion (`clientLogin`), le pont remplace en mémoire `client.renderYouTube` (oEmbed) et `chatango.getBackground` (`msgbg.xml`, de son compte comme des auteurs) par une fonction qui ne fait rien. Dès que le pont voit la connexion, aucun `www.youtube.com/oembed` ni `msgbg.xml` ne part donc plus de Torch en live. Torch Skin lit lui-même `msgbg.xml` selon « Message backgrounds » (voir Fond de message). Rien n'est écrit dans `localStorage["settings"]` : Torch sans habillage garde son comportement. Le prototype n'est pas concerné.
 - Le chargement d'une image `lazy` ou d'une `<video>` dans un élément détaché n'est pas établi : il dépend du navigateur.
-- N'ont lieu que depuis l'écran de Torch, donc jamais en live : `check_pmr` (au clic sur l'onglet MP de Torch, `inject.js:10601`, que le pont refait lui-même, voir Restriction des MP), `check_block` (Torch n'envoie `connect:` qu'au clic dans son écran, et le pont n'appelle pas son gestionnaire `connect`, voir Présence des amis), les envois de fichiers de sa fenêtre Upload (Torch Skin envoie les siens par la liste fermée, voir Envoi de fichiers), `/api/v1/uploads`, `/api/v1/who`, `/api/v1/profile`, `/track`, l'enregistrement de groupe (`vissle /chatango/room`).
+- N'ont lieu que depuis l'écran de Torch, donc jamais en live : `check_pmr` (au clic sur l'onglet MP de Torch, `inject.js:10601`, que le pont refait lui-même, voir Restriction des MP), `check_block` (Torch n'envoie `connect:` qu'au clic dans son écran, et le pont n'appelle pas son gestionnaire `connect`, voir Présence des amis), les envois de fichiers de sa fenêtre Upload (Torch Skin envoie les siens par la liste fermée, voir Envoi de fichiers), `/api/v1/uploads`, `/api/v1/who` (que Torch Skin fait lui-même au clic, voir Comptes liés), `/api/v1/profile`, `/track`, l'enregistrement de groupe (`vissle /chatango/room`).
 
 ## Messages privés
 
@@ -299,6 +300,13 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Pagination : 16 éléments par réponse, dont 15 affichés. Page suivante : `page` = `time` du dernier élément affiché.
 - `get` : `all|log|like|dislike|msg|refer`. `order` : `desc|asc`.
 - Pas de temps réel : le socket.io de vissle refuse l'origine st.chatango.com.
+
+## Comptes liés (vissle)
+
+- Transport : `GET https://vissle.me/api/v1/who/{nom}` par `fetch` depuis la page, sans option, comme Torch (`inject.js:7452-7477`) : ni cookie, l'origine étant autre, ni credential. `{nom}` est un compte validé par `ACCOUNT_NAME`, jamais un invité. Un appel par clic sur « Who is this », sans cache ([ADR-0010](adr/0010-linked-accounts-on-request.md)).
+- Réponse : JSON `{target, definite, linked, strong, medium, weak}`, chaque niveau une liste de noms. Torch exige `target`, puis affiche le total et chaque niveau non vide, dans cet ordre.
+- `parseWho` exige `target` et ne lit que les chaînes des cinq listes. Tout autre champ est ignoré. `target` n'est pas affiché : la fenêtre nomme le compte cliqué. Les noms sont rendus en texte.
+- Fenêtre « Who is {nom} » : le total, chaque niveau non vide avec ses noms, et une ligne qui dit que c'est l'estimation de vissle. Sans nom : « vissle has no linked accounts for {nom}. ». JSON illisible ou sans `target` : « vissle sent an answer Torch Skin can't read. ». `fetch` rejeté : « vissle could not be reached. Try again later. ». Le résultat vit dans la fenêtre : la fermer l'oublie, et rien n'est stocké ni journalisé.
 
 ## Trames utilisées et leur source
 

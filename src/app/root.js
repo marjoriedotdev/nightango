@@ -19,6 +19,7 @@ function Root(props) {
   var u11 = useState(null), fullProfile = u11[0], setFullProfile = u11[1];
   var u12 = useState(null), profileLink = u12[0], setProfileLink = u12[1];
   var u13 = useState({}), uploads = u13[0], setUploads = u13[1];
+  var u14 = useState(null), who = u14[0], setWho = u14[1];
   var u10 = useState(0), themeTick = u10[1];
   var prefs = state.prefs;
 
@@ -1312,6 +1313,7 @@ function Root(props) {
     confirm: setConfirm,
     openProfile: function (name, gid) { setProfile({ name: name, gid: gid }); },
     openFullProfile: function (name) { setFullProfile(name); },
+    openWho: setWho,
     openLink: setLinkUrl,
     openProfileLink: setProfileLink,
     openPalette: function () { setPalette(true); setNavOpen(false); },
@@ -1328,6 +1330,7 @@ function Root(props) {
     state.auth.loggedIn && profile ? h(ProfileDialog, { name: profile.name, gid: profile.gid, onClose: function () { setProfile(null); } }) : null,
     state.auth.loggedIn && banCfg ? h(BanDialog, { name: banCfg.name, gid: banCfg.gid, msg: banCfg.msg, onClose: function () { setBan(null); } }) : null,
     state.auth.loggedIn && fullProfile ? h(FullProfileDialog, { name: fullProfile, onClose: function () { setFullProfile(null); } }) : null,
+    state.auth.loggedIn && who ? h(WhoDialog, { name: who, onClose: function () { setWho(null); } }) : null,
     linkUrl ? h(LinkDialog, { url: linkUrl, onClose: function () { setLinkUrl(null); } }) : null,
     profileLink ? h(ProfileLinkDialog, { link: profileLink, onClose: function () { setProfileLink(null); } }) : null,
     state.auth.loggedIn && palette ? h(Palette, { onClose: function () { setPalette(false); } }) : null,

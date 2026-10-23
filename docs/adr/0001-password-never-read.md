@@ -16,6 +16,7 @@ Notre code ne lit, ne stocke, ne journalise ni ne transmet jamais le mot de pass
 - `client.post(url, form, {})` vers `chatango.com` seulement, car Torch ajoute sans option le jeton `s` vers tout hôte de sa liste, ou `client.post(url, form, { cookie: true })`, jamais `credential` ;
 - `client.post('https://vissle.me/chatango/upload', form, { key: true })`, cette URL seulement et jamais avec `progress` : Torch y ajoute la clé de session vissle, jamais le mot de passe ;
 - `GET https://api.vissle.me/v1/pmr/{nom}` par `fetch`, sans cookie ni credential, pour le compte connecté (`client.user.name`) et seulement si `check_pmr` est actif ;
+- `GET https://vissle.me/api/v1/who/{nom}` par `fetch`, sans cookie ni credential, `{nom}` validé par `ACCOUNT_NAME`, un appel par clic sur « Who is this » : comptes liés, source `inject.js:7452-7477` ([ADR-0010](0010-linked-accounts-on-request.md)) ;
 - les GET publics `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml` (fond de message, dont l'image `msgbg.jpg` est une ressource chargée en `<img>` `no-referrer`) ;
 - `chatango.com/search` avec `credentials: 'include'`, comme Torch ;
 - `POST https://vissle.me/track1/activity` par `GM_xmlhttpRequest`, `anonymous: true`.

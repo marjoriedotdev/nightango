@@ -96,6 +96,15 @@ function viewProfileItem(app, name, gid) {
 }
 
 /**
+ * Permet de proposer en live les comptes que vissle lie à un compte, jamais à un invité.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Nom du membre.
+ */
+function whoItem(app, name) {
+  return LIVE && ACCOUNT_NAME.test(name) ? { id: 'who', label: 'Who is this', icon: 'users', onSelect: function () { app.ui.openWho(name); } } : null;
+}
+
+/**
  * Permet de proposer d'ignorer un membre ou de ne plus l'ignorer.
  * @param {Object} app Contexte de l'application.
  * @param {string} name Nom du membre.
@@ -171,7 +180,28 @@ function ProfileDialog(p) {
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
       : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
         buttons.map(function (it) { return h(T.Button, { key: it.id, variant: it.id === 'message' ? 'primary' : undefined, icon: it.icon, disabled: it.disabled, onClick: it.onSelect }, it.buttonLabel || it.label); }),
-        h(MenuButton, { label: 'More profile actions', items: actions.filter(function (it) { return buttons.indexOf(it) < 0; }) }))));
+        h(MenuButton, { label: 'More profile actions', items: [whoItem(app, name)].concat(actions.filter(function (it) { return buttons.indexOf(it) < 0; })) }))));
+}
+
+/**
+ * Comptes que vissle lie à un compte, demandés à l'ouverture et oubliés à la fermeture (ADR-0010).
+ * @param {{name: string, onClose: Function}} p Compte visé et fermeture de la fenêtre.
+ */
+function WhoDialog(p) {
+  var st = useState(null), res = st[0], setRes = st[1];
+  useEffect(function () {
+    liveBridge.fetchWho(p.name).then(function (levels) {
+      setRes(levels ? { levels: levels } : { error: "vissle sent an answer Torch Skin can't read." });
+    }, function () { setRes({ error: 'vissle could not be reached. Try again later.' }); });
+  }, [p.name]);
+  var levels = res && res.levels || [];
+  var total = levels.reduce(function (n, x) { return n + x.names.length; }, 0);
+  var lead = !res ? h('p', { className: 'startup' }, h(T.Spinner, null), 'Asking vissle')
+    : h('p', { className: 'about' }, res.error || (total ? total + (total > 1 ? ' linked accounts' : ' linked account') + ' for ' + p.name + '.' : 'vissle has no linked accounts for ' + p.name + '.'));
+  return h(Dialog, { title: 'Who is ' + p.name, onClose: p.onClose, footer: h(T.Button, { variant: 'primary', onClick: p.onClose }, 'Close') },
+    h('div', { className: 'dialog-body' }, lead),
+    levels.map(function (x) { return h('div', { key: x.level, className: 'kv' }, h('h3', null, x.level.charAt(0).toUpperCase() + x.level.slice(1)), h('p', { className: 'about' }, x.names.join(', '))); }),
+    total ? h('div', { className: 'dialog-body' }, h('p', { className: 'about muted' }, "This is vissle's estimate. It can be wrong.")) : null);
 }
 
 function BanDialog(p) {

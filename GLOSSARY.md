@@ -173,6 +173,10 @@ _Avoid_: visites (pour la section entière), stats
 Recherche de membres de Chatango filtrée par âge, genre, photo et présence.
 _Avoid_: découverte (réservé à Discover, la liste de groupes à rejoindre)
 
+**Comptes liés**:
+Autres comptes que vissle rapproche d'un compte, rangés par niveau de rapprochement (Definite à Weak), selon une méthode que le code de Torch ne dit pas. Demandés au clic sur « Who is this », montrés à l'utilisateur seul, sans être gardés.
+_Avoid_: alts, multicomptes, doubles comptes
+
 ## Style
 
 **Style de message**:

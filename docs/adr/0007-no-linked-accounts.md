@@ -1,7 +1,9 @@
 ---
-status: accepted
+status: superseded by ADR-0010
 date: 2026-10
 ---
+
+Remplacée le 2026-10-23 par [ADR-0010](0010-linked-accounts-on-request.md) : les comptes liés sont proposés comme dans Torch, montrés à l'utilisateur seul.
 
 # Comptes liés non implémentés
 

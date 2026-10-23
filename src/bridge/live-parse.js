@@ -282,6 +282,22 @@ function parseMsgBg(xml, image) {
   };
 }
 
+// -- Comptes liés -------------------------------------------------------------
+
+var WHO_LEVELS = ['definite', 'linked', 'strong', 'medium', 'weak'];
+/**
+ * Permet de lire la réponse de vissle aux comptes liés d'un compte sans rien reprendre d'autre que les noms des cinq niveaux.
+ * @param {*} data Réponse JSON de /api/v1/who.
+ * @returns {?Array<{level: string, names: Array<string>}>} Niveaux non vides dans l'ordre de Torch, null sans target.
+ */
+function parseWho(data) {
+  if (!data || !data.target) return null;
+  return WHO_LEVELS.map(function (level) {
+    var list = Array.isArray(data[level]) ? data[level] : [];
+    return { level: level, names: list.filter(function (x) { return typeof x === 'string'; }) };
+  }).filter(function (x) { return x.names.length; });
+}
+
 // -- Présence et connexions ---------------------------------------------------
 
 function presenceOf(state, idle) { return state === 'on' ? (+idle ? 'idle' : 'online') : state === 'app' ? 'online' : 'offline'; }

@@ -110,7 +110,7 @@ function DmMessageRow(p) {
   var ms = memberStyles(userOf(s, m.from), s.prefs.styles, app.theme, false);
   // Un MP envoyé n'a sa clé d'archive qu'au prochain OK : son entrée de retrait n'apparaît qu'ensuite.
   var canRemove = !LIVE || !!m.archiveTs;
-  var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null,
+  var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
     canRemove ? { divider: true } : null,
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
       app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(p.peer, LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });

@@ -22,13 +22,13 @@ src/
     live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      table des émoticônes (EMOTICONS), modèles live
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
-                     fond Premium (parseMiniCss), fond de message (parseMsgBg), présence, horodatages, références de message,
-                     enregistrements de l'historique privé (lecture, tri d'un import)
+                     fond Premium (parseMiniCss), fond de message (parseMsgBg), comptes liés (parseWho), présence, horodatages,
+                     références de message, enregistrements de l'historique privé (lecture, tri d'un import)
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
                      profils, recherche, historique privé, vissle, création de groupe
   views/      écrans principaux
     login, shell (barre latérale), group, message (ligne et médias),
-    members (liste, fiche profil, bannissement, lien externe, lien de profil), dm (Chats, Friends),
+    members (liste, fiche profil, comptes liés, bannissement, lien externe, lien de profil), dm (Chats, Friends),
     meet (Meet people), mentions (mentions récentes de tous les groupes),
     profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
     emoji-picker (sélecteur d'émoticônes des composeurs), attach (envoi de fichier des composeurs),
