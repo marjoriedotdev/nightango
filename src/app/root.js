@@ -122,8 +122,8 @@ function Root(props) {
   function receiveGroup(gid, msg) {
     var s0 = stateRef.current, me = s0.me;
     var mention = msg.kind === 'msg' && new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(msg.text);
-    // Comme dans Torch, un groupe coupé tait ses mentions sans changer les compteurs.
-    var quiet = !!(s0.groups[gid] && s0.groups[gid].muted);
+    // Comme dans Torch, la mention d'un groupe coupé ou d'un auteur ignoré n'alerte pas, et les compteurs changent quand même.
+    var quiet = !!(s0.groups[gid] && s0.groups[gid].muted) || !!userOf(s0, msg.author).ignored;
     var focused = s0.route.view === 'group' && s0.route.id === gid && document.visibilityState === 'visible';
     update(function (d) {
       var g = d.groups[gid]; if (!g) return;
@@ -152,7 +152,7 @@ function Root(props) {
       if (!focused) c.unread += 1; else c.lastReadTs = Date.now();
       c.seenTs = Date.now();
     });
-    if (!focused) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
+    if (!focused && !userOf(s0, from).ignored) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
   }
   function setTyping(key, name, on) {
     update(function (d) {
@@ -234,7 +234,7 @@ function Root(props) {
       if (key === 'friend' && !was) return;
       var text = {
         friend: name + ' removed from friends.',
-        ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + ' in groups.',
+        ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + '.',
         blocked: was ? name + ' unblocked.' : name + ' blocked.'
       }[key];
       toast(text, { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
@@ -387,7 +387,7 @@ function Root(props) {
   var profilePending = useRef({});
   var offlineCount = useRef(0);
   function skinKey(me) { return 'torch-skin:' + me; }
-  function blankLocal() { return { ignored: [], hidden: [], style: null }; }
+  function blankLocal() { return { hidden: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -527,8 +527,7 @@ function Root(props) {
           if (d.meet.token !== token) return;
           var prev = more ? d.meet.results : [];
           var fresh = names.filter(function (n) { return prev.indexOf(n) < 0; });
-          // Statut inconnu jusqu'à la réponse de présence : hors ligne par défaut pour un inconnu.
-          fresh.forEach(function (n) { var known = !!d.users[n]; var u = ensureLiveUser(d, n); if (!known) u.status = 'offline'; });
+          fresh.forEach(function (n) { ensureUnseenUser(d, n); });
           d.meet = { results: prev.concat(fresh), next: from + names.length, loading: false, error: null, done: names.length < 40, filters: f, token: token };
         });
       }, function (e) {
@@ -546,10 +545,11 @@ function Root(props) {
       if (key === 'friend' && !was) return liveBridge.addFriend(name);
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
+      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('Torch could not save its ignore list. Reload the page and try again.'); return; }
       update(function (d) { ensureLiveUser(d, name)[key] = !was; });
       var text = {
         friend: name + ' removed from friends.',
-        ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + ' in groups.',
+        ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + '.',
         blocked: was ? name + ' unblocked.' : name + ' blocked.'
       }[key];
       toast(text, { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
@@ -615,9 +615,26 @@ function Root(props) {
     var u = d.users[name];
     if (!u) {
       u = d.users[name] = { status: 'online', about: '', style: {} };
-      if (localRef.current.ignored.indexOf(name) >= 0) u.ignored = true;
+      if ((liveBridge.ignoredUsers() || []).indexOf(name) >= 0) u.ignored = true;
     }
     return u;
+  }
+  /**
+   * Permet d'ajouter un membre que l'état ne connaît pas encore, hors ligne par défaut tant que son statut est inconnu.
+   * @param {Object} d État en cours de modification.
+   * @param {string} name Membre visé.
+   */
+  function ensureUnseenUser(d, name) {
+    if (!d.users[name]) ensureLiveUser(d, name).status = 'offline';
+  }
+  /**
+   * Permet de compter en ligne un membre présent dans un groupe, sauf un ami dont la connexion privée donne la présence.
+   * @param {Object} d État en cours de modification.
+   * @param {string} name Membre visé.
+   */
+  function ensurePresentUser(d, name) {
+    var u = ensureLiveUser(d, name);
+    if (u.status === 'offline' && !u.friend) u.status = 'online';
   }
   /**
    * Permet d'appliquer à un membre une présence reçue du pont.
@@ -707,12 +724,15 @@ function Root(props) {
     switch (op.op) {
       case 'login': {
         var stored = storageGet(skinKey(op.me)) || {}, raw = JSON.stringify(stored);
-        var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted };
+        var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
         // Listes d'avant la synchronisation avec Torch : versées dans les siennes, retirées du stockage local une fois toutes acceptées.
         Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
         if (JSON.stringify(stored) !== raw) storageSet(skinKey(op.me), stored);
         localRef.current = Object.assign(blankLocal(), stored);
-        update(function (d) { Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style; d.auth = { loggedIn: true }; });
+        update(function (d) {
+          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style; d.auth = { loggedIn: true };
+          (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n); });
+        });
         // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
         setTimeout(function () { update(function (d) { d.groupsSeen = true; }); }, 10000);
         break;
@@ -772,10 +792,10 @@ function Root(props) {
       case 'members': groupUpdate(op.gid, function (g, d) {
         var list = op.names.slice(); if (list.indexOf(d.me) < 0) list.push(d.me);
         g.members = list; g.guests = op.guests; g.membersLoaded = true;
-        list.forEach(function (n) { var u = ensureLiveUser(d, n); if (u.status === 'offline' && !u.friend) u.status = 'online'; });
+        list.forEach(function (n) { ensurePresentUser(d, n); });
       }); break;
       case 'member': groupUpdate(op.gid, function (g, d) {
-        if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensureLiveUser(d, op.name); }
+        if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensurePresentUser(d, op.name); }
         if (op.action === 0) g.members = g.members.filter(function (n) { return n !== op.name; });
       }); break;
       case 'count': groupUpdate(op.gid, function (g) { g.liveCount = op.n; }); break;
@@ -854,6 +874,8 @@ function Root(props) {
       case 'pm': {
         var s0 = stateRef.current;
         var focused = s0.route.view === 'dm' && s0.route.id === op.from && document.visibilityState === 'visible';
+        // Comme dans Torch, le MP d'un membre ignoré est reçu et archivé, sans alerte.
+        var ignored = !!userOf(s0, op.from).ignored;
         update(function (d) {
           if (!d.auth.loggedIn) return;
           var ts = op.ts || Date.now();
@@ -864,9 +886,9 @@ function Root(props) {
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
           if (!focused) c.unread += 1;
         });
-        if (!focused && !op.offline) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
+        if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
         // Les msgoff arrivent en rafale juste après la connexion : une seule notification pour toute la rafale.
-        if (op.offline && !offlineCount.current++) setTimeout(function () {
+        if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
           offlineCount.current = 0;
           notify('pm', { toast: plural(n, 'message', 'messages') + ' received while you were away.', icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'dm', id: null }); } } });
@@ -938,18 +960,17 @@ function Root(props) {
       default: break;
     }
   }
-  /* Membres ignorés, conversations masquées et style perso, conservés par compte dans ce navigateur */
+  /* Conversations masquées et style perso, conservés par compte dans ce navigateur */
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
-    // Favoris et sourdines locaux que Torch n'a pas encore acceptés : gardés pour la prochaine connexion.
+    // Favoris, sourdines et membres ignorés locaux que Torch n'a pas encore acceptés : gardés pour la prochaine connexion.
     o.fav = prev.fav;
     o.muted = prev.muted;
+    o.ignored = prev.ignored;
     prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
-    prev.ignored.forEach(function (n) { if (!state.users[n]) o.ignored.push(n); });
-    Object.keys(state.users).forEach(function (n) { if (state.users[n].ignored) o.ignored.push(n); });
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageSet(skinKey(state.me), o); }
   });
   useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(handleLiveOp); }, []);

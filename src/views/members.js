@@ -120,7 +120,7 @@ function ProfileDialog(p) {
         h(T.Button, { icon: friend.icon, disabled: friend.busy, onClick: friend.run }, friend.label),
         h(MenuButton, {
           label: 'More profile actions', items: [
-            { label: u.ignored ? 'Stop ignoring' : 'Ignore in groups', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } },
+            { label: u.ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } },
             { label: u.blocked ? 'Unblock' : 'Block', icon: 'ban', danger: !u.blocked, onSelect: function () { if (u.blocked) app.actions.toggleUser(name, 'blocked'); else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } }); } },
             isStaffRole(myRole) && theirRole !== 'owner' ? { label: 'Ban from #' + g.id, icon: 'ban', danger: true, onSelect: function () { p.onClose(); app.ui.ban(name, g.id); } } : null
           ]

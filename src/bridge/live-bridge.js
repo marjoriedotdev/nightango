@@ -6,7 +6,7 @@ var liveBridge = (function () {
   var listeners = [], queue = [];
   var GENDERS = { M: 'Male', F: 'Female' };
   var STARTUP = { joinOwned: ['groups', 'connect_own'], joinRecent: ['groups', 'connect_recent'], joinFavorites: ['groups', 'connect_favorite'] };
-  var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'] };
+  var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'] };
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
@@ -643,6 +643,17 @@ var liveBridge = (function () {
      * @param {boolean} on Vrai pour le couper.
      */
     setMuted: function (gid, on) { return writeList('muted', gid, on); },
+    /**
+     * Permet de lire les membres ignorés dans Torch, dont il tait les alertes.
+     * @returns {?Array<string>} Noms en minuscules, null si les réglages de Torch sont illisibles.
+     */
+    ignoredUsers: function () { return readList('ignored'); },
+    /**
+     * Permet d'ignorer un membre dans Torch ou de ne plus l'ignorer.
+     * @param {string} name Membre visé.
+     * @param {boolean} on Vrai pour l'ignorer.
+     */
+    setIgnored: function (name, on) { return writeList('ignored', lower(name), on); },
     /**
      * Permet de lire l'activité de son propre profil enregistrée par vissle.me.
      * @param {{page: number, order: string, get: string}} q Curseur, ordre et filtre de la page demandée.
