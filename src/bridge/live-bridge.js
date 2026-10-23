@@ -368,6 +368,15 @@ var liveBridge = (function () {
     return open.then(migrateUnread);
   }
   /**
+   * Permet d'ouvrir la base d'historique privé pour une lecture par pages, un export ou un import, qui échouent sans elle.
+   */
+  function pmDbOrFail() {
+    return openPmDb().then(function (db) {
+      if (!db) throw new Error('Torch could not open your message history. Reload the page and try again.');
+      return db;
+    });
+  }
+  /**
    * Permet de marquer lus des messages de l'historique privé, par l'index de Torch (markRead).
    * @param {IDBDatabase} db Base d'historique privé.
    * @param {?IDBKeyRange} range Plage de target_ts_idx, null pour toute la base.
@@ -394,17 +403,6 @@ var liveBridge = (function () {
     var key = skinKey(lower(C.user.name));
     if (!db || (storageGet(key) || {}).pmReadMigrated) return db;
     return markRead(db, null).then(function () { storageMerge(key, { pmReadMigrated: true }); }, warn).then(function () { return db; });
-  }
-  /**
-   * Permet de lire un enregistrement de l'historique privé au format des messages du pont.
-   * @param {Object} v Enregistrement de Torch (saveMessage).
-   * @returns {?Object} Entrée avec sa clé archiveTs, null pour une trame illisible.
-   */
-  function pmEntry(v) {
-    var parts = String(v.data || '').split(':').slice(1);
-    if (parts.length <= 5) return null;
-    var body = parsePm(parts);
-    return { from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, unread: !!v.unread };
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
   // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
@@ -731,12 +729,39 @@ var liveBridge = (function () {
               });
               resolve(out); return;
             }
-            var v = cur.value || {}, target = lower(v.target), x = target && pmEntry(v);
+            var v = cur.value || {}, target = lower(v.target), x = target && pmRecordEntry(v);
             if (x) (out[target] = out[target] || []).push(x);
             cur.continue();
           };
           req.onerror = function () { resolve({}); };
         } catch (e) { warn(e); resolve({}); }
+      }); });
+    },
+    /** Enregistrements bruts de l'historique privé, tels que les exporte Torch (exportMessages). */
+    exportPm: function () {
+      return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
+        var req = db.transaction(['messages'], 'readonly').objectStore('messages').getAll();
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { warn(req.error); reject(new Error('Torch could not read your message history. Reload the page and try again.')); };
+      }); });
+    },
+    /**
+     * Permet d'ajouter à l'historique privé les enregistrements valides d'un fichier de Torch, lus, sans écraser une clé présente.
+     * @param {Array} records Contenu du fichier, non fiable.
+     * @returns {Promise} Compte {added, saved, skipped, foreign}, rendu une fois la transaction terminée.
+     */
+    importPm: function (records) {
+      return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
+        var screened = screenPmRecords(records, C.user.name), out = { added: 0, saved: 0, skipped: screened.skipped, foreign: screened.foreign };
+        var tx = db.transaction(['messages'], 'readwrite'), store = tx.objectStore('messages');
+        screened.valid.forEach(function (r) {
+          var req = store.add(r);
+          req.onsuccess = function () { out.added++; };
+          // Clé déjà présente : sans preventDefault, l'échec de add annulerait toute la transaction.
+          req.onerror = function (e) { if (req.error.name === 'ConstraintError') { e.preventDefault(); out.saved++; } };
+        });
+        tx.oncomplete = function () { resolve(out); };
+        tx.onabort = function () { warn(tx.error); reject(new Error('Torch could not save these messages. Nothing was imported. Reload the page and try again.')); };
       }); });
     },
     /**
@@ -747,12 +772,11 @@ var liveBridge = (function () {
      * @returns {Promise<{list: Array, more: boolean}>} Entrées de la plus ancienne à la plus récente, et s'il en reste de plus anciennes. Rejetée sans base.
      */
     pmOlder: function (target, before, count) {
-      return openPmDb().then(function (db) { return new Promise(function (resolve, reject) {
-        if (!db) throw new Error('The private history of this browser could not be opened.');
+      return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
         var list = [], req = db.transaction(['messages'], 'readonly').objectStore('messages').index('target_ts_idx')
           .openCursor(IDBKeyRange.bound([target, 0], [target, before], false, true), 'prev');
         req.onsuccess = function (e) {
-          var cur = e.target.result, x = cur && pmEntry(cur.value);
+          var cur = e.target.result, x = cur && pmRecordEntry(cur.value);
           if (x) list.push(x);
           // Une entrée de plus que demandé dit s'il en reste.
           if (cur && list.length <= count) { cur.continue(); return; }

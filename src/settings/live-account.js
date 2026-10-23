@@ -109,6 +109,7 @@ function PrivacyPageLive() {
         title: 'Check my private message status', description: checking ? PMR_STATUS[pmrStatus] : null,
         control: h(T.Switch, { checked: checking, onChange: function (e) { setPmrSetting('pmrCheck', e.target.checked); } })
       }) : null,
+      h(PmHistoryRows, null),
       h(T.SettingRow, {
         asLabel: false, title: 'Delete saved conversations', description: 'Torch keeps a copy of your private messages in this browser. Chatango does not store them.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message Torch saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')

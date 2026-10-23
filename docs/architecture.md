@@ -8,12 +8,12 @@ Torch Skin est une seule application React 18 écrite en JavaScript ES5, sans JS
 src/
   core/       socle partagé, évalué en premier
     globals.js       alias React, wrapper T (avatars live), hooks
-    util.js          APP_VERSION, temps, stockage local, copie
+    util.js          APP_VERSION, temps, stockage local, copie, lecture d'un fichier JSON, téléchargement d'un fichier
     colors.js        couleurs et contraste, polices, canaux
     roles.js         permissions, rôles, réglages de groupe par défaut
     sample-data.js   données d'exemple du prototype, visites simulées
     prefs.js         préférences par défaut
-    ui.js            contexte React, Portal (calque #layer), useFloating (calque ancré à son déclencheur), MenuButton, Dialog, ConfirmDialog, Toasts,
+    ui.js            contexte React, Portal (calque #layer), useFloating (calque ancré à son déclencheur), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
                      Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes,
                      useRightColumn (seul seuil de 1180 px : colonne de droite au-dessus, plein écran en dessous)
     rich-text.js     MessageText (emphase, citations, mentions, liens), RichText (mini profil assaini), fullProfileDoc
@@ -22,7 +22,8 @@ src/
     live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      table des émoticônes (EMOTICONS), modèles live
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
-                     fond Premium (parseMiniCss), fond de message (parseMsgBg), présence, horodatages, références de message
+                     fond Premium (parseMiniCss), fond de message (parseMsgBg), présence, horodatages, références de message,
+                     enregistrements de l'historique privé (lecture, tri d'un import)
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
                      profils, recherche, historique privé, vissle, création de groupe
   views/      écrans principaux

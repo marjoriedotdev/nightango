@@ -9,6 +9,7 @@ function PrivacyPage() {
           h('option', { value: 'everyone' }, 'Everyone'), h('option', { value: 'groups' }, 'Members of my groups'), h('option', { value: 'friends' }, 'Friends only'))
       }),
       h(T.SettingRow, { title: 'Show read receipts and idle time', description: 'Others see when you read their message and how long you have been idle.', control: pr.sw('privacy.showIdle') }),
+      h(PmHistoryRows, null),
       h(T.SettingRow, {
         asLabel: false, title: 'Delete all conversations', description: 'Removes every private message from your account. Others keep their copy.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete all conversations?', body: 'Every private message is removed from your account. This cannot be undone.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
@@ -19,6 +20,30 @@ function PrivacyPage() {
       h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
     h(T.SettingsSection, { title: 'Your data' },
       h(T.SettingRow, { asLabel: false, title: 'Request a copy of your data', description: 'Chatango holds your account data. Torch keeps only your encrypted sign-in and these settings.', control: h(T.Button, { size: 'sm', onClick: function () { app.ui.toast('Data requests are not part of this prototype.'); } }, 'Request') })));
+}
+
+/**
+ * Export et import de l'historique privé, au format de fichier de Torch (exportMessages et importMessages).
+ */
+function PmHistoryRows() {
+  var app = useApp(), toast = app.ui.toast;
+  function exportFile() {
+    app.actions.exportDms().then(function (records) {
+      downloadText(app.state.me + '_history.json', JSON.stringify(records), 'text/json');
+    }, function (e) { toast(e.message); });
+  }
+  function importFile(file) {
+    readJsonFile(file).then(function (records) { return Array.isArray(records) ? records : null; }, function () { return null; }).then(function (records) {
+      if (!records) { toast('This file is not a Torch message history.'); return; }
+      app.actions.importDms(records).then(function (r) {
+        if (r.foreign) toast("This file holds another account's messages. Nothing was imported.");
+        else toast('Imported ' + plural(r.added, 'message', 'messages') + '. ' + r.saved + ' already saved, ' + r.skipped + ' skipped.', { icon: r.added ? 'check' : 'info' });
+      }, function (e) { toast(e.message); });
+    });
+  }
+  return h(Frag, null,
+    h(T.SettingRow, { asLabel: false, title: 'Export messages', description: 'The file holds your messages in plain text. Keep it private.', control: h(T.Button, { size: 'sm', onClick: exportFile }, 'Export') }),
+    h(T.SettingRow, { asLabel: false, title: 'Import messages', description: 'Adds the messages of a Torch history file. Messages already saved stay as they are.', control: h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import') }));
 }
 
 var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];

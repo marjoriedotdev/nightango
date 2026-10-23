@@ -195,6 +195,23 @@ function ColorField(p) {
       h('span', { className: 'tnum', style: { fontSize: 12.5, color: 'var(--text-2)' } }, p.value)));
 }
 
+/**
+ * Bouton qui ouvre le sélecteur de fichiers JSON.
+ * @param {{onFile: function(File), icon: ?string, size: ?string, children: *}} p Rappel du fichier choisi, icône, taille et libellé du bouton.
+ */
+function JsonFileButton(p) {
+  var ref = useRef(null);
+  function change(e) {
+    var file = e.target.files && e.target.files[0];
+    // Sélecteur vidé : choisir de nouveau le même fichier doit relancer la lecture.
+    e.target.value = '';
+    if (file) p.onFile(file);
+  }
+  return h(Frag, null,
+    h('input', { ref: ref, type: 'file', accept: '.json,application/json', hidden: true, onChange: change }),
+    h(T.Button, { icon: p.icon, size: p.size, onClick: function () { ref.current.click(); } }, p.children));
+}
+
 var SKELETON_WIDTHS = ['62%', '44%', '70%', '52%', '66%', '40%'];
 /**
  * Lignes d'attente à la forme d'une liste.

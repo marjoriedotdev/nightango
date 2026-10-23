@@ -90,6 +90,39 @@ function parseContent(raw, keepMedia, premium) {
  */
 function parsePm(data) { return parseContent(data.slice(5).join(':'), false, !!(parseInt(data[4], 10) & MSG_FLAG.PREMIUM)); }
 /**
+ * Permet de lire un enregistrement de l'historique privé de Torch.
+ * @param {{ts: number, data: string, unread: number}} v Enregistrement (saveMessage), data étant la trame msg complète.
+ * @returns {?Object} Message archivé avec sa clé archiveTs, null si la trame n'a pas tous ses champs.
+ */
+function pmRecordEntry(v) {
+  var parts = String(v.data || '').split(':').slice(1);
+  if (parts.length <= 5) return null;
+  var body = parsePm(parts);
+  return { from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, unread: !!v.unread };
+}
+var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
+/**
+ * Permet de trier les enregistrements d'un historique privé importé, avant toute écriture.
+ * @param {Array} records Contenu du fichier, non fiable.
+ * @param {string} me Compte connecté.
+ * @returns {{valid: Array, skipped: number, foreign: boolean}} Enregistrements à écrire, marqués lus, nombre d'ignorés, et vrai pour le fichier d'un autre compte, dont rien n'est écrit.
+ */
+function screenPmRecords(records, me) {
+  var valid = [], skipped = 0, foreign = 0;
+  records.forEach(function (r) {
+    var ok = !!r && typeof r.target === 'string' && PM_TARGET.test(r.target) && typeof r.ts === 'number' && isFinite(r.ts) && r.ts > 0
+      && typeof r.data === 'string' && r.data.indexOf('msg:') === 0;
+    var fields = ok ? r.data.split(':') : [];
+    if (fields.length < 7) { skipped++; return; }
+    var author = lower(fields[1]);
+    if (author !== lower(r.target) && author !== lower(me)) { skipped++; foreign++; return; }
+    valid.push({ target: r.target, ts: r.ts, data: r.data, unread: 0 });
+  });
+  // Fichier d'un autre compte : ses MP reçus passent le tri un par un, mais aucun n'est écrit.
+  if (skipped && foreign === skipped) return { valid: [], skipped: skipped, foreign: true };
+  return { valid: valid, skipped: skipped, foreign: false };
+}
+/**
  * Permet de découper un corps de message en segments marqués gras, italique, souligné ou barré.
  * Liste blanche de Torch (renderMessage) : b, i sans attribut, u, s et strike.
  * @param {string} body Corps dont les balises br, les médias et les paires ▓…▒ sont déjà convertis.

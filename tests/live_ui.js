@@ -64,9 +64,12 @@ const migrationFlag = () => !!JSON.parse(w.localStorage.getItem('torch-skin:marj
 // Comme IndexedDB, une transaction voit les enregistrements présents à sa création : un archivage créé après elle lui échappe.
 function pmTransaction(stores, mode) {
   const seen = pmRecords.slice(), tx = {};
+  // Comme IndexedDB, une transaction sans aucune requête se termine aussi.
+  let requests = 0;
+  setTimeout(() => { if (!requests && tx.oncomplete) tx.oncomplete(); }, 0);
   // Curseur en microtâches après une première tâche : un parcours lent ferait échouer les attentes courtes sous charge.
   const cursor = list => {
-    const req = {}; let i = 0;
+    const req = {}; let i = 0; requests++;
     const read = () => {
       const rec = list[i];
       req.onsuccess({ target: { result: rec ? { value: Object.assign({}, rec), update(v) { Object.assign(rec, v); }, continue() { i++; Promise.resolve().then(read); } } : null } });
@@ -80,9 +83,25 @@ function pmTransaction(stores, mode) {
     return (range.lowerOpen ? lo > 0 : lo >= 0) && (range.upperOpen ? hi < 0 : hi <= 0);
   };
   const byIndex = (name, range) => name === 'target_ts_idx' ? seen.filter(inRange(range)).sort((a, b) => keyCmp([a.target, a.ts], [b.target, b.ts])) : [];
+  // Comme IndexedDB, add refuse une clé présente : sans preventDefault sur l'échec, toute la transaction est annulée.
+  const adds = [];
+  const commit = () => {
+    const done = [];
+    for (const [rec, req] of adds) {
+      if (pmRecords.concat(done).some(r => r.ts === rec.ts)) {
+        let kept = false;
+        req.error = { name: 'ConstraintError' };
+        if (req.onerror) req.onerror({ target: req, preventDefault() { kept = true; } });
+        if (!kept) { tx.error = req.error; if (tx.onabort) tx.onabort(); return; }
+      } else { done.push(Object.assign({}, rec)); if (req.onsuccess) req.onsuccess({ target: req }); }
+    }
+    pmRecords.push(...done);
+    if (tx.oncomplete) tx.oncomplete();
+  };
   tx.objectStore = () => ({
     openCursor: () => cursor(seen),
-    index: name => ({ openCursor: (range, dir) => { const list = byIndex(name, range); return cursor(dir === 'prev' ? list.reverse() : list); } })
+    index: name => ({ openCursor: (range, dir) => { const list = byIndex(name, range); return cursor(dir === 'prev' ? list.reverse() : list); } }),
+    add(rec) { const req = {}; requests++; if (!adds.length) setTimeout(commit, 0); adds.push([rec, req]); return req; }
   });
   return tx;
 }
@@ -1195,6 +1214,63 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const rheaAll = { texts: rheaTexts(), start: d.body.textContent.includes(PM_START) };
   step('older private history loads by pages', JSON.stringify(rheaFirst.texts) === JSON.stringify(pages(100)) && !rheaFirst.start && !!rheaTop
     && JSON.stringify(rheaAll.texts) === JSON.stringify(pages(130)) && rheaAll.start, { first: rheaFirst.texts.length, firstStart: rheaFirst.start, observed: !!rheaTop, all: rheaAll.texts.length, head: rheaAll.texts.slice(0, 3), allStart: rheaAll.start });
+
+  /* Import d'un historique privé : seuls les enregistrements valides de ce compte sont écrits, lus, sans écraser une clé présente */
+  const chooseFile = text => {
+    const input = $('input[type="file"]');
+    if (!input) return;
+    Object.defineProperty(input, 'files', { configurable: true, value: [new w.File([text], 'history.json', { type: 'application/json' })] });
+    input.dispatchEvent(new w.Event('change', { bubbles: true }));
+  };
+  const fayBefore = JSON.stringify(pmRecords.filter(r => r.target === 'fay')), countBefore = pmRecords.length;
+  click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
+  click(byText('.tc-nav', 'Privacy')); await until(() => !!$('input[type="file"]'));
+  chooseFile('{"messages":[]}'); await until(() => !!byText('.toast', 'This file is not a Torch message history.'));
+  const notHistory = { toast: !!byText('.toast', 'This file is not a Torch message history.'), written: pmRecords.length - countBefore };
+  const RECEIVED = 'msg:ivan:marjorie:unknown:1700003000.5:0:<n000/>Kept from my old browser', SENT = 'msg:marjorie:marjorie:unknown:1700003010.5:0:<n000/>My old reply';
+  chooseFile(JSON.stringify([
+    { target: 'ivan', ts: 1700003000.5, data: RECEIVED, unread: 1 },
+    { target: 'ivan', ts: 1700003010.5, data: SENT, unread: 0 },
+    { target: 'ivan', ts: 1700003020.5, data: 'msg:zed:zed:unknown:1700003020.5:0:<n000/>Not my account', unread: 0 },
+    { target: 'ivan', ts: 1700003030.5, data: 'wl:ivan:marjorie:unknown:1700003030.5:0:<n000/>Not a message', unread: 0 },
+    { target: 'fay', ts: 1700000050.5, data: 'msg:fay:marjorie:unknown:1700000050.5:0:<n000/>Rewritten', unread: 1 }
+  ]));
+  await until(() => !!byText('.toast .grow', 'Imported'));
+  const importToast = (byText('.toast .grow', 'Imported') || {}).textContent || null;
+  const imported = pmRecords.slice(countBefore), fayAfter = JSON.stringify(pmRecords.filter(r => r.target === 'fay'));
+  // Fichier d'un autre compte : son MP reçu passerait le tri seul, son MP envoyé trahit le compte.
+  chooseFile(JSON.stringify([
+    { target: 'ivan', ts: 1700003040.5, data: 'msg:ivan:zed:unknown:1700003040.5:0:<n000/>Meant for zed', unread: 1 },
+    { target: 'ivan', ts: 1700003050.5, data: 'msg:zed:zed:unknown:1700003050.5:0:<n000/>Sent by zed', unread: 0 }
+  ]));
+  await until(() => !!byText('.toast .grow', "another account's messages"));
+  const foreignFile = { toast: (byText('.toast .grow', "another account's messages") || {}).textContent || null, written: pmRecords.length - countBefore - imported.length };
+  click(byText('.tc-nav', 'Back to chat')); await wait(50);
+  click(byText('.tc-nav', 'Private messages')); await until(() => listed('ivan'));
+  if (listed('ivan')) { click(byText('.conv', 'ivan')); await wait(50); }
+  const ivanThread = $$('.thread .tc-msg-text').map(x => x.textContent);
+  step('pm history import writes only valid records of this account',
+    notHistory.toast && !notHistory.written && importToast === 'Imported 2 messages. 1 already saved, 2 skipped.'
+      && JSON.stringify(imported) === JSON.stringify([{ target: 'ivan', ts: 1700003000.5, data: RECEIVED, unread: 0 }, { target: 'ivan', ts: 1700003010.5, data: SENT, unread: 0 }])
+      && fayAfter === fayBefore && JSON.stringify(ivanThread) === JSON.stringify(['Kept from my old browser', 'My old reply'])
+      && foreignFile.toast === "This file holds another account's messages. Nothing was imported." && !foreignFile.written,
+    { notHistory, importToast, imported, fayBefore, fayAfter, foreignFile, ivanThread });
+
+  /* Import d'entrées plus anciennes que les 100 dernières : une conversation dont l'historique tenait en entier reprend la lecture par pages */
+  const ivanOlder = Array.from({ length: 120 }, (_, i) => ({ target: 'ivan', ts: 1690000000.5 + i, data: 'msg:ivan:marjorie:unknown:' + (1690000000.5 + i) + ':0:<n000/>Older ivan ' + i, unread: 0 }));
+  click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
+  click(byText('.tc-nav', 'Privacy')); await until(() => !!$('input[type="file"]'));
+  chooseFile(JSON.stringify(ivanOlder)); await until(() => !!byText('.toast .grow', 'Imported 120'));
+  click(byText('.tc-nav', 'Back to chat')); await wait(50);
+  click(byText('.tc-nav', 'Private messages')); await until(() => listed('ivan'));
+  click(byText('.conv', 'ivan')); await until(() => !!$('.thread .history-more'));
+  const ivanSentinel = !!$('.thread .history-more'), ivanStart = d.body.textContent.includes(PM_START);
+  const ivanTop = observers.filter(x => x.targets.some(t => t.isConnected && t.closest('.thread'))).pop();
+  if (ivanTop) ivanTop.cb(ivanTop.targets.map(target => ({ isIntersecting: true, target })), ivanTop);
+  await until(() => $$('.thread .tc-msg-text').some(x => x.textContent === 'Older ivan 0'));
+  const ivanTexts = $$('.thread .tc-msg-text').map(x => x.textContent);
+  step('pm history import reopens older pages', ivanSentinel && !ivanStart && ivanTexts.length === 122 && ivanTexts[0] === 'Older ivan 0',
+    { ivanSentinel, ivanStart, observed: !!ivanTop, count: ivanTexts.length, head: ivanTexts.slice(0, 3) });
 
   /* Session coupée : connecté ailleurs, hors ligne, connexion perdue, session expirée */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };

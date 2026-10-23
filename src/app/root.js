@@ -286,6 +286,35 @@ function Root(props) {
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
     deleteAllDms: function () { update(function (d) { d.dms = {}; }); },
+    /** Messages d'exemple au format de l'historique privé de Torch, clé ts en secondes. */
+    exportDms: function () {
+      var s0 = stateRef.current, out = [];
+      Object.keys(s0.dms).forEach(function (t) {
+        var c = s0.dms[t];
+        c.messages.forEach(function (m) {
+          var ts = m.ts / 1000;
+          out.push({ target: t, ts: ts, data: ['msg', m.from, s0.me, 'unknown', ts, 0, esc(m.text)].join(':'), unread: m.from !== s0.me && m.ts > c.lastReadTs ? 1 : 0 });
+        });
+      });
+      return Promise.resolve(out.sort(function (a, b) { return a.ts - b.ts; }));
+    },
+    /**
+     * Permet d'ajouter aux conversations les enregistrements valides d'un historique privé, comme l'import live.
+     * @param {Array} records Contenu du fichier, non fiable.
+     */
+    importDms: function (records) {
+      var s0 = stateRef.current, screened = screenPmRecords(records, s0.me), keys = {}, added = [];
+      Object.keys(s0.dms).forEach(function (t) { s0.dms[t].messages.forEach(function (m) { keys[m.ts / 1000] = true; }); });
+      screened.valid.forEach(function (r) { if (!keys[r.ts]) { keys[r.ts] = true; added.push(r); } });
+      update(function (d) {
+        added.forEach(function (r) {
+          var t = lower(r.target), c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now() });
+          c.messages.push(pmMessage(pmRecordEntry(r)));
+          c.messages.sort(function (a, b) { return a.ts - b.ts; });
+        });
+      });
+      return Promise.resolve({ added: added.length, saved: screened.valid.length - added.length, skipped: screened.skipped, foreign: screened.foreign });
+    },
     declineRequest: function (name) { actions.closeDm(name); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
@@ -681,6 +710,8 @@ function Root(props) {
       Object.keys(stateRef.current.dms).forEach(function (n) { liveBridge.clearPmHistory(n); actions.closeDm(n); });
       update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; d.dms[n].olderMore = false; }); });
     };
+    actions.exportDms = function () { return liveBridge.exportPm(); };
+    actions.importDms = function (records) { return liveBridge.importPm(records).then(function (r) { loadPmHistory(true); return r; }); };
     actions.createGroup = function (name, title, desc, listed) {
       return liveBridge.createGroup({ name: name, title: title, description: desc, discovery: listed }).then(function () {
         actions.joinGroup(name);
@@ -914,6 +945,28 @@ function Root(props) {
     c.messages.sort(function (a, b) { return a.ts - b.ts; });
     return fresh;
   }
+  /**
+   * Permet de fusionner l'historique privé de Torch aux conversations, à chaque OK et après un import, sans doublon.
+   * @param {boolean=} imported Vrai après un import, qui peut avoir ajouté des entrées plus anciennes que celles chargées.
+   */
+  function loadPmHistory(imported) {
+    liveBridge.pmHistory(100).then(function (hist) {
+      update(function (d) {
+        if (!d.auth.loggedIn) return;
+        d.pmLoaded = true;
+        Object.keys(hist).forEach(function (t) {
+          if (t === d.me) return;
+          ensureLiveUser(d, t);
+          var c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: localRef.current.hidden.indexOf(t) >= 0 });
+          // Fixé au premier OK : à une reconnexion, les 100 dernières entrées ne disent rien des pages plus anciennes déjà chargées. Un import, lui, peut en ajouter.
+          if (c.olderMore == null || (imported && hist[t].more)) c.olderMore = hist[t].more;
+          var fresh = mergePmHistory(d, c, hist[t].list);
+          // Une entrée couverte par un message affiché ne compte plus : le compteur a déjà vu ce message.
+          if (!c.closed && !isDmInView(d, t)) c.unread += fresh;
+        });
+      });
+    });
+  }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
   /**
    * Permet de relancer les connexions fermées.
@@ -1141,24 +1194,7 @@ function Root(props) {
         }, 1500);
         break;
       }
-      case 'pmReady':
-        liveBridge.pmHistory(100).then(function (hist) {
-          update(function (d) {
-            if (!d.auth.loggedIn) return;
-            d.pmLoaded = true;
-            Object.keys(hist).forEach(function (t) {
-              if (t === d.me) return;
-              ensureLiveUser(d, t);
-              var c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: localRef.current.hidden.indexOf(t) >= 0 });
-              // Fixé au premier OK : à une reconnexion, les 100 dernières entrées ne disent rien des pages plus anciennes déjà chargées.
-              if (c.olderMore == null) c.olderMore = hist[t].more;
-              var fresh = mergePmHistory(d, c, hist[t].list);
-              // Une entrée couverte par un message affiché ne compte plus : le compteur a déjà vu ce message.
-              if (!c.closed && !isDmInView(d, t)) c.unread += fresh;
-            });
-          });
-        });
-        break;
+      case 'pmReady': loadPmHistory(); break;
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;

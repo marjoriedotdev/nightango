@@ -1,6 +1,5 @@
 function AppearancePage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
-  var fileRef = useRef(null);
   var md = useState(function () { return LIVE ? liveBridge.setting('markdown') : null; }), markdown = md[0], setMarkdown = md[1];
   var themes = [
     ['dark', 'Dark', ['#16171a', '#111214', '#3a3d44', '#2e3036', '#1d1f23']],
@@ -18,23 +17,15 @@ function AppearancePage() {
         h('span', { style: { height: 5, width: '80%', borderRadius: 3, background: c[2] } }), h('span', { style: { height: 5, width: '60%', borderRadius: 3, background: c[3] } }),
         h('span', { style: { marginTop: 'auto', height: 12, borderRadius: 4, background: c[4], border: '1px solid ' + c[3] } })));
   }
-  function importFile(e) {
-    var file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      try {
-        var src = JSON.parse(reader.result);
-        var accent = src.active || src.highlight || src.accent;
-        if (!hexToRgb(accent)) throw new Error('no accent');
-        var name = (file.name || 'Theme').replace(/\.json$/i, '');
-        var colors = [src.backdrop, src.primary, src.secondary, accent].filter(hexToRgb);
-        app.update(function (d) { d.prefs.customThemes = (d.prefs.customThemes || []).concat([{ id: uid(), name: name, accent: accent, colors: colors, at: Date.now() }]); });
-        app.ui.toast('Imported ' + name + '.', { icon: 'check' });
-      } catch (err) { app.ui.toast('This file is not a Torch theme. Export one from the old theme editor and try again.'); }
-    };
-    reader.readAsText(file);
+  function importFile(file) {
+    readJsonFile(file).then(function (src) {
+      var accent = src.active || src.highlight || src.accent;
+      if (!hexToRgb(accent)) throw new Error('no accent');
+      var name = (file.name || 'Theme').replace(/\.json$/i, '');
+      var colors = [src.backdrop, src.primary, src.secondary, accent].filter(hexToRgb);
+      app.update(function (d) { d.prefs.customThemes = (d.prefs.customThemes || []).concat([{ id: uid(), name: name, accent: accent, colors: colors, at: Date.now() }]); });
+      app.ui.toast('Imported ' + name + '.', { icon: 'check' });
+    }).catch(function () { app.ui.toast('This file is not a Torch theme. Export one from the old theme editor and try again.'); });
   }
   var custom = prefs.customThemes || [];
   var palette = accents.some(function (a) { return a[1] === prefs.accent; });
@@ -77,9 +68,7 @@ function AppearancePage() {
       h(T.SettingRow, { title: 'Profile backgrounds', description: 'Colors and images Premium members set on their mini profile.', control: pr.sw('styles.profileBackgrounds') })),
     h(T.SettingsSection, {
       title: 'Imported themes', description: 'Theme files (.json) exported from the old Torch theme editor. Torch uses their accent color.',
-      headerAside: h(Frag, null,
-        h('input', { ref: fileRef, type: 'file', accept: '.json,application/json', hidden: true, onChange: importFile }),
-        h(T.Button, { icon: 'upload', onClick: function () { fileRef.current.click(); } }, 'Import file'))
+      headerAside: h(JsonFileButton, { icon: 'upload', onFile: importFile }, 'Import file')
     },
       custom.length ? custom.map(function (t) {
         return h('div', { key: t.id, className: 'lrow' },
