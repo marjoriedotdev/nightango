@@ -186,13 +186,21 @@ function liveWorld(me) {
 }
 /** Clé d'une entrée de la liste des bannissements : unid et IP, comme removeblock. */
 function banKey(b) { return b.unid + ':' + b.ip; }
+function blankBanPage() { return { loaded: false, more: false, loading: false }; }
+/**
+ * Permet de lire une liste de Torch chargée par pages : bannissements (block) ou débannissements (unblock).
+ * @param {Object} g Groupe live.
+ * @param {string} kind block ou unblock.
+ * @returns {{rows: Array, page: {loaded: boolean, more: boolean, loading: boolean}}} Lignes chargées et état de la liste.
+ */
+function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.live.banPage } : { rows: g.live.unbans, page: g.live.unbanPage }; }
 function liveGroup(id, title) {
   var t = title || id;
   return {
     id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: Date.now(),
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, discover: null, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
-    live: { flags: 0, mods: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, banPage: { loaded: false, more: false, loading: false }, banSearch: null },
+    live: { flags: 0, mods: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
     settings: mkSettings({ overview: { title: t, description: '', showInDiscovery: true, membersPublic: true, nsfw: false }, staff: {} })
   };
 }

@@ -705,12 +705,13 @@ function Root(props) {
     actions.requestBans = function (gid) {
       // La réponse à la première page remplace la liste, même si une page suivante était attendue.
       groupUpdate(gid, function (g) { g.live.banPage.loading = false; g.live.banSearch = null; });
-      liveBridge.banList(gid, '0');
+      liveBridge.banList(gid, 'block', '0');
     };
-    actions.moreBans = function (gid) {
-      var rows = stateRef.current.groups[gid].bans, last = rows[rows.length - 1];
+    actions.requestUnbans = function (gid) { liveBridge.banList(gid, 'unblock', '0'); };
+    actions.moreBans = function (gid, kind) {
+      var rows = banListOf(stateRef.current.groups[gid], kind).rows, last = rows[rows.length - 1];
       // Une ligne ajoutée en direct n'a pas d'horodatage de Chatango : la page repart alors de la plus récente.
-      if (liveBridge.banList(gid, last && last.ts || '0')) groupUpdate(gid, function (g) { g.live.banPage.loading = true; });
+      if (liveBridge.banList(gid, kind, last && last.ts || '0')) groupUpdate(gid, function (g) { banListOf(g, kind).page.loading = true; });
     };
     actions.searchBans = function (gid, query) {
       var at = Date.now();
@@ -839,21 +840,20 @@ function Root(props) {
     g.messages = g.messages.filter(function (x) { return edits.indexOf(x) < 0; });
   }
   /**
-   * Permet de verser une page de bannissements dans les lignes chargées.
-   * @param {Array} rows Lignes chargées.
-   * @param {{loaded: boolean, more: boolean, loading: boolean}} page État de la liste, mis à jour en place.
+   * Permet de verser une page de bannissements ou de débannissements dans sa liste.
+   * @param {{rows: Array, page: Object}} list Liste lue par banListOf, mise à jour en place.
    * @param {{list: Array, more: boolean}} op Page reçue du pont.
-   * @returns {Array} Lignes après la page.
    */
-  function receiveBanPage(rows, page, op) {
+  function receiveBanPage(list, op) {
     // Seule la page suivante demandée par Torch Skin s'ajoute : un rechargement de Torch repart de la première page.
-    var next = page.loading, keep = next ? rows : [], known = {};
-    keep.forEach(function (b) { known[banKey(b)] = true; });
+    var next = list.page.loading, known = {};
+    if (!next) list.rows.splice(0);
+    list.rows.forEach(function (b) { known[banKey(b)] = true; });
     var fresh = op.list.filter(function (b) { return !known[banKey(b)]; });
-    page.more = op.more && (!next || fresh.length > 0);
-    page.loaded = true;
-    page.loading = false;
-    return keep.concat(fresh);
+    list.rows.push.apply(list.rows, fresh);
+    list.page.more = op.more && (!next || fresh.length > 0);
+    list.page.loaded = true;
+    list.page.loading = false;
   }
   // Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
   function pmContentKey(m) {
@@ -1009,7 +1009,7 @@ function Root(props) {
       case 'anncPost': if (op.text || op.embeds.length) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', annc: true, text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
       case 'bw': groupUpdate(op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
       case 'rate': groupUpdate(op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;
-      case 'bans': groupUpdate(op.gid, function (g) { g.bans = receiveBanPage(g.bans, g.live.banPage, op); }); break;
+      case 'bans': groupUpdate(op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;
         groupUpdate(op.gid, function (g) {
@@ -1024,11 +1024,13 @@ function Root(props) {
         g.bans = g.bans.filter(function (b) { return !gone(b); });
         var s = g.live.banSearch;
         if (s && s.ban && gone(s.ban)) s.ban = null;
+        if (g.live.unbanPage.loaded) g.live.unbans = op.list.concat(g.live.unbans.filter(function (b) { return !gone(b); }));
       }); break;
       // Une réponse arrivée après le délai d'attente reste valable, mais pas après Clear search.
       case 'banSearch': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
       case 'banSearchRefused': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
-      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; }); break;
+      // Torch ne fait que journaliser allunblocked : la liste des débannissements est redemandée à son prochain affichage.
+      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
         var known = {}, list = (g.live.modlog || []).slice();
         list.forEach(function (x) { known[x.id] = true; });
@@ -1041,7 +1043,7 @@ function Root(props) {
         if (!d.auth.loggedIn) return;
         var g = d.groups[op.gid];
         // Une demande d'historique en cours ne reçoit plus de réponse sur un socket fermé.
-        if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; } }
+        if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; } }
         d.session = sessionAfterConn(d, op);
       }); break;
       case 'session': update(function (d) {

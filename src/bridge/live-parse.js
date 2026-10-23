@@ -152,6 +152,18 @@ function parseBans(data) {
   }).filter(function (b) { return b.unid; });
 }
 /**
+ * Permet de lire la trame unblocked comme Torch : entrées unid:ip:nom séparées par des points-virgules, auteur à l'avant-dernier champ.
+ * @param {Array<string>} data Trame découpée sur :.
+ * @returns {Array<Object>} Débannissements, datés de la réception comme chez Torch.
+ */
+function parseUnbanned(data) {
+  var by = lower(data.slice(-2)[0]), at = Date.now();
+  return data.join(':').split(';').map(function (x) {
+    var t = x.split(':');
+    return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], by: by, at: at };
+  }).filter(function (b) { return b.unid; });
+}
+/**
  * Permet de lire la réponse bansearchresult de Torch : autres noms, nom, IP, unid, auteur et date.
  * @param {Array<string>} data Trame découpée sur :, date comprise.
  * @returns {?Object} Bannissement trouvé, null si aucun.

@@ -41,7 +41,7 @@ w.__TORCH_SKIN_VERSION__ = '0.2.0-test';
 w.__TORCH_SHOW__ = () => { shown++; };
 w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
-const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
+const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
 const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
 // Enregistrement de la base d'historique de Torch (saveMessage) : clé ts, horodatage de la trame.
 const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
@@ -521,6 +521,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     banSearch.frame === 'searchban:spamking' && /spamking/.test(banSearch.found) && /by marjorie/.test(banSearch.found) && /Includes alt1, alt2\./.test(banSearch.found) && !banSearch.list
       && banSearch.unban === 'removeblock:UNID7:1.2.3.4' && banSearch.none && banSearch.cleared && banSearch.error === "That's not a valid username.",
     banSearch);
+  /* Débannissements : onglet Unbanned chargé par pages comme Torch, tenu à jour par unblocked (auteur à l'avant-dernier champ) */
+  const unbanTab = { before: frame('blocklist:unblock:').length };
+  click(byText('.spage .tc-seg button', 'Unbanned'));
+  await until(() => frame('blocklist:unblock:').length > unbanTab.before);
+  unbanTab.frame = frame('blocklist:unblock:').pop();
+  g('unblocklist', 'test', ['UNID2:5.6.7.8:carl:1700000200:marjorie']);
+  await until(() => !!byText('.spage .lrow', 'carl'));
+  unbanTab.carl = (byText('.spage .lrow', 'carl') || {}).textContent || null;
+  g('unblocked', 'test', ['UNID1', '1.2.3.4', 'alice', 'marjorie', '1700000400']);
+  await until(() => $$('.spage .lrow').length === 2);
+  unbanTab.rows = $$('.spage .lrow').map(x => x.textContent);
+  unbanTab.buttons = $$('.spage .lrow .tc-btn').length;
+  click(byText('.spage .tc-seg button', 'Banned')); await wait(30);
+  unbanTab.aliceBanned = !!byText('.spage .lrow', 'alice');
+  step('unbanned tab loads from Torch and follows unblocked',
+    unbanTab.frame === 'blocklist:unblock:0:next:50:anons:1' && /by marjorie/.test(unbanTab.carl) && unbanTab.rows.length === 2 && /alice/.test(unbanTab.rows[0]) && /by marjorie/.test(unbanTab.rows[0])
+      && /carl/.test(unbanTab.rows[1]) && unbanTab.buttons === 0 && !unbanTab.aliceBanned,
+    unbanTab);
 
   click(byText('.tc-nav', 'Audit log')); await wait(50);
   step('audit entries', !!byText('.lrow', 'made bob a moderator') && !!byText('.lrow', 'changed banned words'));

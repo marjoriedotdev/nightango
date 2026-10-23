@@ -14,11 +14,22 @@ var liveBridge = (function () {
   // Seuls réglages de son que Torch lit, avec l'objet Audio que chacun règle.
   var SOUND_KEYS = ['play_mention', 'volume_mention', 'play_online', 'volume_online'];
   var SOUND_AUDIO = { mention: 'message', online: 'play_online' };
-  // Taille des pages de bannissements demandées par Torch.
+  // Taille des pages de bannissements et de débannissements demandées par Torch.
   var BAN_PAGE = 50;
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
+  /**
+   * Permet de transmettre une page de la liste des bannissements (block) ou des débannissements (unblock).
+   * @param {string} room Groupe.
+   * @param {string} kind block ou unblock.
+   * @param {Array<string>} data Trame découpée sur :.
+   */
+  function banPage(room, kind, data) {
+    var list = parseBans(data);
+    // Comme Torch, une page incomplète est la dernière.
+    emit({ op: 'bans', gid: room, kind: kind, list: list, more: list.length >= BAN_PAGE });
+  }
   function author(data) {
     if (data[1]) return lower(data[1]);
     if (data[2]) return '#' + lower(data[2]);
@@ -125,14 +136,10 @@ var liveBridge = (function () {
       }
       case 'bw': emit({ op: 'bw', gid: room, part: unquote(data[0]), whole: unquote(data[1]) }); break;
       case 'getratelimit': case 'ratelimitset': emit({ op: 'rate', gid: room, seconds: parseInt(data[0], 10) || 0 }); break;
-      case 'blocklist': {
-        var bans = parseBans(data);
-        // Comme Torch, une page incomplète est la dernière.
-        emit({ op: 'bans', gid: room, list: bans, more: bans.length >= BAN_PAGE });
-        break;
-      }
+      case 'blocklist': banPage(room, 'block', data); break;
+      case 'unblocklist': banPage(room, 'unblock', data); break;
       case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', guest: !data[2], by: lower(data[3]), at: Date.now() } }); break;
-      case 'unblocked': emit({ op: 'unbanned', gid: room, list: parseBans(data) }); break;
+      case 'unblocked': emit({ op: 'unbanned', gid: room, list: parseUnbanned(data) }); break;
       case 'bansearchresult': emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
       case 'badbansearchstring': emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
@@ -615,11 +622,12 @@ var liveBridge = (function () {
     unban: function (gid, b) { return send(gid, 'removeblock:' + b.unid + ':' + b.ip, 'The unban could not be sent.'); },
     unbanAll: function (gid) { return send(gid, 'unbanall', 'The unban could not be sent.'); },
     /**
-     * Permet de demander une page de bannissements, comme Torch.
+     * Permet de demander une page de bannissements ou de débannissements, comme Torch.
      * @param {string} gid Groupe visé.
+     * @param {string} kind block ou unblock.
      * @param {string} ts Horodatage de la dernière ligne chargée, 0 pour la première page.
      */
-    banList: function (gid, ts) { return send(gid, 'blocklist:block:' + ts + ':next:' + BAN_PAGE + ':anons:1', 'The ban list could not be loaded.'); },
+    banList: function (gid, kind, ts) { return send(gid, 'blocklist:' + kind + ':' + ts + ':next:' + BAN_PAGE + ':anons:1', 'The ban list could not be loaded.'); },
     searchBans: function (gid, query) { return send(gid, 'searchban:' + query, 'The search could not be sent.'); },
     clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
     /* Réglages de groupe : trames relevées dans chadango et chatango-lib */
