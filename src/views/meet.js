@@ -17,12 +17,12 @@ function meetActive(f) {
  * @param {Function} onClick Ouverture de la fiche.
  */
 function personCard(s, n, theme, onClick) {
-  var u = userOf(s, n), isMe = n === s.me, mini = miniStyleOf(s.prefs, u, theme);
+  var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status, mini = miniStyleOf(s.prefs, u, theme);
   var about = u.aboutHtml ? h(RichText, { html: u.aboutHtml, inline: true, bg: mini ? mini.bg : null }) : u.about || null;
   return h('button', { key: n, type: 'button', className: 'conv person' + (mini ? ' mini-bg' : ''), style: mini ? { backgroundColor: mini.bg, color: mini.text } : null, onClick: onClick },
-    h(T.Avatar, { name: n, size: 44, status: isMe ? s.meStatus : u.status, ring: mini ? mini.bg : 'var(--panel)' }),
+    h(T.Avatar, { name: n, size: 44, status: status, ring: mini ? mini.bg : 'var(--panel)' }),
     h('span', { className: 'conv-main' },
-      h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), isMe ? h(T.Badge, null, 'You') : null, u.premium ? h(T.Badge, { tone: 'accent' }, 'Premium') : null),
+      h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), presenceSr(status), youBadge(isMe), u.premium ? h(T.Badge, { tone: 'accent' }, 'Premium') : null),
       personMetaLine(n, u),
       isProfilePending(n, u) ? h('span', { className: 'conv-about skel-about' }, h('span', { className: 'tc-sr' }, 'Loading profile'), h(T.Skeleton, { width: 220, height: 10 }), h(T.Skeleton, { width: 130, height: 10 }))
         : h('span', { className: 'conv-about' }, about || (u.profileMissing ? 'No public profile.' : null))));

@@ -37,7 +37,7 @@ function DMView(p) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
-      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading conversations' })
+      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' })
       : shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'))));
 
   var thread;
@@ -73,8 +73,8 @@ function DMView(p) {
         h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
         h(T.Avatar, { name: id, size: 30, status: u.status, ring: 'var(--bg)' }),
         h('h2', null, id),
-        h('span', { className: 'topic', style: { flex: 1 } }, [u.friend ? 'Friend' : null, lastOnline(u)].filter(Boolean).join(' · ')),
-        h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [lastOnline(u), personMeta(u)].filter(Boolean).join(' · ')),
+        h('span', { className: 'topic', style: { flex: 1 } }, [presenceText(u), u.friend ? 'Friend' : null].filter(Boolean).join(' · ')),
+        h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personMeta(u)].filter(Boolean).join(' · ')),
         h(T.IconButton, { icon: 'panel', label: showProfile ? 'Hide profile' : 'Show profile', pressed: showProfile, className: 'hide-mobile', onClick: function () { setShowProfile(!showProfile); } }),
         h(MenuButton, {
           label: 'Conversation options', items: [
@@ -96,10 +96,10 @@ function DMView(p) {
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };
 function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
 /**
- * Permet de dater la dernière connexion d'un ami hors ligne.
+ * Permet d'écrire la présence d'un membre, avec sa dernière connexion quand elle est connue.
  * @param {Object} u Membre dans l'état.
  */
-function lastOnline(u) { return u.friend && u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : null; }
+function presenceText(u) { return u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : statusLabel(u.status); }
 function personMeta(u) {
   return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
@@ -141,9 +141,9 @@ function useProfiles(names) {
 function personRow(s, n, onClick, current) {
   var u = userOf(s, n), c = s.dms[n], last = c && c.messages[c.messages.length - 1];
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': current === n ? 'page' : undefined, onClick: onClick },
-    h(T.Avatar, { name: n, size: 36, status: u.status, ring: 'var(--panel)' }),
+    h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
-      h('span', { className: 'conv-name' }, n),
+      h('span', { className: 'conv-name' }, n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(n, u),
       c ? h('span', { className: 'conv-prev' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet') : null,
@@ -280,7 +280,7 @@ function FriendsList(p) {
       h('div', { style: { flex: 1 } }, h(T.TextField, { id: 'add-friend', label: 'Add a friend', placeholder: 'Username', value: name, error: err || undefined, autoComplete: 'off', onChange: function (e) { setName(e.target.value); setErr(''); } })),
       h(T.Button, { type: 'submit', style: { height: 38 }, disabled: !!request.pending }, request.pending ? 'Adding' : 'Add')),
     LIVE && !s.friendsLoaded ? null : h('p', { className: 'mlabel', style: { margin: '8px 16px 4px' } }, online + ' online · ' + plural(friends.length, 'friend', 'friends')),
-    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading friends' })
+    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading friends' })
       : friends.length
       ? friends.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(s, n, function () { app.actions.openDm(n, 'friends'); }, p.current)); })
       : h('p', { className: 'pal-empty' }, 'No friends yet. Add someone by username, or from their profile.')));

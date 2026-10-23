@@ -195,3 +195,20 @@ function Toasts(p) {
         h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
     })));
 }
+
+// -- Personnes ----------------------------------------------------------------
+/**
+ * Permet d'afficher le rôle court d'un membre en badge, à côté de son nom.
+ * @param {?string} role Rôle du membre dans le groupe.
+ */
+function roleBadge(role) { return role ? h(T.Badge, { icon: role === 'owner' ? 'crown' : 'shield' }, ROLE_LABEL[role]) : null; }
+/**
+ * Permet de marquer sa propre ligne dans une liste.
+ * @param {boolean} isMe Ligne de l'utilisateur connecté.
+ */
+function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
+/**
+ * Permet de donner la présence d'une ligne de liste aux lecteurs d'écran, le point de l'avatar restant seul à l'œil.
+ * @param {string} status Présence du membre.
+ */
+function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + statusLabel(status)); }

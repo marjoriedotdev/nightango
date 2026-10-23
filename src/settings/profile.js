@@ -64,7 +64,7 @@ var VISIT_FILTERS = [{ value: 'all', label: 'All' }, { value: 'log', label: 'Vis
  */
 function visitorRow(app, r) {
   return h('div', { key: r.key, className: 'lrow' },
-    h(T.Avatar, { name: r.name, size: 32 }),
+    h(T.Avatar, { name: r.name, size: 28 }),
     h('span', { className: 'grow' },
       h('span', { className: 'lrow-title', style: { fontWeight: 400 } },
         r.guest ? h('b', { style: { fontWeight: 600 } }, r.name)

@@ -85,7 +85,7 @@ const COMPONENTS = [
   return h(T.SegmentedControl, { label: 'Protection level', options: [{ value: 'off', label: 'Off' }, { value: 'standard', label: 'Standard' }, { value: 'strict', label: 'Strict' }, { value: 'custom', label: 'Custom' }], value: s[0], onChange: s[1] });`],
   ['Badge', 'Status', 56,
     'A short label for roles and qualifiers next to a name or title.',
-    `Children are one or two words. Default tone (\`selected\` fill, \`text-2\`) for roles like Mod or Owner, with the matching icon. \`accent\` tone for qualifiers that need attention, such as Sensitive on a permission.`,
+    `Children are one or two words. Default tone (\`selected\` fill, \`text-2\`) for roles like Mod or Owner, with the matching icon. \`accent\` tone for qualifiers that need attention, such as Sensitive on a permission. Mark the viewer's own row with a default-tone You badge.`,
     `  return h('div', { className: 'row' }, h(T.Badge, { icon: 'shield' }, 'Mod'), h(T.Badge, { icon: 'crown' }, 'Owner'), h(T.Badge, { tone: 'accent' }, 'Sensitive'), h(T.Badge, null, 'Friend'));`],
   ['CountBadge', 'Status', 56,
     'An accent pill with an unread or mention count.',
@@ -95,9 +95,16 @@ const COMPONENTS = [
     'Profile picture or initials on a muted color derived from the username, with optional presence.',
     `Pass \`src\` to show a profile picture. The initials stay underneath and remain visible while it loads or if it fails (account without a picture, guest); a failed URL is not requested again on the same page. The picture fades in once loaded, and shows at once when the page already loaded it. \`onLoad\` is called each time the picture loads, to offer actions that need it, such as opening the full photo.
 
-Pass \`name\`; the color comes from a fixed palette of eight muted tones so a user keeps the same color everywhere. \`status\` is online, idle or offline and must also be stated in text nearby (Online, Idle). Set \`ring\` to the surface color behind the avatar so the presence dot is cut out cleanly. \`square\` renders a group icon.
+Pass \`name\`; the color comes from a fixed palette of eight muted tones so a user keeps the same color everywhere. \`status\` is online, idle or offline, and the dot is never the only cue: where one person is shown, write the status next to the avatar (Online, Idle, Last online …); in a list row, the dot may stand alone and the row's accessible name states the status. Set \`ring\` to the surface color behind the avatar so the presence dot is cut out cleanly. \`square\` renders a group icon.
 
-Sizes: 16 in reply previews, 22 in the sidebar, 28 in lists, 36 in messages, 72 in the profile panel, 96 in the profile dialog.`,
+Sizes:
+
+- 16 in reply previews.
+- 22 in the sidebar and in groups in common.
+- 28 in every list row, with one or two lines of text: conversations, friends, members, settings lists.
+- 36 in messages.
+- 72 in the profile panel.
+- 96 in the profile dialog.`,
     `  return h('div', { className: 'row' }, h(T.Avatar, { name: 'sable', status: 'online' }), h(T.Avatar, { name: 'quill', status: 'idle' }), h(T.Avatar, { name: 'halcyon', status: 'offline' }), h(T.Avatar, { name: 'orrin', size: 64, status: 'online' }), h(T.Avatar, { name: 'community', square: true, size: 22 }));`],
   ['NavItem', 'Navigation', 200,
     'A row in the sidebar or a list: groups, private messages, settings pages.',

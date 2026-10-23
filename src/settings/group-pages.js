@@ -108,7 +108,7 @@ function GSBans(p) {
     h(T.SettingsSection, { title: 'Banned · ' + g.bans.length },
       g.bans.length ? g.bans.map(function (x) {
         return h('div', { key: x.name, className: 'lrow' },
-          h(T.Avatar, { name: x.name, size: 32 }),
+          h(T.Avatar, { name: x.name, size: 28 }),
           h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, x.name), h('span', { className: 'lrow-sub' }, x.reason + ' · by ' + x.by + ' · ' + ago(x.at))),
           showIp ? h('span', { className: 'mono muted', style: { fontSize: 12 } }, x.ip) : null,
           h(T.Button, { size: 'sm', onClick: function () { app.actions.unban(g.id, x.name); } }, 'Unban'));

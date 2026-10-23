@@ -9,6 +9,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 - Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input".
 - No emoji in the interface, no exclamation marks, no filler ("Oops", "Awesome").
 - Be honest about trade-offs where they affect trust. The login screen states that credentials are stored encrypted on Torch servers.
+- Roles: next to a name, the short role is a `Badge` with its icon (Mod with a shield, Owner with a crown). The long role (Moderator) belongs in a sentence or a title. The viewer's own row carries a `You` badge, never "(you)" in text.
 
 ## Color
 
@@ -17,7 +18,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 - `accent` (ember) is a fill: primary buttons, unread counts, the on state of switches, the brand mark. Text and icons on it use `on-accent`, never white.
 - When the accent is text or an icon (mentions, links, the announcement pin), use `accent-text`, which is darkened in light for contrast. `accent-soft` tints a message that mentions the viewer.
 - Use `danger` as text only, on destructive actions that also say what they do (Block, Log out, Close group). Use `warning` for the icon of a warning banner; the sentence carries the meaning.
-- Presence: `status-online`, `status-idle`, `status-offline` dots, always with a text label nearby (Online, Idle). They are never the only cue.
+- Presence: `status-online`, `status-idle`, `status-offline` dots. Where one person is shown (a conversation header, a profile), a text label sits next to the dot (Online, Idle, Last online …). In a list, the dot may stand alone on screen; the row's accessible name then states the status.
 - Focus: a 2px solid `focus-ring` outline offset by 2px on every interactive element. It holds 3:1 on every surface.
 
 ## Typography

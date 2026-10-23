@@ -8,16 +8,16 @@ function MembersList(p) {
   var others = g.members.filter(function (n) { return !roleOf(g, n); });
   var on = others.filter(function (n) { return userOf(s, n).status !== 'offline' || n === s.me; });
   var off = others.filter(function (n) { return userOf(s, n).status === 'offline' && n !== s.me; });
-  function row(n, aside) {
-    var u = userOf(s, n);
+  function row(n) {
+    var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status;
     return h('button', { key: n, type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, g.id); } },
-      h(T.Avatar, { name: n, size: 28, status: n === s.me ? s.meStatus : u.status, ring: 'var(--panel)' }),
-      h('span', { className: 'grow', style: u.status === 'offline' && n !== s.me ? { color: 'var(--text-3)' } : null }, n + (n === s.me ? ' (you)' : '')),
-      aside ? h('span', { style: { fontSize: 11.5, color: 'var(--text-3)' } }, aside) : null);
+      h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
+      h('span', { className: 'grow', style: u.status === 'offline' && !isMe ? { color: 'var(--text-3)' } : null }, n),
+      presenceSr(status), youBadge(isMe), roleBadge(roleOf(g, n)));
   }
   return LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
     : h('div', { className: 'members-list' },
-      h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n, ROLE_LABEL[roleOf(g, n)]); }),
+      h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n); }),
       h('h3', { className: 'mlabel' }, 'Online · ' + on.length), on.map(function (n) { return row(n); }),
       off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
       s.prefs.safety.showGuests && g.guests ? h('p', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + g.guests) : null);

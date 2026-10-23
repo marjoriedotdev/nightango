@@ -46,14 +46,13 @@ function MessageRow(p) {
   var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
-  var roleBadge = role ? h(T.Badge, { icon: role === 'owner' ? 'crown' : 'shield' }, ROLE_LABEL[role]) : null;
   var reply = m.replyTo ? { avatar: m.replyTo.author ? h(T.Avatar, { name: m.replyTo.author, size: 16 }) : null, author: m.replyTo.author, text: m.replyTo.text } : null;
   var authorBtn = handle
     ? h('button', { type: 'button', className: 'tc-msg-author linkbtn', title: 'Mention ' + m.author, style: Object.assign({ textDecoration: 'none', color: 'var(--text)', fontWeight: 600, fontSize: 14 }, nameStyle), onClick: function () { p.onMention(handle); } }, m.author)
     : authorName(m.author, nameStyle);
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
-    avatar: h(AuthorAvatar, { name: m.author, gid: g.id }), author: authorBtn, meta: h(Frag, null, roleBadge, chan), reply: reply, actions: actions,
+    avatar: h(AuthorAvatar, { name: m.author, gid: g.id }), author: authorBtn, meta: h(Frag, null, roleBadge(role), chan), reply: reply, actions: actions,
     className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle
   }, body);
 }

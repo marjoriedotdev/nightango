@@ -73,7 +73,7 @@ function Sidebar() {
       section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.map(function (n) {
         var u = userOf(s, n), c = s.dms[n];
         return h(T.NavItem, {
-          key: n, label: n, active: r.view === 'dm' && r.id === n, unread: c.unread > 0, count: c.unread || 0,
+          key: n, label: h(Frag, null, n, presenceSr(u.status)), active: r.view === 'dm' && r.id === n, unread: c.unread > 0, count: c.unread || 0,
           avatar: h(T.Avatar, { name: n, size: 22, status: u.status, ring: 'var(--sidebar)' }),
           onClick: function () { app.nav({ view: 'dm', id: n }); }
         });

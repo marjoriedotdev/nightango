@@ -679,7 +679,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Bio : line Chatango brute dans le champ, rendue dans l'aperçu */
   const ownCard = async () => {
     click(byText('.tc-nav', 'test')); await wait(50);
-    click(byText('.members .mrow', 'marjorie (you)')); await wait(120);
+    click($$('.members .mrow').find(x => [...x.querySelectorAll('.tc-badge')].some(b => b.textContent === 'You'))); await wait(120);
     const r = $('.dialog .about.rich'), out = { text: r ? r.textContent : null, br: !!(r && r.querySelector('br')) };
     key(d, 'Escape'); await wait(30);
     return out;

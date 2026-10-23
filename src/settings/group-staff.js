@@ -68,11 +68,12 @@ function GSMembers(p) {
   return h(Page, { title: 'Members', lede: g.members.length + ' members and ' + g.guests + ' guests right now.' },
     h(T.TextField, { id: 'mem-q', label: 'Search members', type: 'search', value: q, onChange: function (e) { setQ(e.target.value); } }),
     h(T.SettingsSection, null, list.length ? list.map(function (n, i) {
-      var r = p.draft.staff[n], u = userOf(s, n);
+      var r = p.draft.staff[n], isMe = n === s.me, status = isMe ? s.meStatus : userOf(s, n).status;
       return h('div', { key: n, className: 'lrow', style: i ? null : { borderTop: 0 } },
-        h(T.Avatar, { name: n, size: 32, status: n === s.me ? s.meStatus : u.status, ring: 'var(--panel)' }),
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, n + (n === s.me ? ' (you)' : '')), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(n === s.me ? s.meStatus : u.status))),
-        n === s.me || r === 'owner' ? null : h(MenuButton, {
+        h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
+        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, n), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(status))),
+        youBadge(isMe),
+        isMe || r === 'owner' ? null : h(MenuButton, {
           label: 'Actions for ' + n, items: [
             { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(n, g.id); } },
             canMods && !r ? { label: 'Make moderator', icon: 'shield', onSelect: function () { p.edit(function (d) { d.staff[n] = 'mod'; if (LIVE) d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); }); app.ui.toast(n + ' will be a moderator once you save.'); } } : null,
