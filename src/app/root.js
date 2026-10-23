@@ -16,6 +16,7 @@ function Root(props) {
   var u8 = useState(null), banCfg = u8[0], setBan = u8[1];
   var u9 = useState(false), navOpen = u9[0], setNavOpen = u9[1];
   var u11 = useState(null), fullProfile = u11[0], setFullProfile = u11[1];
+  var u12 = useState(null), profileLink = u12[0], setProfileLink = u12[1];
   var u10 = useState(0), themeTick = u10[1];
   var prefs = state.prefs;
 
@@ -991,6 +992,7 @@ function Root(props) {
     openProfile: function (name, gid) { setProfile({ name: name, gid: gid }); },
     openFullProfile: function (name) { setFullProfile(name); },
     openLink: setLinkUrl,
+    openProfileLink: setProfileLink,
     openPalette: function () { setPalette(true); setNavOpen(false); },
     openCreate: function (prefill) { setCreate({ prefill: prefill || '' }); setNavOpen(false); },
     openNewDm: function () { setNewDm(true); setNavOpen(false); },
@@ -1006,6 +1008,7 @@ function Root(props) {
     state.auth.loggedIn && banCfg ? h(BanDialog, { name: banCfg.name, gid: banCfg.gid, msg: banCfg.msg, onClose: function () { setBan(null); } }) : null,
     state.auth.loggedIn && fullProfile ? h(FullProfileDialog, { name: fullProfile, onClose: function () { setFullProfile(null); } }) : null,
     linkUrl ? h(LinkDialog, { url: linkUrl, onClose: function () { setLinkUrl(null); } }) : null,
+    profileLink ? h(ProfileLinkDialog, { link: profileLink, onClose: function () { setProfileLink(null); } }) : null,
     state.auth.loggedIn && palette ? h(Palette, { onClose: function () { setPalette(false); } }) : null,
     state.auth.loggedIn && create ? h(CreateGroupDialog, { prefill: create.prefill, onClose: function () { setCreate(null); } }) : null,
     state.auth.loggedIn && newDm ? h(NewDmDialog, { onClose: function () { setNewDm(false); } }) : null,

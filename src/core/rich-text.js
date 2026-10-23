@@ -1,6 +1,29 @@
 var EMBED_LABEL = { youtube: 'Video', image: 'Image', photo: 'Photo' };
 function messagePreview(m) { var e = m.embeds && m.embeds[0]; return m.text || (e ? EMBED_LABEL[e.kind] : ''); }
 function warnOnLink(app, url) { return function (e) { if (app.state.prefs.safety.warnLinks) { e.preventDefault(); app.ui.openLink(url); } }; }
+var CHATANGO_SERVICE_HOSTS = ['www', 'st', 'ust', 'fp', 'm1', 'client'];
+/**
+ * Nom du profil désigné par un lien {nom}.chatango.com, ou null.
+ * @param {string} url Adresse du lien.
+ */
+function profileOfLink(url) {
+  var name = ((/^https?:\/\/([^\/?#]+)\.chatango\.com(?:[\/?#]|$)/i.exec(url) || [])[1] || '').toLowerCase();
+  return ACCOUNT_NAME.test(name) && CHATANGO_SERVICE_HOSTS.indexOf(name) < 0 ? name : null;
+}
+/**
+ * Clic sur un lien de profil : propose le profil ou la page, sauf clic modifié ou clic milieu.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} url Adresse du lien.
+ * @param {string} name Nom du profil.
+ * @param {?string} gid Groupe du message, null en MP.
+ */
+function onProfileLink(app, url, name, gid) {
+  return function (e) {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    app.ui.openProfileLink({ url: url, name: name, gid: gid });
+  };
+}
 
 var EMPHASIS = ['b', 'i', 'u', 's'];
 
@@ -16,7 +39,10 @@ function MessageText(p) {
           ? h('button', { key: i, type: 'button', className: 'tc-mention', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
           : h('span', { key: i, className: 'tc-mention' }, s);
       }
-      if (/^https?:\/\//.test(s)) return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: warnOnLink(app, s) }, s);
+      if (/^https?:\/\//.test(s)) {
+        var profile = profileOfLink(s);
+        return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: profile ? onProfileLink(app, s, profile, p.gid || null) : warnOnLink(app, s) }, s);
+      }
       return s;
     });
     return EMPHASIS.reduce(function (node, mark) { return part[mark] ? h(mark, { key: k }, node) : node; }, nodes);

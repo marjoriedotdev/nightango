@@ -143,16 +143,45 @@ function BanDialog(p) {
         h('span', { className: 'tc-hint' }, 'Shown to other staff in the audit log.'))));
 }
 
+/**
+ * Bouton qui ouvre une adresse dans un nouvel onglet puis ferme la fenêtre.
+ * @param {string} url Adresse à ouvrir.
+ * @param {string} variant Variante du bouton.
+ * @param {Function} onClose Fermeture de la fenêtre.
+ */
+function openLinkButton(url, variant, onClose) {
+  return h('a', { key: 'o', className: 'tc-btn tc-btn-' + variant, href: url, target: '_blank', rel: 'noopener noreferrer', onClick: onClose, style: { textDecoration: 'none' } }, 'Open link', h(T.Icon, { name: 'external', size: 14 }));
+}
+/**
+ * Adresse complète d'un lien, en tête de sa fenêtre.
+ * @param {string} url Adresse du lien.
+ */
+function linkAddress(url) {
+  return h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 12.5, overflowWrap: 'anywhere', color: 'var(--text-body)' } }, url);
+}
+
 function LinkDialog(p) {
   var app = useApp();
   return h(Dialog, {
     title: 'This link leaves Torch', description: 'Check the address before you continue. Torch does not check external sites.', onClose: p.onClose,
     footer: [
       h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
-      h('a', { key: 'o', className: 'tc-btn tc-btn-primary', href: p.url, target: '_blank', rel: 'noopener noreferrer', onClick: p.onClose, style: { textDecoration: 'none' } }, 'Open link', h(T.Icon, { name: 'external', size: 14 }))
+      openLinkButton(p.url, 'primary', p.onClose)
     ]
   },
     h('div', { className: 'dialog-body' },
-      h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 8, background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 12.5, overflowWrap: 'anywhere', color: 'var(--text-body)' } }, p.url),
+      linkAddress(p.url),
       h(T.Checkbox, { label: "Don't warn me again", onChange: function (e) { var v = e.target.checked; app.update(function (d) { d.prefs.safety.warnLinks = !v; }); } })));
+}
+
+function ProfileLinkDialog(p) {
+  var app = useApp(), link = p.link;
+  return h(Dialog, {
+    title: link.name + '.chatango.com', description: 'This address can lead to a Chatango profile or group.', onClose: p.onClose,
+    footer: [
+      h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
+      openLinkButton(link.url, 'secondary', p.onClose),
+      h(T.Button, { key: 'v', variant: 'primary', icon: 'users', onClick: function () { p.onClose(); app.ui.openProfile(link.name, link.gid); } }, 'View profile')
+    ]
+  }, h('div', { className: 'dialog-body' }, linkAddress(link.url)));
 }
