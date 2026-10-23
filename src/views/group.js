@@ -22,6 +22,7 @@ function GroupView(p) {
     else if (!older) setJump(true);
   }, [count, !!search]);
   var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open');
+  useLogAnchor(logRef, []);
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
@@ -35,7 +36,7 @@ function GroupView(p) {
   function onScroll() {
     var el = logRef.current;
     // .log en column-reverse : scrollTop vaut 0 en bas et devient négatif en remontant.
-    atBottom.current = el.scrollTop > -48;
+    atBottom.current = el.scrollTop > -LOG_BOTTOM_SLACK;
     if (atBottom.current && jump) setJump(false);
   }
   // Comme Torch : la mention s'ajoute en fin de brouillon.

@@ -9,6 +9,7 @@ function DMView(p) {
   var len = convo ? convo.messages.length : 0;
   // .log en column-reverse : scrollTop vaut 0 en bas.
   useLayoutEffect(function () { if (logRef.current) logRef.current.scrollTop = 0; }, [id, len]);
+  useLogAnchor(logRef, [id, !!convo]);
 
   var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
   useProfiles(names);

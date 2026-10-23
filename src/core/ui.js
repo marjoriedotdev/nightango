@@ -29,6 +29,44 @@ function useOutside(ref, open, onClose, extraRef) {
   }, [open]);
 }
 
+// Distance au bas d'un fil sous laquelle il reste collé en bas.
+var LOG_BOTTOM_SLACK = 48;
+
+/**
+ * Permet de garder la lecture en place dans un fil quand le contenu sous la vue change, là où le navigateur ne le fait pas.
+ * Le fil est en column-reverse : ce qui change au-dessus de la vue ne la déplace déjà pas.
+ * @param {Object} logRef Référence du fil (.log).
+ * @param {Array} deps Valeurs qui remplacent l'élément du fil.
+ */
+function useLogAnchor(logRef, deps) {
+  useEffect(function () {
+    var el = logRef.current;
+    // Safari avant 27 n'a pas d'ancrage natif du défilement. Ailleurs, corriger ici doublerait le décalage.
+    if (!el || window.CSS.supports('overflow-anchor', 'auto')) return;
+    var anchor = null, anchorTop = 0;
+    function pick() {
+      var top = el.getBoundingClientRect().top, rows = el.firstChild.children, lo = 0, hi = rows.length - 1;
+      while (lo < hi) { var mid = (lo + hi) >> 1; if (rows[mid].getBoundingClientRect().bottom > top) hi = mid; else lo = mid + 1; }
+      // Comme l'ancrage natif exclut la sentinelle (overflow-anchor: none), l'ancre manuelle l'exclut aussi.
+      if (rows[lo] && rows[lo].classList.contains('history-more')) lo++;
+      anchor = rows[lo] || null;
+      anchorTop = anchor ? anchor.getBoundingClientRect().top : 0;
+    }
+    function hold() {
+      if (anchor && anchor.isConnected && el.scrollTop < -LOG_BOTTOM_SLACK) {
+        var delta = anchor.getBoundingClientRect().top - anchorTop;
+        if (delta) el.scrollTop += delta;
+      }
+      pick();
+    }
+    var ro = new ResizeObserver(hold);
+    ro.observe(el.firstChild);
+    el.addEventListener('scroll', pick, { passive: true });
+    pick();
+    return function () { ro.disconnect(); el.removeEventListener('scroll', pick); };
+  }, deps);
+}
+
 /**
  * Permet de demander la page suivante quand une sentinelle approche de la zone visible.
  * @param {Object} rootRef Référence de la zone qui défile.
