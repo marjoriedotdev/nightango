@@ -63,11 +63,22 @@ function MessageRow(p) {
   return h('article', { className: cx('tc-msg', mention && 'tc-msg-mention', menuOpen && 'menu-open', chanColor && 'chan-msg'), style: Object.assign({ marginTop: 6 }, m.replyTo ? { flexDirection: 'column' } : null, rowStyle) },
     reply,
     h('div', { style: { display: 'flex', gap: 12 } },
-      h(T.Avatar, { name: m.author }),
+      h(AuthorAvatar, { name: m.author, gid: g.id }),
       h('div', { className: 'tc-msg-body' },
         h('div', { className: 'tc-msg-head' }, authorBtn, roleBadge, h('time', { className: 'tc-msg-time' }, time), chan),
         body)),
     actions);
+}
+
+/**
+ * Avatar de l'auteur d'un message, qui ouvre sa fiche de profil.
+ * @param {string} p.name Nom du membre.
+ * @param {?string} [p.gid] Groupe du message.
+ */
+function AuthorAvatar(p) {
+  var app = useApp();
+  return h('button', { type: 'button', className: 'avatar-btn', 'aria-label': 'View ' + p.name + "'s profile", onClick: function () { app.ui.openProfile(p.name, p.gid || null); } },
+    h(T.Avatar, { name: p.name }));
 }
 
 function MessageContent(p) {

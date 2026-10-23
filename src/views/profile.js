@@ -69,7 +69,7 @@ function ProfilePhoto(p) {
   var avatar = h(T.Avatar, { name: p.name, size: 96, status: p.status, ring: p.ring, onLoad: function () { setHasPhoto(true); } });
   if (!hasPhoto) return avatar;
   return h(Frag, null,
-    h('button', { type: 'button', className: 'photo-btn', 'aria-label': 'View ' + p.name + "'s profile photo", onClick: function () { setOpen(true); } }, avatar),
+    h('button', { type: 'button', className: 'avatar-btn photo-btn', 'aria-label': 'View ' + p.name + "'s profile photo", onClick: function () { setOpen(true); } }, avatar),
     open ? h(PhotoViewer, { name: p.name, onClose: function () { setOpen(false); } }) : null);
 }
 

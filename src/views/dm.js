@@ -60,7 +60,7 @@ function DMView(p) {
       rows.push(cont
         ? h('article', { key: m.id, className: 'tc-msg tc-msg-cont', style: ms.row }, h('span', { className: 'tc-msg-gutter' }, time), h('div', { className: 'tc-msg-body' }, content))
         : h('article', { key: m.id, className: 'tc-msg', style: Object.assign({ marginTop: 6 }, ms.row) },
-          h(T.Avatar, { name: m.from }),
+          h(AuthorAvatar, { name: m.from }),
           h('div', { className: 'tc-msg-body' }, h('div', { className: 'tc-msg-head' }, h('span', { className: 'tc-msg-author', style: ms.name }, m.from), h('time', { className: 'tc-msg-time' }, time)), content)));
       prev = m;
     });

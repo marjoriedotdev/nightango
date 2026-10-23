@@ -345,8 +345,10 @@ h1,h2,h3{text-wrap:balance}
 .profile-cover{position:absolute;top:0;left:0;right:0;height:120px;pointer-events:none}
 .profile-cover img{display:block;width:100%;height:100%;object-fit:cover}
 .profile-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,var(--raised))}
-.photo-btn{display:inline-flex;padding:0;border:0;border-radius:50%;background:none;cursor:zoom-in}
-.photo-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.avatar-btn{display:inline-flex;flex:none;padding:0;border:0;border-radius:50%;background:none;cursor:pointer}
+.avatar-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.photo-btn{cursor:zoom-in}
+.tc-msg .avatar-btn{align-self:flex-start}
 .photo-viewer{z-index:55;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--bg) 94%,transparent)}
 .photo-full{display:block;min-height:0;max-width:100%;max-height:calc(100% - 64px);object-fit:contain;border-radius:8px}
 .photo-wait{display:none}
