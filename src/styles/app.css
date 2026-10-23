@@ -191,6 +191,7 @@ h1,h2,h3{text-wrap:balance}
 .navlist .skel-row{gap:10px;height:var(--size-control-md);padding:0 10px}
 .members-list .skel-row{gap:10px;height:38px;padding:0 8px}
 .log .skel-row{align-items:flex-start;padding:6px 20px}
+.tc-section .skel-row{padding:12px 20px}
 .conv-meta .tc-skeleton{margin-left:8px}
 .startup{display:inline-flex;align-items:center;gap:8px;margin:0;color:var(--text-2)}
 

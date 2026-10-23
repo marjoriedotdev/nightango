@@ -82,7 +82,7 @@ function VisitorsSection() {
     h('div', { className: 'tc-section-pad seg-scroll' }, h(T.SegmentedControl, { label: 'Activity type', value: get, options: VISIT_FILTERS, onChange: function (g) { app.actions.loadVisitors(g, false); } })),
     rows.map(visitorRow),
     v && v.error ? h('p', { className: 'pal-empty' }, v.error)
-      : loading ? h('p', { className: 'pal-empty' }, 'Loading activity from vissle.me.')
-        : !rows.length ? h('p', { className: 'pal-empty' }, 'No activity yet.')
-          : v.next ? h('div', { style: { padding: 12, display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--divider)' } }, h(T.Button, { size: 'sm', onClick: function () { app.actions.loadVisitors(get, true); } }, 'Load more')) : null);
+      : !rows.length ? loading ? h(SkeletonRows, { count: 5, avatar: 28, label: 'Loading activity from vissle.me' }) : h('p', { className: 'pal-empty' }, 'No activity yet.')
+        : v.next ? h('div', { style: { padding: 12, display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--divider)' } },
+          loading ? h(T.Spinner, { label: 'Loading more activity' }) : h(T.Button, { size: 'sm', onClick: function () { app.actions.loadVisitors(get, true); } }, 'Load more')) : null);
 }

@@ -47,6 +47,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 - Hover: `hover` on rows, `hover-2` on buttons. Current item: `selected`. Pressed toggles: `selected` plus `aria-pressed`.
 - Local preferences (theme, notifications, density) save on change and say so in the page description. Changes that go to Chatango (profile, group settings, roles) collect in a `SaveBar` and are saved together.
 - Destructive actions ask for confirmation in a dialog that repeats the consequence.
+- Loading: a list with no rows yet shows skeleton rows shaped like its rows. A list loading its next page keeps its rows and shows a `Spinner` below them. A single block (a form, a profile, one control) says what is loading in one line of text.
 - Motion is limited to 120 to 150ms color and position transitions. Nothing bounces.
 
 ## Members' Chatango styles
