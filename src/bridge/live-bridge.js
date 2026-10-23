@@ -7,6 +7,7 @@ var liveBridge = (function () {
   var GENDERS = { M: 'Male', F: 'Female' };
   var STARTUP = { joinOwned: ['groups', 'connect_own'], joinRecent: ['groups', 'connect_recent'], joinFavorites: ['groups', 'connect_favorite'] };
   var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'] };
+  var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
@@ -114,6 +115,14 @@ var liveBridge = (function () {
       // La trame status ne dit pas si le compte est inactif : un état idle connu doit rester en place.
       case 'status': emit(data[2] === 'offline' ? { op: 'presence', name: lower(data[0]), status: 'offline', lastOn: epochMs(data[1]) } : { op: 'presence', name: lower(data[0]), status: 'online', keepIdle: true }); break;
       case 'idleupdate': emit({ op: 'presence', name: lower(data[0]), status: data[1] === '0' ? 'idle' : 'online' }); break;
+      case 'connect': {
+        // Une réponse à nom vide refuse le dernier nom envoyé.
+        var target = lower(data[0]) || connectTarget, state = data[0] && CONNECT_STATE[data[2]];
+        if (state) emit({ op: 'people', list: [friendPresence(target, state, data[1], data[1])] });
+        // Comme Torch, un état inconnu est ignoré.
+        if (state || !data[0] || data[2] === 'invalid' || data[2] === 'nouser') emit({ op: 'pmChecked', name: target, found: !!state });
+        break;
+      }
       case 'presence': {
         var people = [];
         // Hors ligne, les minutes ne sont pas de l'inactivité : elles servent de dernière connexion approchée.
@@ -146,7 +155,8 @@ var liveBridge = (function () {
       var w = function (c, socket, room, data) {
         try { if (kind === 'group') tapGroup(name, room, data || []); else tapPrivate(name, data || []); } catch (e) { warn(e); }
         // Torch répond à DENIED par un alert() bloquant : la fenêtre de session expirée le remplace.
-        if (kind === 'private' && name === 'DENIED') return;
+        // Son gestionnaire connect ouvre son écran de MP et peut appeler api.vissle.me, hors de la liste fermée.
+        if (kind === 'private' && (name === 'DENIED' || name === 'connect')) return;
         return orig.apply(this, arguments);
       };
       w.__skin = true;
@@ -234,6 +244,20 @@ var liveBridge = (function () {
 
   function send(gid, frame, failure) {
     try { C.socket(gid, frame, failure); return true; } catch (e) { warn(e); return false; }
+  }
+  function pmOpen() { return !!(C.private && C.private.socket && C.private.socket.readyState === 1); }
+  // Dernier correspondant demandé par connect, auquel se rattache une réponse à nom vide.
+  var connectTarget = '';
+  /**
+   * Permet de demander à Chatango la présence d'un correspondant, comme Torch à l'ouverture d'un MP.
+   * @param {string} name Correspondant visé.
+   * @returns {boolean} Vrai si la trame est partie.
+   */
+  function connectPm(name) {
+    var n = lower(name);
+    if (!pmOpen() || !send('private_message', 'connect:' + n, 'The conversation with ' + n + ' could not be opened.')) return false;
+    connectTarget = n;
+    return true;
   }
   function post(url, fields, item) {
     if (typeof C.post !== 'function') return Promise.reject(new Error('Torch is not signed in yet.'));
@@ -356,7 +380,6 @@ var liveBridge = (function () {
       // Groupes déjà connectés avant nous : leurs trames inited et participants sont passées.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
       if (typeof window.__TORCH_SHOW__ === 'function') window.__TORCH_SHOW__();
-      var pmOpen = function () { return !!(C.private && C.private.socket && C.private.socket.readyState === 1); };
       if (pmOpen()) {
         // Session déjà ouverte : la liste d'amis et l'historique ont été reçus avant nous, on les redemande.
         emit({ op: 'pmReady' });
@@ -440,8 +463,16 @@ var liveBridge = (function () {
     },
     applyStyle: function (style) { try { applyStyle(style); } catch (e) { warn(e); } },
     focus: function (gid) { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } },
-    // Torch n'archive un message privé envoyé que pour la conversation qu'il considère ouverte.
-    focusPm: function (user) { try { if (C.private) C.private.focus = user || false; } catch (e) { warn(e); } },
+    /**
+     * Permet de suivre la conversation affichée, et d'en demander la présence quand elle change de correspondant.
+     * @param {string|boolean} user Correspondant affiché, false hors des MP.
+     */
+    focusPm: function (user) {
+      // Torch n'archive un message privé envoyé que pour la conversation qu'il considère ouverte.
+      try { if (C.private) C.private.focus = user || false; } catch (e) { warn(e); }
+      if (user && user !== connectTarget) connectPm(user);
+    },
+    connectPm: connectPm,
     join: function (gid) {
       delete left[gid];
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }

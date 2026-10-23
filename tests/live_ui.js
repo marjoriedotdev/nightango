@@ -55,7 +55,8 @@ function fakeGroup() { return { socket: { readyState: 1 }, user: { badge: 0, cha
 const C = {
   // DENIED : Torch affiche un alert() bloquant.
   // msgoff : Torch archive le message dans sa base d'historique (saveMessage), une seule fois.
-  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msgoff() { calls.push(['archive', !!C.database.pm]); } }) },
+  // connect : Torch ouvre son propre écran de MP.
+  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msgoff() { calls.push(['archive', !!C.database.pm]); }, connect() { calls.push(['torchPmScreen']); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
   settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] } }, safety: { users: { ignore: [] } } },
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
@@ -424,7 +425,15 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('msg', ['dave', 'marjorie', 'unknown', '1700000300.5', '0', '<n3366FF/><m v="1"><g x12s9900cc="4">Hi</g></m>']); await wait(50);
   const live = styled('Hi');
   step('pm style rendered', styleOk(live), live.p && [live.p.style.cssText, live.name && live.name.style.cssText]);
+  const sentBeforeFay = sent.length;
   click(byText('.conv', 'fay')); await wait(50);
+  const fayFrames = sent.slice(sentBeforeFay);
+  pm('connect', ['fay', '1700000000', 'offline']);
+  await until(() => !!$('.thread .topbar .tc-presence-offline'));
+  const fayHead = { topic: ($('.thread .topbar .topic') || {}).textContent || '', offline: !!$('.thread .topbar .tc-presence-offline') };
+  const fayDays = +((/^Last online (\d+) days ago$/.exec(fayHead.topic) || [])[1]);
+  step('opening a pm asks Chatango for the presence', JSON.stringify(fayFrames) === JSON.stringify([['private_message', 'connect:fay']]) && fayHead.offline
+    && Math.abs(fayDays - (Date.now() - 1700000000000) / 86400000) <= 1 && !calls.some(c => c[0] === 'torchPmScreen'), { fayFrames, fayHead, torch: calls.filter(c => c[0] === 'torchPmScreen').length });
   const old = styled('Old styled');
   step('pm history keeps style', styleOk(old), old.p && [old.p.style.cssText, old.name && old.name.style.cssText]);
   type($('.thread .tc-composer textarea'), 'Mine'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
@@ -494,6 +503,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await closeConv('dave');
   click($('.convs button[aria-label="New message"]')); await wait(50);
   type($('#newdm'), 'dave'); click(byText('.dialog-foot button', 'Start conversation')); await wait(50);
+  pm('connect', ['dave', '0', 'online']);
+  await until(() => !$('.dialog') && !hiddenStored().includes('dave'));
   const reopened = { hidden: hiddenStored().includes('dave'), listed: listed('dave'), history: !!$('.thread') && $('.thread').textContent.includes('Hello & welcome') };
   step('close keeps history and reopens', !closed.listed && !closed.cleared && closed.hidden && back && !reopened.hidden && reopened.listed && reopened.history, { closed, back, reopened });
   click($('.thread button[aria-label="Conversation options"]')); await wait(30);
@@ -501,8 +512,21 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.dialog-foot button', 'Delete')); await wait(50);
   step('delete clears Torch history', calls.some(c => c[0] === 'clearHistory' && c[1] === 'dave') && !listed('dave'), calls.filter(c => c[0] === 'clearHistory'));
   click($('.convs button[aria-label="New message"]')); await wait(50);
+  const sentBeforeGhost = sent.length;
+  type($('#newdm'), 'ghost'); click(byText('.dialog-foot button', 'Start conversation'));
+  await until(() => !!byText('.dialog-foot button', 'Checking'));
+  const checking = byText('.dialog-foot button', 'Checking');
+  const ghostAsk = { frames: sent.slice(sentBeforeGhost), waiting: !!checking && checking.disabled };
+  pm('connect', ['ghost', '0', 'invalid']);
+  await until(() => !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'));
+  const ghost = { error: !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'), listed: listed('ghost'), head: ($('.thread .topbar h2') || {}).textContent || '' };
+  if ($('.dialog')) { click(byText('.dialog-foot button', 'Cancel')); await wait(30); }
+  step('new pm checks the name with Chatango', JSON.stringify(ghostAsk.frames) === JSON.stringify([['private_message', 'connect:ghost']]) && ghostAsk.waiting && ghost.error && !ghost.listed && ghost.head !== 'ghost', { ghostAsk, ghost });
+  click($('.convs button[aria-label="New message"]')); await wait(50);
   const dmChips = $$('.dialog .chip').length;
   type($('#newdm'), 'hank'); key($('#newdm'), 'Enter'); await wait(50);
+  pm('connect', ['hank', '0', 'online']);
+  await until(() => !$('.dialog') && !!$('.thread .topbar h2'));
   const hankHead = $('.thread .topbar h2');
   step('new dm has no suggestions', dmChips === 0 && !$('.dialog') && !!hankHead && hankHead.textContent === 'hank', { dmChips, dialog: !!$('.dialog'), head: hankHead && hankHead.textContent });
   const convRow = n => $$('.conv-row').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n);

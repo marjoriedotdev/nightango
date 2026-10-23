@@ -106,6 +106,9 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - `wlonline:nom`, `wlapp:nom` (connecté depuis l'application mobile), `wloffline:nom:horodatage` (source ch.py).
 - `status:nom:horodatage:état`, état `online`, `app` ou `offline` (sources ch.py, chatango-lib). Cette trame ne dit pas si le compte est inactif : un état idle déjà connu est gardé. Torch ne s'en sert que pour son écran de MP.
 - `presence` (réponse à `getpresence:a;b`) : triplets nom, minutes, état (`online`, `app` ou `offline`). En `online` ou `app`, les minutes sont de l'inactivité. En `offline`, elles donnent une dernière connexion approchée.
+- `connect:nom:valeur:état` (réponse à `connect:{n}`, gestionnaire `connect` de Torch, `inject.js:4120` à `inject.js:4166`) : présence d'un correspondant, ami ou non. État `online` : en ligne si la valeur vaut 0, sinon inactif depuis `valeur` minutes (`inject.js:4159`). `app` : connecté depuis l'application mobile. `offline` : la valeur est la dernière connexion en secondes (`inject.js:4160`). Refus : `invalid`, le nom « does not exist or is a group chat » (`inject.js:4124` à `inject.js:4131`), `nouser`, le nom « is not associated with a Chatango account » (`inject.js:4132` à `inject.js:4134`), et nom vide, « Username does not exist or is a group chat. » (`inject.js:4164`), que le pont rattache au dernier nom envoyé. Comme Torch, le pont ignore un autre état. La réponse ne porte que la présence : Torch lit l'historique dans sa base locale (`inject.js:8939` à `inject.js:8968`).
+- Torch envoie `connect:{n}`, nom en minuscules, à chaque ouverture d'un MP : clic sur une conversation (`inject.js:10212`), `/chat nom` (`inject.js:7354`), « Message » d'un profil (`inject.js:7580`), formulaire Chat (`inject.js:10590`) et avatar (`inject.js:756`). Jamais à la fermeture : il n'envoie `disconnect:{n}` qu'après un blocage (`inject.js:7585`). Le pont envoie `connect:{n}` quand la conversation affichée passe à un autre correspondant que celui de la dernière demande, si la connexion privée est ouverte. New private message l'envoie avant d'ouvrir la conversation et attend la réponse.
+- Le pont n'appelle pas le gestionnaire `connect` de Torch, comme pour `DENIED`. Ce gestionnaire passe par `Private.setFocus` (`inject.js:8875` à `inject.js:8995`), qui ouvre l'écran de MP de Torch, passe `client.focus` à `private_message`, ajoute la personne à sa liste et marque sa base lue, alors que Torch Skin gère ces états lui-même. Avec `check_block` (faux par défaut, `inject.js:9691`), il appelle aussi `api.vissle.me/v1/profile/{nom}?get=status` (`inject.js:4142` à `inject.js:4157`), hors de la liste fermée des appels HTTP autorisés.
 - Le pont en tire `lastOn` (millisecondes, 0 si inconnu). Un passage hors ligne sans horodatage prend l'heure courante (`app/root.js`). Les lignes Chats et Friends affichent cette date en haut à droite pour un ami hors ligne (« 3 h ago »).
 - Le pont en tire aussi `idleSince` (millisecondes) à partir des minutes d'inactivité. `idleupdate` ne donne pas de durée : l'inactivité part de sa réception. L'état idle n'est affiché qu'après 3 minutes (`IDLE_DELAY`, `app/root.js`), avant quoi le membre reste online. Un ami idle affiche sa durée d'inactivité en haut à droite (« Idle 12 min »).
 
@@ -198,6 +201,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - `block:{n}:{n}:S`, `unblock:{n}`
 - `wl`, `getblock`
 - `getpresence:a;b`
+- `connect:{n}` (voir Présence des amis)
 
 ### Enregistrement des réglages de groupe
 

@@ -155,8 +155,8 @@ function presenceOf(state, idle) { return state === 'on' ? (+idle ? 'idle' : 'on
 // Chatango envoie "None" ou 0 quand il ne connaît pas la dernière connexion.
 function epochMs(v) { return Math.round(parseFloat(v) * 1000) || 0; }
 /**
- * Permet de lire la présence d'un ami dans une trame wl ou wladd.
- * @param {string} name Nom de l'ami.
+ * Permet de lire la présence d'un correspondant dans une trame wl, wladd ou connect.
+ * @param {string} name Nom du correspondant.
  * @param {string} state État Chatango on, off ou app.
  * @param {string} ts Dernière connexion en secondes.
  * @param {string} minutes Minutes d'inactivité.

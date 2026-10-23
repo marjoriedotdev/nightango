@@ -386,6 +386,8 @@ function Root(props) {
   /* ---------- Mode live : actions transmises à Chatango par le client Torch ---------- */
   var localRef = useRef(blankLocal());
   var profilePending = useRef({});
+  // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
+  var pmAsked = useRef(null);
   var offlineCount = useRef(0);
   function skinKey(me) { return 'torch-skin:' + me; }
   function blankLocal() { return { hidden: [], style: null }; }
@@ -519,6 +521,16 @@ function Root(props) {
         actions.loadProfile(n).then(next);
       }
       for (var k = 0; k < 4; k++) next();
+    };
+    /**
+     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme Torch avant de l'ouvrir.
+     * @param {string} name Correspondant visé.
+     * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
+     */
+    actions.checkPm = function (name) {
+      if (!liveBridge.connectPm(name)) return false;
+      pmAsked.current = name;
+      return true;
     };
     actions.searchPeople = function (f, more) {
       var cur = stateRef.current.meet, from = more && cur ? cur.next : 0, token = (cur && cur.token || 0) + 1;
@@ -942,8 +954,15 @@ function Root(props) {
         break;
       case 'friendRefused':
         update(function (d) { delete d.friendAdds[op.name]; });
-        toast('No Chatango user named ' + op.name + '.', { icon: 'info' });
+        toast(unknownUserText(op.name), { icon: 'info' });
         break;
+      case 'pmChecked': {
+        var asked = pmAsked.current === op.name;
+        if (asked) pmAsked.current = null;
+        update(function (d) { d.pmChecked = { name: op.name, found: op.found, ts: Date.now() }; });
+        if (!op.found && !asked && stateRef.current.dms[op.name]) toast(unknownUserText(op.name), { icon: 'info' });
+        break;
+      }
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
       case 'presence': {
         var before = stateRef.current.users[op.name];
