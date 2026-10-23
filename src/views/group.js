@@ -1,6 +1,8 @@
 /* ---------- Groupe ---------- */
 // Torch refuse la dixième modification d'un message.
 var EDIT_MAX = 9;
+// Limite de Torch pour un groupe, comptée sur le corps qu'il construit et non sur le texte saisi.
+var GROUP_MESSAGE_MAX = 2900;
 var COMPOSER_MODES = {
   reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply' },
   edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit' },
@@ -51,6 +53,7 @@ function GroupView(p) {
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
   // Le canal d'envoi n'est jamais masqué, même s'il reste dans la liste gardée.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
+  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m) : null;
 
   function onScroll() {
     reading.onScroll();
@@ -94,11 +97,10 @@ function GroupView(p) {
     setMode({ kind: 'edit', m: m });
   }
   function send(text) {
-    if (mode && mode.kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
+    if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
     if (runCommand(app, text, g.id)) return;
     reading.atBottom.current = true;
-    var kind = mode && mode.kind;
-    app.actions.sendGroup(g.id, text, { replyTo: kind === 'reply' ? { id: mode.m.id } : null, quote: kind === 'quote' ? quoteOf(mode.m) : null, channel: channel });
+    app.actions.sendGroup(g.id, text, { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel });
     setMode(null);
   }
   function toBottom() { var el = logRef.current; reading.atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
@@ -150,8 +152,12 @@ function GroupView(p) {
   } else if (ann.broadcast && !canBroadcast) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
+    var typed = draft.trim();
+    var left = GROUP_MESSAGE_MAX - (LIVE ? liveBridge.measure(g.id, typed, { replyId: replyId, editId: kind === 'edit' ? editedId(mode.m) : null, quote: quoted, style: s.ownStyle }) : typed.length);
     composer = h(Frag, null, h(T.Composer, {
-      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: completeMention, inputRef: inputRef,
+      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: completeMention, inputRef: inputRef, canSend: left >= 0,
+      hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
+      hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji,
       onAttach: LIVE ? null : function () { app.ui.toast('Uploading media is not part of this prototype.'); },

@@ -468,6 +468,30 @@ var liveBridge = (function () {
     if (!accountStyle) accountStyle = readStyle(f);
     writeStyle(f, Object.assign({}, style, { on: true, active: true }));
   }
+  /**
+   * Permet de faire construire par Torch le corps d'un message de groupe, sans l'envoyer, avec la référence et la citation que l'envoi insère.
+   * @param {string} gid Groupe visé.
+   * @param {string} text Texte saisi.
+   * @param {{replyId: ?string, editId: ?string, quote: ?string, style: ?Object}} opts Réponse, original modifié ou citation en texte brut, et style perso.
+   * @returns {?{body: string, style: Object}} Corps, et style propre lu dans celui de Torch, null si Torch ne construit rien.
+   */
+  function groupBody(gid, text, opts) {
+    applyStyle(opts.style);
+    var body = C.sendMessage(esc(text), true, gid);
+    if (typeof body !== 'string' || !body) return null;
+    var style = parseContent(body).style;
+    // Comme Torch, une modification ne porte jamais de réponse.
+    var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
+    var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
+    body = head + ref + body.slice(head.length);
+    if (opts.quote) {
+      // Torch place la citation juste avant le texte saisi : après l'emphase de son style, lue dans ses cases, et avant celle du Markdown.
+      var f = C.user.style ? styleFields() : null;
+      var at = head.length + (f ? (f.bold.checked ? '<b>' : '') + (f.italic.checked ? '<i>' : '') + (f.underline.checked ? '<u>' : '') : '').length;
+      body = body.slice(0, at) + esc(opts.quote) + body.slice(at);
+    }
+    return { body: body, style: style };
+  }
 
   /* Réponses du pont vissle du userscript, rapprochées des demandes par identifiant */
   var vissleWaits = {};
@@ -541,24 +565,24 @@ var liveBridge = (function () {
      */
     send: function (gid, text, opts) {
       opts = opts || {};
-      var body;
-      try { applyStyle(opts.style); body = C.sendMessage(esc(text), true, gid); } catch (e) { warn(e); return null; }
-      if (typeof body !== 'string' || !body) return null;
-      var style = parseContent(body).style;
-      // Comme Torch, une modification ne porte jamais de réponse.
-      var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
-      var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
-      body = head + ref + body.slice(head.length);
-      if (opts.quote) {
-        // Torch place la citation juste avant le texte saisi : après l'emphase de son style, lue dans ses cases, et avant celle du Markdown.
-        var f = C.user.style ? styleFields() : null;
-        var at = head.length + (f ? (f.bold.checked ? '<b>' : '') + (f.italic.checked ? '<i>' : '') + (f.underline.checked ? '<u>' : '') : '').length;
-        body = body.slice(0, at) + esc(opts.quote) + body.slice(at);
-      }
+      var built;
+      try { built = groupBody(gid, text, opts); } catch (e) { warn(e); return null; }
+      if (!built) return null;
       var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
       var user = (C.groups[gid] && C.groups[gid].user) || {};
       var flag = (CHANNEL_FLAG[opts.channel] || 0) + (parseInt(user.badge, 10) || 0);
-      return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + body, failure) ? style : null;
+      return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure) ? built.style : null;
+    },
+    /**
+     * Permet de mesurer, comme le compteur de Torch, le corps qu'enverrait send, sans le préfixe bm.
+     * @param {string} gid Groupe visé.
+     * @param {string} text Texte saisi.
+     * @param {{replyId: ?string, editId: ?string, quote: ?string, style: ?Object}} opts Mêmes options que send.
+     * @returns {number} Longueur du corps, 0 pour un texte vide.
+     */
+    measure: function (gid, text, opts) {
+      if (!text) return 0;
+      try { var built = groupBody(gid, text, opts); return built ? built.body.length : 0; } catch (e) { warn(e); return 0; }
     },
     /**
      * Permet d'envoyer un message privé.

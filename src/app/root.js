@@ -529,7 +529,7 @@ function Root(props) {
       sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, 'Message not sent. Torch rejected it.');
     };
     // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
-    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: m.editId || m.id, channel: m.channel }, 'Message not edited. Torch rejected it.'); };
+    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. Torch rejected it.'); };
     actions.sendDm = function (name, text) {
       var me = stateRef.current.me;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);

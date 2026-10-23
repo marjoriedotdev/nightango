@@ -135,6 +135,12 @@ function quoteOf(m) {
 }
 
 /**
+ * Permet d'obtenir l'identifiant que vise la modification d'un message : celui de l'original pour une modification affichée à part.
+ * @param {Object} m Message modifié.
+ */
+function editedId(m) { return m.editId || m.id; }
+
+/**
  * Nom de l'auteur d'un message, sans action.
  * @param {string} name Nom du membre.
  * @param {?Object} style Couleur du nom choisie par le membre.

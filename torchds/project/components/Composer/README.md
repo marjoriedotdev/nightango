@@ -9,3 +9,5 @@ Provide `placeholder` ("Message #community", "Message sable") and `onSend(text)`
 - `aside` holds the channel picker. `beforeSend` holds one icon button placed right before Send, such as the message style.
 - Pass `value` and `onChange` when the view writes into the input, such as a mention, and `inputRef` to focus it afterwards.
 - `onKeyDown(e)` sees each key before the composer does. Call `e.preventDefault()` to keep the key from it, such as Tab completing a mention. Leave Tab alone when there is nothing to complete, so focus moves on.
+- `hint` puts a short text in the bar, before `aside`, and describes the input for assistive tech, such as "240 characters left". Its digits are tabular. With `hintTone: 'warning'`, the `alert` icon in `warning` comes first and the text says what to do: "Shorten your message by 12 characters to send it."
+- `canSend={false}` disables Send, and Enter neither sends nor clears the input. Say why in `hint`.

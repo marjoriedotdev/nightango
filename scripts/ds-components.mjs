@@ -171,7 +171,7 @@ Sizes:
     'A floating bar that appears when a page has unsaved changes that go to Chatango.',
     `Use it only where changes are sent to Chatango (profile, group settings). Local preferences save on change and never show it. Children say what will change ("Moderator role changed. Applies to sable and vantage."). Provide \`onDiscard\` and \`onSave\`.`,
     `  return h(T.SaveBar, { onDiscard: function () {}, onSave: function () {} }, 'You have 2 unsaved changes');`],
-  ['Composer', 'Chat', 150,
+  ['Composer', 'Chat', 270,
     'The message input with reply or edit context, optional tools and send button.',
     `Provide \`placeholder\` ("Message #community", "Message sable") and \`onSend(text)\`. Enter sends, Shift+Enter adds a line. A click anywhere in the composer outside its controls focuses the input.
 
@@ -179,9 +179,13 @@ Sizes:
 - \`onEmoji\` and \`onAttach\` each show their tool button; leave them out when the feature does not exist.
 - \`aside\` holds the channel picker. \`beforeSend\` holds one icon button placed right before Send, such as the message style.
 - Pass \`value\` and \`onChange\` when the view writes into the input, such as a mention, and \`inputRef\` to focus it afterwards.
-- \`onKeyDown(e)\` sees each key before the composer does. Call \`e.preventDefault()\` to keep the key from it, such as Tab completing a mention. Leave Tab alone when there is nothing to complete, so focus moves on.`,
-    `  var s = React.useState('Thanks @sa');
-  return h(T.Composer, { placeholder: 'Message #community', value: s[0], onChange: s[1], onKeyDown: function (e) { if (e.key === 'Tab' && !e.shiftKey && /@sa$/.test(s[0])) { e.preventDefault(); s[1](s[0] + 'ble '); } }, context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) });`],
+- \`onKeyDown(e)\` sees each key before the composer does. Call \`e.preventDefault()\` to keep the key from it, such as Tab completing a mention. Leave Tab alone when there is nothing to complete, so focus moves on.
+- \`hint\` puts a short text in the bar, before \`aside\`, and describes the input for assistive tech, such as "240 characters left". Its digits are tabular. With \`hintTone: 'warning'\`, the \`alert\` icon in \`warning\` comes first and the text says what to do: "Shorten your message by 12 characters to send it."
+- \`canSend={false}\` disables Send, and Enter neither sends nor clears the input. Say why in \`hint\`.`,
+    `  var s = React.useState('Thanks @sa'), long = React.useState('A message past the length Torch allows');
+  return h('div', { className: 'col' },
+    h(T.Composer, { placeholder: 'Message #community', value: s[0], onChange: s[1], onKeyDown: function (e) { if (e.key === 'Tab' && !e.shiftKey && /@sa$/.test(s[0])) { e.preventDefault(); s[1](s[0] + 'ble '); } }, context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) }),
+    h(T.Composer, { placeholder: 'Message #community', value: long[0], onChange: long[1], onSend: function () {}, hint: 'Shorten your message by 12 characters to send it.', hintTone: 'warning', canSend: false }));`],
   ['Skeleton', 'Feedback', 120,
     'A shimmering placeholder that holds the place of content still loading.',
     `Pass \`width\` and \`height\` in pixels, or \`circle\` for an avatar. Compose them in the shape of the rows they replace (avatar plus one or two lines) so the layout does not jump when the content arrives. Use them only while data is on its way: an empty list says so in words.

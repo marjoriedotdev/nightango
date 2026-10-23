@@ -1097,7 +1097,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   type($('.thread .tc-composer textarea'), 'Styled pm'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(30);
   styleProbe = null;
   const atGroup = styleAtBuild.filter(x => x.group === 'test').map(x => x.style), atPm = styleAtBuild.filter(x => x.group === 'private_message').map(x => x.style);
-  step('own style applied locally', !!styleBtn && atGroup.length === 1 && atGroup[0] === WANT && storedStyle.includes('#9900cc') && storedStyle.includes('#3366ff') && atPm.length === 1 && atPm[0] === WANT && posts.length === postsBeforeStyle && submits === 0,
+  step('own style applied locally', !!styleBtn && atGroup.length >= 1 && atGroup.every(x => x === WANT) && frame('bm:').some(f => /Styled$/.test(f)) && storedStyle.includes('#9900cc') && storedStyle.includes('#3366ff') && atPm.length === 1 && atPm[0] === WANT && posts.length === postsBeforeStyle && submits === 0,
     { button: !!styleBtn, atGroup, storedStyle, atPm, posts: posts.slice(postsBeforeStyle), submits });
 
   /* Style d'un MP : l'historique privé rejoué à OK n'écrase pas le style d'un message plus récent reçu en direct */

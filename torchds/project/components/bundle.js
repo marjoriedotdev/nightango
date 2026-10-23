@@ -290,10 +290,11 @@
     var value = props.value != null ? props.value : internal[0];
     var setValue = props.onChange || internal[1];
     var own = React.useRef(null), ref = props.inputRef || own;
-    var id = React.useId();
+    var id = React.useId(), hintId = id + '-hint';
+    var blocked = props.canSend === false;
     function send() {
       var text = value.trim();
-      if (!text) return;
+      if (!text || blocked) return;
       // Vidé avant onSend : la vue peut y remettre un brouillon mis de côté.
       setValue('');
       if (props.onSend) props.onSend(text);
@@ -326,7 +327,7 @@
         h(IconButton, { icon: 'x', label: ctx.cancelLabel, size: 24, iconSize: 13, onClick: props.onCancelContext })) : null,
       h('label', { htmlFor: id, className: 'tc-sr' }, props.label || 'Message'),
       h('textarea', {
-        id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value,
+        id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value, 'aria-describedby': props.hint ? hintId : undefined,
         onChange: function (e) { setValue(e.target.value); if (props.onTyping) props.onTyping(); },
         onKeyDown: function (e) {
           if (props.onKeyDown) props.onKeyDown(e);
@@ -338,10 +339,11 @@
       h('div', { className: 'tc-composer-bar' },
         props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', size: 30, iconSize: 16, onClick: props.onEmoji }) : null,
         props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach }) : null,
-        h('span', { style: { flex: 1 } }),
+        props.hint ? h('span', { id: hintId, className: cx('tc-composer-hint', props.hintTone === 'warning' && 'tc-composer-hint-warning') },
+          props.hintTone === 'warning' ? h(Icon, { name: 'alert', size: 14 }) : null, props.hint) : h('span', { style: { flex: 1 } }),
         props.aside || null,
         props.beforeSend || null,
-        h('button', { type: 'button', className: 'tc-send', 'aria-label': 'Send message', disabled: !value.trim(), onClick: send }, h(Icon, { name: 'send', size: 16 }))));
+        h('button', { type: 'button', className: 'tc-send', 'aria-label': 'Send message', disabled: !value.trim() || blocked, onClick: send }, h(Icon, { name: 'send', size: 16 }))));
   }
 
   function Skeleton(props) {
