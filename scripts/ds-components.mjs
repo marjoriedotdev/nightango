@@ -150,7 +150,8 @@ Sizes: 16 in reply previews, 22 in the sidebar, 28 in lists, 36 in messages, 72 
     `Provide \`placeholder\` ("Message #community", "Message sable") and \`onSend(text)\`. Enter sends, Shift+Enter adds a line, Escape cancels a reply. Pass \`replyTo\` as \`{author, text}\` with \`onCancelReply\`. A click anywhere in the composer outside its controls focuses the input.
 
 - \`onEmoji\` and \`onAttach\` each show their tool button; leave them out when the feature does not exist.
-- \`aside\` holds the channel picker. \`beforeSend\` holds one icon button placed right before Send, such as the message style.`,
+- \`aside\` holds the channel picker. \`beforeSend\` holds one icon button placed right before Send, such as the message style.
+- Pass \`value\` and \`onChange\` when the view writes into the input, such as a mention, and \`inputRef\` to focus it afterwards.`,
     `  return h(T.Composer, { placeholder: 'Message #community', replyTo: { author: 'sable', text: "Known issue on server s12" }, onCancelReply: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) });`],
   ['Skeleton', 'Feedback', 120,
     'A shimmering placeholder that holds the place of content still loading.',

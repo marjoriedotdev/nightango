@@ -20,6 +20,6 @@ export interface BannerProps { tone?: 'info' | 'warning'; icon?: IconName; title
 export interface SettingsSectionProps { title?: ReactNode; description?: ReactNode; headerAside?: ReactNode; padded?: boolean; children?: ReactNode }
 export interface SettingRowProps { title: ReactNode; description?: ReactNode; control: ReactNode; badge?: ReactNode; asLabel?: boolean }
 export interface SaveBarProps { children: ReactNode; onDiscard?: () => void; onSave?: () => void; saveLabel?: string; discardLabel?: string }
-export interface ComposerProps { placeholder: string; onSend: (text: string) => void; value?: string; onChange?: (value: string) => void; replyTo?: { author: string; text: string } | null; onCancelReply?: () => void; onTyping?: () => void; onEmoji?: () => void; onAttach?: () => void; aside?: ReactNode; beforeSend?: ReactNode; label?: string }
+export interface ComposerProps { placeholder: string; onSend: (text: string) => void; value?: string; onChange?: (value: string) => void; replyTo?: { author: string; text: string } | null; onCancelReply?: () => void; onTyping?: () => void; onEmoji?: () => void; onAttach?: () => void; aside?: ReactNode; beforeSend?: ReactNode; label?: string; /** Reçoit le champ de saisie, pour lui rendre le focus. */ inputRef?: { current: HTMLTextAreaElement | null } }
 export interface SkeletonProps { width: number | string; height?: number | string; circle?: boolean }
 export interface SpinnerProps { size?: number; /** Nom accessible, omis quand un texte visible annonce déjà le chargement. */ label?: string }
