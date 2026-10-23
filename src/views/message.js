@@ -47,11 +47,13 @@ function MessageRow(p) {
   // Comme la réponse, la modification attend l'identifiant définitif du message.
   var canEdit = m.author === me && (!LIVE || liveBridge.canReply(m.id));
   var handle = m.author !== me ? mentionHandle(m.author) : null;
+  var showIp = LIVE && m.ip && canSeeIps(myRole, livePerms(g, me));
   var deleteMessage = function () { app.actions.deleteMessage(g.id, m.id); };
   var menuItems = [
     canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
     handle ? { label: 'Mention ' + m.author, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
     copyTextItem(app, m),
+    showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed.'); }); } } : null,
     m.author !== me ? viewProfileItem(app, m.author, g.id) : null,
     m.author !== me ? styleItem(app, m.author, true) : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,

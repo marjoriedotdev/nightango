@@ -1,6 +1,12 @@
 function roleOf(group, name) { return group && group.settings && group.settings.staff ? group.settings.staff[name] || null : null; }
 function isStaffRole(r) { return r === 'owner' || r === 'coowner' || r === 'admin' || r === 'mod'; }
 function canManage(group, me) { var r = roleOf(group, me); return r === 'owner' || r === 'coowner' || r === 'admin'; }
+/**
+ * Permet de savoir si l'utilisateur voit les IP d'un groupe : propriétaire, ou staff qui a le droit « See IP addresses ».
+ * @param {?string} myRole Rôle de l'utilisateur dans le groupe.
+ * @param {Object} perms Droits de l'utilisateur dans le groupe.
+ */
+function canSeeIps(myRole, perms) { return myRole === 'owner' || !!perms.seeIps; }
 function userOf(state, name) { return state.users[name] || { status: 'offline', about: '', style: {} }; }
 /**
  * Permet de retrouver un message chargé d'un groupe, par son identifiant provisoire ou définitif.
