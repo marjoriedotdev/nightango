@@ -9,6 +9,7 @@ function GroupView(p) {
   var a7 = useState(false), jump = a7[0], setJump = a7[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
+  var a10 = useState(null), target = a10[0], setTarget = a10[1];
   var inputRef = useRef(null);
   var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
@@ -24,6 +25,17 @@ function GroupView(p) {
   }, [count, !!search]);
   var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open');
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
+  // Après le rendu qui ferme la recherche : la ligne de l'original n'existe qu'à ce moment.
+  useEffect(function () {
+    if (!target) return;
+    var row = logRef.current.querySelector('[data-msg-id=' + JSON.stringify(target.id) + ']');
+    var still = prefs.a11y.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    row.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+    row.tabIndex = -1;
+    row.focus({ preventScroll: true });
+    var timer = setTimeout(function () { setTarget(null); }, 1500);
+    return function () { clearTimeout(timer); };
+  }, [target]);
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
@@ -45,6 +57,12 @@ function GroupView(p) {
     if (inputRef.current) inputRef.current.focus();
   }
   function toBottom() { var el = logRef.current; atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
+  function ignoredAuthor(m) { var u = userOf(s, m.author); return (u.ignored || (u.blocked && prefs.safety.syncBlocked)) && m.author !== me; }
+  function jumpTo(o) {
+    if (ignoredAuthor(o) && (prefs.safety.ignoreMode === 'hide' || !revealed[o.id])) { app.ui.toast('The original message is hidden because you ignore its author.'); return; }
+    setSearch(null);
+    setTarget({ id: o.id });
+  }
 
   var items = [], prev = null, lastDay = null, marker = false;
   var msgs = q ? g.messages.filter(function (m) { return m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0); }) : g.messages;
@@ -56,8 +74,7 @@ function GroupView(p) {
     }
     if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), m.user + ' was banned')); prev = null; continue; }
     if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null)); prev = null; continue; }
-    var u = userOf(s, m.author);
-    if ((u.ignored || (u.blocked && prefs.safety.syncBlocked)) && m.author !== me) {
+    if (ignoredAuthor(m)) {
       if (prefs.safety.ignoreMode === 'hide') continue;
       if (!revealed[m.id]) {
         items.push(h('div', { key: m.id, className: 'ignored-row' }, h(T.Icon, { name: 'eye-off', size: 14 }), 'Message from ' + m.author + ' hidden.',
@@ -66,7 +83,7 @@ function GroupView(p) {
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted);
-    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, onReply: setReplyTo, onMention: mention }));
+    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: !!target && target.id === m.id, onReply: setReplyTo, onMention: mention, onJump: jumpTo }));
     prev = m;
   }
   if (LIVE && !q) items.unshift(!g.inited && !g.messages.length
@@ -87,7 +104,7 @@ function GroupView(p) {
     composer = h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, inputRef: inputRef, replyTo: replyTo ? { author: replyTo.author, text: messagePreview(replyTo) } : null,
       onCancelReply: function () { setReplyTo(null); },
-      onSend: function (text) { if (runCommand(app, text, g.id)) return; atBottom.current = true; app.actions.sendGroup(g.id, text, { replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: messagePreview(replyTo) } : null, channel: channel }); setReplyTo(null); },
+      onSend: function (text) { if (runCommand(app, text, g.id)) return; atBottom.current = true; app.actions.sendGroup(g.id, text, { replyTo: replyTo ? { id: replyTo.id } : null, channel: channel }); setReplyTo(null); },
       onEmoji: LIVE ? null : function () { app.ui.toast('The emoji picker is not part of this prototype.'); },
       onAttach: LIVE ? null : function () { app.ui.toast('Uploading media is not part of this prototype.'); },
       beforeSend: h(MessageStyleButton, null),

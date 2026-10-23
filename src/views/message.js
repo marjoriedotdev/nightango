@@ -46,14 +46,16 @@ function MessageRow(p) {
   var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
-  var reply = m.replyTo ? { author: m.replyTo.author ? h(Person, { name: m.replyTo.author, gid: g.id, size: 16 }) : null, text: m.replyTo.text } : null;
+  var original = m.replyTo && findMsg(g, m.replyTo.id);
+  var reply = original ? { author: h(Person, { name: original.author, gid: g.id, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
+    : m.replyTo ? { text: 'Original message not loaded' } : null;
   var authorBtn = handle
     ? h('button', { type: 'button', className: 'tc-msg-author namebtn namebtn-mention', title: 'Mention ' + m.author, style: nameStyle, onClick: function () { p.onMention(handle); } }, m.author)
     : authorName(m.author, nameStyle);
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
     avatar: h(Person, { name: m.author, gid: g.id, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(role), chan), reply: reply, actions: actions,
-    className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle
+    msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle
   }, body);
 }
 

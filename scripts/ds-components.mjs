@@ -115,16 +115,17 @@ Sizes:
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'torchdev', square: true, size: 22 }), label: 'torchdev', count: 2, mention: true }),
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'trade', square: true, size: 22 }), label: 'trade', unread: true }),
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'artcorner', square: true, size: 22 }), label: 'artcorner', muted: true }));`],
-  ['Message', 'Chat', 420,
+  ['Message', 'Chat', 480,
     'The row shell of a chat log, shared by groups and private messages: full, continued or compact, with slots for the parts the app owns.',
     `Provide \`time\` and the body as children. A text child renders as \`tc-msg-text\`, with \`@name\` tokens as mention chips. An element child renders as is, for rich text and embeds.
 
-- Full row: \`avatar\`, then a header with \`author\`, \`meta\` (role badge, channel label) and the time. Pass \`reply\` as \`{author, avatar, text}\` to quote the parent above it, with a 16px avatar.
+- Full row: \`avatar\`, then a header with \`author\`, \`meta\` (role badge, channel label) and the time. Pass \`reply\` as \`{author, avatar, text}\` to quote the parent above it, with a 16px avatar. Add \`onJump\` when the parent is in the log: the quoted text becomes a button that goes to it.
 - \`continued\`: a message from the same author within five minutes. No avatar or header, the time shows in the gutter on hover.
 - \`compact\`: the Compact density. Time first, then the author and the body on one line, no avatar. It wins over \`continued\`.
 - \`author\` as text renders as \`tc-msg-author\`. Pass an element for a styled or clickable name.
 - \`actions\` fills the hover toolbar with icon buttons at size 28. Leave it out when nothing can be done, such as a deleted message.
 - \`mention\` tints a message that names the viewer. \`className\` and \`style\` go on the row, for states and member backgrounds.
+- \`msgId\` lands on the row as \`data-msg-id\`, so the app can find the message in the log. \`highlight\` gives the row the \`selected\` background, above a member background, for the message the reader just jumped to. The background fades in and out in 150ms.
 
 - Members' Chatango fonts and colors are not applied here; see Appearance in the brand book.`,
     `  var actions = h(React.Fragment, null, h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16 }), h(T.IconButton, { icon: 'more', label: 'More actions', size: 28, iconSize: 16 }));
@@ -133,8 +134,9 @@ Sizes:
     h('div', null,
       h(T.Message, { author: 'sable', avatar: h(T.Avatar, { name: 'sable' }), meta: h(T.Badge, { icon: 'shield' }, 'Mod'), time: '12:42', actions: actions }, parent),
       h(T.Message, { time: '12:42', continued: true, actions: actions }, 'Reconnecting twice usually sticks.'),
-      h(T.Message, { author: 'quill', avatar: h(T.Avatar, { name: 'quill' }), time: '12:44', reply: { author: 'sable', avatar: h(T.Avatar, { name: 'sable', size: 16 }), text: parent } }, 'Confirmed, the second reconnect held.'),
-      h(T.Message, { author: 'nightowl', avatar: h(T.Avatar, { name: 'nightowl' }), time: '12:48', mention: true }, '@orrin the theme you exported imports cleanly now.')),
+      h(T.Message, { author: 'quill', avatar: h(T.Avatar, { name: 'quill' }), time: '12:44', reply: { author: 'sable', avatar: h(T.Avatar, { name: 'sable', size: 16 }), text: parent, onJump: function () {} } }, 'Confirmed, the second reconnect held.'),
+      h(T.Message, { author: 'nightowl', avatar: h(T.Avatar, { name: 'nightowl' }), time: '12:48', mention: true }, '@orrin the theme you exported imports cleanly now.'),
+      h(T.Message, { author: 'kestrel', avatar: h(T.Avatar, { name: 'kestrel' }), time: '12:50', highlight: true }, 'Back online on s12.')),
     h('div', null,
       h(T.Message, { compact: true, author: 'sable', time: '12:42', actions: actions }, parent),
       h(T.Message, { compact: true, author: 'quill', time: '12:44', reply: { author: 'sable', avatar: h(T.Avatar, { name: 'sable', size: 16 }), text: parent } }, 'Confirmed, the second reconnect held.'),

@@ -213,16 +213,21 @@
     var reply = props.reply ? h('div', { className: 'tc-msg-reply' },
       h(Icon, { name: 'reply', size: 14 }), props.reply.avatar,
       props.reply.author ? h('span', { className: 'tc-msg-reply-author' }, props.reply.author) : null,
-      h('span', { className: 'tc-msg-reply-text' }, props.reply.text)) : null;
+      props.reply.onJump
+        ? h('button', { type: 'button', className: 'tc-msg-reply-text tc-msg-reply-jump', title: 'Go to the original message', onClick: props.reply.onJump }, props.reply.text)
+        : h('span', { className: 'tc-msg-reply-text' }, props.reply.text)) : null;
+    // Fond en style inline : il doit passer devant le fond du membre, lui aussi inline.
+    var highlight = props.highlight ? { background: 'var(--selected)' } : null;
+    function row(base, style) { return { className: cx(base, mention, props.className), style: Object.assign({}, style, props.style, highlight), 'data-msg-id': props.msgId }; }
     if (props.compact) {
-      return h('article', { className: cx('cmsg', mention, props.className), style: props.style },
+      return h('article', row('cmsg'),
         time, author, h('div', { style: { flex: 1, minWidth: 0 } }, reply, body), actions);
     }
     if (props.continued) {
-      return h('article', { className: cx('tc-msg', 'tc-msg-cont', mention, props.className), style: props.style },
+      return h('article', row('tc-msg tc-msg-cont'),
         h('span', { className: 'tc-msg-gutter' }, props.time), h('div', { className: 'tc-msg-body' }, body), actions);
     }
-    return h('article', { className: cx('tc-msg', mention, props.className), style: Object.assign({ marginTop: 6 }, reply ? { flexDirection: 'column' } : null, props.style) },
+    return h('article', row('tc-msg', Object.assign({ marginTop: 6 }, reply ? { flexDirection: 'column' } : null)),
       reply,
       h('div', { style: { display: 'flex', gap: 12, minWidth: 0 } },
         props.avatar,

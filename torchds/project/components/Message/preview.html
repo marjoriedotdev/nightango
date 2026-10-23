@@ -1,4 +1,4 @@
-<!-- @dsCard group="Chat" height=420 -->
+<!-- @dsCard group="Chat" height=480 -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -18,8 +18,9 @@ function Demo() {
     h('div', null,
       h(T.Message, { author: 'sable', avatar: h(T.Avatar, { name: 'sable' }), meta: h(T.Badge, { icon: 'shield' }, 'Mod'), time: '12:42', actions: actions }, parent),
       h(T.Message, { time: '12:42', continued: true, actions: actions }, 'Reconnecting twice usually sticks.'),
-      h(T.Message, { author: 'quill', avatar: h(T.Avatar, { name: 'quill' }), time: '12:44', reply: { author: 'sable', avatar: h(T.Avatar, { name: 'sable', size: 16 }), text: parent } }, 'Confirmed, the second reconnect held.'),
-      h(T.Message, { author: 'nightowl', avatar: h(T.Avatar, { name: 'nightowl' }), time: '12:48', mention: true }, '@orrin the theme you exported imports cleanly now.')),
+      h(T.Message, { author: 'quill', avatar: h(T.Avatar, { name: 'quill' }), time: '12:44', reply: { author: 'sable', avatar: h(T.Avatar, { name: 'sable', size: 16 }), text: parent, onJump: function () {} } }, 'Confirmed, the second reconnect held.'),
+      h(T.Message, { author: 'nightowl', avatar: h(T.Avatar, { name: 'nightowl' }), time: '12:48', mention: true }, '@orrin the theme you exported imports cleanly now.'),
+      h(T.Message, { author: 'kestrel', avatar: h(T.Avatar, { name: 'kestrel' }), time: '12:50', highlight: true }, 'Back online on s12.')),
     h('div', null,
       h(T.Message, { compact: true, author: 'sable', time: '12:42', actions: actions }, parent),
       h(T.Message, { compact: true, author: 'quill', time: '12:44', reply: { author: 'sable', avatar: h(T.Avatar, { name: 'sable', size: 16 }), text: parent } }, 'Confirmed, the second reconnect held.'),

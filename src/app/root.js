@@ -708,26 +708,13 @@ function Root(props) {
       L.annc ? { enabled: L.annc.enabled, text: L.annc.text, displayText: L.annc.displayText, embeds: L.annc.embeds, interval: Math.round(L.annc.interval / 60), intervalSec: L.annc.interval } : null);
     g.closed = !!(f & F.IS_CLOSED);
   }
-  function findMsg(g, id) {
-    if (!g || !id) return null;
-    var plain = String(id).replace(/^k:/, '');
-    for (var i = g.messages.length - 1; i >= 0; i--) { var x = g.messages[i]; if (x.id === plain || x.id === 'k:' + plain) return x; }
-    return null;
-  }
   function withReply(g, m) {
-    if (m.replyId) {
-      var o = findMsg(g, m.replyId);
-      m.replyTo = o ? { id: o.id, author: o.author, text: messagePreview(o) } : { id: m.replyId, author: '', text: 'an earlier message' };
-    }
+    if (m.replyId) { var o = findMsg(g, m.replyId); m.replyTo = { id: o ? o.id : m.replyId }; }
     delete m.replyId;
     return m;
   }
   function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
-  /** Applique une modification à l'original et aux citations qui le reprennent. */
-  function applyEdit(g, o, m) {
-    o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true;
-    g.messages.forEach(function (x) { if (x.replyTo && x.replyTo.id === o.id) x.replyTo.text = messagePreview(o); });
-  }
+  function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
   // Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
   function pmContentKey(m) {
     var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
@@ -781,7 +768,7 @@ function Root(props) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, m.author), o = editTarget(g, m);
             mergeStyle(u, style, m.ts);
-            if (o) { applyEdit(g, o, m); return; }
+            if (o) { applyEdit(o, m); return; }
             m.edited = true; delete m.editId;
             g.messages.push(withReply(g, m));
           });
@@ -800,7 +787,7 @@ function Root(props) {
           mergeStyle(u, hs, hm.ts);
           if (g.messages.some(function (x) { return x.id === hm.id; })) return;
           var o = editTarget(g, hm);
-          if (o) { applyEdit(g, o, hm); return; }
+          if (o) { applyEdit(o, hm); return; }
           if (hm.editId) hm.edited = true;
           delete hm.editId;
           g.messages.push(withReply(g, hm));

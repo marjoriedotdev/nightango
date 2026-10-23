@@ -2,6 +2,17 @@ function roleOf(group, name) { return group && group.settings && group.settings.
 function isStaffRole(r) { return r === 'owner' || r === 'coowner' || r === 'admin' || r === 'mod'; }
 function canManage(group, me) { var r = roleOf(group, me); return r === 'owner' || r === 'coowner' || r === 'admin'; }
 function userOf(state, name) { return state.users[name] || { status: 'offline', about: '', style: {} }; }
+/**
+ * Permet de retrouver un message chargé d'un groupe, par son identifiant provisoire ou définitif.
+ * @param {Object} g Groupe dans l'état.
+ * @param {string} id Identifiant du message.
+ */
+function findMsg(g, id) {
+  if (!g || !id) return null;
+  var plain = String(id).replace(/^k:/, '');
+  for (var i = g.messages.length - 1; i >= 0; i--) { var x = g.messages[i]; if (x.id === plain || x.id === 'k:' + plain) return x; }
+  return null;
+}
 function resolvedTheme(prefs, viewerTheme) {
   if (prefs.theme === 'dark' || prefs.theme === 'light') return prefs.theme;
   if (viewerTheme === 'dark' || viewerTheme === 'light') return viewerTheme;
