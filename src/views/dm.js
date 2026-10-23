@@ -3,7 +3,7 @@ function DMView(p) {
   var app = useApp(), s = app.state, me = s.me, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
   var a2 = useState(''), q = a2[0], setQ = a2[1];
-  var a3 = useState(true), showProfile = a3[0], setShowProfile = a3[1];
+  var column = useRightColumn(function () { app.ui.openProfile(id, null); });
   var logRef = useRef(null);
   var convo = id ? s.dms[id] : null;
   var len = convo ? convo.messages.length : 0;
@@ -70,11 +70,10 @@ function DMView(p) {
     thread = h('main', { className: 'thread' },
       h('header', { className: 'topbar' },
         h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
-        h(T.Avatar, { name: id, size: 30, status: u.status, ring: 'var(--bg)' }),
-        h('h2', null, id),
+        h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
         h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
         h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(s, id)].filter(Boolean).join(' · ')),
-        h(T.IconButton, { icon: 'panel', label: showProfile ? 'Hide profile' : 'Show profile', pressed: showProfile, className: 'hide-mobile', onClick: function () { setShowProfile(!showProfile); } }),
+        h(T.IconButton, { icon: 'panel', label: column.pressed == null ? 'View profile' : column.pressed ? 'Hide profile' : 'Show profile', pressed: column.pressed, onClick: column.toggle }),
         h(MenuButton, {
           label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
         })),
@@ -85,7 +84,7 @@ function DMView(p) {
   }
   return h('div', { className: 'main', style: { flexDirection: 'row' } },
     h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
-    convo && showProfile ? h(ProfilePanel, { name: id }) : null);
+    convo && column.open ? h(ProfilePanel, { name: id }) : null);
 }
 
 /**

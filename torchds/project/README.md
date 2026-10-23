@@ -35,7 +35,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 
 - Spacing steps: `space-2` between an icon and its label, `space-3` between an avatar and a message, `space-5` for the message log side padding and settings rows, `space-6` between settings sections, `space-10` and `space-12` for settings page padding.
 - Radius: `radius-md` for rows and icon buttons, `radius-lg` for buttons, inputs and banners, `radius-xl` for sections, cards, the composer and the save bar, `radius-full` for avatars, dots and switches.
-- App shell: `size-sidebar` navigation, a fluid center column, an optional `size-members` column on the right (members in a group, profile in a private conversation). Below 1180px the right column hides; below 860px the sidebar stacks above the content.
+- App shell: `size-sidebar` navigation, a fluid center column, an optional `size-members` column on the right (members in a group, profile in a private conversation). Below 1180px the right column hides; its header control then opens the same content full screen. Below 860px the sidebar stacks above the content.
 - Settings pages: navigation on the left, content capped at 820px, sections stacked with `space-6`.
 - Targets: `size-control-md` on desktop, at least `size-touch` on mobile.
 

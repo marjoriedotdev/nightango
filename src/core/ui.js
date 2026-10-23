@@ -88,6 +88,24 @@ function useFloating(anchorRef, floatRef, open, onClose, o) {
   return place || FLOAT_UNPLACED;
 }
 
+// Seul seuil de la colonne de droite : app.css ne le répète pas, la colonne n'est rendue qu'au-dessus.
+var NARROW_LAYOUT = '(max-width:1180px)';
+/**
+ * Permet de basculer la colonne de droite quand la fenêtre lui laisse la place, et sinon d'ouvrir son contenu en plein écran.
+ * @param {Function} openFull Ouverture du même contenu en plein écran.
+ */
+function useRightColumn(openFull) {
+  var a = useState(function () { return !window.matchMedia(NARROW_LAYOUT).matches; }), fits = a[0], setFits = a[1];
+  var b = useState(true), shown = b[0], setShown = b[1];
+  useEffect(function () {
+    var mq = window.matchMedia(NARROW_LAYOUT);
+    function onChange() { setFits(!mq.matches); }
+    mq.addEventListener('change', onChange);
+    return function () { mq.removeEventListener('change', onChange); };
+  }, []);
+  return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
+}
+
 /* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, disabled, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
@@ -232,11 +250,11 @@ function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
 function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + statusLabel(status)); }
 /**
  * Avatar et nom d'une personne dans un seul bouton qui ouvre sa fiche de profil.
- * @param {{name: string, label: string, gid: string, size: number, avatarOnly: boolean, inert: boolean}} p Nom du compte, nom affiché s'il diffère, groupe d'où la fiche s'ouvre, taille de l'avatar, avatar sans le nom, simple texte pour qui n'a pas de compte.
+ * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Nom du compte, nom affiché s'il diffère, groupe d'où la fiche s'ouvre, taille de l'avatar, présence et contour de son point, avatar sans le nom, simple texte pour qui n'a pas de compte.
  */
 function Person(p) {
   var app = useApp(), label = p.label || p.name;
-  var avatar = h(T.Avatar, { name: p.name, size: p.size }), text = p.avatarOnly ? null : h('span', { className: 'namebtn' }, label);
+  var avatar = h(T.Avatar, { name: p.name, size: p.size, status: p.status, ring: p.ring }), text = p.avatarOnly ? null : h('span', { className: 'namebtn' }, label);
   if (p.inert) return h('span', { className: 'person-tag' }, avatar, text);
   return h('button', { type: 'button', className: p.avatarOnly ? 'avatar-btn' : 'person-tag', 'aria-label': 'View ' + label + "'s profile", onClick: function () { app.ui.openProfile(p.name, p.gid || null); } }, avatar, text);
 }

@@ -718,15 +718,15 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const ghostAsk = { frames: sent.slice(sentBeforeGhost), waiting: !!checking && checking.disabled };
   pm('connect', ['ghost', '0', 'invalid']);
   await until(() => !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'));
-  const ghost = { error: !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'), listed: listed('ghost'), head: ($('.thread .topbar h2') || {}).textContent || '' };
+  const ghost = { error: !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'), listed: listed('ghost'), head: ($('.thread .topbar h2 .namebtn') || {}).textContent || '' };
   if ($('.dialog')) { click(byText('.dialog-foot button', 'Cancel')); await wait(30); }
   step('new pm checks the name with Chatango', JSON.stringify(ghostAsk.frames) === JSON.stringify([['private_message', 'connect:ghost']]) && ghostAsk.waiting && ghost.error && !ghost.listed && ghost.head !== 'ghost', { ghostAsk, ghost });
   click($('.convs button[aria-label="New message"]')); await wait(50);
   const dmChips = $$('.dialog .chip').length;
   type($('#newdm'), 'hank'); key($('#newdm'), 'Enter'); await wait(50);
   pm('connect', ['hank', '0', 'online']);
-  await until(() => !$('.dialog') && !!$('.thread .topbar h2'));
-  const hankHead = $('.thread .topbar h2');
+  await until(() => !$('.dialog') && !!$('.thread .topbar h2 .namebtn'));
+  const hankHead = $('.thread .topbar h2 .namebtn');
   step('new dm has no suggestions', dmChips === 0 && !$('.dialog') && !!hankHead && hankHead.textContent === 'hank', { dmChips, dialog: !!$('.dialog'), head: hankHead && hankHead.textContent });
   const convRow = n => $$('.conv-row').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n);
   const menuLabels = () => $$('.menu button').map(x => x.textContent);
@@ -752,7 +752,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pointer('pointerdown', 250); pointer('pointermove', 240); pointer('pointermove', 120); pointer('pointerup', 120);
   click(gusRow.querySelector('.conv')); await wait(30);
   const swipeButtons = [...gusRow.querySelectorAll('button')].filter(b => !b.closest('.conv')).map(b => b.textContent);
-  const gusOpened = !!$('.thread .topbar h2') && $('.thread .topbar h2').textContent === 'gus';
+  const gusOpened = !!$('.thread .topbar h2 .namebtn') && $('.thread .topbar h2 .namebtn').textContent === 'gus';
   step('chat row actions', hasRowItems(ctxItems) && hasRowItems(moreItems) && asked && hankDeleted && swipeButtons.includes('Close') && swipeButtons.includes('Delete') && !gusOpened, { ctxItems, moreItems, asked, hankDeleted, swipeButtons, gusOpened });
 
   /* Amis et rencontres */

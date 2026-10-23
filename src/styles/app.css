@@ -49,6 +49,10 @@ h1,h2,h3{text-wrap:balance}
 
 .topbar{height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px 0 20px;border-bottom:1px solid var(--border)}
 .topbar h1,.topbar h2{margin:0;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Le titre ne rogne pas : le contour de focus du bouton profil le déborde, seul le nom passe en points de suspension. */
+.topbar .dm-title{min-width:0;overflow:visible}
+.dm-title .person-tag{max-width:100%}
+.dm-title .namebtn{overflow:hidden;text-overflow:ellipsis}
 .col-head{padding-left:var(--space-4)}
 .topic{flex:1;min-width:0;margin:0;color:var(--text-3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vsep{width:1px;height:18px;background:var(--border-strong);flex:none}
@@ -306,7 +310,6 @@ h1,h2,h3{text-wrap:balance}
 .login-foot select{background:transparent;border:0;color:var(--text-2);cursor:pointer}
 .formerr{padding:10px 12px;border-radius:8px;background:var(--subtle);border:1px solid var(--danger);color:var(--text-body);font-size:13px}
 
-@media (max-width:1180px){.col.members,.col.profile{display:none}}
 @media (max-width:860px){
   .sidebar{position:fixed;top:0;bottom:0;left:0;z-index:40;width:min(300px,86vw);transform:translateX(-104%);transition:transform .2s ease;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);box-shadow:var(--shadow-floating)}
   .shell.nav-open .sidebar{transform:none}

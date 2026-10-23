@@ -14,7 +14,8 @@ src/
     sample-data.js   données d'exemple du prototype, visites simulées
     prefs.js         préférences par défaut
     ui.js            contexte React, Portal (calque #layer), useFloating (calque ancré à son déclencheur), MenuButton, Dialog, ConfirmDialog, Toasts,
-                     Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes
+                     Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes,
+                     useRightColumn (seul seuil de 1180 px : colonne de droite au-dessus, plein écran en dessous)
     rich-text.js     MessageText (emphase, citations, mentions, liens), RichText (mini profil assaini), fullProfileDoc
     selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées
   bridge/     le pont vers Torch

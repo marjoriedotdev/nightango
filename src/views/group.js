@@ -9,13 +9,13 @@ var COMPOSER_MODES = {
 
 function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
-  var a1 = useState(true), showMembers = a1[0], setShowMembers = a1[1];
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
   var a3 = useState(null), mode = a3[0], setMode = a3[1];
   var a4 = useState('none'), channel = a4[0], setChannel = a4[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a7 = useState(false), jump = a7[0], setJump = a7[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
+  var column = useRightColumn(function () { setInfoOpen(true); });
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
   var a10 = useState(null), target = a10[0], setTarget = a10[1];
   var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
@@ -191,9 +191,8 @@ function GroupView(p) {
         h('span', { className: 'vsep' }),
         h('p', { className: 'topic' }, g.topic),
         h('span', { className: 'grow only-mobile' }),
-        h('button', { type: 'button', className: 'pillbtn hide-mobile', 'aria-pressed': String(showMembers), onClick: function () { setShowMembers(!showMembers); } },
+        h('button', { type: 'button', className: 'pillbtn', 'aria-pressed': column.pressed == null ? undefined : String(column.pressed), onClick: column.toggle },
           h(T.Icon, { name: 'users', size: 16 }), LIVE && !g.membersLoaded && !g.liveCount ? 'Members' : online + ' online'),
-        h(T.IconButton, { icon: 'info', label: 'Group info and members', className: 'only-mobile', onClick: function () { setInfoOpen(true); } }),
         h(T.IconButton, { icon: 'search', label: 'Search in this group', pressed: search != null, onClick: function () { setSearch(search == null ? '' : null); } }),
         h(T.IconButton, { icon: g.muted ? 'volume-x' : 'bell', label: g.muted ? 'Unmute group' : 'Mute group', pressed: g.muted, onClick: function () { app.actions.toggleMute(g.id); } }),
         h(MenuButton, {
@@ -223,7 +222,7 @@ function GroupView(p) {
         h('p', { className: 'typing', 'aria-live': 'polite' }, typing.length ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, typing.join(', ')), typing.length > 1 ? ' are typing' : ' is typing') : null),
         composer,
         h('p', { className: 'tc-sr', 'aria-live': 'polite' }, completed))),
-    showMembers ? h(MembersPanel, { g: g }) : null,
+    column.open ? h(MembersPanel, { g: g }) : null,
     infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null);
 }
 
