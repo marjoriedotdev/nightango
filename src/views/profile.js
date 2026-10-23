@@ -171,10 +171,11 @@ function ProfilePanel(p) {
   var actions = useProfileActions(name, null);
   useEffect(function () { app.actions.loadProfile(name); }, [name]);
   return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + name },
+    columnHeader('Profile'),
     h('div', { className: 'scroll' },
       h('div', { className: 'profile-card' },
         h(T.Avatar, { name: name, size: 72, status: u.status, ring: 'var(--panel)' }),
-        h('h2', null, name), profileMeta(meta, name, u)),
+        h('h3', null, name), profileMeta(meta, name, u)),
       profileAbout(u),
       h('div', { style: { padding: '0 16px 8px' } }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'id-card', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')),
       common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length),

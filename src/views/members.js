@@ -32,7 +32,7 @@ function MembersList(p) {
  */
 function MembersPanel(p) {
   return h('aside', { className: 'col members', 'aria-label': 'Members of ' + p.g.id },
-    h('div', { className: 'topbar', style: { padding: '0 12px 0 16px' } }, h('h2', { className: 'grow' }, 'Members')),
+    columnHeader('Members'),
     h('div', { className: 'scroll' }, h(MembersList, { g: p.g })));
 }
 

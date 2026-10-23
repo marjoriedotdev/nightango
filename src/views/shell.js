@@ -4,6 +4,14 @@ function MobileNavButton() {
   return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', onClick: app.ui.openNav });
 }
 
+/**
+ * En-tête titré d'une colonne de droite.
+ * @param {string} title Titre de la colonne.
+ */
+function columnHeader(title) {
+  return h('header', { className: 'topbar col-head' }, h('h2', { className: 'grow' }, title));
+}
+
 function Shell() {
   var app = useApp(), r = app.state.route, main;
   if (r.view === 'settings') return h(SettingsView, { page: r.page });

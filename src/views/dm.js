@@ -25,7 +25,7 @@ function DMView(p) {
   if (!LIVE) filters.push(['requests', 'Requests' + (reqCount ? ' · ' + reqCount : '')]);
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
-    h('div', { className: 'topbar', style: { padding: '0 12px 0 16px' } }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
+    h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
