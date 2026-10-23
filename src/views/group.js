@@ -28,7 +28,7 @@ function GroupView(p) {
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
   var reading = useReadingPosition(logRef, firstTs, [count, !!search], function () { setJump(true); });
-  var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open');
+  var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open' && !target);
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
   // Saut demandé par la page Mentions : jumpTo, déclarée plus bas, refuse un message que le fil masque.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);

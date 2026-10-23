@@ -137,7 +137,7 @@ function DmThread(p) {
   var jump = useMessageJump(logRef), target = jump[0], setTarget = jump[1];
   var personActions = useProfileActions(id, null);
   var reading = useReadingPosition(logRef, len ? convo.messages[0].ts : null, [len], function (el) { el.scrollTop = el.scrollHeight; });
-  useInfiniteScroll(logRef, sentinelRef, !!(convo.olderMore && !convo.loadingOlder && !convo.olderFailed), function () { app.actions.loadOlderDm(id); }, '200px 0px 0px 0px');
+  useInfiniteScroll(logRef, sentinelRef, !!(convo.olderMore && !convo.loadingOlder && !convo.olderFailed && !target), function () { app.actions.loadOlderDm(id); }, '200px 0px 0px 0px');
   function onScroll() {
     reading.onScroll();
     // Après un échec de lecture, la sentinelle ne relance la lecture qu'au défilement suivant.
