@@ -59,20 +59,13 @@ function ProfilePage() {
 var VISIT_FILTERS = [{ value: 'all', label: 'All' }, { value: 'log', label: 'Visits' }, { value: 'like', label: 'Likes' }, { value: 'dislike', label: 'Dislikes' }, { value: 'msg', label: 'Comments' }, { value: 'refer', label: 'Referrals' }];
 /**
  * Permet d'afficher une ligne d'activité vissle.
- * @param {object} app Contexte de l'application.
  * @param {object} r Ligne produite par visitorPage.
  */
-function visitorRow(app, r) {
-  return h('div', { key: r.key, className: 'lrow' },
-    h(T.Avatar, { name: r.name, size: 28 }),
-    h('span', { className: 'grow' },
-      h('span', { className: 'lrow-title', style: { fontWeight: 400 } },
-        r.guest ? h('b', { style: { fontWeight: 600 } }, r.name)
-          : h('button', { type: 'button', className: 'linkbtn', style: { fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }, onClick: function () { app.ui.openProfile(r.user, null); } }, r.name),
-        ' ' + r.label,
-        r.guest ? h('span', { style: { marginLeft: 8 } }, h(T.Badge, null, 'Guest')) : null),
-      r.msg ? h('span', { className: 'lrow-sub' }, r.msg) : null),
-    h('time', { className: 'tc-msg-time', title: new Date(r.ts).toLocaleString('en-GB') }, ago(r.ts)));
+function visitorRow(r) {
+  return h(ActivityRow, { key: r.key, sub: r.msg, at: r.ts },
+    h(Person, { name: r.user, label: r.name, size: 28, inert: r.guest }),
+    ' ' + r.label,
+    r.guest ? h('span', { style: { marginLeft: 8 } }, h(T.Badge, null, 'Guest')) : null);
 }
 
 /**
@@ -87,7 +80,7 @@ function VisitorsSection() {
     headerAside: h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', size: 34, iconSize: 15, disabled: loading, onClick: function () { app.actions.loadVisitors(get, false); } })
   },
     h('div', { className: 'tc-section-pad seg-scroll' }, h(T.SegmentedControl, { label: 'Activity type', value: get, options: VISIT_FILTERS, onChange: function (g) { app.actions.loadVisitors(g, false); } })),
-    rows.map(function (r) { return visitorRow(app, r); }),
+    rows.map(visitorRow),
     v && v.error ? h('p', { className: 'pal-empty' }, v.error)
       : loading ? h('p', { className: 'pal-empty' }, 'Loading activity from vissle.me.')
         : !rows.length ? h('p', { className: 'pal-empty' }, 'No activity yet.')

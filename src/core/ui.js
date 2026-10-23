@@ -212,3 +212,13 @@ function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
  * @param {string} status Présence du membre.
  */
 function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + statusLabel(status)); }
+/**
+ * Avatar et nom d'une personne dans un seul bouton qui ouvre sa fiche de profil.
+ * @param {{name: string, label: string, gid: string, size: number, avatarOnly: boolean, inert: boolean}} p Nom du compte, nom affiché s'il diffère, groupe d'où la fiche s'ouvre, taille de l'avatar, avatar sans le nom, simple texte pour qui n'a pas de compte.
+ */
+function Person(p) {
+  var app = useApp(), label = p.label || p.name;
+  var avatar = h(T.Avatar, { name: p.name, size: p.size }), text = p.avatarOnly ? null : h('span', { className: 'namebtn' }, label);
+  if (p.inert) return h('span', { className: 'person-tag' }, avatar, text);
+  return h('button', { type: 'button', className: p.avatarOnly ? 'avatar-btn' : 'person-tag', 'aria-label': 'View ' + label + "'s profile", onClick: function () { app.ui.openProfile(p.name, p.gid || null); } }, avatar, text);
+}

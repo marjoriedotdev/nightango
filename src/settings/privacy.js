@@ -40,7 +40,7 @@ function SafetyPage() {
   var ignored = Object.keys(s.users).filter(function (n) { return s.users[n].ignored; });
   function people(list, key, action, empty) {
     return list.length ? list.map(function (n) {
-      return h('div', { key: n, className: 'lrow' }, h(T.Avatar, { name: n, size: 28 }), h('span', { className: 'grow lrow-title' }, n),
+      return h('div', { key: n, className: 'lrow' }, h('span', { className: 'grow' }, h(Person, { name: n, size: 28 })),
         h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(n, key); } }, action));
     }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, empty);
   }

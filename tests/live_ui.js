@@ -343,7 +343,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('ban list requested', frame('blocklist:block:0:next:500:anons:1').length >= 1);
   g('blocklist', 'test', ['UNID1:1.2.3.4:alice:1700000300:marjorie;UNID9:9.9.9.9::1700000000:bob']); await wait(50);
   step('ban list shown', !!byText('.lrow', 'alice') && !!byText('.lrow', '!anon'));
-  click(byText('.lrow', 'alice').querySelector('button')); await wait(20);
+  click(byText('.lrow', 'alice').querySelector('.tc-btn')); await wait(20);
   step('unban frame', frame('removeblock:').pop() === 'removeblock:UNID1:1.2.3.4');
 
   click(byText('.tc-nav', 'Audit log')); await wait(50);

@@ -21,10 +21,8 @@ function GSAuditLive(p) {
   },
     h(T.SettingsSection, null, log == null ? h('p', { className: 'pal-empty' }, 'Loading the log from Chatango.') : rows.length ? rows.map(function (x, i) {
       var sys = MODLOG_SYSTEM[x.type], text = (MODLOG_TEXT[x.type] || 'did ' + x.type).replace('*t*', x.target || 'someone');
-      return h('div', { key: x.id, className: 'lrow', style: i ? null : { borderTop: 0 } },
-        sys ? h('span', { className: 'role-ico' }, h(T.Icon, { name: 'lock', size: 14 })) : h(T.Avatar, { name: x.actor, size: 28 }),
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title', style: { fontWeight: 400 } }, sys || h(Frag, null, h('b', { style: { fontWeight: 600 } }, x.actor), ' ', text))),
-        x.at ? h('time', { className: 'tc-msg-time', title: new Date(x.at).toLocaleString('en-GB') }, ago(x.at)) : null);
+      return h(ActivityRow, { key: x.id, first: !i, at: x.at, lead: sys ? h('span', { className: 'role-ico' }, h(T.Icon, { name: 'lock', size: 14 })) : null },
+        sys || h(Frag, null, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', text));
     }) : h('p', { className: 'pal-empty' }, 'No entries.')));
 }
 

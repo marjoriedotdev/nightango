@@ -236,6 +236,7 @@ h1,h2,h3{text-wrap:balance}
 .lrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 20px;border-top:1px solid var(--divider)}
 .lrow .grow{min-width:180px}
 .lrow-title{display:block;font-weight:500;color:var(--text)}
+.lrow-activity{font-weight:400}
 .lrow-sub{display:block;font-size:12.5px;color:var(--text-3)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .cards.small{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
@@ -341,6 +342,15 @@ h1,h2,h3{text-wrap:balance}
 .avatar-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .photo-btn{cursor:zoom-in}
 .tc-msg .avatar-btn{align-self:flex-start}
+.person-tag{display:inline-flex;align-items:center;gap:var(--space-2);padding:0;border:0;border-radius:var(--radius-sm);background:none;color:inherit;font:inherit;text-align:left;vertical-align:middle}
+.namebtn{padding:0;border:0;background:none;color:var(--text);font:inherit;font-weight:600;text-decoration:none}
+button.person-tag,button.namebtn,button.tc-mention{cursor:pointer}
+button.person-tag:hover .namebtn,button.tc-mention:hover{text-decoration:underline;text-underline-offset:2px}
+/* La couleur de nom choisie par le membre est en style inline, seul !important la remplace au survol. */
+.namebtn-mention:hover{color:var(--accent-text)!important}
+button.tc-mention{border:0;font-family:inherit;font-size:inherit;line-height:inherit}
+.tc-msg-reply-author .namebtn{font-weight:inherit;color:inherit}
+.person-sub{padding-left:calc(28px + var(--space-2))}
 .photo-viewer{z-index:55;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--bg) 94%,transparent)}
 .photo-full{display:block;min-height:0;max-width:100%;max-height:calc(100% - 64px);object-fit:contain;border-radius:8px}
 .photo-wait{display:none}

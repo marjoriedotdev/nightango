@@ -108,8 +108,7 @@ function GSBans(p) {
     h(T.SettingsSection, { title: 'Banned · ' + g.bans.length },
       g.bans.length ? g.bans.map(function (x) {
         return h('div', { key: x.name, className: 'lrow' },
-          h(T.Avatar, { name: x.name, size: 28 }),
-          h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, x.name), h('span', { className: 'lrow-sub' }, x.reason + ' · by ' + x.by + ' · ' + ago(x.at))),
+          h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28 }), h('span', { className: 'lrow-sub person-sub' }, x.reason + ' · by ' + x.by + ' · ' + ago(x.at))),
           showIp ? h('span', { className: 'mono muted', style: { fontSize: 12 } }, x.ip) : null,
           h(T.Button, { size: 'sm', onClick: function () { app.actions.unban(g.id, x.name); } }, 'Unban'));
       }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, 'Nobody is banned.')));
@@ -126,9 +125,6 @@ function GSAudit(p) {
       h('select', { className: 'tc-input', style: { width: 'auto', height: 34 }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, n); })))
   },
     h(T.SettingsSection, null, rows.length ? rows.map(function (x, i) {
-      return h('div', { key: x.id, className: 'lrow', style: i ? null : { borderTop: 0 } },
-        h(T.Avatar, { name: x.actor, size: 28 }),
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title', style: { fontWeight: 400 } }, h('b', { style: { fontWeight: 600 } }, x.actor), ' ', x.text.charAt(0).toLowerCase() + x.text.slice(1))),
-        h('time', { className: 'tc-msg-time', title: new Date(x.at).toLocaleString('en-GB') }, ago(x.at)));
+      return h(ActivityRow, { key: x.id, first: !i, at: x.at }, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', x.text.charAt(0).toLowerCase() + x.text.slice(1));
     }) : h('p', { className: 'pal-empty' }, 'No entries.')));
 }

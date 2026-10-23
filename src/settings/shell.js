@@ -54,6 +54,17 @@ function Page(p) {
     p.children);
 }
 
+/**
+ * Ligne d'activité : qui a fait quoi, et quand.
+ * @param {{first: boolean, lead: *, sub: ?string, at: ?number}} p Première ligne de la section, icône avant le texte, ligne secondaire, date de l'action.
+ */
+function ActivityRow(p) {
+  return h('div', { className: 'lrow', style: p.first ? { borderTop: 0 } : null },
+    p.lead,
+    h('span', { className: 'grow' }, h('span', { className: 'lrow-title lrow-activity' }, p.children), p.sub ? h('span', { className: 'lrow-sub person-sub' }, p.sub) : null),
+    p.at ? h('time', { className: 'tc-msg-time', title: new Date(p.at).toLocaleString('en-GB') }, ago(p.at)) : null);
+}
+
 function SettingsView(p) {
   var app = useApp(), page = p.page || 'appearance';
   var map = { profile: ProfilePage, privacy: PrivacyPage, safety: SafetyPage, account: AccountPage, premium: PremiumPage, appearance: AppearancePage, notifications: NotificationsPage, language: LanguagePage, accessibility: AccessibilityPage, whatsnew: WhatsNewPage, about: AboutPage };

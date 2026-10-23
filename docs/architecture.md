@@ -13,7 +13,8 @@ src/
     roles.js         permissions, rôles, réglages de groupe par défaut
     sample-data.js   données d'exemple du prototype, visites simulées
     prefs.js         préférences par défaut
-    ui.js            contexte React, Portal (calque #layer), MenuButton, Dialog, ConfirmDialog, Toasts
+    ui.js            contexte React, Portal (calque #layer), MenuButton, Dialog, ConfirmDialog, Toasts,
+                     Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes
     rich-text.js     MessageText, RichText (mini profil assaini), fullProfileDoc
     selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs
   bridge/     le pont vers Torch

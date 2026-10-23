@@ -42,17 +42,17 @@ function MessageRow(p) {
     h(MenuButton, { label: 'More actions', size: 28, iconSize: 16, items: menuItems, onOpenChange: setMenuOpen }));
   var body = m.deleted
     ? h('p', { className: 'tc-msg-text deleted' }, m.deleted.by === m.author ? 'Message deleted' : 'Message deleted by ' + m.deleted.by)
-    : h(MessageContent, { m: m, style: textStyle }, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null);
+    : h(MessageContent, { m: m, style: textStyle, gid: g.id }, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null);
   var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
-  var reply = m.replyTo ? { avatar: m.replyTo.author ? h(T.Avatar, { name: m.replyTo.author, size: 16 }) : null, author: m.replyTo.author, text: m.replyTo.text } : null;
+  var reply = m.replyTo ? { author: m.replyTo.author ? h(Person, { name: m.replyTo.author, gid: g.id, size: 16 }) : null, text: m.replyTo.text } : null;
   var authorBtn = handle
-    ? h('button', { type: 'button', className: 'tc-msg-author linkbtn', title: 'Mention ' + m.author, style: Object.assign({ textDecoration: 'none', color: 'var(--text)', fontWeight: 600, fontSize: 14 }, nameStyle), onClick: function () { p.onMention(handle); } }, m.author)
+    ? h('button', { type: 'button', className: 'tc-msg-author namebtn namebtn-mention', title: 'Mention ' + m.author, style: nameStyle, onClick: function () { p.onMention(handle); } }, m.author)
     : authorName(m.author, nameStyle);
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
-    avatar: h(AuthorAvatar, { name: m.author, gid: g.id }), author: authorBtn, meta: h(Frag, null, roleBadge(role), chan), reply: reply, actions: actions,
+    avatar: h(Person, { name: m.author, gid: g.id, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(role), chan), reply: reply, actions: actions,
     className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle
   }, body);
 }
@@ -76,20 +76,9 @@ function authorName(name, style) {
   return h('span', { className: 'tc-msg-author', style: style }, name);
 }
 
-/**
- * Avatar de l'auteur d'un message, qui ouvre sa fiche de profil.
- * @param {string} p.name Nom du membre.
- * @param {?string} [p.gid] Groupe du message.
- */
-function AuthorAvatar(p) {
-  var app = useApp();
-  return h('button', { type: 'button', className: 'avatar-btn', 'aria-label': 'View ' + p.name + "'s profile", onClick: function () { app.ui.openProfile(p.name, p.gid || null); } },
-    h(T.Avatar, { name: p.name }));
-}
-
 function MessageContent(p) {
   var m = p.m;
-  return h(Frag, null, m.text ? h(MessageText, { text: m.text, style: p.style }) : null, p.children, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
+  return h(Frag, null, m.text ? h(MessageText, { text: m.text, style: p.style, gid: p.gid }) : null, p.children, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
 }
 
 function MessageEmbeds(p) {

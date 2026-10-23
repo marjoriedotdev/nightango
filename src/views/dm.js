@@ -56,7 +56,7 @@ function DMView(p) {
       var ms = memberStyles(userOf(s, m.from).style || {}, s.prefs.styles, app.theme, false);
       rows.push(h(T.Message, {
         key: m.id, compact: s.prefs.density === 'compact', continued: prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, time: fmtTime(m.ts, s.prefs.h24),
-        avatar: h(AuthorAvatar, { name: m.from }), author: authorName(m.from, ms.name), style: ms.row
+        avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row
       }, h(MessageContent, { m: m, style: ms.text })));
       prev = m;
     });
