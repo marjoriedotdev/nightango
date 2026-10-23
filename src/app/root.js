@@ -542,7 +542,17 @@ function Root(props) {
     };
     actions.toggleUser = function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
-      if (key === 'friend' && !was) return liveBridge.addFriend(name);
+      if (key === 'friend' && !was) {
+        if (!liveBridge.addFriend(name)) return;
+        var asked = Date.now();
+        update(function (d) { d.friendAdds[name] = asked; });
+        setTimeout(function () {
+          if (stateRef.current.friendAdds[name] !== asked) return;
+          update(function (d) { delete d.friendAdds[name]; });
+          toast("Chatango didn't confirm adding " + name + ' to friends.');
+        }, CONFIRM_TIMEOUT);
+        return;
+      }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
       if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('Torch could not save its ignore list. Reload the page and try again.'); return; }
@@ -926,11 +936,11 @@ function Root(props) {
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;
-          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); });
+          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
         });
         break;
       case 'friendRefused':
-        update(function (d) { d.friendRefused = { name: op.name, ts: Date.now() }; });
+        update(function (d) { delete d.friendAdds[op.name]; });
         toast('No Chatango user named ' + op.name + '.', { icon: 'info' });
         break;
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;

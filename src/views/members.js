@@ -52,29 +52,14 @@ function GroupInfoSheet(p) {
 
 /* ---------- Profil d'un membre ---------- */
 /**
- * Permet de suivre une demande d'ami jusqu'à la réponse de Chatango.
+ * Permet de suivre la demande d'ami envoyée depuis un formulaire jusqu'à la réponse de Chatango.
  */
 function useFriendRequest() {
-  var app = useApp(), s = app.state;
+  var app = useApp();
   var a = useState(null), asked = a[0], setAsked = a[1];
-  // Un refus plus ancien pour le même nom ne termine pas une nouvelle demande.
-  var refused = !!(asked && s.friendRefused && s.friendRefused.name === asked.name && s.friendRefused.ts >= asked.ts);
-  if (asked && (userOf(s, asked.name).friend || refused)) setAsked(null);
-  useEffect(function () {
-    if (!asked) return undefined;
-    var t = setTimeout(function () {
-      setAsked(null);
-      app.ui.toast("Chatango didn't confirm adding " + asked.name + ' to friends.');
-    }, CONFIRM_TIMEOUT);
-    return function () { clearTimeout(t); };
-  }, [asked]);
   return {
-    pending: asked ? asked.name : null,
-    toggle: function (name) {
-      var was = !!userOf(s, name).friend, sent = app.actions.toggleUser(name, 'friend');
-      // Le prototype ajoute sans rien renvoyer : seul un envoi refusé en live (false) n'ouvre pas l'attente.
-      setAsked(!was && sent !== false ? { name: name, ts: Date.now() } : null);
-    }
+    pending: asked && app.state.friendAdds[asked] ? asked : null,
+    add: function (name) { app.actions.toggleUser(name, 'friend'); setAsked(name); }
   };
 }
 
@@ -94,10 +79,10 @@ function confirmRemoveFriend(app, name) {
  * @param {boolean} [menu] Entrée de menu, dont le libellé de retrait annonce le dialogue.
  */
 function useFriendAction(name, u, menu) {
-  var app = useApp(), request = useFriendRequest(), busy = request.pending === name;
+  var app = useApp(), busy = !!app.state.friendAdds[name];
   return {
     busy: busy, icon: u.friend ? 'user-minus' : 'user-plus', label: busy ? 'Adding friend' : u.friend ? (menu ? 'Remove friend…' : 'Remove friend') : 'Add friend',
-    run: function () { if (u.friend) confirmRemoveFriend(app, name); else request.toggle(name); }
+    run: function () { if (u.friend) confirmRemoveFriend(app, name); else app.actions.toggleUser(name, 'friend'); }
   };
 }
 

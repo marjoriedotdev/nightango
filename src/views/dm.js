@@ -274,7 +274,7 @@ function FriendsList(p) {
     if (n === s.me) { setErr("You can't add yourself."); return; }
     if (s.users[n] && s.users[n].friend) { setErr(n + ' is already a friend.'); return; }
     setErr(''); setName('');
-    request.toggle(n);
+    request.add(n);
   }
   return h(Frag, null,
     h('form', { onSubmit: add, noValidate: true, style: { padding: '12px 12px 4px', display: 'flex', alignItems: 'flex-end', gap: 8 } },
