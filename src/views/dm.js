@@ -12,7 +12,7 @@ function DMView(p) {
   var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
   useProfiles(names);
   var reqCount = names.filter(function (n) { return s.dms[n].request; }).length;
-  var unreadCount = names.filter(function (n) { return !s.dms[n].request && s.dms[n].unread; }).length;
+  var unreadCount = unreadDmCount(s);
   var shown = names.filter(function (n) {
     var c = s.dms[n];
     if (tab === 'requests' ? !c.request : c.request) return false;

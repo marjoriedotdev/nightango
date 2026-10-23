@@ -22,7 +22,11 @@ function listedDms(state) {
   return Object.keys(state.dms).filter(function (n) { return !state.dms[n].request && !state.dms[n].closed; })
     .sort(function (a, b) { return lastTs(state.dms[b]) - lastTs(state.dms[a]); });
 }
-function dmUnreadTotal(state) { var n = 0; for (var k in state.dms) n += state.dms[k].unread || 0; return n; }
+/**
+ * Permet de compter les conversations non lues, hors demandes et conversations fermées.
+ * @param {Object} state État de l'application.
+ */
+function unreadDmCount(state) { return listedDms(state).filter(function (n) { return state.dms[n].unread; }).length; }
 function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
 /**
  * Permet d'abréger le genre d'un profil.

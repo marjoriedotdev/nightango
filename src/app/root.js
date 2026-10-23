@@ -64,7 +64,7 @@ function Root(props) {
   /* Titre de l'onglet */
   useEffect(function () {
     if (!state.auth.loggedIn) { document.title = 'Torch'; return; }
-    var n = dmUnreadTotal(state);
+    var n = unreadDmCount(state);
     Object.keys(state.groups).forEach(function (k) { n += state.groups[k].mentions || 0; });
     document.title = (prefs.tabTitle && n ? '(' + n + ') ' : '') + (prefs.privacy.usernameInTitle ? state.me + ' | ' : '') + 'Torch';
   });
