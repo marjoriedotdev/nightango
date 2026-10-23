@@ -31,7 +31,7 @@ src/
     commands (/join, /leave, /chat et /help des composeurs),
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages
-    shell, profile (Visitors compris), appearance, notifications, privacy (et Safety, compte),
+    shell, profile (Visitors et tracker vissle compris), appearance, notifications, privacy (et Safety, compte),
     language-a11y-about, premium
     group-view, group-pages, group-staff                                réglages de groupe du prototype
     live-group-view, live-group-pages, live-group-staff, live-account   variantes live

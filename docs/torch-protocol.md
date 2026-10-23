@@ -205,7 +205,9 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 
 - Transport : `POST https://vissle.me/track1/activity`, corps `JSON.stringify({action:'activity', profile, page, order, get})` en `text/plain`. Pas d'authentification (source `vissle.me/js/track.js`).
 - vissle n'envoie aucun en-tête CORS : la page ne peut pas lire la réponse avec `fetch`. D'où le pont `GM_xmlhttpRequest` dans le bac à sable du userscript ([ADR-0003](adr/0003-two-context-loader.md)).
-- Le tracker s'installe dans Torch par « Add profile tracker ». Le panneau « track » de Torch l'affiche déjà.
+- Tracker : la balise `<script src="//vissle.me/profile/{n}"></script>` dans la bio du mini profil. Torch la détecte par `/<script src="(?:https:)?\/\/vissle.me\/profile\/(\d+)"><\/script>/` (`inject.js:1472`, `4889-4890`).
+- Torch Skin l'ajoute et la retire dans la section Visitors de la page Profile, comme Torch. Ajout (`inject.js:1478-1487`, `1521-1541`) : `\n<script src="//vissle.me/profile/512"></script>` en fin de bio, si la bio fait moins de `2000 - ("\n" + balise).length` caractères. Retrait (`inject.js:1488-1493`) : remplacement de `/(\n)?(<script src="(?:https:)?\/\/vissle.me\/profile\/\d+"><\/script>)/` par une chaîne vide. Un tracker déjà présent garde son `n`. Seul le brouillon de la bio change : la bio part ensuite par `updateprofile` (Son propre profil).
+- Le statut affiché vient de la bio enregistrée. Torch Skin ne charge jamais `vissle.me/profile/{n}` : la balise est du texte de la bio, que `RichText` ne rend pas ([ADR-0004](adr/0004-member-html-never-injected.md)). Les options du tracker de Torch (`n` = 512 + drapeaux, `client.html:2106-2220`) et son panneau « track » restent dans Torch.
 - Réponse : `{get:[{user, name?, action, time, msg?}]}`, ou `{error}` dans une réponse 200.
 - Pagination : 16 éléments par réponse, dont 15 affichés. Page suivante : `page` = `time` du dernier élément affiché.
 - `get` : `all|log|like|dislike|msg|refer`. `order` : `desc|asc`.

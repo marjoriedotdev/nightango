@@ -71,16 +71,10 @@ function ProfilePageLive() {
                   : h('p', { className: 'muted', style: { margin: 0 } }, "You haven't written a full profile."))),
         h(T.SettingsSection, { title: 'Visibility' },
           h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other Chatango users find you by age and location.', control: h(T.Switch, { checked: !!draft.dir, disabled: !base.loaded || saving, onChange: function (e) { set('dir', e.target.checked); } }) })),
-        h(VisitorsSection, null)),
+        h(VisitorsSection, { bio: base.about, draft: draft.about, onDraft: function (v) { set('about', v); }, disabled: !base.loaded || saving })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
-        h('div', { style: { border: '1px solid var(--border)', borderRadius: 12, background: 'var(--subtle)', overflow: 'hidden' } },
-          h('div', { style: { height: 64, background: 'var(--selected)' } }),
-          h('div', { style: { padding: '0 18px 18px', marginTop: -32 } },
-            h(T.Avatar, { name: s.me, size: 64, style: { border: '4px solid var(--subtle)', boxSizing: 'content-box' } }),
-            h('p', { style: { margin: '8px 0 0', fontSize: 17, fontWeight: 600 } }, s.me),
-            meta ? h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, meta) : null,
-            draft.about ? h('div', { style: { marginTop: 12 } }, h(RichText, { html: draft.about })) : h('p', { className: 'about', style: { marginTop: 12 } }, 'No bio yet.'))))),
+        profilePreviewCard(s.me, meta, draft.about))),
     dirty && base.loaded ? h(T.SaveBar, { onDiscard: function () { setDraft(editable(base)); }, onSave: saving ? function () {} : save, saveLabel: saving ? 'Saving' : 'Save profile' }, 'Unsaved changes to your Chatango profile') : null);
 }
 
