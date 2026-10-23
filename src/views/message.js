@@ -46,7 +46,7 @@ function MessageRow(p) {
   var menuItems = [
     canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
     handle ? { label: 'Mention ' + m.author, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
-    { label: 'Copy text', icon: 'copy', onSelect: function () { copyText(messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed. Select the text and copy it.'); }); } },
+    copyTextItem(app, m),
     m.author !== me ? viewProfileItem(app, m.author, g.id) : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,
     canDelete ? { label: LIVE ? 'Delete message…' : 'Delete message', icon: 'trash', danger: true, onSelect: function () { if (LIVE) app.ui.confirm({ title: 'Delete this message?', body: 'Chatango removes it from #' + g.id + " for everyone. You can't undo this.", confirmLabel: 'Delete', danger: true, onConfirm: deleteMessage }); else deleteMessage(); } } : null,
@@ -56,7 +56,7 @@ function MessageRow(p) {
   ];
   var actions = m.deleted ? null : h(Frag, null,
     h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: function () { p.onReply(m); } }),
-    h(MenuButton, { label: 'More actions', size: 28, iconSize: 16, items: menuItems, onOpenChange: setMenuOpen }));
+    moreActionsButton(menuItems, setMenuOpen));
   var body = m.deleted
     ? h('p', { className: 'tc-msg-text deleted' }, m.deleted.by === m.author ? 'Message deleted' : 'Message deleted by ' + m.deleted.by)
     : h(MessageContent, { m: m, style: textStyle, gid: g.id });
@@ -74,6 +74,24 @@ function MessageRow(p) {
     avatar: h(Person, { name: m.author, gid: g.id, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(role), chan), reply: reply, actions: actions,
     msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle, background: bgImage
   }, body);
+}
+
+/**
+ * Permet de proposer la copie du texte d'un message, en groupe comme en MP.
+ * @param {Object} app Contexte de l'application.
+ * @param {Object} m Message.
+ */
+function copyTextItem(app, m) {
+  return { label: 'Copy text', icon: 'copy', onSelect: function () { copyText(messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed. Select the text and copy it.'); }); } };
+}
+
+/**
+ * Bouton « More actions » de la barre d'un message.
+ * @param {Array} items Entrées du menu.
+ * @param {function(boolean)} onOpenChange Suivi de l'ouverture, qui garde la barre affichée.
+ */
+function moreActionsButton(items, onOpenChange) {
+  return h(MenuButton, { label: 'More actions', size: 28, iconSize: 16, items: items, onOpenChange: onOpenChange });
 }
 
 /**

@@ -56,11 +56,7 @@ function DMView(p) {
     convo.messages.forEach(function (m) {
       var dk = dayKey(m.ts);
       if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-      var ms = memberStyles(userOf(s, m.from).style || {}, s.prefs.styles, app.theme, false);
-      rows.push(h(T.Message, {
-        key: m.id, compact: s.prefs.density === 'compact', continued: prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, time: fmtTime(m.ts, s.prefs.h24),
-        avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row
-      }, h(MessageContent, { m: m, style: ms.text })));
+      rows.push(h(DmMessageRow, { key: m.id, m: m, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN }));
       prev = m;
     });
     var lastMsg = convo.messages[convo.messages.length - 1];
@@ -90,6 +86,22 @@ function DMView(p) {
   return h('div', { className: 'main', style: { flexDirection: 'row' } },
     h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
     convo && showProfile ? h(ProfilePanel, { name: id }) : null);
+}
+
+/**
+ * Ligne d'un message privé avec son menu d'actions locales, sans Reply faute de trame sourcée.
+ * @param {{m: Object, continued: boolean}} p Message et suite du message précédent du même auteur.
+ */
+function DmMessageRow(p) {
+  var app = useApp(), s = app.state, m = p.m;
+  var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
+  var ms = memberStyles(userOf(s, m.from).style || {}, s.prefs.styles, app.theme, false);
+  var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null];
+  return h(T.Message, {
+    compact: s.prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, s.prefs.h24),
+    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row,
+    actions: moreActionsButton(items, setMenuOpen), className: cx(menuOpen && 'menu-open')
+  }, h(MessageContent, { m: m, style: ms.text }));
 }
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };
