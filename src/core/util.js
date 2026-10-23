@@ -20,12 +20,6 @@ function dayLabel(ts) {
   if (diff === 1) return 'Yesterday';
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
-function shortWhen(ts, h24) {
-  var diff = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(ts).setHours(0, 0, 0, 0)) / 86400000);
-  if (diff <= 0) return fmtTime(ts, h24);
-  if (diff < 7) return new Date(ts).toLocaleDateString('en-GB', { weekday: 'short' });
-  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-}
 function ago(ts) {
   var m = Math.round((Date.now() - ts) / MIN);
   if (m < 1) return 'just now';
@@ -34,6 +28,12 @@ function ago(ts) {
   if (hrs < 24) return hrs + (hrs === 1 ? ' hour ago' : ' hours ago');
   var days = Math.round(hrs / 24);
   return days + (days === 1 ? ' day ago' : ' days ago');
+}
+function elapsedShort(ts) {
+  var m = Math.floor((Date.now() - ts) / MIN);
+  if (m < 60) return Math.max(m, 1) + ' min';
+  if (m < 1440) return Math.floor(m / 60) + ' h';
+  return Math.floor(m / 1440) + ' d';
 }
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }

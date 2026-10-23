@@ -105,7 +105,8 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - `wlonline:nom`, `wlapp:nom` (connecté depuis l'application mobile), `wloffline:nom:horodatage` (source ch.py).
 - `status:nom:horodatage:état`, état `online`, `app` ou `offline` (sources ch.py, chatango-lib). Cette trame ne dit pas si le compte est inactif : un état idle déjà connu est gardé. Torch ne s'en sert que pour son écran de MP.
 - `presence` (réponse à `getpresence:a;b`) : triplets nom, minutes, état (`online`, `app` ou `offline`). En `online` ou `app`, les minutes sont de l'inactivité. En `offline`, elles donnent une dernière connexion approchée.
-- Le pont en tire `lastOn` (millisecondes, 0 si inconnu). Un passage hors ligne sans horodatage prend l'heure courante (`app/root.js`). Un ami hors ligne affiche « Last online » avec cette date.
+- Le pont en tire `lastOn` (millisecondes, 0 si inconnu). Un passage hors ligne sans horodatage prend l'heure courante (`app/root.js`). Les lignes Chats et Friends affichent cette date en haut à droite pour un ami hors ligne (« 3 h ago »).
+- Le pont en tire aussi `idleSince` (millisecondes) à partir des minutes d'inactivité. `idleupdate` ne donne pas de durée : l'inactivité part de sa réception. L'état idle n'est affiché qu'après 3 minutes (`IDLE_DELAY`, `app/root.js`), avant quoi le membre reste online. Un ami idle affiche sa durée d'inactivité en haut à droite (« Idle 12 min »).
 
 ## Médias
 

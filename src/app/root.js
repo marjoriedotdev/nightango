@@ -1,5 +1,6 @@
 /* ---------- Racine ---------- */
 var THREAD_MAX = 500;
+var IDLE_DELAY = 3 * MIN;
 
 function Root(props) {
   var st = useState(function () { return props.boot && props.boot.auth ? props.boot : initialState(); }), state = st[0], setState = st[1];
@@ -47,6 +48,18 @@ function Root(props) {
     if (mq.addEventListener) mq.addEventListener('change', onChange);
     return function () { if (mq.removeEventListener) mq.removeEventListener('change', onChange); };
   }, []);
+
+  /* Passage à idle des membres inactifs depuis IDLE_DELAY */
+  useEffect(function () {
+    if (!state.users) return;
+    var next = Infinity;
+    Object.keys(state.users).forEach(function (n) { var u = state.users[n]; if (u.idleSince && u.status === 'online') next = Math.min(next, u.idleSince + IDLE_DELAY); });
+    if (next === Infinity) return;
+    var timer = setTimeout(function () {
+      update(function (d) { Object.keys(d.users).forEach(function (n) { var u = d.users[n]; if (u.idleSince && u.status === 'online' && Date.now() - u.idleSince >= IDLE_DELAY) u.status = 'idle'; }); });
+    }, Math.max(0, next - Date.now()));
+    return function () { clearTimeout(timer); };
+  }, [state.users]);
 
   /* Titre de l'onglet */
   useEffect(function () {
@@ -353,7 +366,7 @@ function Root(props) {
         var friends = Object.keys(s0.users).filter(function (n) { return s0.users[n].friend && n !== me; });
         if (friends.length) {
           var f = pick(friends), cur = s0.users[f].status, next = cur === 'offline' ? 'online' : 'offline';
-          update(function (d) { d.users[f].status = next; });
+          update(function (d) { var u = d.users[f]; u.status = next; u.idleSince = 0; if (next === 'offline') u.lastOn = Date.now(); });
           if (next === 'online' && (isNotifyingOnline(s0, f) || s0.prefs.notify.friendOn.app)) {
             if (s0.prefs.notify.friendOn.sound) beep(s0.prefs.volume);
             toast(f + ' is online.', { icon: 'users', action: { label: 'Message', run: function () { actions.openDm(f); } } });
@@ -598,10 +611,12 @@ function Root(props) {
   /**
    * Permet d'appliquer à un membre une présence reçue du pont.
    * @param {Object} u Membre dans l'état.
-   * @param {{status: string, lastOn: number}} x Présence reçue.
+   * @param {{status: string, lastOn: number, idleSince: number}} x Présence reçue.
    */
   function applyPresence(u, x) {
-    u.status = x.status;
+    // Avant IDLE_DELAY, un membre inactif reste affiché online : idleSince seul garde l'inactivité.
+    u.idleSince = x.status === 'idle' ? x.idleSince || u.idleSince || Date.now() : 0;
+    u.status = x.status === 'idle' && Date.now() - u.idleSince < IDLE_DELAY ? 'online' : x.status;
     if (x.lastOn) u.lastOn = x.lastOn;
   }
   /**
@@ -886,7 +901,7 @@ function Root(props) {
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
       case 'presence': {
         var before = stateRef.current.users[op.name];
-        var status = op.keepIdle && before && before.status === 'idle' ? 'idle' : op.status;
+        var status = op.keepIdle && before && before.idleSince ? 'idle' : op.status;
         update(function (d) {
           var u = ensureLiveUser(d, op.name);
           applyPresence(u, { status: status, lastOn: op.lastOn });

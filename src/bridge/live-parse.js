@@ -138,6 +138,7 @@ function epochMs(v) { return Math.round(parseFloat(v) * 1000) || 0; }
  * @param {string} minutes Minutes d'inactivité.
  */
 function friendPresence(name, state, ts, minutes) {
-  return { name: lower(name), status: presenceOf(state, minutes), lastOn: state === 'off' ? epochMs(ts) : 0 };
+  var status = presenceOf(state, minutes);
+  return { name: lower(name), status: status, lastOn: state === 'off' ? epochMs(ts) : 0, idleSince: status === 'idle' ? Date.now() - minutes * MIN : 0 };
 }
 function stateOf(sock) { return !sock ? 'closed' : sock.readyState === 1 ? 'open' : sock.readyState === 0 ? 'connecting' : 'closed'; }
