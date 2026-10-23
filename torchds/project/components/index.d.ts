@@ -1,4 +1,4 @@
-import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes } from 'react';
+import type { ReactNode, CSSProperties, ButtonHTMLAttributes, InputHTMLAttributes } from 'react';
 
 export type IconName = string;
 export type Presence = 'online' | 'idle' | 'offline';
@@ -14,7 +14,7 @@ export interface BadgeProps { tone?: 'neutral' | 'accent'; icon?: IconName; chil
 export interface CountBadgeProps { count: number; mention?: boolean }
 export interface AvatarProps { name: string; size?: number; status?: Presence; color?: string; ring?: string; square?: boolean; /** Photo de profil ; les initiales restent affichées si elle ne charge pas. */ src?: string | null; /** Appelé quand la photo de profil est chargée. */ onLoad?: () => void }
 export interface NavItemProps { label: ReactNode; icon?: IconName; avatar?: ReactNode; active?: boolean; unread?: boolean; count?: number; mention?: boolean; muted?: boolean; href?: string; onClick?: () => void; trailing?: ReactNode }
-export interface MessageProps { author: string; time: string; children: ReactNode; role?: 'Owner' | 'Mod' | string; continued?: boolean; mention?: boolean; reply?: { author: string; text: string }; avatarColor?: string; avatarSrc?: string | null; extra?: ReactNode; onReply?: () => void; onReact?: () => void; onMore?: () => void }
+export interface MessageProps { time: string; /** Un texte devient un p.tc-msg-text avec ses @mentions, un élément est rendu tel quel. */ children: ReactNode; /** Un texte devient un span.tc-msg-author, un élément est rendu tel quel. */ author?: ReactNode; avatar?: ReactNode; /** Rôle et canal, après le nom. */ meta?: ReactNode; reply?: { author?: ReactNode; avatar?: ReactNode; text: ReactNode } | null; /** Contenu de la barre d'actions au survol. */ actions?: ReactNode; compact?: boolean; continued?: boolean; mention?: boolean; className?: string; style?: CSSProperties }
 export interface DayDividerProps { children: ReactNode }
 export interface BannerProps { tone?: 'info' | 'warning'; icon?: IconName; title?: ReactNode; children: ReactNode; action?: ReactNode; onDismiss?: () => void }
 export interface SettingsSectionProps { title?: ReactNode; description?: ReactNode; headerAside?: ReactNode; padded?: boolean; children?: ReactNode }

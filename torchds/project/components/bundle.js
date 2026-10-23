@@ -198,40 +198,35 @@
   }
 
   function renderText(text) {
-    if (typeof text !== 'string') return text;
-    var parts = text.split(/(@[A-Za-z0-9_-]+)/g);
-    return parts.map(function (p, i) {
+    return text.split(/(@[A-Za-z0-9_-]+)/g).map(function (p, i) {
       if (p.charAt(0) === '@' && p.length > 1) return h('span', { key: i, className: 'tc-mention' }, p);
       return p;
     });
   }
 
   function Message(props) {
-    var mention = props.mention;
-    var actions = (props.onReply || props.onReact || props.onMore) ? h('div', { className: 'tc-msg-actions' },
-      props.onReact ? h(IconButton, { icon: 'smile', label: 'Add reaction', size: 28, iconSize: 16, onClick: props.onReact }) : null,
-      props.onReply ? h(IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: props.onReply }) : null,
-      props.onMore ? h(IconButton, { icon: 'more', label: 'More actions', size: 28, iconSize: 16, onClick: props.onMore }) : null) : null;
-    var text = h('p', { className: 'tc-msg-text' }, renderText(props.children));
-    if (props.continued) {
-      return h('article', { className: cx('tc-msg', 'tc-msg-cont', mention && 'tc-msg-mention') },
-        h('span', { className: 'tc-msg-gutter' }, props.time),
-        h('div', { className: 'tc-msg-body' }, text, props.extra || null), actions);
+    var mention = props.mention && 'tc-msg-mention';
+    var body = typeof props.children === 'string' ? h('p', { className: 'tc-msg-text' }, renderText(props.children)) : props.children;
+    var author = typeof props.author === 'string' ? h('span', { className: 'tc-msg-author' }, props.author) : props.author;
+    var time = h('time', { className: 'tc-msg-time' }, props.time);
+    var actions = props.actions ? h('div', { className: 'tc-msg-actions' }, props.actions) : null;
+    var reply = props.reply ? h('div', { className: 'tc-msg-reply' },
+      h(Icon, { name: 'reply', size: 14 }), props.reply.avatar,
+      props.reply.author ? h('span', { className: 'tc-msg-reply-author' }, props.reply.author) : null,
+      h('span', { className: 'tc-msg-reply-text' }, props.reply.text)) : null;
+    if (props.compact) {
+      return h('article', { className: cx('cmsg', mention, props.className), style: props.style },
+        time, author, h('div', { style: { flex: 1, minWidth: 0 } }, reply, body), actions);
     }
-    var roleBadge = props.role ? h(Badge, { icon: props.role === 'Owner' ? 'crown' : 'shield' }, props.role) : null;
-    return h('article', { className: cx('tc-msg', mention && 'tc-msg-mention'), style: props.reply ? { flexDirection: 'column' } : null },
-      props.reply ? h('div', { className: 'tc-msg-reply' },
-        h(Icon, { name: 'reply', size: 14 }),
-        h(Avatar, { name: props.reply.author, size: 16 }),
-        h('span', { style: { fontWeight: 500, color: 'var(--text-2)' } }, props.reply.author),
-        h('span', { className: 'tc-msg-reply-text' }, props.reply.text)) : null,
+    if (props.continued) {
+      return h('article', { className: cx('tc-msg', 'tc-msg-cont', mention, props.className), style: props.style },
+        h('span', { className: 'tc-msg-gutter' }, props.time), h('div', { className: 'tc-msg-body' }, body), actions);
+    }
+    return h('article', { className: cx('tc-msg', mention, props.className), style: Object.assign({ marginTop: 6 }, reply ? { flexDirection: 'column' } : null, props.style) },
+      reply,
       h('div', { style: { display: 'flex', gap: 12 } },
-        h(Avatar, { name: props.author, color: props.avatarColor, src: props.avatarSrc }),
-        h('div', { className: 'tc-msg-body' },
-          h('div', { className: 'tc-msg-head' },
-            h('span', { className: 'tc-msg-author' }, props.author), roleBadge,
-            h('time', { className: 'tc-msg-time' }, props.time)),
-          text, props.extra || null)),
+        props.avatar,
+        h('div', { className: 'tc-msg-body' }, h('div', { className: 'tc-msg-head' }, author, props.meta, time), body)),
       actions);
   }
 

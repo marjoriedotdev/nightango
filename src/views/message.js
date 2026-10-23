@@ -37,7 +37,7 @@ function MessageRow(p) {
     m.author !== me ? { label: u.ignored ? 'Stop ignoring ' + m.author : 'Ignore ' + m.author, icon: 'eye-off', onSelect: function () { app.actions.toggleUser(m.author, 'ignored'); } } : null,
     canBan ? { label: 'Ban from #' + g.id, icon: 'ban', danger: true, onSelect: function () { app.ui.ban(m.author, g.id, m); } } : null
   ];
-  var actions = m.deleted ? null : h('div', { className: 'tc-msg-actions' },
+  var actions = m.deleted ? null : h(Frag, null,
     h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: function () { p.onReply(m); } }),
     h(MenuButton, { label: 'More actions', size: 28, iconSize: 16, items: menuItems, onOpenChange: setMenuOpen }));
   var body = m.deleted
@@ -47,31 +47,15 @@ function MessageRow(p) {
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
   var roleBadge = role ? h(T.Badge, { icon: role === 'owner' ? 'crown' : 'shield' }, ROLE_LABEL[role]) : null;
-  var time = fmtTime(m.ts, prefs.h24);
-  var reply = m.replyTo ? h('div', { className: 'tc-msg-reply' },
-    h(T.Icon, { name: 'reply', size: 14 }), m.replyTo.author ? h(T.Avatar, { name: m.replyTo.author, size: 16 }) : null,
-    m.replyTo.author ? h('span', { style: { fontWeight: 500, color: 'var(--text-2)' } }, m.replyTo.author) : null, h('span', { className: 'tc-msg-reply-text' }, m.replyTo.text)) : null;
+  var reply = m.replyTo ? { avatar: m.replyTo.author ? h(T.Avatar, { name: m.replyTo.author, size: 16 }) : null, author: m.replyTo.author, text: m.replyTo.text } : null;
   var authorBtn = handle
     ? h('button', { type: 'button', className: 'tc-msg-author linkbtn', title: 'Mention ' + m.author, style: Object.assign({ textDecoration: 'none', color: 'var(--text)', fontWeight: 600, fontSize: 14 }, nameStyle), onClick: function () { p.onMention(handle); } }, m.author)
     : h('span', { className: 'tc-msg-author', style: nameStyle }, m.author);
-
-  if (prefs.density === 'compact') {
-    return h('article', { className: cx('cmsg', mention && 'tc-msg-mention', menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle },
-      h('time', { className: 'tc-msg-time' }, time), authorBtn,
-      h('div', { style: { flex: 1, minWidth: 0 } }, reply, body), actions);
-  }
-  if (p.continued) {
-    return h('article', { className: cx('tc-msg', 'tc-msg-cont', mention && 'tc-msg-mention', menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle },
-      h('span', { className: 'tc-msg-gutter' }, time), h('div', { className: 'tc-msg-body' }, body), actions);
-  }
-  return h('article', { className: cx('tc-msg', mention && 'tc-msg-mention', menuOpen && 'menu-open', chanColor && 'chan-msg'), style: Object.assign({ marginTop: 6 }, m.replyTo ? { flexDirection: 'column' } : null, rowStyle) },
-    reply,
-    h('div', { style: { display: 'flex', gap: 12 } },
-      h(AuthorAvatar, { name: m.author, gid: g.id }),
-      h('div', { className: 'tc-msg-body' },
-        h('div', { className: 'tc-msg-head' }, authorBtn, roleBadge, h('time', { className: 'tc-msg-time' }, time), chan),
-        body)),
-    actions);
+  return h(T.Message, {
+    compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
+    avatar: h(AuthorAvatar, { name: m.author, gid: g.id }), author: authorBtn, meta: h(Frag, null, roleBadge, chan), reply: reply, actions: actions,
+    className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle
+  }, body);
 }
 
 /**
