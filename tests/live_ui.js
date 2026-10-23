@@ -54,7 +54,11 @@ const pmRecords = [
   pmRecord('fay', 'msg:fay:marjorie:unknown:1700000050.5:0:<n3366FF/><m v="1"><g x12s9900cc="4">Old styled</g></m>', 0)
 ];
 // Comme Torch : un MP reçu est archivé non lu, le pont ne donnant jamais à Torch le focus des MP.
-function saveMessage(data) { pmRecords.push(pmRecord(data[0], 'msg:' + data.join(':'), 1)); }
+// Clé déjà prise : Torch réessaie une seconde plus tard (ConstraintError), horodatage de la trame compris.
+function saveMessage(data) {
+  while (pmRecords.some(r => r.ts === parseFloat(data[3]))) data[3] = String(parseFloat(data[3]) + 1);
+  pmRecords.push(pmRecord(data[0], 'msg:' + data.join(':'), 1));
+}
 // Ordre des clés IndexedDB : une chaîne passe après tout nombre, un tableau se compare élément par élément.
 function keyCmp(a, b) {
   if (Array.isArray(a)) { for (let i = 0; i < Math.min(a.length, b.length); i++) { const c = keyCmp(a[i], b[i]); if (c) return c; } return a.length - b.length; }
@@ -69,13 +73,21 @@ function pmTransaction(stores, mode) {
   // Comme IndexedDB, une transaction sans aucune requête se termine aussi.
   let requests = 0;
   setTimeout(() => { if (!requests && tx.oncomplete) tx.oncomplete(); }, 0);
+  // Comme IndexedDB, la transaction se termine quand plus aucune requête n'attend, y compris celles ouvertes par un rappel.
+  let pending = 0;
+  const done = () => {
+    if (--pending) return;
+    Promise.resolve().then(() => { if (pending) return; if (mode === 'readwrite') calls.push(['written', migrationFlag()]); if (tx.oncomplete) tx.oncomplete(); });
+  };
+  const drop = rec => [pmRecords, seen].forEach(l => { const i = l.indexOf(rec); if (i >= 0) l.splice(i, 1); });
+  const request = run => { const req = {}; pending++; requests++; setTimeout(() => { run(req); done(); }, 0); return req; };
   // Curseur en microtâches après une première tâche : un parcours lent ferait échouer les attentes courtes sous charge.
   const cursor = list => {
-    const req = {}; let i = 0; requests++;
+    const req = {}; let i = 0; pending++; requests++;
     const read = () => {
       const rec = list[i];
-      req.onsuccess({ target: { result: rec ? { value: Object.assign({}, rec), update(v) { Object.assign(rec, v); }, continue() { i++; Promise.resolve().then(read); } } : null } });
-      if (!rec) Promise.resolve().then(() => { if (mode === 'readwrite') calls.push(['written', migrationFlag()]); if (tx.oncomplete) tx.oncomplete(); });
+      req.onsuccess({ target: { result: rec ? { value: Object.assign({}, rec), update(v) { Object.assign(rec, v); }, delete() { drop(rec); }, continue() { i++; Promise.resolve().then(read); } } : null } });
+      if (!rec) done();
     };
     setTimeout(read, 0); return req;
   };
@@ -101,6 +113,8 @@ function pmTransaction(stores, mode) {
     if (tx.oncomplete) tx.oncomplete();
   };
   tx.objectStore = () => ({
+    get: ts => request(req => { const rec = seen.find(r => r.ts === ts); req.onsuccess({ target: { result: rec && Object.assign({}, rec) } }); }),
+    delete: ts => request(() => drop(seen.find(r => r.ts === ts))),
     openCursor: () => cursor(seen),
     index: name => ({ openCursor: (range, dir) => { const list = byIndex(name, range); return cursor(dir === 'prev' ? list.reverse() : list); } }),
     add(rec) { const req = {}; requests++; if (!adds.length) setTimeout(commit, 0); adds.push([rec, req]); return req; }
@@ -1310,6 +1324,51 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const ivanTexts = $$('.thread .tc-msg-text').map(x => x.textContent);
   step('pm history import reopens older pages', ivanSentinel && !ivanStart && ivanTexts.length === 122 && ivanTexts[0] === 'Older ivan 0',
     { ivanSentinel, ivanStart, observed: !!ivanTop, count: ivanTexts.length, head: ivanTexts.slice(0, 3) });
+
+  /* Retrait d'un MP de la base de Torch : l'enregistrement est relu avant suppression, celui d'un autre membre reste intact */
+  const recordAt = ts => pmRecords.find(r => r.ts === ts);
+  const pmRow = txt => { const p = $$('.thread .tc-msg-text').find(x => x.textContent === txt); return p && p.closest('.tc-msg'); };
+  const removeFromBrowser = async txt => {
+    const r = pmRow(txt), more = r && r.querySelector('button[aria-label="More actions"]');
+    if (more) { click(more); await wait(30); }
+    const item = menuItem('Remove from this browser');
+    if (item) { click(item); await wait(30); }
+    const dialog = $('.dialog') ? $('.dialog').textContent : '';
+    if (dialog) click(byText('.dialog-foot button', 'Remove'));
+    return { item: !!item, dialog };
+  };
+  // Clé déjà prise par un MP de walt : Torch archive celui de vera une seconde plus tard, le pont garde la clé de la trame.
+  pmRecords.push(pmRecord('walt', 'msg:walt:marjorie:unknown:1700004000.5:0:<n000/>Not yours', 0));
+  pm('msg', ['vera', 'marjorie', 'unknown', '1700003900.5', '0', '<n000/>Remove me']);
+  pm('msg', ['vera', 'marjorie', 'unknown', '1700004000.5', '0', '<n000/>Keep me']);
+  await until(() => !!byText('.conv', 'vera'));
+  click(byText('.conv', 'vera')); await until(() => !!pmRow('Keep me'));
+  const removeAsk = await removeFromBrowser('Remove me');
+  await until(() => !pmRow('Remove me'));
+  const removed = { ask: removeAsk, record: !!recordAt(1700003900.5), shown: !!pmRow('Remove me'), toast: !!byText('.toast', 'Message removed from this browser.') };
+  await removeFromBrowser('Keep me');
+  await until(() => !!byText('.toast', 'This message could not be removed.'));
+  const refused = { walt: (recordAt(1700004000.5) || {}).target, vera: (recordAt(1700004001.5) || {}).target, shown: !!pmRow('Keep me'), toast: !!byText('.toast', 'This message could not be removed. Reload the page and try again.') };
+  // Original modifié : relu par sa clé, il part avec sa modification, mais pas le MP de nell qui porte la même clé.
+  click(byText('.conv', 'olga')); await until(() => !!pmRow('Final text'));
+  await removeFromBrowser('Final text');
+  await until(() => !pmRow('Final text'));
+  const edited = { original: !!recordAt(1700000900.5), edit: !!recordAt(1700000960.5), nell: !!recordAt(1700000350.5), shown: !!pmRow('Final text') };
+  // Modification affichée sans son original, archivé hors du fil : l'original part aussi, sinon il reviendrait au rechargement.
+  pmRecords.push(pmRecord('pia', 'msg:pia:marjorie:unknown:1700004100.5:0:<n000/><iorig9876/><m v="1"><g x12s000="0">Old draft</g></m>', 0));
+  pm('msg', ['pia', 'marjorie', 'unknown', '1700004200.5', '0', '<n000/><iedit4321/><m v="1"><g x12s000="0"><eorig9876/>Only the edit</g></m>']);
+  await until(() => !!byText('.conv', 'pia'));
+  click(byText('.conv', 'pia')); await until(() => !!pmRow('Only the edit'));
+  await removeFromBrowser('Only the edit');
+  await until(() => !pmRow('Only the edit'));
+  const editOnly = { original: !!recordAt(1700004100.5), edit: !!recordAt(1700004200.5), shown: !!pmRow('Only the edit') };
+  step('remove a private message from this browser',
+    removed.ask.item && /Remove this message from this browser\?/.test(removed.ask.dialog) && removed.ask.dialog.includes('Removes the copy Torch keeps in this browser. Chatango does not store private messages, and vera keeps their copy.')
+      && !removed.record && !removed.shown && removed.toast
+      && refused.walt === 'walt' && refused.vera === 'vera' && refused.shown && refused.toast
+      && !edited.original && !edited.edit && edited.nell && !edited.shown
+      && !editOnly.original && !editOnly.edit && !editOnly.shown,
+    { removed, refused, edited, editOnly });
 
   /* Session coupée : connecté ailleurs, hors ligne, connexion perdue, session expirée */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };

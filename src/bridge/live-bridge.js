@@ -163,7 +163,7 @@ var liveBridge = (function () {
     switch (name) {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
-        emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), offline: name === 'msgoff' });
+        emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
         break;
       }
       case 'wl': {
@@ -403,6 +403,18 @@ var liveBridge = (function () {
     var key = skinKey(lower(C.user.name));
     if (!db || (storageGet(key) || {}).pmReadMigrated) return db;
     return markRead(db, null).then(function () { storageMerge(key, { pmReadMigrated: true }); }, warn).then(function () { return db; });
+  }
+  // Borne haute en chaîne comme Torch : dans l'ordre IndexedDB, une chaîne passe après tout horodatage.
+  function targetRange(target) { return IDBKeyRange.bound([target, 1], [target, '']); }
+  /**
+   * Permet de savoir si une entrée de l'historique privé est un message affiché.
+   * @param {Object} x Entrée lue par pmRecordEntry.
+   * @param {{from: string, text: string, key: ?string}} m Message affiché.
+   */
+  function isPmOf(x, m) {
+    if (x.from !== m.from) return false;
+    // Une modification appliquée change le texte affiché : la clé du MP, quand il en a une, désigne l'original et ses modifications.
+    return m.key ? x.key === m.key || x.editId === m.key : x.text === m.text;
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
   // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
@@ -853,12 +865,39 @@ var liveBridge = (function () {
     markPmRead: function (name) {
       // Transaction créée après la pile en cours : Torch n'archive un MP reçu qu'après l'émission de pm.
       openPmDb().then(function (db) {
-        // Borne haute en chaîne comme Torch : dans l'ordre IndexedDB, une chaîne passe après tout horodatage.
-        if (db) return markRead(db, IDBKeyRange.bound([name, 1], [name, '']));
+        if (db) return markRead(db, targetRange(name));
       }).catch(warn);
     },
     /** Supprime l'historique que Torch garde dans ce navigateur ; Chatango n'en conserve pas. */
     clearPmHistory: function (target) { try { C.private.clearHistory(target); return true; } catch (e) { warn(e); return false; } },
+    /**
+     * Permet de retirer un MP de l'historique privé, comme l'entrée remove de Torch, après avoir relu son enregistrement.
+     * @param {string} target Membre de la conversation.
+     * @param {{from: string, archiveTs: number, text: string, key: ?string}} entry Message affiché.
+     * @returns {Promise<boolean>} Vrai à la fin de la transaction qui l'a supprimé, faux si l'enregistrement n'est pas ce message ou sans base.
+     */
+    removePm: function (target, entry) {
+      return openPmDb().then(function (db) { return new Promise(function (resolve) {
+        if (!db) { resolve(false); return; }
+        var removed = false, tx = db.transaction(['messages'], 'readwrite'), store = tx.objectStore('messages');
+        // Clé ts commune à tous les membres : après une collision, saveMessage archive une seconde plus tard et la clé de la trame désigne le MP d'un autre.
+        store.get(entry.archiveTs).onsuccess = function (e) {
+          var v = e.target.result, x = v && lower(v.target) === target && pmRecordEntry(v);
+          if (!x || !isPmOf(x, entry)) return;
+          store.delete(entry.archiveTs);
+          removed = true;
+          // Original et modifications partagent la clé du MP : un seul enregistrement laissé ferait revenir le message au rechargement.
+          if (entry.key) store.index('target_ts_idx').openCursor(targetRange(target)).onsuccess = function (ev) {
+            var cur = ev.target.result, y = cur && pmRecordEntry(cur.value);
+            if (!cur) return;
+            if (y && isPmOf(y, entry)) cur.delete();
+            cur.continue();
+          };
+        };
+        tx.oncomplete = function () { resolve(removed); };
+        tx.onabort = function () { resolve(false); };
+      }); }).catch(function (e) { warn(e); return false; });
+    },
     /* Profil : lu dans les champs que Torch remplit à la connexion, enregistré par client.post */
     readProfile: function () {
       var dir = document.querySelector('[data-setting="show_profile"] input');

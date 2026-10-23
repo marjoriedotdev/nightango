@@ -72,7 +72,7 @@ function DmThread(p) {
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    rows.push(h(DmMessageRow, { key: m.id, m: m, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN }));
+    rows.push(h(DmMessageRow, { key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN }));
     prev = m;
   });
   if (LIVE && s.pmLoaded) rows.unshift(convo.olderMore ? olderSentinel(sentinelRef, convo.loadingOlder) : historyStart('This is the start of the messages saved in this browser.'));
@@ -102,13 +102,19 @@ function DmThread(p) {
 
 /**
  * Ligne d'un message privé avec son menu d'actions locales, sans Reply faute de trame sourcée.
- * @param {{m: Object, continued: boolean}} p Message et suite du message précédent du même auteur.
+ * @param {{m: Object, peer: string, continued: boolean}} p Message, correspondant de la conversation et suite du message précédent du même auteur.
  */
 function DmMessageRow(p) {
   var app = useApp(), s = app.state, m = p.m;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var ms = memberStyles(userOf(s, m.from), s.prefs.styles, app.theme, false);
-  var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null];
+  // Un MP envoyé n'a sa clé d'archive qu'au prochain OK : son entrée de retrait n'apparaît qu'ensuite.
+  var canRemove = !LIVE || !!m.archiveTs;
+  var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null,
+    canRemove ? { divider: true } : null,
+    canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
+      app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(p.peer, LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
+    } } : null];
   return h(T.Message, {
     compact: s.prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, s.prefs.h24),
     avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row,
@@ -206,6 +212,15 @@ function personRow(s, n, onClick, current) {
 }
 
 /**
+ * Permet de dire qui garde les MP retirés de ce navigateur.
+ * @param {string} name Correspondant.
+ * @param {boolean} torch Vrai pour dire d'abord que seule la copie de Torch part.
+ */
+function keptCopyText(name, torch) {
+  return (torch ? 'Removes the copy Torch keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
+}
+
+/**
  * Permet de lister les actions de fermeture et de suppression d'une conversation.
  * @param {Object} app Contexte de l'application.
  * @param {string} name Membre de la conversation.
@@ -214,7 +229,7 @@ function convActions(app, name) {
   return [
     { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },
     { label: 'Delete conversation…', short: 'Delete', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Delete this conversation?', body: LIVE ? 'Removes the copy Torch keeps in this browser. Chatango does not store private messages, and ' + name + ' keeps their copy.' : 'Messages with ' + name + ' are removed from your account. ' + name + ' keeps their copy.', confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
+      app.ui.confirm({ title: 'Delete this conversation?', body: LIVE ? keptCopyText(name, true) : 'Messages with ' + name + ' are removed from your account. ' + name + ' keeps their copy.', confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
     } }
   ];
 }

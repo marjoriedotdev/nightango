@@ -212,6 +212,15 @@ function Root(props) {
       unstyled: was ? name + "'s style shown again." : name + "'s style hidden."
     }[key];
   }
+  /**
+   * Permet d'enlever du fil un MP retiré de ce navigateur, puis de le dire.
+   * @param {string} name Correspondant.
+   * @param {string} id Identifiant du message dans l'état.
+   */
+  function dropDmMessage(name, id) {
+    update(function (d) { var c = d.dms[name]; c.messages = c.messages.filter(function (x) { return x.id !== id; }); });
+    toast('Message removed from this browser.');
+  }
   function setTyping(key, name, on) {
     update(function (d) {
       var list = (d.typing[key] || []).filter(function (n) { return n !== name; });
@@ -286,6 +295,12 @@ function Root(props) {
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
+    /**
+     * Permet de retirer un MP de sa conversation.
+     * @param {string} name Correspondant.
+     * @param {Object} m Message retiré.
+     */
+    removeDmMessage: function (name, m) { dropDmMessage(name, m.id); },
     deleteAllDms: function () { update(function (d) { d.dms = {}; }); },
     /** Messages d'exemple au format de l'historique privé de Torch, clé ts en secondes. */
     exportDms: function () {
@@ -732,6 +747,11 @@ function Root(props) {
       liveBridge.clearPmHistory(name);
       actions.closeDm(name);
       update(function (d) { d.dms[name].messages = []; d.dms[name].olderMore = false; });
+    };
+    actions.removeDmMessage = function (name, m) {
+      liveBridge.removePm(name, m).then(function (ok) {
+        if (ok) dropDmMessage(name, m.id); else toast('This message could not be removed. Reload the page and try again.');
+      });
     };
     actions.deleteAllDms = function () {
       Object.keys(stateRef.current.dms).forEach(function (n) { liveBridge.clearPmHistory(n); actions.closeDm(n); });
