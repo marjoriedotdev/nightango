@@ -760,7 +760,7 @@ function Root(props) {
         if (JSON.stringify(stored) !== raw) storageSet(skinKey(op.me), stored);
         localRef.current = Object.assign(blankLocal(), stored);
         update(function (d) {
-          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style; d.auth = { loggedIn: true };
+          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.auth = { loggedIn: true };
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n); });
           Object.keys(TORCH_PREFS).forEach(function (path) { var v = liveBridge.setting(TORCH_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
         });

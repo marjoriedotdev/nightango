@@ -18,6 +18,8 @@ var decoder = document.createElement('textarea');
 
 function decodeHtml(html) { decoder.innerHTML = html; return decoder.value; }
 var IMAGE_URL = /^https:\/\/\S+\.(?:png|apng|jpe?g|gif|bmp|webp)(?:[?#]\S*)?$/i;
+// Comme renderMessage de Torch : seule une paire ▓…▒ devient un barré, un marqueur isolé reste du texte.
+var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
 function embedOf(src) {
   var yt = /^vid:\/\/yt:([\w-]{11})/.exec(src), img = /^img:\/\/(?:cam|lib):([^"&?\/\s]+)/.exec(src);
   if (yt) return { kind: 'youtube', id: yt[1] };
@@ -45,22 +47,23 @@ function parseContent(raw, keepMedia) {
       var m = embedOf(decodeHtml(src));
       if (m) embeds.push(m);
       return m && !keepMedia ? ' ' : ' ' + src + ' ';
-    });
+    })
+    .replace(STRIKE_PAIR, '<s>$1</s>');
   var text = decodeHtml(body.replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
   (text.match(/https:\/\/\S+/g) || []).forEach(function (url) { if (IMAGE_URL.test(url)) embeds.push({ kind: 'image', url: url }); });
   return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null, key: k ? decodeRef(k[1]) : null };
 }
 /**
  * Permet de découper un corps de message en segments marqués gras, italique, souligné ou barré.
- * Liste blanche de Torch (renderMessage) : b, i sans attribut, u, s, strike et les marqueurs ▓…▒ du barré en MP.
- * @param {string} body Corps dont les balises br et les médias sont déjà convertis.
+ * Liste blanche de Torch (renderMessage) : b, i sans attribut, u, s et strike.
+ * @param {string} body Corps dont les balises br, les médias et les paires ▓…▒ sont déjà convertis.
  * @returns {?Array} Segments {text, b, i, u, s} rognés comme le texte, null si aucun n'est marqué.
  */
 function emphasisParts(body) {
   var depth = { b: 0, i: 0, u: 0, s: 0 }, parts = [];
-  body.split(/(<[^>]+>|[\u2592\u2593])/).forEach(function (t, k) {
+  body.split(/(<[^>]+>)/).forEach(function (t, k) {
     if (k % 2) {
-      var tag = t === '\u2593' ? ['', '', 's'] : t === '\u2592' ? ['', '/', 's'] : /^<(\/?)(b|i|u|s|strike)>$/i.exec(t);
+      var tag = /^<(\/?)(b|i|u|s|strike)>$/i.exec(t);
       var mark = tag && lower(tag[2]).charAt(0);
       if (mark && !tag[1]) depth[mark] += 1;
       else if (mark && depth[mark]) depth[mark] -= 1;

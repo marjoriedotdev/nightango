@@ -408,7 +408,7 @@ var liveBridge = (function () {
     var f = styleFields();
     if (!style) { writeStyle(f, accountStyle); accountStyle = null; return; }
     if (!accountStyle) accountStyle = readStyle(f);
-    writeStyle(f, Object.assign({}, style, { strike: false, on: true, active: true }));
+    writeStyle(f, Object.assign({}, style, { on: true, active: true }));
   }
 
   /* Réponses du pont vissle du userscript, rapprochées des demandes par identifiant */
@@ -516,7 +516,7 @@ var liveBridge = (function () {
      */
     accountStyle: function () {
       var v = accountStyle || readStyle(styleFields());
-      return { face: v.face, size: v.size, textColor: v.textColor, nameColor: v.nameColor, bold: v.bold, italic: v.italic, underline: v.underline };
+      return { face: v.face, size: v.size, textColor: v.textColor, nameColor: v.nameColor, bold: v.bold, italic: v.italic, underline: v.underline, strike: v.strike };
     },
     applyStyle: function (style) { try { applyStyle(style); } catch (e) { warn(e); } },
     focus: function (gid) { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } },

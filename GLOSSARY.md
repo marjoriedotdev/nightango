@@ -182,7 +182,7 @@ Police, taille, couleurs du texte et du nom, gras, italique et souligné d'un me
 Style de message enregistré chez Chatango pour le compte.
 
 **Style perso**:
-Style de message choisi dans Torch Skin, gardé dans ce navigateur seulement et appliqué à chaque envoi.
+Style de message choisi dans Torch Skin, gardé dans ce navigateur seulement et appliqué à chaque envoi. Il peut aussi barrer le texte, en MP seulement.
 _Avoid_: style local, thème de message
 
 ## Session

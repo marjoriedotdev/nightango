@@ -837,14 +837,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const torchStyle = () => JSON.stringify({
     face: d.querySelector('.font-face').firstElementChild.value, size: d.querySelector('.font-size .text-input').value,
     text: fontsEl.querySelector('[data-color="fontColor"]').value, name: fontsEl.querySelector('[data-color="nameColor"]').value,
-    bold: emph('.fa-bold').checked, italic: emph('.fa-italic').checked, underline: emph('.fa-underline').checked, on: fontsEl.querySelector('[name="stylesOn"]').checked, user: C.user.style
+    bold: emph('.fa-bold').checked, italic: emph('.fa-italic').checked, underline: emph('.fa-underline').checked, strike: emph('.fa-strikethrough').checked, on: fontsEl.querySelector('[name="stylesOn"]').checked, user: C.user.style
   });
-  const WANT = JSON.stringify({ face: '4', size: '14', text: '#9900cc', name: '#3366ff', bold: true, italic: false, underline: false, on: true, user: true });
+  const WANT = JSON.stringify({ face: '4', size: '14', text: '#9900cc', name: '#3366ff', bold: true, italic: false, underline: false, strike: true, on: true, user: true });
   // Torch recharge le style du compte à la reconnexion : ses champs reviennent aux valeurs de Chatango.
   const resetTorchStyle = () => {
     d.querySelector('.font-face').firstElementChild.value = '0'; d.querySelector('.font-size .text-input').value = '11';
     fontsEl.querySelector('[data-color="fontColor"]').value = '#000000'; fontsEl.querySelector('[data-color="nameColor"]').value = '#000000';
-    emph('.fa-bold').checked = false; fontsEl.querySelector('[name="stylesOn"]').checked = false; C.user.style = false;
+    emph('.fa-bold').checked = false; emph('.fa-strikethrough').checked = false; fontsEl.querySelector('[name="stylesOn"]').checked = false; C.user.style = false;
   };
   const postsBeforeStyle = posts.length;
   styleProbe = torchStyle;
@@ -853,7 +853,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (styleBtn) {
     click(styleBtn); await wait(50);
     type($('#ms-face'), '4'); type($('#ms-size'), '14'); type($('#ms-text'), '#9900cc'); type($('#ms-name'), '#3366ff');
-    click(byText('.dialog .tc-checkline', 'Bold').querySelector('input')); await wait(20);
+    click(byText('.dialog .tc-checkline', 'Bold').querySelector('input'));
+    const strikeBox = byText('.dialog .tc-checkline', 'Strikethrough');
+    if (strikeBox) click(strikeBox.querySelector('input'));
+    await wait(20);
     click(byText('.dialog-foot button', 'Save')); await wait(50);
     resetTorchStyle();
     type($('.tc-composer textarea'), 'Styled'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
