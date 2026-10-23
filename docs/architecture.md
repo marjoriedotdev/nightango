@@ -27,6 +27,7 @@ src/
     login, shell (barre latérale), group, message (ligne et médias),
     members (liste, fiche profil, bannissement, lien externe), dm (Chats, Friends),
     meet (Meet people), profile (profil complet, panneau), new-dm, message-style (style perso),
+    commands (/join, /leave, /chat et /help des composeurs),
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages
     shell, profile (Visitors compris), appearance, notifications, privacy (et Safety, compte),

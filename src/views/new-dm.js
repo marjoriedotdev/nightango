@@ -1,3 +1,12 @@
+/**
+ * Permet de refuser un nom avec lequel aucune conversation ne peut s'ouvrir.
+ * @param {Object} s État de l'application.
+ * @param {string} name Nom en minuscules, non vide.
+ */
+function dmNameError(s, name) {
+  if (LIVE ? !ACCOUNT_NAME.test(name) : !s.users[name]) return LIVE ? 'Usernames use letters, numbers, - and _ only.' : 'No Chatango user named ' + name + '.';
+  return name === s.me ? "You can't message yourself." : '';
+}
 function NewDmDialog(p) {
   var app = useApp(), s = app.state;
   var a = useState(''), name = a[0], setName = a[1];
@@ -5,8 +14,8 @@ function NewDmDialog(p) {
   function start() {
     var v = name.trim().toLowerCase();
     if (!v) { setErr('Enter a username.'); return; }
-    if (LIVE ? !ACCOUNT_NAME.test(v) : !s.users[v]) { setErr(LIVE ? 'Usernames use letters, numbers, - and _ only.' : 'No Chatango user named ' + v + '.'); return; }
-    if (v === s.me) { setErr("You can't message yourself."); return; }
+    var invalid = dmNameError(s, v);
+    if (invalid) { setErr(invalid); return; }
     p.onClose(); app.actions.openDm(v);
   }
   return h(Dialog, {

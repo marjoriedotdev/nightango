@@ -87,7 +87,7 @@ function GroupView(p) {
     composer = h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, inputRef: inputRef, replyTo: replyTo ? { author: replyTo.author, text: messagePreview(replyTo) } : null,
       onCancelReply: function () { setReplyTo(null); },
-      onSend: function (text) { atBottom.current = true; app.actions.sendGroup(g.id, text, { replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: messagePreview(replyTo) } : null, channel: channel }); setReplyTo(null); },
+      onSend: function (text) { if (runCommand(app, text, g.id)) return; atBottom.current = true; app.actions.sendGroup(g.id, text, { replyTo: replyTo ? { id: replyTo.id, author: replyTo.author, text: messagePreview(replyTo) } : null, channel: channel }); setReplyTo(null); },
       onEmoji: LIVE ? null : function () { app.ui.toast('The emoji picker is not part of this prototype.'); },
       onAttach: LIVE ? null : function () { app.ui.toast('Uploading media is not part of this prototype.'); },
       beforeSend: h(MessageStyleButton, null),
@@ -124,7 +124,7 @@ function GroupView(p) {
             { label: g.favorite ? 'Remove from favorites' : 'Add to favorites', icon: 'star', onSelect: function () { app.actions.toggleFavorite(g.id); } },
             { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com'); }); } },
             { divider: true },
-            { label: 'Leave group', icon: 'log-out', danger: true, onSelect: function () { app.ui.confirm({ title: 'Leave #' + g.id + '?', body: 'You can join again from Discover at any time.', confirmLabel: 'Leave group', danger: true, onConfirm: function () { app.actions.leaveGroup(g.id); } }); } }
+            { label: 'Leave group', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
           ]
         })),
       ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
@@ -146,4 +146,13 @@ function GroupView(p) {
         composer)),
     showMembers ? h(MembersPanel, { g: g }) : null,
     infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null);
+}
+
+/**
+ * Permet de demander confirmation avant de quitter un groupe.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} gid Groupe à quitter.
+ */
+function confirmLeave(app, gid) {
+  app.ui.confirm({ title: 'Leave #' + gid + '?', body: 'You can join again from Discover at any time.', confirmLabel: 'Leave group', danger: true, onConfirm: function () { app.actions.leaveGroup(gid); } });
 }

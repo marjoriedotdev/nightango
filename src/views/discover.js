@@ -2,6 +2,12 @@
 function parseGroupName(v) {
   return String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^client\.chatango\.com\/q\?/, '').replace(/\.chatango\.com.*$/, '').replace(/\/.*$/, '').replace(/^#/, '');
 }
+/**
+ * Permet de refuser, dans le prototype, un groupe absent des données d'exemple.
+ * @param {Object} s État de l'application.
+ * @param {string} id Nom du groupe lu par parseGroupName.
+ */
+function unknownGroupError(s, id) { return s.groups[id] || LIVE ? '' : 'No group named ' + id + '. Check the spelling, or create it.'; }
 function Discover() {
   var app = useApp(), s = app.state;
   var a = useState(''), joinName = a[0], setJoinName = a[1];
@@ -18,8 +24,9 @@ function Discover() {
     e.preventDefault();
     var id = parseGroupName(joinName);
     if (!id) { setErr({ text: 'Enter a group name or a link.' }); return; }
-    if (s.groups[id] || LIVE) { setErr(null); setJoinName(''); app.actions.joinGroup(id); return; }
-    setErr({ text: 'No group named ' + id + '. Check the spelling, or create it.', name: id });
+    var unknown = unknownGroupError(s, id);
+    if (unknown) { setErr({ text: unknown, name: id }); return; }
+    setErr(null); setJoinName(''); app.actions.joinGroup(id);
   }
   function joinBtn(g) {
     return g.joined
