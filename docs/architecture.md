@@ -16,7 +16,7 @@ src/
     ui.js            contexte React, Portal (calque #layer), MenuButton, Dialog, ConfirmDialog, Toasts,
                      Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes
     rich-text.js     MessageText, RichText (mini profil assaini), fullProfileDoc
-    selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs
+    selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées
   bridge/     le pont vers Torch
     live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG), modèles live
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,

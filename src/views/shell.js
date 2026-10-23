@@ -29,8 +29,7 @@ function Sidebar() {
   var app = useApp(), s = app.state, r = s.route;
   var joined = Object.keys(s.groups).map(function (k) { return s.groups[k]; }).filter(function (g) { return g.joined; });
   var favs = joined.filter(function (g) { return g.favorite; }), rest = joined.filter(function (g) { return !g.favorite; });
-  var dmNames = Object.keys(s.dms).filter(function (n) { return !s.dms[n].request && !s.dms[n].closed; })
-    .sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); }).slice(0, 4);
+  var dmNames = listedDms(s).slice(0, 4);
   function toggle(k) { app.update(function (d) { d.sections[k] = !d.sections[k]; }); }
   function groupItem(g) {
     var isC = g.id === 'community';
@@ -95,4 +94,3 @@ function Sidebar() {
       }),
       h(T.IconButton, { icon: 'sliders', label: 'Settings', onClick: function () { app.nav({ view: 'settings', page: 'appearance' }); } })));
 }
-function lastTs(c) { return c.messages.length ? c.messages[c.messages.length - 1].ts : 0; }

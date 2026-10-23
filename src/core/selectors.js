@@ -13,6 +13,15 @@ function resolvedTheme(prefs, viewerTheme) {
  * @param {string} name Membre suivi.
  */
 function isNotifyingOnline(state, name) { return !!state.notifyOnline[name]; }
+function lastTs(c) { return c.messages.length ? c.messages[c.messages.length - 1].ts : 0; }
+/**
+ * Permet de lister les conversations affichées, hors demandes et conversations fermées, de la plus récente à la plus ancienne.
+ * @param {Object} state État de l'application.
+ */
+function listedDms(state) {
+  return Object.keys(state.dms).filter(function (n) { return !state.dms[n].request && !state.dms[n].closed; })
+    .sort(function (a, b) { return lastTs(state.dms[b]) - lastTs(state.dms[a]); });
+}
 function dmUnreadTotal(state) { var n = 0; for (var k in state.dms) n += state.dms[k].unread || 0; return n; }
 function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
 /**
