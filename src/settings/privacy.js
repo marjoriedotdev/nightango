@@ -29,11 +29,11 @@ function PmHistoryRows() {
   var app = useApp(), toast = app.ui.toast;
   function exportFile() {
     app.actions.exportDms().then(function (records) {
-      downloadText(app.state.me + '_history.json', JSON.stringify(records), 'text/json');
+      downloadJson(app.state.me + '_history.json', records);
     }, function (e) { toast(e.message); });
   }
   function importFile(file) {
-    readJsonFile(file).then(function (records) { return Array.isArray(records) ? records : null; }, function () { return null; }).then(function (records) {
+    readJsonArray(file).then(function (records) {
       if (!records) { toast('This file is not a Torch message history.'); return; }
       app.actions.importDms(records).then(function (r) {
         if (r.foreign) toast("This file holds another account's messages. Nothing was imported.");

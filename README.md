@@ -14,6 +14,7 @@ You sign in on Torch's own screen. Torch Skin never reads your password and only
 - Red, blue and staff channels, with a color bar on every channel message.
 - Older messages load as you scroll up.
 - Errors and warnings show as short notices instead of filling the thread.
+- Your Torch media library: star an image to save it, insert it from the Media tab or by typing `:name` then Tab, and import or export it in Torch's format.
 
 **Private messages and friends**
 - Images and videos show as soon as you send them.

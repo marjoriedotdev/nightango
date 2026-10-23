@@ -250,5 +250,7 @@ function ImageEmbed(p) {
   var st = useState(false), shown = st[0], setShown = st[1];
   if (!safety.embedImages) return mediaLink(app, p.url, 'msg-link', p.url);
   if (!shown && waitsForClick(safety, p.kind)) return h(RevealButton, { icon: 'image', label: 'Show image', url: p.url, onClick: function () { setShown(true); } });
-  return mediaLink(app, p.url, 'embed-image', h('img', { src: p.url, alt: EMBED_LABEL[p.kind], loading: 'lazy', referrerPolicy: 'no-referrer' }));
+  return h('span', { className: 'embed-image-wrap' },
+    mediaLink(app, p.url, 'embed-image', h('img', { src: p.url, alt: EMBED_LABEL[p.kind], loading: 'lazy', referrerPolicy: 'no-referrer' })),
+    h(MediaStar, { url: p.url }));
 }

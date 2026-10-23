@@ -230,6 +230,10 @@ function Root(props) {
     });
   }
 
+  var mediaLib = LIVE ? liveBridge : sampleMedia;
+  // Les étoiles et l'onglet Media relisent la médiathèque quand ce compteur change.
+  function mediaChanged() { update(function (d) { d.mediaRev++; }); }
+
   var actions = {
     login: function (name) { update(function (d) { seedState(d, name); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
@@ -332,6 +336,22 @@ function Root(props) {
       });
       return Promise.resolve({ added: added.length, saved: screened.valid.length - added.length, skipped: screened.skipped, foreign: screened.foreign });
     },
+    mediaPage: function (index, after, text) { return mediaLib.mediaPage(index, after, text); },
+    searchMedia: function (text, count) { return mediaLib.searchMedia(text, count); },
+    hasMedia: function (url) { return mediaLib.hasMedia(url); },
+    /**
+     * Permet d'ajouter une image à la médiathèque, sous le nom que lui donne Torch, ou de l'en retirer.
+     * @param {string} url Adresse de l'image.
+     * @param {boolean} saved L'image est déjà dans la médiathèque.
+     */
+    toggleMedia: function (url, saved) {
+      (saved ? mediaLib.removeMedia(url) : mediaLib.addMedia({ url: url, name: mediaName(url) })).then(function () {
+        mediaChanged();
+        toast(saved ? 'Removed from your media.' : 'Added to your media.', { icon: 'check' });
+      }, function (e) { toast(e.message); });
+    },
+    exportMedia: function () { return mediaLib.exportMedia(); },
+    importMedia: function (entries) { return mediaLib.importMedia(entries).then(function (r) { mediaChanged(); return r; }); },
     declineRequest: function (name) { actions.closeDm(name); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];

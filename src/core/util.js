@@ -55,14 +55,19 @@ function readJsonFile(file) {
   });
 }
 /**
- * Permet de faire télécharger un texte comme fichier.
- * @param {string} name Nom du fichier.
- * @param {string} text Contenu, écrit tel quel.
- * @param {string} type Type MIME du fichier.
+ * Permet de lire un fichier d'export de Torch, dont le contenu est un tableau.
+ * @param {File} file Fichier choisi.
+ * @returns {Promise<?Array>} Tableau lu, null si le fichier est illisible ou ne contient pas de tableau.
  */
-function downloadText(name, text, type) {
+function readJsonArray(file) { return readJsonFile(file).then(function (v) { return Array.isArray(v) ? v : null; }, function () { return null; }); }
+/**
+ * Permet de faire télécharger une valeur en fichier JSON, au type text/json des exports de Torch.
+ * @param {string} name Nom du fichier.
+ * @param {*} value Valeur écrite par JSON.stringify.
+ */
+function downloadJson(name, value) {
   var link = document.createElement('a');
-  link.href = URL.createObjectURL(new Blob([text], { type: type }));
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(value)], { type: 'text/json' }));
   link.download = name;
   link.click();
   // Adresse gardée une minute : la révoquer dès le clic peut annuler le téléchargement.

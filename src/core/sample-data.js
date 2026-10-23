@@ -141,7 +141,7 @@ function seedWorld(me) {
     pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60), request: true }
   };
   return {
-    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, typing: {}, mentionLog: [],
+    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, typing: {}, mentionLog: [], mediaRev: 0,
     meStatus: 'online', awayText: '',
     profile: { visibility: { age: true, gender: false, location: true, meet: false, fullPage: true }, colors: { bg: '#1b1c20', text: '#e6e6e6', link: '#f27a3f' } },
     account: { email: 'orrin@example.com', verified: true },
@@ -165,3 +165,29 @@ var SAMPLE_VISITS = (function () {
 function sampleVisits(q) {
   return SAMPLE_VISITS.filter(function (x) { return (q.get === 'all' || x.action === q.get) && (q.page === 1 || x.time < q.page); }).slice(0, VISIT_PAGE);
 }
+
+/* Médiathèque d'exemple du prototype, en mémoire, avec les appels que le pont fait sur la base de Torch. */
+var sampleMedia = (function () {
+  var list = ['wave', 'thumbs up', 'party', 'facepalm', 'coffee', 'cat nap', 'good night', 'popcorn'].map(function (n) {
+    return { url: 'https://media.example/' + n.replace(/ /g, '-') + '.gif', name: n };
+  });
+  function byIndex(index) { return function (a, b) { return a[index] < b[index] ? -1 : a[index] > b[index] ? 1 : a.url < b.url ? -1 : 1; }; }
+  function read(index, after, text, count) {
+    var kept = list.filter(function (e) { return mediaMatch(index, e, after, text); }).sort(byIndex(index));
+    return Promise.resolve({ list: kept.slice(0, count), more: kept.length > count });
+  }
+  function put(e) { list = list.filter(function (x) { return x.url !== e.url; }).concat([e]); }
+  return {
+    mediaPage: function (index, after, text) { return read(index, after, text, MEDIA_PAGE); },
+    searchMedia: function (text, count) { return read('name', null, text, count).then(function (r) { return r.list; }); },
+    hasMedia: function (url) { return Promise.resolve(list.some(function (e) { return e.url === url; })); },
+    addMedia: function (e) { put(e); return Promise.resolve(); },
+    removeMedia: function (url) { list = list.filter(function (e) { return e.url !== url; }); return Promise.resolve(); },
+    exportMedia: function () { return Promise.resolve(list.slice().sort(byIndex('url'))); },
+    importMedia: function (entries) {
+      var screened = screenMediaEntries(entries);
+      screened.valid.forEach(put);
+      return Promise.resolve({ added: screened.valid.length, skipped: screened.skipped });
+    }
+  };
+})();

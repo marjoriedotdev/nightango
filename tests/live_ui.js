@@ -65,7 +65,7 @@ function keyCmp(a, b) {
   if (typeof a !== typeof b) return typeof a === 'string' ? 1 : -1;
   return a < b ? -1 : a > b ? 1 : 0;
 }
-w.IDBKeyRange = { bound: (lower, upper, lowerOpen, upperOpen) => ({ lower, upper, lowerOpen: !!lowerOpen, upperOpen: !!upperOpen }) };
+w.IDBKeyRange = { bound: (lower, upper, lowerOpen, upperOpen) => ({ lower, upper, lowerOpen: !!lowerOpen, upperOpen: !!upperOpen }), lowerBound: (lower, open) => ({ lower, lowerOpen: !!open }) };
 const migrationFlag = () => !!JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').pmReadMigrated;
 // Comme IndexedDB, une transaction voit les enregistrements présents à sa création : un archivage créé après elle lui échappe.
 function pmTransaction(stores, mode) {
@@ -121,6 +121,33 @@ function pmTransaction(stores, mode) {
   });
   return tx;
 }
+// Base favorite_media de Torch : magasin media à clé url, index url et name, écritures appliquées à la fin de la transaction.
+const mediaRecords = [{ url: 'https://x.test/old.png', name: 'old' }];
+function mediaTransaction() {
+  const tx = {}, writes = [];
+  // Comme IndexedDB, une transaction sans aucune requête se termine aussi.
+  setTimeout(() => { if (!writes.length && tx.oncomplete) tx.oncomplete(); }, 0);
+  const answer = value => { const req = {}; setTimeout(() => { req.result = value(); req.onsuccess({ target: req }); }, 0); return req; };
+  const write = op => {
+    if (!writes.length) setTimeout(() => { writes.forEach(f => f()); if (tx.oncomplete) tx.oncomplete(); }, 0);
+    writes.push(op); return {};
+  };
+  const cursor = list => {
+    const req = {}; let i = 0;
+    const read = () => { const rec = list[i]; req.onsuccess({ target: { result: rec ? { value: Object.assign({}, rec), continue() { i++; setTimeout(read, 0); } } : null } }); };
+    setTimeout(read, 0); return req;
+  };
+  const store = {
+    transaction: tx,
+    index: name => ({ openCursor: range => cursor(mediaRecords.filter(r => typeof r[name] === 'string' && (!range || keyCmp(r[name], range.lower) >= 0)).sort((a, b) => keyCmp([a[name], a.url], [b[name], b.url]))) }),
+    get: url => answer(() => mediaRecords.find(r => r.url === url)),
+    getAll: () => answer(() => mediaRecords.slice().sort((a, b) => keyCmp(a.url, b.url))),
+    put: rec => write(() => { const i = mediaRecords.findIndex(r => r.url === rec.url); mediaRecords.splice(i >= 0 ? i : mediaRecords.length, i >= 0 ? 1 : 0, Object.assign({}, rec)); }),
+    delete: url => write(() => { const i = mediaRecords.findIndex(r => r.url === url); if (i >= 0) mediaRecords.splice(i, 1); })
+  };
+  tx.objectStore = () => store;
+  return tx;
+}
 // Relevé du style de Torch au moment où il construit un corps de message (sendMessage avec length).
 let styleProbe = null;
 const styleAtBuild = [];
@@ -156,7 +183,7 @@ const C = {
     const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f, item });
     return /chatango\/upload$/.test(url) ? uploadReply() : Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
   },
-  private: { focus: false, socket: { readyState: 0 }, clearHistory(t) { calls.push(['clearHistory', t]); } },
+  private: { focus: false, socket: { readyState: 0 }, premium: {}, clearHistory(t) { calls.push(['clearHistory', t]); } },
   database: { pm: { transaction: pmTransaction } }
 };
 const CH = {
@@ -1317,8 +1344,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(rheaAll.texts) === JSON.stringify(pages(130)) && rheaAll.start, { first: rheaFirst.texts.length, firstStart: rheaFirst.start, observed: !!rheaTop, all: rheaAll.texts.length, head: rheaAll.texts.slice(0, 3), allStart: rheaAll.start });
 
   /* Import d'un historique privé : seuls les enregistrements valides de ce compte sont écrits, lus, sans écraser une clé présente */
-  const chooseFile = text => {
-    const input = $('input[type="file"]');
+  const chooseFile = (text, sel = 'input[type="file"]') => {
+    const input = $(sel);
     if (!input) return;
     Object.defineProperty(input, 'files', { configurable: true, value: [new w.File([text], 'history.json', { type: 'application/json' })] });
     input.dispatchEvent(new w.Event('change', { bubbles: true }));
@@ -1372,6 +1399,30 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const ivanTexts = $$('.thread .tc-msg-text').map(x => x.textContent);
   step('pm history import reopens older pages', ivanSentinel && !ivanStart && ivanTexts.length === 122 && ivanTexts[0] === 'Older ivan 0',
     { ivanSentinel, ivanStart, observed: !!ivanTop, count: ivanTexts.length, head: ivanTexts.slice(0, 3) });
+
+  /* Import de médiathèque : seules les entrées dont l'URL est une image https et le nom un texte sont écrites dans la base de Torch */
+  C.database.media = { transaction: mediaTransaction };
+  const mediaNames = () => $$('.emoji-picker .media-name').map(x => x.textContent);
+  const emojiButton = $('.thread .tc-composer button[aria-label="Emoji"]');
+  if (emojiButton) { click(emojiButton); await until(() => !!$('.emoji-picker')); }
+  const mediaTab = byText('.emoji-picker .tc-seg button', 'Media');
+  if (mediaTab) { click(mediaTab); await until(() => mediaNames().includes('old')); }
+  const mediaBefore = mediaRecords.length;
+  chooseFile(JSON.stringify([
+    { url: 'https://x.test/cat.gif', name: 'cat' },
+    { url: 'javascript:alert(1)//x.test/a.png', name: 'script' },
+    { url: 'http://x.test/dog.png', name: 'dog' },
+    { url: 'https://x.test/bird.png', name: 42 }
+  ]), '.emoji-picker input[type="file"]');
+  await until(() => !!byText('.toast .grow', 'Imported 1 image'));
+  const mediaToast = (byText('.toast .grow', 'Imported 1 image') || {}).textContent || null;
+  await until(() => mediaNames().includes('cat'));
+  const mediaImport = { picker: !!emojiButton, tab: !!mediaTab, toast: mediaToast, written: mediaRecords.slice(mediaBefore), listed: mediaNames() };
+  if (d.activeElement) key(d.activeElement, 'Escape');
+  await until(() => !$('.emoji-picker'));
+  step('media import writes only https images with a text name',
+    mediaImport.toast === 'Imported 1 image. 3 skipped.' && JSON.stringify(mediaImport.written) === JSON.stringify([{ url: 'https://x.test/cat.gif', name: 'cat' }])
+      && JSON.stringify(mediaImport.listed) === '["cat","old"]', mediaImport);
 
   /* Retrait d'un MP de la base de Torch : l'enregistrement est relu avant suppression, celui d'un autre membre reste intact */
   const recordAt = ts => pmRecords.find(r => r.ts === ts);

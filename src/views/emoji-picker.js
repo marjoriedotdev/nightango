@@ -1,14 +1,16 @@
-/* ---------- Sélecteur d'émoticônes des composeurs ---------- */
+/* ---------- Sélecteur d'émoticônes et de médias des composeurs ---------- */
 var EMOJI_SECTIONS = [{ title: 'Classic', premium: false }, { title: 'Premium', premium: true }];
+var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'media', label: 'Media' }];
 
 /**
- * Permet d'ouvrir le sélecteur d'émoticônes d'un composeur et d'insérer le raccourci choisi dans son champ.
+ * Permet d'ouvrir le sélecteur d'un composeur, onglets Emoji et Media, et d'insérer le raccourci ou l'adresse choisis dans son champ.
  * @param {Object} inputRef Référence du champ du composeur.
  * @param {function(string)} setValue Écrit le texte du champ.
  * @returns {{onEmoji: Function, picker: ?Object}} Action du bouton Emoji et sélecteur à rendre à côté du composeur.
  */
 function useEmojiPicker(inputRef, setValue) {
   var st = useState(false), open = st[0], setOpen = st[1];
+  var tb = useState('emoji'), tab = tb[0], setTab = tb[1];
   var anchorRef = useRef(null), caret = useRef(null);
   // Le champ contrôlé ne reçoit sa nouvelle valeur qu'au commit : le curseur se place après.
   useLayoutEffect(function () {
@@ -31,19 +33,20 @@ function useEmojiPicker(inputRef, setValue) {
   }
   return {
     onEmoji: function (e) { anchorRef.current = e.currentTarget; setOpen(function (o) { return !o; }); },
-    picker: open ? h(EmojiPicker, { anchorRef: anchorRef, premium: !LIVE || liveBridge.premium(), onPick: pick, onClose: close }) : null
+    picker: open ? h(EmojiPicker, { anchorRef: anchorRef, premium: !LIVE || liveBridge.premium(), tab: tab, onTab: setTab, onPick: pick, onClose: close }) : null
   };
 }
 
 /**
- * Émoticônes de Torch par leur emoji, rangées en Classic et Premium comme dans son sélecteur.
- * @param {{anchorRef: Object, premium: boolean, onPick: function(string), onClose: function(Event)}} p Bouton Emoji, section Premium affichée, choix d'un raccourci et fermeture.
+ * Sélecteur des composeurs : émoticônes de Torch par leur emoji, rangées en Classic et Premium comme dans son sélecteur, et médiathèque de Torch.
+ * @param {{anchorRef: Object, premium: boolean, tab: string, onTab: function(string), onPick: function(string), onClose: function(Event)}} p Bouton Emoji, section Premium affichée, onglet ouvert et son changement, choix d'un raccourci ou d'une adresse et fermeture.
  */
 function EmojiPicker(p) {
   var ref = useRef(null);
   var place = useFloating(p.anchorRef, ref, true, p.onClose, { up: true, align: 'left' });
-  return h(Portal, null, h('div', { ref: ref, className: 'emoji-picker', role: 'dialog', 'aria-label': 'Emoji', style: place },
-    EMOJI_SECTIONS.filter(function (s) { return p.premium || !s.premium; }).map(function (s) {
+  return h(Portal, null, h('div', { ref: ref, className: 'emoji-picker', role: 'dialog', 'aria-label': 'Emoji and media', style: place },
+    h('div', { className: 'picker-tabs' }, h(T.SegmentedControl, { label: 'Emoji or media', block: true, value: p.tab, onChange: p.onTab, options: PICKER_TABS })),
+    p.tab === 'media' ? h(MediaPanel, { scrollRef: ref, onPick: p.onPick }) : EMOJI_SECTIONS.filter(function (s) { return p.premium || !s.premium; }).map(function (s) {
       return h(Frag, { key: s.title },
         h('h3', { className: 'mlabel' }, s.title),
         h('div', { className: 'emoji-grid' }, EMOTICONS.filter(function (e) { return e.emoji && e.premium === s.premium; }).map(function (e) {

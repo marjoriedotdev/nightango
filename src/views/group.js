@@ -21,7 +21,7 @@ function GroupView(p) {
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
   var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
   var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
-  var emoji = useEmojiPicker(inputRef, setDraft);
+  var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid, channel: channel });
   var logRef = useRef(null), sentinelRef = useRef(null);
   var a10 = useMessageJump(logRef), target = a10[0], setTarget = a10[1];
@@ -76,6 +76,10 @@ function GroupView(p) {
     el.setSelectionRange(c.end, c.end);
     setDraft(next);
     setCompleted(c.names[c.index] + ', ' + (c.index + 1) + ' of ' + c.names.length);
+  }
+  function onKeyDown(e) {
+    media.onKeyDown(e);
+    if (!e.defaultPrevented) completeMention(e);
   }
   function closeMode() { if (mode && mode.kind === 'edit') setDraft(stash.current); setMode(null); }
   function enter(kind) { return function (m) { closeMode(); setMode({ kind: kind, m: m }); }; }
@@ -144,8 +148,8 @@ function GroupView(p) {
   } else {
     var typed = draft.trim();
     var left = GROUP_MESSAGE_MAX - (LIVE ? liveBridge.measure(g.id, typed, { replyId: replyId, editId: kind === 'edit' ? editedId(mode.m) : null, quote: quoted, style: s.ownStyle }) : typed.length);
-    composer = h(Frag, null, h(T.Composer, {
-      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: completeMention, inputRef: inputRef, canSend: left >= 0,
+    composer = h(Frag, null, media.panel, h(T.Composer, {
+      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0,
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
       hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,

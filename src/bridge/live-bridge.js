@@ -418,7 +418,7 @@ var liveBridge = (function () {
   }
   /**
    * Permet de lire par curseur au plus count entrées retenues, plus une qui dit s'il en reste.
-   * @param {IDBRequest} req Curseur ouvert sur l'historique privé.
+   * @param {IDBRequest} req Curseur ouvert sur l'historique privé ou la médiathèque.
    * @param {number} count Nombre d'entrées au plus.
    * @param {Function} pick Entrée retenue pour un enregistrement, null pour l'écarter.
    * @returns {Promise<{list: Array, more: boolean}>} Entrées dans l'ordre du curseur, et s'il en reste après elles.
@@ -433,6 +433,55 @@ var liveBridge = (function () {
         resolve({ list: list.slice(0, count), more: list.length > count });
       };
       req.onerror = function () { reject(req.error); };
+    });
+  }
+  /**
+   * Permet d'atteindre le magasin de la médiathèque que Torch ouvre à la connexion (favorite_media), sans lequel chaque appel échoue.
+   * @param {string} mode readonly ou readwrite.
+   * @returns {Promise<IDBObjectStore>} Magasin media d'une nouvelle transaction, rejetée sans base.
+   */
+  function mediaStore(mode) {
+    return new Promise(function (resolve) {
+      if (!C.database.media) throw new Error('Torch could not open your media library. Reload the page and try again.');
+      resolve(C.database.media.transaction(['media'], mode).objectStore('media'));
+    });
+  }
+  /**
+   * Permet d'attendre le résultat d'une requête IndexedDB.
+   * @param {IDBRequest} req Requête.
+   */
+  function requestResult(req) {
+    return new Promise(function (resolve, reject) {
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+  /**
+   * Permet d'écrire dans la médiathèque, une fois la transaction terminée.
+   * @param {function(IDBObjectStore)} write Écritures faites dans la transaction.
+   * @param {string} failure Texte d'échec, quand la transaction est annulée.
+   */
+  function mediaWrite(write, failure) {
+    return mediaStore('readwrite').then(function (store) { return new Promise(function (resolve, reject) {
+      var tx = store.transaction;
+      write(store);
+      tx.oncomplete = function () { resolve(); };
+      tx.onabort = function () { warn(tx.error); reject(new Error(failure)); };
+    }); });
+  }
+  /**
+   * Permet de lire la médiathèque dans l'ordre d'un index de Torch, après une entrée et filtrée par nom, en écartant les entrées invalides.
+   * @param {string} index url ou name.
+   * @param {?{url: string, name: string}} after Dernière entrée déjà lue, null pour commencer.
+   * @param {string} text Recherche dans le nom, vide pour tout lire.
+   * @param {number} count Nombre d'entrées au plus.
+   * @returns {Promise<{list: Array, more: boolean}>} Entrées {url, name}, et s'il en reste après.
+   */
+  function readMedia(index, after, text, count) {
+    return mediaStore('readonly').then(function (store) {
+      return cursorPage(store.index(index).openCursor(after ? IDBKeyRange.lowerBound(after[index]) : null), count, function (v) {
+        return mediaEntryOk(v) && mediaMatch(index, v, after, text) ? { url: v.url, name: v.name } : null;
+      });
     });
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
@@ -823,6 +872,50 @@ var liveBridge = (function () {
           return x && lower(x.text).indexOf(q) >= 0 ? { target: target, from: x.from, ts: x.ts, archiveTs: x.archiveTs, text: x.text, key: x.key, editId: x.editId, embeds: x.embeds } : null;
         });
       });
+    },
+    /**
+     * Permet de lire une page de la médiathèque de Torch, comme viewMedia et loadMedia.
+     * @param {string} index Ordre de l'index url ou name.
+     * @param {?{url: string, name: string}} after Dernière entrée de la page précédente, null pour la première.
+     * @param {string} text Recherche dans le nom, vide pour tout lire.
+     * @returns {Promise<{list: Array, more: boolean}>} Jusqu'à 21 entrées, et s'il en reste. Rejetée sans base.
+     */
+    mediaPage: function (index, after, text) { return readMedia(index, after, text, MEDIA_PAGE); },
+    /**
+     * Permet de chercher des médias par nom, comme la complétion de Torch (searchMedia).
+     * @param {string} text Texte que le nom contient.
+     * @param {number} count Nombre de médias au plus.
+     * @returns {Promise<Array>} Entrées {url, name} dans l'ordre des noms. Rejetée sans base.
+     */
+    searchMedia: function (text, count) { return readMedia('name', null, text, count).then(function (r) { return r.list; }); },
+    /** Permet de savoir si une adresse est dans la médiathèque, comme checkMedia. Rejetée sans base. */
+    hasMedia: function (url) { return mediaStore('readonly').then(function (store) { return requestResult(store.get(url)); }).then(function (v) { return !!v; }); },
+    /**
+     * Permet d'ajouter un média, comme favoriteMedia (put).
+     * @param {{url: string, name: string}} e Entrée écrite.
+     */
+    addMedia: function (e) {
+      return mediaWrite(function (store) { store.put({ url: e.url, name: e.name }); }, 'Torch could not add this image to your media. Reload the page and try again.');
+    },
+    /** Permet de retirer un média par son adresse, comme unfavoriteMedia. */
+    removeMedia: function (url) {
+      return mediaWrite(function (store) { store.delete(url); }, 'Torch could not remove this image from your media. Reload the page and try again.');
+    },
+    /** Entrées brutes de la médiathèque, telles que les exporte Torch (exportMedia). */
+    exportMedia: function () {
+      return mediaStore('readonly').then(function (store) {
+        return requestResult(store.getAll()).catch(function (e) { warn(e); throw new Error('Torch could not read your media library. Reload the page and try again.'); });
+      });
+    },
+    /**
+     * Permet d'écrire les entrées valides d'un fichier de médiathèque de Torch, par put comme importMedia.
+     * @param {Array} entries Contenu du fichier, non fiable.
+     * @returns {Promise<{added: number, skipped: number}>} Compte rendu une fois la transaction terminée.
+     */
+    importMedia: function (entries) {
+      var screened = screenMediaEntries(entries);
+      return mediaWrite(function (store) { screened.valid.forEach(function (e) { store.put(e); }); }, 'Torch could not save these images. Nothing was imported. Reload the page and try again.')
+        .then(function () { return { added: screened.valid.length, skipped: screened.skipped }; });
     },
     /**
      * Recherche de membres comme le fait Torch, puis demande de leur présence sur la connexion privée.

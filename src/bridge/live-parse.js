@@ -315,3 +315,39 @@ function friendPresence(name, state, ts, minutes) {
   return { name: lower(name), status: status, lastOn: state === 'off' ? epochMs(ts) : 0, idleSince: status === 'idle' ? Date.now() - minutes * MIN : 0 };
 }
 function stateOf(sock) { return !sock ? 'closed' : sock.readyState === 1 ? 'open' : sock.readyState === 0 ? 'connecting' : 'closed'; }
+
+// -- Médiathèque de Torch -----------------------------------------------------
+
+// Taille des pages de la médiathèque, comme viewMedia et loadMedia de Torch.
+var MEDIA_PAGE = 21;
+var PHOTO_URL = /^https:\/\/chatango\.com\/pmmessageimg\?i=[^"&?\/\s]+$/;
+/**
+ * Permet de savoir si une entrée de la médiathèque, lue dans la base de Torch ou dans un fichier, peut être affichée et écrite.
+ * @param {*} e Entrée {url, name}, non fiable.
+ * @returns {boolean} Vrai pour une image https ou une pmmessageimg au nom en texte.
+ */
+function mediaEntryOk(e) { return !!e && typeof e.url === 'string' && (IMAGE_URL.test(e.url) || PHOTO_URL.test(e.url)) && typeof e.name === 'string'; }
+/**
+ * Permet de garder une entrée lue par pages : après la dernière de la page précédente dans l'ordre de l'index, et dont le nom contient la recherche, sans casse.
+ * @param {string} index Index de Torch, url ou name, dont l'ordre suit la clé puis l'url.
+ * @param {{url: string, name: string}} e Entrée lue.
+ * @param {?{url: string, name: string}} after Dernière entrée de la page précédente, null pour la première page.
+ * @param {string} text Recherche, vide pour tout garder.
+ */
+function mediaMatch(index, e, after, text) {
+  return (!after || e[index] > after[index] || e[index] === after[index] && e.url > after.url) && lower(e.name).indexOf(lower(text)) >= 0;
+}
+/**
+ * Permet de nommer un média comme Torch (favoriteMedia) : le dernier segment de son adresse.
+ * @param {string} url Adresse de l'image.
+ */
+function mediaName(url) { return url.split('/').slice(-1)[0]; }
+/**
+ * Permet de trier les entrées d'une médiathèque importée, avant toute écriture.
+ * @param {Array} entries Contenu du fichier, non fiable.
+ * @returns {{valid: Array, skipped: number}} Entrées {url, name} à écrire, et nombre d'ignorées.
+ */
+function screenMediaEntries(entries) {
+  var valid = entries.filter(mediaEntryOk).map(function (e) { return { url: e.url, name: e.name }; });
+  return { valid: valid, skipped: entries.length - valid.length };
+}

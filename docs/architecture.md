@@ -8,10 +8,10 @@ Torch Skin est une seule application React 18 écrite en JavaScript ES5, sans JS
 src/
   core/       socle partagé, évalué en premier
     globals.js       alias React, wrapper T (avatars live), hooks
-    util.js          APP_VERSION, temps, stockage local, copie, lecture d'un fichier JSON, téléchargement d'un fichier
+    util.js          APP_VERSION, temps, stockage local, copie, lecture d'un fichier JSON, téléchargement d'un fichier JSON
     colors.js        couleurs et contraste, polices, canaux
     roles.js         permissions, rôles, réglages de groupe par défaut
-    sample-data.js   données d'exemple du prototype, visites simulées
+    sample-data.js   données d'exemple du prototype, visites simulées, médiathèque d'exemple en mémoire
     prefs.js         préférences par défaut
     ui.js            contexte React, Portal (calque #layer), useFloating (calque ancré à son déclencheur), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
                      Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes,
@@ -23,15 +23,17 @@ src/
                      table des émoticônes (EMOTICONS), modèles live
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
                      fond Premium (parseMiniCss), fond de message (parseMsgBg), comptes liés (parseWho), présence, horodatages,
-                     références de message, enregistrements de l'historique privé (lecture, tri d'un import)
+                     références de message, enregistrements de l'historique privé (lecture, tri d'un import),
+                     entrées de la médiathèque (validation, ordre des pages, tri d'un import)
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
-                     profils, recherche, historique privé, vissle, création de groupe
+                     profils, recherche, historique privé, médiathèque, vissle, création de groupe
   views/      écrans principaux
     login, shell (barre latérale), group, message (ligne, médias, saut vers un message du fil),
     members (liste, fiche profil, comptes liés, bannissement, lien externe, lien de profil), dm (Chats et recherche dans les MP, Friends),
     meet (Meet people), mentions (mentions récentes de tous les groupes, ligne d'un message hors de son fil),
     profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
-    emoji-picker (sélecteur d'émoticônes des composeurs), attach (envoi de fichier des composeurs),
+    emoji-picker (sélecteur d'émoticônes et de médias des composeurs), attach (envoi de fichier des composeurs),
+    media (médiathèque de Torch : onglet Media, étoile des images de message, complétion :nom),
     commands (/join, /leave, /chat et /help des composeurs),
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages
@@ -114,6 +116,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - Les préférences sont persistées dans `localStorage` sous `torch-prototype-prefs` (`app/state.js`). En live, celles de `TORCH_PREFS` (`core/prefs.js` : messages d'invités, annonces) sont des réglages de Torch : relues dans ses réglages à la connexion, et `usePref().sw` ne les bascule qu'une fois écrites chez lui.
 - Les données propres au compte sont persistées sous `torch-skin:<pseudo>` : conversations fermées (`hidden`), canaux masqués de chaque groupe (`channels`), membres au style coupé (`unstyled`) et style perso (`style`). Le pont y pose aussi le drapeau de migration des non-lus (`pmReadMigrated`, `docs/torch-protocol.md`, Historique privé) : `Root` fusionne ses écritures avec le contenu stocké pour le garder. En live, les favoris, les sourdines de groupe et les membres ignorés sont ceux de Torch (`docs/torch-protocol.md`, Réglages de démarrage de Torch). Le prototype garde les siens dans son état.
 - Les profils lus (mini profil, fond Premium dans `u.miniStyle`) et les fonds de message (`u.msgBg`) sont mis en cache avec l'utilisateur.
+- La médiathèque de Torch reste hors de l'état : l'onglet Media, les étoiles et la complétion la lisent par les actions de `Root`, en live dans la base `favorite_media` de Torch (pont), en prototype dans la médiathèque d'exemple (`sampleMedia`). Chaque écriture augmente `mediaRev`, qui les fait relire (`docs/torch-protocol.md`, Médiathèque).
 - La page Mentions lit `mentionLog` : les 100 derniers messages de groupe, en direct ou d'historique, qui mentionnent l'utilisateur, le plus récent en tête. La liste vit dans l'état seulement et repart vide à chaque chargement de la page.
 
 ## Contenu des membres
@@ -127,7 +130,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - Fond de message : sous `styles.backgrounds`, la couleur tirée de `msgbg.xml` par `parseMsgBg` colore la ligne d'un message de groupe marqué `bg`, texte et nom à 4,5:1. L'image `msgbg.jpg` est une `<img>` `no-referrer` derrière le texte (emplacement `background` de `T.Message`), à sa taille naturelle, placée selon l'alignement du membre, seulement si `embedImages` est actif et `proxyMedia` coupé.
 - Style coupé : « Hide style », dans le menu d'un message ou les actions sur une personne, marque le membre `unstyled`. `memberStyles` rend alors ses lignes, en groupe et en MP, comme si `styles.names`, `styles.fonts` et `styles.backgrounds` étaient coupés pour lui seul, sans lire son fond de message, et `MessageText` retire son gras, son italique et son souligné, le barré restant. Référence : `/style nom` de Torch (`inject.js:7308-7350`), qui ne touche que les messages déjà affichés et ne garde rien au rechargement.
 - Photo de profil : l'avatar de la fenêtre et du panneau de profil, une fois sa miniature chargée, ouvre une visionneuse plein écran de `full.jpg` en `<img>` `no-referrer`, avec repli sur la miniature.
-- Médias des messages : rien n'est chargé avant le clic quand `embedImages`, `embedVideos` ou `proxyMedia` le demandent. Un seul test, `waitsForClick` (`views/message.js`), décide qu'un média attend le clic : toujours pour un fichier vidéo ou audio, sous `proxyMedia` pour une image ou la miniature YouTube. `parseContent` relève aussi les liens YouTube, les images et les fichiers vidéo et audio tapés en texte (`docs/torch-protocol.md`, Médias).
+- Médias des messages : rien n'est chargé avant le clic quand `embedImages`, `embedVideos` ou `proxyMedia` le demandent. Un seul test, `waitsForClick` (`views/message.js`), décide qu'un média attend le clic : toujours pour un fichier vidéo ou audio, sous `proxyMedia` pour une image ou la miniature YouTube. `parseContent` relève aussi les liens YouTube, les images et les fichiers vidéo et audio tapés en texte (`docs/torch-protocol.md`, Médias). Une image affichée porte l'étoile de la médiathèque, « Add to media » ou « Remove from media ».
 
 Voir [ADR-0004](adr/0004-member-html-never-injected.md).
 

@@ -125,6 +125,12 @@ _Avoid_: contact, watch list
 **Blocage**:
 Refus des MP d'un compte, côté messages privés.
 
+## Médias
+
+**Médiathèque**:
+Images favorites que Torch garde dans ce navigateur, communes à tous ses comptes, insérées dans un message par leur adresse. L'interface dit « Media ».
+_Avoid_: favoris (réservé aux groupes), galerie
+
 ## Présence
 
 **Présence**:
