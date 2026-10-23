@@ -12,7 +12,6 @@ function DMView(p) {
   var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
   useProfiles(names);
   var reqCount = names.filter(function (n) { return s.dms[n].request; }).length;
-  var unreadCount = unreadDmCount(s);
   var shown = names.filter(function (n) {
     var c = s.dms[n];
     if (tab === 'requests' ? !c.request : c.request) return false;
@@ -20,7 +19,7 @@ function DMView(p) {
     return !q || n.indexOf(q.toLowerCase()) >= 0;
   });
 
-  var filters = [['all', 'All'], ['unread', 'Unread' + (unreadCount ? ' · ' + unreadCount : '')]];
+  var filters = [['all', 'All'], ['unread', 'Unread']];
   // Ni Chatango ni Torch ne connaissent de demande de MP
   if (!LIVE) filters.push(['requests', 'Requests' + (reqCount ? ' · ' + reqCount : '')]);
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
@@ -29,7 +28,7 @@ function DMView(p) {
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
-      options: [{ value: 'chats', label: h(Frag, null, 'Chats', h(T.CountBadge, { count: unreadCount })) }, { value: 'friends', label: 'Friends' }, { value: 'meet', label: 'Meet people' }]
+      options: [{ value: 'chats', label: h(Frag, null, 'Chats', h(T.CountBadge, { count: unreadDmCount(s) })) }, { value: 'friends', label: 'Friends' }, { value: 'meet', label: 'Meet people' }]
     })),
     section === 'friends' ? h(FriendsList, { current: id }) : section === 'meet' ? h(MeetPeople, null) : h(Frag, null,
     h('div', { style: { padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10 } },

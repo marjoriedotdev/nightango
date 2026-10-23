@@ -16,6 +16,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 - Dark is the default theme, light is the alternative; both use the same token names. Put surfaces in this order from back to front: `sidebar`, `bg`, `panel`, `subtle`, `raised`.
 - Text: `text` for names, headings and labels, `text-body` for message bodies, `text-2` for secondary text and icons, `text-3` for timestamps and hints. All four hold 4.5:1 on every surface in both themes.
 - `accent` (ember) is a fill: primary buttons, unread counts, the on state of switches, the brand mark. Text and icons on it use `on-accent`, never white.
+- An unread count is a `CountBadge` on the navigation item that leads to the list. A filter inside the list does not repeat it.
 - When the accent is text or an icon (mentions, links, the announcement pin), use `accent-text`, which is darkened in light for contrast. `accent-soft` tints a message that mentions the viewer.
 - Use `danger` as text only, on destructive actions that also say what they do (Block, Log out, Close group). Use `warning` for the icon of a warning banner; the sentence carries the meaning.
 - Presence: `status-online`, `status-idle`, `status-offline` dots. Where one person is shown (a conversation header, a profile), a text label sits next to the dot (Online, Idle, Last online …). In a list, the dot may stand alone on screen; the row's accessible name then states the status.
