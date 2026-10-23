@@ -32,6 +32,12 @@ function GroupView(p) {
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
   // Saut demandé par la page Mentions : jumpTo, déclarée plus bas, refuse un message que le fil masque.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
+  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m) : null;
+  var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
+  // Style comparé en texte : update clone tout l'état, l'objet change à chaque mise à jour.
+  var measured = useMemo(function () {
+    return LIVE ? liveBridge.measure(p.gid, typed, { replyId: replyId, editId: editId, quote: quoted, style: s.ownStyle }) : typed.length;
+  }, [p.gid, typed, replyId, editId, quoted, JSON.stringify(s.ownStyle)]);
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
@@ -43,7 +49,6 @@ function GroupView(p) {
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
   // Le canal d'envoi n'est jamais masqué, même s'il reste dans la liste gardée.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
-  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m) : null;
 
   function onScroll() {
     reading.onScroll();
@@ -146,8 +151,7 @@ function GroupView(p) {
   } else if (ann.broadcast && !canBroadcast) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
-    var typed = draft.trim();
-    var left = GROUP_MESSAGE_MAX - (LIVE ? liveBridge.measure(g.id, typed, { replyId: replyId, editId: kind === 'edit' ? editedId(mode.m) : null, quote: quoted, style: s.ownStyle }) : typed.length);
+    var left = GROUP_MESSAGE_MAX - measured;
     composer = h(Frag, null, media.panel, h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0,
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
