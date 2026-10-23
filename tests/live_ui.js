@@ -149,7 +149,7 @@ w.eval(fs.readFileSync(S + '/dist/app.js', 'utf8'));
 /* ---------- Outils ---------- */
 const wait = ms => new Promise(r => setTimeout(r, ms));
 // Au plafond, rend la main sans erreur : l'étape qui suit juge et donne son détail.
-const until = async (cond, ms = 2000) => { for (const end = Date.now() + ms; !cond() && Date.now() < end;) await wait(10); };
+const until = async (cond, ms = 5000) => { for (const end = Date.now() + ms; !cond() && Date.now() < end;) await wait(10); };
 const $ = s => d.querySelector(s), $$ = s => [...d.querySelectorAll(s)];
 function click(el) { if (!el) throw new Error('missing element'); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); }
 function byText(sel, txt) { return $$(sel).find(e => e.textContent.trim() === txt) || $$(sel).find(e => e.textContent.includes(txt)); }
@@ -179,11 +179,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('overlay shown after login', shown === 1);
   SB.renderGroup({ group: 'test', header: 'Test' });
   g('ok', 'test', ['marjorie', '', '', '', '1700000000', '', 'alice,' + MOD + ';bob,' + (MOD | 2 | 16), String(64)]);
-  await wait(100);
+  await until(() => !!$('.log .tc-skeleton'));
   const groupSkeleton = { beforeInit: !!$('.log .tc-skeleton') };
   g('inited', 'test', []);
   g('g_participants', 'test', ['S1:1700:U1:Alice:None;S2:1700:U2:Bob:None;S3:1700:U3:None:None']);
-  await wait(150);
+  await until(() => !$('.log .tc-skeleton'));
   groupSkeleton.afterInit = !!$('.log .tc-skeleton');
   step('group opens', !!byText('h1', 'test'));
   step('announcement requested after init', frame('getannouncement').length >= 1);
@@ -232,21 +232,21 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('u', 'test', ['tmp1', 'A-B_C=']);
   g('b', 'test', ['1700000210.1', 'Bob', '', 'u2', 'UNID2', 'tmp2', '5.6.7.8', '2048', '', '<n000/><f x11000="0"><rAhypheNBunderSC/>Welcome back']);
   g('u', 'test', ['tmp2', 'BOB1=']);
-  await wait(80);
+  await until(() => d.body.textContent.includes('Welcome back'));
   step('reply resolves original', !!$$('.tc-msg-reply').find(x => x.textContent.includes('alice') && x.textContent.includes('Hi all')));
   g('b', 'test', ['1700000220.1', 'Alice', '', 'u1', 'UNID1', 'tmp3', '1.2.3.4', '0', '', '<n000/><f x11000="0"><eAhypheNBunderSC/>Hi everyone']);
-  await wait(80);
+  await until(() => d.body.textContent.includes('Hi everyone'));
   step('edit replaces original text', d.body.textContent.includes('Hi everyone') && !d.body.textContent.includes('Hi all') && d.body.textContent.includes('(edited)'));
 
   /* Style d'un membre : celui de son message le plus récent, quel que soit l'ordre d'arrivée (face 4 = Impact) */
   const logFont = txt => { const p = $$('.log .tc-msg-text').find(x => x.textContent === txt); return p ? p.style.fontFamily : null; };
   g('b', 'test', ['1700000280.1', 'Hana', '', 'u8', 'UNID8', 'tmp20', '2.2.2.2', '0', '', '<n000/><f x11000="4">Hana new']);
   g('i', 'test', ['1700000150.1', 'Hana', '', 'u8', 'UNID8', 'H1=', '2.2.2.2', '0', '', '<n000/><f x11000="1">Hana old']);
-  await wait(80);
+  await until(() => logFont('Hana new') !== null);
   step('group history keeps newest style', /Impact/.test(logFont('Hana new') || ''), logFont('Hana new'));
   g('i', 'test', ['1700000190.1', 'Ivy', '', 'u9', 'UNID9', 'H2=', '3.3.3.3', '0', '', '<n000/><f x11000="4">Ivy newer']);
   g('i', 'test', ['1700000180.1', 'Ivy', '', 'u9', 'UNID9', 'H3=', '3.3.3.3', '0', '', '<n000/><f x11000="1">Ivy older']);
-  await wait(80);
+  await until(() => logFont('Ivy newer') !== null);
   step('group history batch keeps its newest style', /Impact/.test(logFont('Ivy newer') || ''), logFont('Ivy newer'));
 
   /* Envoi : échappement, réponse, canal */
@@ -278,15 +278,15 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.dialog-foot button', 'Ban')); await wait(30);
   step('ban frame', frame('block:').pop() === 'block:UNID1:1.2.3.4:alice', frame('block:'));
   step('delete-all frame with ban', frame('delallmsg:').pop() === 'delallmsg:UNID1:1.2.3.4:alice', frame('delallmsg:'));
-  g('blocked', 'test', ['UNID1', '1.2.3.4', 'alice', 'marjorie']); await wait(50);
+  g('blocked', 'test', ['UNID1', '1.2.3.4', 'alice', 'marjorie']); await until(() => d.body.textContent.includes('alice was banned'));
   step('ban event shown', d.body.textContent.includes('alice was banned'));
-  g('delete', 'test', ['BOB1=']); await wait(50);
+  g('delete', 'test', ['BOB1=']); await until(() => d.body.textContent.includes('Message deleted by staff'));
   step('server delete marks message', d.body.textContent.includes('Message deleted by staff'));
 
   /* Régressions relevées en relecture */
   g('u', 'test', ['tmp9', 'REAL9=']);
   g('b', 'test', ['1700000230.1', 'Carol', '', 'u3', 'UNID3', 'tmp9', '3.3.3.3', '0', '', '<n000/><f x11000="0">Early id']);
-  await wait(60);
+  await until(() => d.body.textContent.includes('Early id'));
   const early = $$('.tc-msg').find(x => x.textContent.includes('Early id'));
   click(early.querySelector('button[aria-label="More actions"]')); await wait(30);
   click(menuItem('Delete message')); await wait(30);
@@ -296,7 +296,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('u', 'test', ['tmp10', 'G1=']);
   g('b', 'test', ['1700000250.1', '', 'foo', 'u5', 'GUEST2', 'tmp11', '8.8.8.8', '0', '', '<n000/><f x11000="0">Second guest']);
   g('u', 'test', ['tmp11', 'G2=']);
-  await wait(60);
+  await until(() => d.body.textContent.includes('Second guest'));
   const guest = $$('.tc-msg').find(x => x.textContent.includes('First guest'));
   click(guest.querySelector('button[aria-label="More actions"]')); await wait(30);
   click(menuItem('Ban from #test')); await wait(50);
@@ -344,10 +344,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(50);
 
   /* Avertissements et connexion */
-  C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await wait(50);
+  C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
   step('Torch notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
   let reloads = 0;
-  C.setNotice({ icon: 'warning', content: 'Relogin required.', button: 'Reload', action: () => { reloads++; } }); await wait(50);
+  C.setNotice({ icon: 'warning', content: 'Relogin required.', button: 'Reload', action: () => { reloads++; } }); await until(() => !!byText('.toast', 'Relogin required.'));
   const t = byText('.toast', 'Relogin required.');
   step('Torch warning becomes a toast with its action', !!t && !!byText('.toast button', 'Reload'));
   click(byText('.toast button', 'Reload'));
@@ -362,14 +362,16 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.banner-wrap button', 'Reconnect')); await wait(30);
   const testConnects = calls.filter(c => c[0] === 'connect' && c[1] === 'test').length;
   step('reconnect twice', testConnects === 2 && !C.cache.connect.includes('test'), { testConnects, cache: C.cache.connect });
-  C.groups.test.socket.readyState = 1; await wait(2300);
+  C.groups.test.socket.readyState = 1;
 
   /* Historique */
-  const historyTop = observers.find(x => x.targets.some(t => t.closest('.log')));
+  const historyWatcher = () => observers.find(x => x.targets.some(t => t.closest('.log')));
+  await until(historyWatcher);
+  const historyTop = historyWatcher();
   if (historyTop) historyTop.cb(historyTop.targets.map(target => ({ isIntersecting: true, target })), historyTop);
   await wait(30);
   step('get_more uses Torch counter', frame('get_more:').pop() === 'get_more:20:5', { observed: !!historyTop, frames: frame('get_more:') });
-  g('nomore', 'test', []); await wait(50);
+  g('nomore', 'test', []); await until(() => d.body.textContent.includes('beginning of the history'));
   step('history end shown', d.body.textContent.includes('beginning of the history'));
 
   /* Réglages de groupe */
@@ -388,7 +390,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await wait(30);
   step('flag update frame', frame('updategroupflags:').pop() === 'updategroupflags:0:64', frame('updategroupflags:'));
   step('pending state while waiting', !!byText('.tc-banner', 'Waiting for Chatango'));
-  g('groupflagsupdate', 'test', ['0']); await wait(80);
+  g('groupflagsupdate', 'test', ['0']); await until(() => !byText('.tc-banner', 'Waiting for Chatango'));
   step('confirmed by server', !byText('.tc-banner', 'Waiting for Chatango') && row('Allow links').checked === true);
 
   click(byText('.tc-nav', 'AutoMod')); await wait(50);
@@ -406,7 +408,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await wait(30);
   step('announcement keeps style, escapes, keeps line breaks', frame('updateannouncement:').pop() === 'updateannouncement:1:900:<nF00/><f x12F00="1">Be kind &lt;3\rThanks', frame('updateannouncement:'));
   g('getannc', 'test', ['1', 'test', '5', '900', '<nF00/><f x12F00="1">Be kind &lt;3\rThanks']); await wait(80);
-  g('getannc', 'test', ['3', 'test', '5', '900', '<nF00/><f x12F00="1"><b><i>Be kind</i></b>']); await wait(80);
+  g('getannc', 'test', ['3', 'test', '5', '900', '<nF00/><f x12F00="1"><b><i>Be kind</i></b>']); await until(() => $('#ann-text').value === 'Be kind' && !byText('.tc-banner', 'Waiting for Chatango'));
   type($('#ann-int'), '30'); await wait(20);
   click($('.tc-savebar .tc-btn-primary')); await wait(30);
   step('announcement keeps background mode and emphasis', frame('updateannouncement:').pop() === 'updateannouncement:3:1800:<nF00/><f x12F00="1"><b><i>Be kind</i></b>', frame('updateannouncement:'));
@@ -427,7 +429,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   click(byText('.tc-nav', 'Bans')); await wait(50);
   step('ban list requested', frame('blocklist:block:0:next:500:anons:1').length >= 1);
-  g('blocklist', 'test', ['UNID1:1.2.3.4:alice:1700000300:marjorie;UNID9:9.9.9.9::1700000000:bob']); await wait(50);
+  g('blocklist', 'test', ['UNID1:1.2.3.4:alice:1700000300:marjorie;UNID9:9.9.9.9::1700000000:bob']); await until(() => !!byText('.lrow', 'alice'));
   step('ban list shown', !!byText('.lrow', 'alice') && !!byText('.lrow', '!anon'));
   click(byText('.lrow', 'alice').querySelector('.tc-btn')); await wait(20);
   step('unban frame', frame('removeblock:').pop() === 'removeblock:UNID1:1.2.3.4');
@@ -472,7 +474,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   const pmSkeleton = { beforeReady: !!$('.convs .tc-skeleton') };
   C.private.socket.readyState = 1;
-  pm('OK', []); await wait(150);
+  pm('OK', []); await until(() => !$('.convs .tc-skeleton'));
   pmSkeleton.afterHistory = !!$('.convs .tc-skeleton');
   step('loading skeletons', groupSkeleton.beforeInit && !groupSkeleton.afterInit && pmSkeleton.beforeReady && !pmSkeleton.afterHistory, { groupSkeleton, pmSkeleton });
   step("Torch's history base opened with its exact schema", JSON.stringify(schema) === JSON.stringify([['open', 'marjorie_history', 1], ['store', 'messages', 'ts'], ['index', 'target_idx', '"target"'], ['index', 'target_read_idx', '["target","unread"]'], ['index', 'target_ts_idx', '["target","ts"]']]), schema);
@@ -486,13 +488,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('pm escaped', calls.some(c => c[0] === 'pm' && c[1] === 'private_message' && c[2] === 'dave' && c[3] === 'x &lt; y'));
   click(byText('.profile .mrow', 'Add friend')); await wait(30);
   step('add friend frame', frame('wladd:dave').length === 1);
-  pm('wladd', ['nobody', 'invalid']); await wait(50);
+  pm('wladd', ['nobody', 'invalid']); await until(() => !!byText('.toast', 'No Chatango user named nobody.'));
   step('unknown friend reported', !!byText('.toast', 'No Chatango user named nobody.'));
   click(byText('.profile .mrow', 'Block')); await wait(30);
   click(byText('.dialog-foot button', 'Block')); await wait(30);
   step('pm block frame', frame('block:dave:dave:S').length === 1);
   pm('wl', ['erin', '0', 'off', '0']); await wait(30);
-  pm('wlonline', ['erin']); await wait(50);
+  pm('wlonline', ['erin']); await until(() => !!byText('.toast', 'erin is online.'));
   step('friend online notification', !!byText('.toast', 'erin is online.'));
 
   /* Styles Chatango et médias, avec les réglages activés comme dans Apparence */
@@ -502,7 +504,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   const styled = txt => { const p = $$('.thread .tc-msg-text').find(x => x.textContent === txt); const a = p && p.closest('.tc-msg'); return { p, name: a && a.querySelector('.tc-msg-author') }; };
   const styleOk = r => !!r.p && r.p.style.fontFamily.includes('Impact') && r.p.style.color === 'rgb(153, 0, 204)' && !!r.name && r.name.style.color === 'rgb(51, 102, 255)';
-  pm('msg', ['dave', 'marjorie', 'unknown', '1700000300.5', '0', '<n3366FF/><m v="1"><g x12s9900cc="4">Hi</g></m>']); await wait(50);
+  pm('msg', ['dave', 'marjorie', 'unknown', '1700000300.5', '0', '<n3366FF/><m v="1"><g x12s9900cc="4">Hi</g></m>']); await until(() => !!styled('Hi').p);
   const live = styled('Hi');
   step('pm style rendered', styleOk(live), live.p && [live.p.style.cssText, live.name && live.name.style.cssText]);
   const sentBeforeFay = sent.length;
@@ -524,7 +526,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000270.1', 'Eve', '', 'u7', 'UNID7', 'tmp13', '9.9.9.9', '0', '', '<n000/><f x11000="2">Look at this']);
   g('b', 'test', ['1700000271.1', 'Eve', '', 'u7', 'UNID7', 'tmp14', '9.9.9.9', '0', '', '<n000/><f x11000="0"><i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/>']);
-  await wait(60);
+  await until(() => !!$('.log .embed-video'));
   const yt = $('.log .embed-video'), eveText = $$('.log .tc-msg-text').find(x => x.textContent === 'Look at this');
   const ytBefore = { raw: d.body.textContent.includes('vid://'), card: !!yt, media: !!yt && !!yt.querySelector('iframe, img'), font: eveText && eveText.style.fontFamily };
   if (yt) { click(yt); await wait(30); }
@@ -570,19 +572,19 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     return p && { els: [...p.querySelectorAll('*')].map(x => x.tagName.toLowerCase() + ':' + x.textContent), text: p.textContent, unsafe: !!p.closest('article').querySelector('script, [onerror]') };
   };
   const emphOk = r => !!r && JSON.stringify(r.els) === JSON.stringify(['b:Bold @alice', 'button:@alice', 'i:Ital', 'u:Under', 's:Gone', 's:Struck']) && !/[\u2592\u2593]/.test(r.text) && r.text.includes('plain') && r.text.includes('tail') && !r.unsafe;
-  g('b', 'test', ['1700000272.1', 'Eve', '', 'u7', 'UNID7', 'tmp15', '9.9.9.9', '0', '', '<n000/><f x11000="0">' + EMPH]); await wait(60);
+  g('b', 'test', ['1700000272.1', 'Eve', '', 'u7', 'UNID7', 'tmp15', '9.9.9.9', '0', '', '<n000/><f x11000="0">' + EMPH]); await until(() => !!emphOf('.log'));
   const groupEmph = emphOf('.log');
   click(byText('.tc-nav', 'Private messages')); await wait(50);
-  pm('msg', ['nell', 'marjorie', 'unknown', '1700000350.5', '0', '<n000/><iabc1234/><m v="1"><g x12s000="0">' + EMPH + '</g></m>']); await wait(50);
+  pm('msg', ['nell', 'marjorie', 'unknown', '1700000350.5', '0', '<n000/><iabc1234/><m v="1"><g x12s000="0">' + EMPH + '</g></m>']); await until(() => !!byText('.conv', 'nell'));
   click(byText('.conv', 'nell')); await wait(50);
   const pmEmph = emphOf('.thread');
   step('received emphasis rebuilt from the whitelist', emphOk(groupEmph) && emphOk(pmEmph), { groupEmph, pmEmph });
 
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   const convPrev = n => { const c = $$('.conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n); return c ? c.querySelector('.conv-prev').textContent : null; };
-  pm('msg', ['gus', 'marjorie', 'unknown', '1700000400.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="https://x.test/a.png"/></g></m>']); await wait(50);
+  pm('msg', ['gus', 'marjorie', 'unknown', '1700000400.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="https://x.test/a.png"/></g></m>']); await until(() => convPrev('gus') !== null);
   const prevImage = convPrev('gus');
-  pm('msg', ['gus', 'marjorie', 'unknown', '1700000401.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="img://cam:abc123"/></g></m>']); await wait(50);
+  pm('msg', ['gus', 'marjorie', 'unknown', '1700000401.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="img://cam:abc123"/></g></m>']); await until(() => convPrev('gus') !== prevImage);
   const prevPhoto = convPrev('gus');
   click(byText('.conv', 'gus')); await wait(50);
   const imgsBefore = $$('.thread .embeds img').length;
@@ -630,7 +632,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   };
   await closeConv('dave');
   const closed = { listed: listed('dave'), cleared: calls.some(c => c[0] === 'clearHistory'), hidden: hiddenStored().includes('dave') };
-  pm('msg', ['dave', 'marjorie', 'unknown', '1700000500.5', '0', '<n000/>Back again']); await wait(50);
+  pm('msg', ['dave', 'marjorie', 'unknown', '1700000500.5', '0', '<n000/>Back again']); await until(() => listed('dave'));
   const back = listed('dave');
   await closeConv('dave');
   click($('.convs button[aria-label="New message"]')); await wait(50);
@@ -695,12 +697,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   type($('#add-friend'), 'Newbie'); click(byText('.convs button', 'Add')); await wait(30);
   step('add friend from the list', frame('wladd:newbie').length === 1);
   pm('wladd', ['zoe', 'on', '0']);
-  pm('msg', ['zoe', 'marjorie', 'unknown', '1700000600.5', '0', '<n000/><m v="1"><g x12s000="0">See you at 8</g></m>']); await wait(150);
+  pm('msg', ['zoe', 'marjorie', 'unknown', '1700000600.5', '0', '<n000/><m v="1"><g x12s000="0">See you at 8</g></m>']); await until(() => !!convRow('zoe') && !convRow('zoe').querySelector('.tc-skeleton'));
   const zoeRow = $$('.convs .conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === 'zoe');
   const zoeText = zoeRow ? zoeRow.textContent : '';
   step('friends rows show ASL and last message', zoeText.includes(ZOE_ASL) && zoeText.includes('See you at 8') && !zoeText.includes('Bold'), zoeText);
   const nowS = Date.now() / 1000;
-  pm('wl', ['zoe', String(nowS), 'on', '0', 'erin', String(nowS - 3 * 86400), 'off', '0', 'frank', String(nowS - 600), 'off', '0', 'abe', 'None', 'off', '0']); await wait(60);
+  pm('wl', ['zoe', String(nowS), 'on', '0', 'erin', String(nowS - 3 * 86400), 'off', '0', 'frank', String(nowS - 600), 'off', '0', 'abe', 'None', 'off', '0']); await until(() => !!convRow('frank') && !!convRow('abe'));
   const friendMeta = () => $$('.convs .conv').map(x => [x.querySelector('.conv-name').textContent, x.querySelector('.conv-meta').textContent, (x.querySelector('.conv-time') || {}).textContent || '']);
   const seen = friendMeta(), metaOf = n => (seen.find(x => x[0] === n) || [])[1] || '', timeOf = n => (seen.find(x => x[0] === n) || [])[2] || '';
   pm('presence', ['frank', '30', 'offline']); await wait(60);
@@ -709,10 +711,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('friends last online and order', JSON.stringify(seen.map(x => x[0])) === JSON.stringify(['zoe', 'frank', 'erin', 'abe']) && timeOf('erin') === '3 d ago' && timeOf('frank') === '10 min ago' && !timeOf('abe') && !timeOf('zoe')
     && seen.every(x => !/\b(Online|Idle|Offline|ago)\b/.test(x[1])) && frankOffline, { seen, frankOffline });
   // Idle affiché seulement après 3 minutes : kim y arrive pendant le test, par le minuteur de bascule.
-  pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.999']); pm('idleupdate', ['zoe', '0']); await wait(30);
+  pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.999']); pm('idleupdate', ['zoe', '0']); await until(() => !!convRow('kim'));
   const presenceRow = n => { const r = $$('.convs .conv').find(x => x.querySelector('.conv-name').textContent === n); return r ? [(r.querySelector('.tc-presence') || {}).className || '', (r.querySelector('.conv-time') || {}).textContent || ''] : []; };
   const before3 = { ivy: presenceRow('ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
-  await wait(150);
+  await until(() => /tc-presence-idle/.test(presenceRow('kim')[0]));
   const after3 = presenceRow('kim');
   step('idle shown after three minutes with its duration', /tc-presence-idle/.test(before3.ivy[0]) && before3.ivy[1] === 'Idle 5 min'
     && /tc-presence-online/.test(before3.jade[0]) && !before3.jade[1] && /tc-presence-online/.test(before3.kim[0]) && /tc-presence-online/.test(before3.zoe[0]) && !before3.zoe[1]
@@ -721,7 +723,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const search = fetches.find(x => /\/search$/.test(x.url));
   step('meet search uses Torch parameters and the browser session', !!search && search.credentials === 'include' && search.f.s === 'B' && String(search.f.o) === '1' && String(search.f.ami) === '13' && String(search.f.ama) === '99' && String(search.f.f) === '0' && String(search.f.t) === '40', search);
   step('presence requested for results', frame('getpresence:').pop() === 'getpresence:zoe;yann;marjorie');
-  pm('presence', ['zoe', '0', 'online', 'yann', '5', 'online']); await wait(60);
+  pm('presence', ['zoe', '0', 'online', 'yann', '5', 'online']); await until(() => !!$('.convs .conv .tc-presence-idle'));
   const meetRows = $$('.convs .conv').map(x => [x.textContent, (x.querySelector('.tc-presence') || {}).className]);
   step('meet results with status', meetRows.length === 3 && meetRows[0][0].includes('zoe') && /tc-presence-online/.test(meetRows[0][1]) && /tc-presence-idle/.test(meetRows[1][1]), meetRows);
 
@@ -736,7 +738,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.filter-chip', 'Women').querySelector('button')); await wait(80);
   const fs3 = fetches.filter(x => /\/search$/.test(x.url));
   step('removing the chip searches again without it', fs3[fs3.length - 1].f.s === 'B' && !$('.filter-chip'));
-  pm('presence', ['zoe', '0', 'online', 'yann', '5', 'online']); await wait(150);
+  pm('presence', ['zoe', '0', 'online', 'yann', '5', 'online']); await until(() => $$('.conv.person').some(x => x.textContent.includes('zoe')));
   step('meet cards show the mini profile', !!$$('.conv.person').find(x => x.textContent.includes('zoe') && x.textContent.includes('Lyon') && x.textContent.includes('Bold hi')));
 
   /* Profils */
@@ -747,7 +749,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('mini profile keeps formatting', !!rich && !!rich.querySelector('b') && rich.querySelector('b').textContent === 'Bold' && !!rich.querySelector('span[style*="color"]'));
   step('mini profile drops scripts and handlers', !!rich && !rich.querySelector('script') && !rich.innerHTML.includes('onerror') && !rich.innerHTML.includes('javascript:') && !rich.innerHTML.includes('alert'));
   step('mini profile keeps safe links only', !!rich && $$('.about.rich a').length === 1 && rich.querySelector('a').getAttribute('href') === 'https://example.com/p');
-  click(byText('.dialog button', 'Full profile')); await wait(120);
+  click(byText('.dialog button', 'Full profile')); await until(() => !!$('iframe.fullprofile'));
   const frameEl = $('iframe.fullprofile');
   const sd = frameEl ? frameEl.getAttribute('srcdoc') : '';
   step('full profile in an isolated frame', !!frameEl && !/allow-scripts|allow-same-origin/.test(frameEl.getAttribute('sandbox')) && sd.includes("default-src 'none'") && sd.includes('Zoe page'));
@@ -756,17 +758,17 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   key(d, 'Escape'); await wait(30);
 
   /* Actualiser Meet people avec les filtres en cours */
-  click(byText('.convs button', 'Filters')); await wait(50);
-  click(byText('.dialog .tc-seg button', 'Women')); await wait(20);
-  click(byText('.dialog-foot button', 'Show results')); await wait(80);
   const searches = () => fetches.filter(x => /\/search$/.test(x.url));
   const refreshBtn = () => $('.convs button[aria-label="Refresh"]');
+  click(byText('.convs button', 'Filters')); await wait(50);
+  click(byText('.dialog .tc-seg button', 'Women')); await wait(20);
+  click(byText('.dialog-foot button', 'Show results')); await until(() => !!byText('.filter-chip', 'Women') && !!refreshBtn() && !refreshBtn().disabled);
   const searchesBeforeRefresh = searches().length;
   let releaseSearch;
   searchHold = new Promise(r => { releaseSearch = r; });
   if (refreshBtn()) { click(refreshBtn()); await wait(30); }
   const during = { count: searches().length - searchesBeforeRefresh, disabled: !!refreshBtn() && refreshBtn().disabled };
-  releaseSearch(); searchHold = null; await wait(80);
+  releaseSearch(); searchHold = null; await until(() => !!refreshBtn() && !refreshBtn().disabled);
   const lastSearch = searches().pop();
   step('meet refresh', during.count === 1 && during.disabled && lastSearch.f.s === 'F' && String(lastSearch.f.o) === '1' && String(lastSearch.f.f) === '0' && !!refreshBtn() && !refreshBtn().disabled, { during, f: lastSearch.f });
 
@@ -797,8 +799,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* Fond Premium du mini profil : Premium actif lu dans custom_profile.css, Premium expiré jamais demandé, réponse JPEG ou 404 sans fond */
   searchBody = 'h=goddess;1:expired;1:sith;1:lost;1';
-  click(refreshBtn()); await wait(150);
   const personOf = n => $$('.conv.person').find(x => x.querySelector('.conv-name').textContent === n);
+  click(refreshBtn()); await until(() => ['goddess', 'expired', 'sith', 'lost'].every(n => !!personOf(n) && !personOf(n).querySelector('.tc-skeleton')));
   const cssAsked = n => fetches.some(x => x.url.indexOf('/' + n + '/custom_profile.css') >= 0);
   const premiumCards = ['goddess', 'expired', 'sith', 'lost'].map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
   if (personOf('goddess')) { click(personOf('goddess')); await wait(120); }
@@ -946,7 +948,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* MP modifié par son auteur : l'original change à sa place, en direct puis quand OK rejoue l'archive qui contient les deux entrées */
   const ORIG = '<n000/><iabc1234/><m v="1"><g x12s000="0">First draft</g></m>', EDIT = '<n000/><iedit5678/><m v="1"><g x12s000="0"><eabc1234/>Final text</g></m>';
   pm('msg', ['olga', 'marjorie', 'unknown', '1700000900.5', '0', ORIG]); await wait(50);
-  pm('msg', ['olga', 'marjorie', 'unknown', '1700000960.5', '0', EDIT]); await wait(50);
+  pm('msg', ['olga', 'marjorie', 'unknown', '1700000960.5', '0', EDIT]); await until(() => (convPrev('olga') || '').includes('Final text'));
   click(byText('.conv', 'olga')); await wait(50);
   const olgaThread = () => ({ texts: $$('.thread .tc-msg-text').map(x => x.textContent), edited: $$('.thread .tc-msg').filter(x => x.textContent.includes('(edited)')).length });
   const editLive = olgaThread();
@@ -968,7 +970,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmConnect = calls.filter(c => c[0] === 'connect' && c[1] === 'private_message').pop();
   const archived = calls.filter(c => c[0] === 'archive');
   click(byText('.tc-nav', 'Private messages')); await wait(50);
-  click(byText('.conv', 'gus')); await wait(50);
+  click(byText('.conv', 'gus')); await until(() => $$('.thread .tc-msg-text').some(x => x.textContent === 'ok'));
   const oks = $$('.thread .tc-msg-text').filter(x => x.textContent === 'ok').length;
   step('offline messages archived', !!pmConnect && pmConnect[2] === true && archived.length === 1 && archived[0][1] === true && oks === 2, { pmConnect, archived, oks });
   C.private.socket.readyState = 1; await wait(2300);
