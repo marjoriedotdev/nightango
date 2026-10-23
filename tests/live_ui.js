@@ -124,6 +124,8 @@ const fetches = [];
 let searchHold = null;
 const SEARCH_BODY = 'h=zoe;1;2:yann;3:marjorie;9';
 let searchBody = SEARCH_BODY;
+// Profil complet du compte : 200 hors XML vaut fichier absent, 500 une erreur serveur passagère.
+let ownMod2Status = 200;
 const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img src="x" onerror="alert(2)"><a href="javascript:alert(3)">bad</a> <a href="https://example.com/p">good</a> <font color="#ff0000" size="5">red</font>');
 // Âge Chatango, comme Torch : année courante moins année de naissance.
 const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
@@ -149,6 +151,7 @@ w.fetch = (url, opts) => {
     const saved = posts.filter(p => /updateprofile/.test(p.url)).pop();
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent(saved ? saved.f.line : 'Old bio') + '</body><s>M</s><b>1990-01-01</b><l>Rouen</l></mod>';
   }
+  else if (/marjorie\/mod2\.xml/.test(url)) status = ownMod2Status;
   else if (/\/(goddess|expired|sith|lost)\/mod1\.xml/.test(url)) {
     const end = /expired/.test(url) ? PREMIUM_END - 60 * 86400 : PREMIUM_END;
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent('Hi <a href="https://example.com/g">my page</a>') + '</body><s>F</s><b>1990-01-01</b><l>Paris</l><d>' + end + '</d></mod>';
@@ -905,6 +908,19 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   vissleReply = () => ({ error: 'This profile has tracking turned off.' });
   click(visitors().querySelector('button[aria-label="Refresh"]')); await until(() => visitors().textContent.includes('This profile has tracking turned off.'));
   step('own visitors list: vissle error shown as sent', vissleReqs[3].page === 1 && vissleReqs[3].get === 'like' && visitors().textContent.includes('This profile has tracking turned off.'), visitors().textContent);
+  /* Profil complet illisible (erreur serveur) : enregistrer un autre champ n'envoie rien, jamais un profil complet vide */
+  const torchFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
+  torchFull.value = ''; ownMod2Status = 500;
+  click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
+  click(byText('.tc-nav', 'Profile')); await until(() => !!byText('.tc-hint', 'did not return your full profile'));
+  const fullDown = { failed: !!byText('.tc-hint', 'did not return your full profile') };
+  type($('#pf-loc'), 'Lille'); await until(() => !!$('.tc-savebar'));
+  click($('.tc-savebar .tc-btn-primary')); await until(() => !!byText('.toast', 'Nothing was saved') || profileUpdates().length > 0);
+  fullDown.toast = !!byText('.toast', 'could not be read. Nothing was saved'); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
+  step('full profile server error: saving another field sends nothing', fullDown.failed && fullDown.toast && fullDown.sent.length === 0, fullDown);
+  torchFull.value = 'FULL PAGE'; ownMod2Status = 200;
+  click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
+  click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc') && $('#pf-loc').value === 'Rouen');
   step('profile read from Torch fields', $('#pf-age').value === '34' && $('#pf-gender').value === 'Male' && $('#pf-loc').value === 'Rouen');
   type($('#pf-loc'), 'Paris'); await wait(20);
   click($('.tc-savebar .tc-btn-primary')); await wait(80);

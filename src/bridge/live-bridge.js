@@ -862,13 +862,18 @@ var liveBridge = (function () {
   /**
    * Permet de lire le profil complet d'un membre (mod2.xml), HTML à n'afficher que dans un cadre isolé.
    * @param {string} name Membre visé.
+   * @returns {Promise<string>} Chaîne vide si le fichier manque, rejetée sur une erreur serveur.
    */
   function fetchFullProfile(name) {
       var n = lower(name);
       if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.resolve('');
       var hit = fresh(fullProfileCache, n);
       if (hit) return Promise.resolve(hit.data);
-      return fetch(CH.subdomain.mod2(n)).then(function (r) { return r.ok ? r.text() : ''; }).then(function (xml) {
+      return fetch(CH.subdomain.mod2(n)).then(function (r) {
+        // Erreur serveur rejetée : lue comme profil vide, elle effacerait le profil complet au prochain enregistrement.
+        if (r.status >= 500) throw new Error('Chatango returned HTTP ' + r.status + ' for mod2.xml.');
+        return r.ok ? r.text() : '';
+      }).then(function (xml) {
         var doc = new DOMParser().parseFromString(xml, 'text/xml'), body = doc.querySelector('body');
         return !doc.querySelector('parsererror') && body ? unquote(body.textContent) : '';
       });
