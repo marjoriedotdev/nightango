@@ -51,7 +51,7 @@ function Discover() {
           h('h2', { id: 'off-h', className: 'tc-section-title' }, 'Official'),
           h('div', { className: 'cards small' }, official.map(function (g) {
             return h('article', { key: g.id, className: 'card row' },
-              h(T.Avatar, { name: g.id, square: true, size: 36, color: g.id === 'community' ? 'var(--accent)' : undefined, style: g.id === 'community' ? { color: 'var(--on-accent)' } : null }),
+              h(T.Avatar, { name: g.id, square: true, size: 36 }),
               h('span', { className: 'card-title' }, h('strong', null, g.id), h('span', null, g.title)), h(GroupJoinButton, { group: g }));
           }))),
         LIVE ? null : h('section', { 'aria-labelledby': 'pop-h', style: { display: 'flex', flexDirection: 'column', gap: 14 } },

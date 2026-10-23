@@ -22,7 +22,7 @@ function GroupSettingsView(p) {
     navLabel: 'Group settings', sections: sections, page: page, onBack: leave,
     onPage: function (pg) { app.nav({ view: 'gsettings', id: g.id, page: pg }); },
     header: h('div', { className: 'snav-head' },
-      h(T.Avatar, { name: g.id, square: true, size: 32, color: g.id === 'community' ? 'var(--accent)' : undefined, style: g.id === 'community' ? { color: 'var(--on-accent)' } : null }),
+      h(T.Avatar, { name: g.id, square: true, size: 32 }),
       h('span', { style: { display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 } }, h('span', { style: { fontWeight: 600 } }, g.id), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, 'Group settings · ' + ROLE_LONG[myRole]))),
     footer: canClose ? h(T.NavItem, {
       icon: 'lock', label: g.closed ? 'Reopen group' : 'Close group',

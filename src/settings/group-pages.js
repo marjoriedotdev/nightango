@@ -5,7 +5,7 @@ function GSOverview(p) {
     h(T.SettingsSection, { title: 'Information', padded: true },
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
         h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 } },
-          h(T.Avatar, { name: g.id, square: true, size: 56, color: g.id === 'community' ? 'var(--accent)' : undefined, style: g.id === 'community' ? { color: 'var(--on-accent)' } : null }),
+          h(T.Avatar, { name: g.id, square: true, size: 56 }),
           h('div', { className: 'btnrow' }, h(T.Button, { icon: 'upload', onClick: function () { app.ui.toast('Uploading an icon is not part of this prototype.'); } }, 'Change icon'))),
         h(T.TextField, { id: 'gs-name', label: 'Group name', value: g.id, disabled: true, hint: 'The name is the address, ' + g.id + '.chatango.com. It cannot change.' }),
         h(T.TextField, { id: 'gs-title', label: 'Title', value: o.title, maxLength: 60, onChange: function (e) { var v = e.target.value; p.edit(function (d) { d.overview.title = v; }); } }),

@@ -111,7 +111,7 @@ Sizes:
     `Pass \`label\` and either \`icon\` or \`avatar\`. State props, from strongest to weakest: \`active\` (current page, \`selected\` fill), \`count\` with \`mention\`, \`unread\` (bold label and dot), \`muted\` (dimmed with a muted icon). Use \`href\` for real navigation and \`onClick\` otherwise.`,
     `  return h('div', { style: { width: 240, background: 'var(--sidebar)', padding: 8, borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2 } },
     h(T.NavItem, { icon: 'message', label: 'Private messages', count: 2 }),
-    h(T.NavItem, { avatar: h(T.Avatar, { name: 'community', square: true, size: 22, color: 'var(--accent)' }), label: 'community', active: true }),
+    h(T.NavItem, { avatar: h(T.Avatar, { name: 'community', square: true, size: 22 }), label: 'community', active: true }),
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'torchdev', square: true, size: 22 }), label: 'torchdev', count: 2, mention: true }),
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'trade', square: true, size: 22 }), label: 'trade', unread: true }),
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'artcorner', square: true, size: 22 }), label: 'artcorner', muted: true }));`],

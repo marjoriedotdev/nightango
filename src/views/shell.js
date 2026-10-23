@@ -33,11 +33,10 @@ function Sidebar() {
   var dmNames = listedDms(s).slice(0, 4);
   function toggle(k) { app.update(function (d) { d.sections[k] = !d.sections[k]; }); }
   function groupItem(g) {
-    var isC = g.id === 'community';
     return h(T.NavItem, {
       key: g.id, label: g.id, active: r.view === 'group' && r.id === g.id, unread: g.unread > 0 && !g.muted,
       count: g.mentions || 0, mention: !!g.mentions, muted: g.muted && !g.mentions,
-      avatar: h(T.Avatar, { name: g.id, square: true, size: 22, color: isC ? 'var(--accent)' : undefined, style: isC ? { color: 'var(--on-accent)' } : null }),
+      avatar: h(T.Avatar, { name: g.id, square: true, size: 22 }),
       onClick: function () { app.nav({ view: 'group', id: g.id }); }
     });
   }
