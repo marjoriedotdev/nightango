@@ -27,6 +27,17 @@ Ce document décrit ce que Torch Skin sait du client Torch (vissle.me) et du pro
 - Les tables `client.event.group` et `client.event.private` sont appelées avec `(client, socket, room, argsArray)`. La trame est déjà découpée sur `:`.
 - Le dispatcher de Torch teste `command in table`. Le pont enveloppe donc ces tables et y ajoute les gestionnaires qui manquent.
 
+### Membres d'un groupe
+
+Trames reçues seulement : rien n'est envoyé.
+
+- `g_participants` (et `gparticipants`, après son premier champ) : entrées séparées par `;`, champs par `:`. `t[1]` horodatage de session, `t[2]` identifiant d'anonyme, `t[3]` nom de compte ou `None`, `t[4]` nom d'invité ou `None`. Torch affiche un invité nommé `#t[4]` et un anonyme par `getAnon(t[2], t[1])` (`parseParticipant`, `inject.js:10378` à `inject.js:10424`, ligne `inject.js:10422`).
+- `participant` (`inject.js:3409` à `inject.js:3538`) : `data[0]` action (0 départ, 1 arrivée, 2 changement), `data[2]` identifiant d'anonyme, `data[3]` nom de compte ou `None`, `data[4]` nom d'invité ou `None`, `data[6]` horodatage de session. Cet horodatage relie la trame à l'entrée de `g_participants` (`inject.js:3413`).
+  - Action 0 : départ de la session, compte ou invité (`inject.js:3414` à `inject.js:3429`).
+  - Action 1, `data[3]` à `None` : un invité arrive (`inject.js:3454` à `inject.js:3457`). Torch l'affiche en anonyme. Le pont lit `data[4]` comme dans `g_participants` : un invité qui arrive déjà nommé garde son nom.
+  - Action 2, `data[4]` renseigné : l'anonyme de cette session prend le nom `#data[4]` (`inject.js:3459` à `inject.js:3467`). Torch teste ce cas avant le nom de compte.
+- Le pont (`live-bridge.js`) tient par groupe une table horodatage de session vers `{ account }`, `{ guest: '#nom' }` ou `{ anon: true }`, remplie par `g_participants` et tenue à jour par `participant`. À chaque changement, il émet `guests` : noms d'invités sans doublon, triés, et nombre d'anonymes. Le nom d'invité est en minuscules, comme l'auteur de ses messages, pour que fiche et bannissement les retrouvent.
+
 ## Envoi
 
 - Une trame part par `client.socket(gid, frame, errorText)`.

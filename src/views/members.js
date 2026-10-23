@@ -8,6 +8,7 @@ function MembersList(p) {
   var others = g.members.filter(function (n) { return !roleOf(g, n); });
   var on = others.filter(function (n) { return userOf(s, n).status !== 'offline' || n === s.me; });
   var off = others.filter(function (n) { return userOf(s, n).status === 'offline' && n !== s.me; });
+  var guests = guestsOf(g);
   function row(n) {
     var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status;
     return h('button', { key: n, type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, g.id); } },
@@ -20,7 +21,9 @@ function MembersList(p) {
       h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n); }),
       h('h3', { className: 'mlabel' }, 'Online · ' + on.length), on.map(function (n) { return row(n); }),
       off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
-      s.prefs.safety.showGuests && g.guests ? h('p', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + g.guests) : null);
+      s.prefs.safety.showGuests && guests.count ? h(Frag, null,
+        h('h3', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + guests.count), guests.names.map(function (n) { return row(n); }),
+        g.guests ? h('p', { className: 'muted', style: { margin: 'var(--space-1) var(--space-2)' } }, g.guests + ' anonymous') : null) : null);
 }
 
 /**

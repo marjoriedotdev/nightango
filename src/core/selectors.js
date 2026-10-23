@@ -13,6 +13,15 @@ function findMsg(g, id) {
   for (var i = g.messages.length - 1; i >= 0; i--) { var x = g.messages[i]; if (x.id === plain || x.id === 'k:' + plain) return x; }
   return null;
 }
+/**
+ * Permet de lire les invités d'un groupe : noms des invités nommés et total, anonymes compris.
+ * @param {Object} group Groupe.
+ */
+function guestsOf(group) {
+  // Le prototype n'a pas de guestNames : tous ses invités sont anonymes.
+  var names = group.guestNames || [];
+  return { names: names, count: names.length + group.guests };
+}
 function resolvedTheme(prefs, viewerTheme) {
   if (prefs.theme === 'dark' || prefs.theme === 'light') return prefs.theme;
   if (viewerTheme === 'dark' || viewerTheme === 'light') return viewerTheme;

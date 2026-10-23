@@ -77,14 +77,21 @@ function emphasisParts(body) {
 
 // -- Trames de groupe ---------------------------------------------------------
 
+function notNone(v) { return !!v && v !== 'None'; }
+// Invité nommé en minuscules, comme l'auteur de ses messages : fiche et bannissement les retrouvent.
+function sessionOf(account, guest) {
+  return notNone(account) ? { account: lower(account) } : notNone(guest) ? { guest: '#' + lower(guest) } : { anon: true };
+}
 function parseParticipants(list) {
-  var names = [], guests = 0;
+  var names = [], sessions = {};
   list.forEach(function (x) {
     var t = x.split(':');
     if (t.length < 4) return;
-    if (t[3] && t[3] !== 'None') names.push(lower(t[3])); else guests += 1;
+    var one = sessionOf(t[3], t[4]);
+    if (one.account && names.indexOf(one.account) < 0) names.push(one.account);
+    sessions[t[1]] = one;
   });
-  return { names: names.filter(function (v, i, a) { return a.indexOf(v) === i; }), guests: guests };
+  return { names: names, sessions: sessions };
 }
 function parseMods(entries) {
   var mods = {};

@@ -183,6 +183,25 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
   step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('bob') && x.textContent.includes('Admin')));
 
+  /* Invités : nommés par leur nom, anonymes comptés, suivis par horodatage de session */
+  const guestView = () => ({
+    label: ($$('.members .mlabel').find(x => x.textContent.indexOf('Guests') === 0) || {}).textContent || null,
+    rows: $$('.members .mrow .grow').map(x => x.textContent).filter(t => t[0] === '#'),
+    anon: ($$('.members .muted').find(x => /anonymous$/.test(x.textContent)) || {}).textContent || null
+  });
+  g('g_participants', 'test', ['S4:1701:U4:None:Dana;S5:1702:U5:None:None']); await wait(80);
+  const guests1 = guestView();
+  g('participant', 'test', ['2', 'S5', 'U5', 'None', 'Carl', '', '1702']); await wait(80);
+  const guests2 = guestView();
+  g('participant', 'test', ['0', 'S4', 'U4', 'None', 'Dana', '', '1701']); await wait(80);
+  const guests3 = guestView();
+  step('named guests listed by name, anonymous guests counted',
+    guests1.label === 'Guests · 2' && JSON.stringify(guests1.rows) === '["#dana"]' && guests1.anon === '1 anonymous'
+      && JSON.stringify(guests2.rows) === '["#carl","#dana"]' && !guests2.anon
+      && JSON.stringify(guests3.rows) === '["#carl"]' && !guests3.anon,
+    { guests1, guests2, guests3 });
+  g('g_participants', 'test', ['S1:1700:U1:Alice:None;S2:1700:U2:Bob:None;S3:1700:U3:None:None']); await wait(80);
+
   /* Messages, réponses, modifications */
   g('b', 'test', ['1700000200.1', 'Alice', '', 'u1', 'UNID1', 'tmp1', '1.2.3.4', '0', '', '<n000/><f x11000="0">Hi all']);
   g('u', 'test', ['tmp1', 'A-B_C=']);

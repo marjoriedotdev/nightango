@@ -808,8 +808,12 @@ function Root(props) {
       case 'cleared': groupUpdate(op.gid, function (g) { g.messages = [{ id: uid(), kind: 'system', text: 'All messages in #' + g.id + ' were cleared.', ts: Date.now() }]; }); break;
       case 'members': groupUpdate(op.gid, function (g, d) {
         var list = op.names.slice(); if (list.indexOf(d.me) < 0) list.push(d.me);
-        g.members = list; g.guests = op.guests; g.membersLoaded = true;
+        g.members = list; g.membersLoaded = true;
         list.forEach(function (n) { ensurePresentUser(d, n); });
+      }); break;
+      case 'guests': groupUpdate(op.gid, function (g, d) {
+        g.guestNames = op.names; g.guests = op.anons;
+        op.names.forEach(function (n) { ensurePresentUser(d, n); });
       }); break;
       case 'member': groupUpdate(op.gid, function (g, d) {
         if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensurePresentUser(d, op.name); }

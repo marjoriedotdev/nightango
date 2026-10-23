@@ -28,6 +28,30 @@ var liveBridge = (function () {
   // Identifiants définitifs (trame u) arrivés avant le message (trame b) correspondant.
   var earlyIds = {}, waitingIds = {};
   var profileCache = {};
+  // Sessions de chaque groupe, par horodatage de session comme Torch : { account }, { guest } ou { anon: true }.
+  var sessions = {};
+  function emitGuests(room) {
+    var t = sessions[room], names = [], anons = 0;
+    Object.keys(t).forEach(function (k) {
+      if (t[k].anon) anons += 1;
+      else if (t[k].guest && names.indexOf(t[k].guest) < 0) names.push(t[k].guest);
+    });
+    emit({ op: 'guests', gid: room, names: names.sort(), anons: anons });
+  }
+  function participants(room, list) {
+    var p = parseParticipants(list);
+    sessions[room] = p.sessions;
+    emit({ op: 'members', gid: room, names: p.names });
+    emitGuests(room);
+  }
+  function participant(room, data) {
+    var t = sessions[room] || (sessions[room] = {}), ts = data[6], action = +data[0];
+    if (action === 0) delete t[ts];
+    // Action 2 : Torch teste le nom d'invité avant le compte.
+    else if (action === 2 && notNone(data[4])) t[ts] = sessionOf('None', data[4]);
+    else t[ts] = sessionOf(data[3], data[4]);
+    emitGuests(room);
+  }
   function tapGroup(name, room, data) {
     if (room === ENV) return;
     switch (name) {
@@ -46,10 +70,11 @@ var liveBridge = (function () {
       case 'delete': emit({ op: 'del', gid: room, ids: [data[0]] }); break;
       case 'deleteall': emit({ op: 'del', gid: room, ids: data.slice() }); break;
       case 'clearall': if (data[0] === 'ok') emit({ op: 'cleared', gid: room }); else emit({ op: 'notice', gid: room, text: 'Chatango refused to clear the messages.' }); break;
-      case 'g_participants': emit(Object.assign({ op: 'members', gid: room }, parseParticipants(data.join(':').split(';')))); break;
-      case 'gparticipants': emit(Object.assign({ op: 'members', gid: room }, parseParticipants(data.slice(1).join(':').split(';')))); break;
+      case 'g_participants': participants(room, data.join(':').split(';')); break;
+      case 'gparticipants': participants(room, data.slice(1).join(':').split(';')); break;
       case 'participant':
-        if (data[3] && data[3] !== 'None') emit({ op: 'member', gid: room, action: +data[0], name: lower(data[3]) });
+        if (notNone(data[3])) emit({ op: 'member', gid: room, action: +data[0], name: lower(data[3]) });
+        participant(room, data);
         break;
       case 'n': emit({ op: 'count', gid: room, n: parseInt(data[0], 16) || 0 }); break;
       case 'ok': emit({ op: 'room', gid: room, owner: lower(data[0]), mods: parseMods(String(data[6] || '').split(';')), flags: parseInt(data[7], 10) || 0 }); break;
