@@ -76,27 +76,75 @@ function confirmRemoveFriend(app, name) {
 }
 
 /**
- * Permet d'ajouter ou de retirer un ami depuis une fiche de profil ou un menu.
- * @param {string} name Nom du membre.
- * @param {Object} u Membre dans l'état.
- * @param {boolean} [menu] Entrée de menu, dont le libellé de retrait annonce le dialogue.
+ * Permet de proposer l'alerte de connexion d'un ami en entrée de menu ou de liste.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Ami suivi.
  */
-function useFriendAction(name, u, menu) {
-  var app = useApp(), busy = !!app.state.friendAdds[name];
-  return {
-    busy: busy, icon: u.friend ? 'user-minus' : 'user-plus', label: busy ? 'Adding friend' : u.friend ? (menu ? 'Remove friend…' : 'Remove friend') : 'Add friend',
-    run: function () { if (u.friend) confirmRemoveFriend(app, name); else app.actions.toggleUser(name, 'friend'); }
-  };
+function notifyOnlineItem(app, name) {
+  var notify = isNotifyingOnline(app.state, name);
+  return { id: 'notify', label: notify ? 'Notifying when online' : 'Notify when online', short: notify ? 'Notifying' : 'Notify', icon: 'bell', pressed: notify, onSelect: function () { app.update(function (d) { d.notifyOnline[name] = !notify; }); } };
+}
+
+/**
+ * Permet de proposer d'ignorer un membre ou de ne plus l'ignorer.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Nom du membre.
+ */
+function ignoreItem(app, name) {
+  return { id: 'ignore', label: userOf(app.state, name).ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } };
+}
+
+/**
+ * Permet de proposer le bannissement d'un membre d'un groupe.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Nom du membre.
+ * @param {string} gid Groupe.
+ * @param {Object} [msg] Message d'où part le bannissement.
+ */
+function banItem(app, name, gid, msg) {
+  return { id: 'ban', label: 'Ban from #' + gid, icon: 'ban', danger: true, closes: true, onSelect: function () { app.ui.ban(name, gid, msg); } };
+}
+
+/**
+ * Permet de lister les actions sur une personne, communes à la fenêtre de profil, au panneau et au menu d'un MP.
+ * Une entrée marquée closes ferme la fenêtre de profil qui l'affiche, buttonLabel est son libellé en bouton.
+ * @param {string} name Nom du membre.
+ * @param {?string} gid Groupe d'où le profil est ouvert.
+ */
+function useProfileActions(name, gid) {
+  var app = useApp(), s = app.state, u = userOf(s, name), busy = !!s.friendAdds[name];
+  var g = gid ? s.groups[gid] : null;
+  var inDm = s.route.view === 'dm' && s.route.id === name;
+  var friendLabel = busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend';
+  return [
+    inDm ? null : { id: 'message', label: 'Message', icon: 'message', disabled: u.blocked, closes: true, onSelect: function () { app.actions.openDm(name); } },
+    {
+      id: 'friend', label: u.friend ? friendLabel + '…' : friendLabel, buttonLabel: friendLabel, icon: u.friend ? 'user-minus' : 'user-plus', disabled: busy,
+      onSelect: function () { if (u.friend) confirmRemoveFriend(app, name); else app.actions.toggleUser(name, 'friend'); }
+    },
+    u.friend ? notifyOnlineItem(app, name) : null,
+    ignoreItem(app, name),
+    {
+      id: 'block', label: u.blocked ? 'Unblock' : 'Block', icon: 'ban', danger: !u.blocked, onSelect: function () {
+        if (u.blocked) app.actions.toggleUser(name, 'blocked');
+        else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } });
+      }
+    },
+    g && isStaffRole(roleOf(g, s.me)) && roleOf(g, name) !== 'owner' ? banItem(app, name, gid) : null
+  ].filter(Boolean);
 }
 
 function ProfileDialog(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), isMe = name === s.me;
   var g = p.gid ? s.groups[p.gid] : null;
-  var myRole = g ? roleOf(g, s.me) : null, theirRole = g ? roleOf(g, name) : null;
+  var theirRole = g ? roleOf(g, name) : null;
   var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
   var meta = [u.age && (isMe ? s.profile.visibility.age : true) ? u.age : null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
   var guest = /^[!#]/.test(name);
-  var friend = useFriendAction(name, u);
+  var actions = useProfileActions(name, p.gid).map(function (it) {
+    return it.closes ? Object.assign({}, it, { onSelect: function () { p.onClose(); it.onSelect(); } }) : it;
+  });
+  var buttons = actions.filter(function (it) { return it.id === 'message' || it.id === 'friend'; });
   var mini = miniStyleOf(s.prefs, u, app.theme), cover = useMiniCover(mini);
   useEffect(function () { if (!guest) app.actions.loadProfile(name); }, [name]);
   function go(route) { p.onClose(); app.nav(route); }
@@ -113,16 +161,9 @@ function ProfileDialog(p) {
     common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length), h('p', { className: 'about', style: { color: 'var(--text-2)' } }, common.map(function (c) { return '#' + c; }).join(', '))) : null,
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
-      : LIVE && /^[!#]/.test(name) ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
-        h(T.Button, { variant: 'primary', icon: 'message', disabled: u.blocked, onClick: function () { app.actions.openDm(name); p.onClose(); } }, 'Message'),
-        h(T.Button, { icon: friend.icon, disabled: friend.busy, onClick: friend.run }, friend.label),
-        h(MenuButton, {
-          label: 'More profile actions', items: [
-            { label: u.ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } },
-            { label: u.blocked ? 'Unblock' : 'Block', icon: 'ban', danger: !u.blocked, onSelect: function () { if (u.blocked) app.actions.toggleUser(name, 'blocked'); else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } }); } },
-            isStaffRole(myRole) && theirRole !== 'owner' ? { label: 'Ban from #' + g.id, icon: 'ban', danger: true, onSelect: function () { p.onClose(); app.ui.ban(name, g.id); } } : null
-          ]
-        }))));
+      : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
+        buttons.map(function (it) { return h(T.Button, { key: it.id, variant: it.id === 'message' ? 'primary' : undefined, icon: it.icon, disabled: it.disabled, onClick: it.onSelect }, it.buttonLabel || it.label); }),
+        h(MenuButton, { label: 'More profile actions', items: actions.filter(function (it) { return buttons.indexOf(it) < 0; }) }))));
 }
 
 function BanDialog(p) {

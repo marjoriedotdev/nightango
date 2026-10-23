@@ -144,27 +144,11 @@ function FullProfileDialog(p) {
             : h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(content, media, mini) })));
 }
 
-/**
- * Permet de nommer l'alerte de connexion selon son état.
- * @param {boolean} notify Vrai quand l'alerte est active.
- */
-function notifyOnlineLabel(notify) { return notify ? 'Notifying when online' : 'Notify when online'; }
-/**
- * Permet de basculer l'alerte de connexion d'un membre.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Membre suivi.
- */
-function toggleNotifyOnline(app, name) {
-  var notify = isNotifyingOnline(app.state, name);
-  app.update(function (d) { d.notifyOnline[name] = !notify; });
-}
-
 function ProfilePanel(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name);
   var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
   var meta = [u.age, genderShort(u.gender), u.location].filter(Boolean).join(' · ');
-  var notify = isNotifyingOnline(s, name);
-  var friend = useFriendAction(name, u, true);
+  var actions = useProfileActions(name, null);
   useEffect(function () { app.actions.loadProfile(name); }, [name]);
   return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + name },
     h('div', { className: 'scroll' },
@@ -176,10 +160,8 @@ function ProfilePanel(p) {
       common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length),
         common.map(function (c) { return h('button', { key: c, type: 'button', className: 'mrow', style: { height: 32, padding: '0 4px' }, onClick: function () { app.nav({ view: 'group', id: c }); } }, h(T.Avatar, { name: c, square: true, size: 22 }), h('span', { className: 'grow' }, c)); })) : null,
       h('div', { style: { padding: '12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderTop: '1px solid var(--border)' } },
-        u.friend ? h('button', { type: 'button', className: 'mrow', 'aria-pressed': String(notify), onClick: function () { toggleNotifyOnline(app, name); } },
-          h(T.Icon, { name: 'bell', size: 15 }), h('span', { className: 'grow' }, notifyOnlineLabel(notify)), notify ? h(T.Icon, { name: 'check', size: 14 }) : null) : null,
-        h('button', { type: 'button', className: 'mrow', disabled: friend.busy, onClick: friend.run }, h(T.Icon, { name: friend.icon, size: 15 }), h('span', { className: 'grow' }, friend.label)),
-        h('button', { type: 'button', className: 'mrow', onClick: function () { app.actions.toggleUser(name, 'ignored'); } }, h(T.Icon, { name: 'eye-off', size: 15 }), h('span', { className: 'grow' }, u.ignored ? 'Stop ignoring' : 'Ignore')),
-        h('button', { type: 'button', className: 'mrow', style: u.blocked ? null : { color: 'var(--danger)' }, onClick: function () { if (u.blocked) app.actions.toggleUser(name, 'blocked'); else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } }); } },
-          h(T.Icon, { name: 'ban', size: 15 }), h('span', { className: 'grow' }, u.blocked ? 'Unblock' : 'Block')))));
+        actions.map(function (it) {
+          return h('button', { key: it.id, type: 'button', className: 'mrow', disabled: it.disabled, 'aria-pressed': it.pressed == null ? undefined : String(it.pressed), style: it.danger ? { color: 'var(--danger)' } : null, onClick: it.onSelect },
+            h(T.Icon, { name: it.icon, size: 15 }), h('span', { className: 'grow' }, it.label), it.pressed ? h(T.Icon, { name: 'check', size: 14 }) : null);
+        }))));
 }

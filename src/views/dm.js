@@ -7,7 +7,7 @@ function DMView(p) {
   var logRef = useRef(null);
   var convo = id ? s.dms[id] : null;
   var len = convo ? convo.messages.length : 0;
-  var friend = useFriendAction(id, userOf(s, id), true);
+  var personActions = useProfileActions(id, null);
   useLayoutEffect(function () { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [id, len]);
 
   var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
@@ -80,11 +80,8 @@ function DMView(p) {
         h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personMeta(u)].filter(Boolean).join(' · ')),
         h(T.IconButton, { icon: 'panel', label: showProfile ? 'Hide profile' : 'Show profile', pressed: showProfile, className: 'hide-mobile', onClick: function () { setShowProfile(!showProfile); } }),
         h(MenuButton, {
-          label: 'Conversation options', items: [
-            { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(id, null); } },
-            { label: friend.label, icon: friend.icon, disabled: friend.busy, onSelect: friend.run },
-            { divider: true }
-          ].concat(convActions(app, id))
+          label: 'Conversation options', items: [{ label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(id, null); } }]
+            .concat(personActions, [{ divider: true }], convActions(app, id))
         })),
       h('div', { className: 'log', role: 'log', 'aria-label': 'Messages with ' + id, ref: logRef }, h('div', { className: 'log-inner' }, rows)),
       h('div', { className: 'composer-wrap' },
@@ -173,9 +170,8 @@ function convActions(app, name) {
  * @param {string} name Ami de la ligne.
  */
 function friendActions(app, name) {
-  var notify = isNotifyingOnline(app.state, name);
   return [
-    { label: notifyOnlineLabel(notify), short: notify ? 'Notifying' : 'Notify', icon: 'bell', onSelect: function () { toggleNotifyOnline(app, name); } },
+    notifyOnlineItem(app, name),
     { label: 'Remove friend…', short: 'Remove', icon: 'user-minus', danger: true, onSelect: function () { confirmRemoveFriend(app, name); } }
   ];
 }
