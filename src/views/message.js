@@ -26,12 +26,13 @@ function MessageRow(p) {
   var canDelete = LIVE ? isStaffRole(myRole) : (m.author === me || isStaffRole(myRole));
   var canBan = isStaffRole(myRole) && m.author !== me && role !== 'owner' && (!LIVE || !!m.unid);
   var handle = m.author !== me ? mentionHandle(m.author) : null;
+  var deleteMessage = function () { app.actions.deleteMessage(g.id, m.id); };
   var menuItems = [
     handle ? { label: 'Mention ' + m.author, icon: 'message', onSelect: function () { p.onMention(handle); } } : null,
     { label: 'Copy text', icon: 'list', onSelect: function () { copyText(messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed.'); }); } },
     m.author !== me ? { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(m.author, g.id); } } : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,
-    canDelete ? { label: 'Delete message', icon: 'trash', danger: true, onSelect: function () { app.actions.deleteMessage(g.id, m.id); } } : null,
+    canDelete ? { label: 'Delete message', icon: 'trash', danger: true, onSelect: function () { if (LIVE) app.ui.confirm({ title: 'Delete this message?', body: 'Chatango removes it from #' + g.id + " for everyone. You can't undo this.", confirmLabel: 'Delete', danger: true, onConfirm: deleteMessage }); else deleteMessage(); } } : null,
     LIVE && canBan ? { label: 'Delete all from ' + m.author, icon: 'trash', danger: true, onSelect: function () { app.ui.confirm({ title: 'Delete every message from ' + m.author + '?', body: 'Chatango removes their recent messages in #' + g.id + ' for everyone.', confirmLabel: 'Delete all', danger: true, onConfirm: function () { app.actions.deleteAllFrom(g.id, m.author, m); } }); } } : null,
     m.author !== me ? { label: u.ignored ? 'Stop ignoring ' + m.author : 'Ignore ' + m.author, icon: 'eye-off', onSelect: function () { app.actions.toggleUser(m.author, 'ignored'); } } : null,
     canBan ? { label: 'Ban from #' + g.id, icon: 'ban', danger: true, onSelect: function () { app.ui.ban(m.author, g.id, m); } } : null
