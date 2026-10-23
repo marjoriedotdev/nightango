@@ -42,7 +42,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 
 - Separate areas with `border` hairlines, not shadows. Rows inside a section use `divider`.
 - Only floating elements get a shadow: `shadow-popover` for the message toolbar and menus, `shadow-floating` for the save bar and dialogs.
-- No gradients, no glass effects, no colored left borders.
+- No gradients, no glass effects, no colored left borders. One exception: a message posted on a Chatango channel carries a 3px stripe and a light tint in the channel color, and the message head still names the channel.
 
 ## States and behavior
 
