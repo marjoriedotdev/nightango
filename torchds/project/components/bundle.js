@@ -218,18 +218,19 @@
         : h('span', { className: 'tc-msg-reply-text' }, props.reply.text)) : null;
     // Fond en style inline : il doit passer devant le fond du membre, lui aussi inline.
     var highlight = props.highlight ? { background: 'var(--selected)' } : null;
-    function row(base, style) { return { className: cx(base, mention, props.className), style: Object.assign({}, style, props.style, highlight), 'data-msg-id': props.msgId }; }
+    var bg = props.background && !highlight ? h('div', { className: 'tc-msg-bg', 'aria-hidden': 'true' }, props.background) : null;
+    function row(base, style) { return { className: cx(base, mention, bg && 'tc-msg-layered', props.className), style: Object.assign({}, style, props.style, highlight), 'data-msg-id': props.msgId }; }
     if (props.compact) {
       // Base de 8em : sur un écran étroit, le texte passe à la ligne au lieu de s'écraser à côté du rôle et du canal.
       return h('article', row('cmsg'),
-        time, author, props.meta, h('div', { style: { flex: '1 1 8em', minWidth: 0 } }, reply, body), actions);
+        bg, time, author, props.meta, h('div', { style: { flex: '1 1 8em', minWidth: 0 } }, reply, body), actions);
     }
     if (props.continued) {
       return h('article', row('tc-msg tc-msg-cont'),
-        h('span', { className: 'tc-msg-gutter' }, props.time), h('div', { className: 'tc-msg-body' }, body), actions);
+        bg, h('span', { className: 'tc-msg-gutter' }, props.time), h('div', { className: 'tc-msg-body' }, body), actions);
     }
     return h('article', row('tc-msg', Object.assign({ marginTop: 6 }, reply ? { flexDirection: 'column' } : null)),
-      reply,
+      bg, reply,
       h('div', { style: { display: 'flex', gap: 12, minWidth: 0 } },
         props.avatar,
         h('div', { className: 'tc-msg-body' }, h('div', { className: 'tc-msg-head' }, author, props.meta, time), body)),

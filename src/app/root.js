@@ -385,7 +385,7 @@ function Root(props) {
 
   /* ---------- Mode live : actions transmises à Chatango par le client Torch ---------- */
   var localRef = useRef(blankLocal());
-  var profilePending = useRef({});
+  var profilePending = useRef({}), msgBgPending = useRef({});
   // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
   var pmAsked = useRef(null);
   var offlineCount = useRef(0);
@@ -509,6 +509,19 @@ function Root(props) {
       }).then(function () { delete pending[name]; });
       pending[name] = run;
       return run;
+    };
+    /**
+     * Permet de lire le fond de message Premium d'un membre, gardé dans l'état jusqu'à ce qu'il change.
+     * @param {string} name Membre visé.
+     */
+    actions.loadMsgBg = function (name) {
+      var pending = msgBgPending.current;
+      if (pending[name]) return;
+      pending[name] = true;
+      liveBridge.fetchMsgBg(name).then(function (bg) {
+        delete pending[name];
+        update(function (d) { ensureLiveUser(d, name).msgBg = bg; });
+      });
     };
     /** Mini profils d'une liste de résultats, quatre requêtes à la fois pour ménager Chatango. */
     actions.loadProfiles = function (names) {
@@ -996,6 +1009,7 @@ function Root(props) {
         Object.keys(d.users).forEach(function (n) { if (d.users[n].blocked && op.list.indexOf(n) < 0) d.users[n].blocked = false; });
         op.list.forEach(function (n) { ensureLiveUser(d, n).blocked = true; });
       }); break;
+      case 'msgBgStale': update(function (d) { if (d.users[op.name]) delete d.users[op.name].msgBg; }); break;
       case 'people': update(function (d) { op.list.forEach(function (x) { applyPresence(ensureLiveUser(d, x.name), x); }); }); break;
       case 'pmUnblocked': update(function (d) { if (d.users[op.name]) d.users[op.name].blocked = false; }); break;
       default: break;

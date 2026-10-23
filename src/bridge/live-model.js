@@ -53,6 +53,7 @@ var PERM_MASK = Object.keys(PERM_FLAG).reduce(function (n, k) { return n | PERM_
 // Droits qui font d'un modérateur un administrateur dans le vocabulaire Chatango.
 var ADMIN_MASK = 2 | 4 | 16 | 32 | 1024 | 32768;
 var CHANNEL_FLAG = { red: 256, blue: 2048, mod: 32768 };
+var MSG_FLAG = { PREMIUM: 4, BG_ON: 8 };
 // Polices Chatango dans l'ordre de leur numéro (0 à 8), celui des balises <f x…="n"> et <g x…="n">.
 var FONT_FACES = ['Arial', 'Comic Sans MS', 'Georgia', 'Lucida Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times New Roman', 'Courier New'];
 

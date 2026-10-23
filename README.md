@@ -54,7 +54,7 @@ Everything lives in Settings > Appearance and is saved on your device.
 - Your password stays with Torch. Torch Skin never reads, stores, logs or sends it.
 - Every HTTP call Torch Skin makes is listed in [docs/torch-protocol.md](docs/torch-protocol.md#appels-http-autorisés), and nothing outside that list is called.
 - Member HTML is rebuilt from an allow list, never injected. Full profiles render in a sandboxed frame without scripts.
-- Profile backgrounds and full-size profile pictures load without sending a referrer.
+- Profile backgrounds, message backgrounds and full-size profile pictures load without sending a referrer.
 - Fonts ship inside the userscript: no request to Google Fonts.
 - Activity on your own profile is the only visitor data Torch Skin reads.
 

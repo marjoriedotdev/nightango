@@ -156,6 +156,30 @@ function parseMiniCss(css) {
   };
 }
 
+// -- Fond de message ----------------------------------------------------------
+
+var MSG_BG_ALIGN = { tl: 'left top', tr: 'right top', bl: 'left bottom', br: 'right bottom' };
+/**
+ * Permet de lire le fond de message Premium d'un membre sans rien reprendre d'autre de msgbg.xml.
+ * @param {string} xml Contenu de msgbg.xml.
+ * @param {string} image URL de msgbg.jpg construite à partir du nom du membre, jamais lue dans le fichier.
+ */
+function parseMsgBg(xml, image) {
+  var doc = new DOMParser().parseFromString(String(xml), 'text/xml'), root = doc.documentElement;
+  if (doc.querySelector('parsererror')) return null;
+  function percent(name) { var v = root.getAttribute(name); return v === null ? 100 : Math.min(100, Math.max(0, parseFloat(v) || 0)); }
+  var bgc = root.getAttribute('bgc') || '', align = root.getAttribute('align');
+  return {
+    color: /^(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(bgc) ? '#' + bgc.toLowerCase() : null,
+    alpha: percent('bgalp'),
+    image: root.getAttribute('useimg') === '1' ? image : null,
+    // Alignement inconnu : coin haut gauche, la position par défaut du fond CSS de Torch.
+    align: Object.prototype.hasOwnProperty.call(MSG_BG_ALIGN, align) ? align : 'tl',
+    imageAlpha: percent('ialp'),
+    tile: root.getAttribute('tile') === '1'
+  };
+}
+
 // -- Présence et connexions ---------------------------------------------------
 
 function presenceOf(state, idle) { return state === 'on' ? (+idle ? 'idle' : 'online') : state === 'app' ? 'online' : 'offline'; }

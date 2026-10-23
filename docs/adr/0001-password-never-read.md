@@ -14,7 +14,7 @@ Torch Skin s'exécute dans la page de Torch, qui connaît le mot de passe Chatan
 Notre code ne lit, ne stocke, ne journalise ni ne transmet jamais le mot de passe. La connexion se fait sur l'écran de Torch. Aucun appel à une fonction de Torch qui ajoute le mot de passe à une requête. Les seuls appels HTTP autorisés sont ceux de `docs/torch-protocol.md#appels-http-autorisés` :
 
 - `client.post(url, form, {})` ou `client.post(url, form, { cookie: true })`, jamais `credential` ;
-- les GET publics `mod1.xml`, `mod2.xml`, `custom_profile.css` ;
+- les GET publics `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml` (fond de message, dont l'image `msgbg.jpg` est une ressource chargée en `<img>` `no-referrer`) ;
 - `chatango.com/search` avec `credentials: 'include'`, comme Torch ;
 - `POST https://vissle.me/track1/activity` par `GM_xmlhttpRequest`, `anonymous: true`.
 

@@ -71,7 +71,7 @@ Trames reçues seulement : rien n'est envoyé.
 Cette liste est fermée. Elle couvre les appels que le code applicatif (pont, loader, écrans) fait lui-même vers Chatango et vissle, par `fetch`, `client.post` ou `GM_xmlhttpRequest`. Aucun de ces appels ne transporte le mot de passe ([ADR-0001](adr/0001-password-never-read.md)).
 
 - `client.post(url, form, {})` ou `client.post(url, form, { cookie: true })`. Jamais d'option `credential`, qui ajoute le mot de passe.
-- Les GET publics sur `ust.chatango.com` : `mod1.xml`, `mod2.xml`, `custom_profile.css`.
+- Les GET publics sur `ust.chatango.com` : `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml`.
 - La recherche `chatango.com/search` avec `credentials: 'include'`, comme le fait Torch.
 - `POST https://vissle.me/track1/activity`, par le pont `GM_xmlhttpRequest` du loader, avec `anonymous: true`.
 
@@ -85,6 +85,7 @@ Ce ne sont pas des appels du code applicatif mais des ressources que le navigate
 - Les images de message (URL https, `chatango.com/pmmessageimg`) selon `embedImages` et `proxyMedia`.
 - Les avatars `ust.chatango.com/profileimg/…/thumb.jpg` ou `thumb_m.jpg`, en `<img>`.
 - La photo de profil complète `ust.chatango.com/profileimg/…/full.jpg`, en `<img>` `referrerPolicy="no-referrer"`, chargée seulement au clic sur l'avatar du mini profil.
+- L'image du fond de message `ust.chatango.com/profileimg/…/msgbg.jpg`, en `<img>` `referrerPolicy="no-referrer"`, seulement si `embedImages` est actif et `proxyMedia` coupé.
 
 Un appel exclu pour cette raison : le formulaire de style de Torch (`updatemsgstyles`) transmet le mot de passe. Le style de message perso n'est donc jamais enregistré sur le compte ([ADR-0006](adr/0006-local-message-style.md)).
 
@@ -150,6 +151,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Avatars : `thumb.jpg` (petit) ou `thumb_m.jpg` dans ce dossier. Photo complète : `full.jpg`, même chemin (`inject.js:226`).
 - Mini profil : `mod1.xml`, balises `b` (date de naissance), `s`, `l`, `body` (encodé URL) et `d` (fin du Premium).
 - Profil complet : `mod2.xml`, balise `body`.
+- Fond de message : `msgbg.xml`, dans le même dossier mais sans le préfixe `sp/sp` (Torch `chatango.subdomain.msgbg`, `inject.js:229`), lu par un simple `fetch` sans `credential` (`inject.js:504`). Format : les attributs du premier élément (`inject.js:509-514`), qui sont les champs du formulaire de fond de Torch (`client.html:404-458`) : `bgc` (couleur hex sans `#`), `bgalp` (opacité de la couleur, 0 à 100), `useimg` (0 ou 1), `ialp` (opacité de l'image, 0 à 100), `align` (`tl`, `tr`, `bl` ou `br`), `tile` (0 ou 1), `hasrec` et `isvid`. L'image est `msgbg.jpg`, dans le même dossier (`inject.js:492`).
 
 ### Fond Premium
 
@@ -159,6 +161,13 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Format relevé sur le compte de référence `goddess`, une règle par sélecteur, espaces et `!important` variables :
   `body { background-color; background-image: url(…); background-repeat; color }`, `.profile_text { color }`, `a, a:visited, a:active { color; text-decoration }`, `a:hover { … }`.
 - Le CSS n'est jamais injecté ([ADR-0004](adr/0004-member-html-never-injected.md)). `parseMiniCss` en tire `{bg, text, link, image, repeat}` : couleurs converties en hex (hex, nom CSS, `rgb()`), texte de `body` ou à défaut de `.profile_text`, image en `https` seulement (`http` réécrit), répétition limitée à `repeat`, `repeat-x`, `repeat-y` ou `no-repeat`. Le résultat va dans `u.miniStyle`, mis en cache avec le profil.
+
+### Fond de message
+
+- Un message de groupe (`b` ou `i`) porte un fond si ses drapeaux ont `BG_ON` (8) et `PREMIUM` (4) (`inject.js:52-53` et `inject.js:8197`). Torch compte comme Premium les messages du propriétaire du groupe (`inject.js:7810-7812`). Le pont marque ces messages `bg: true` (`MSG_FLAG`).
+- Sous « Message backgrounds », le pont lit `msgbg.xml` de l'auteur d'un message marqué, au plus une fois par membre et par délai de cache du mini profil, jamais pour un invité. Il exige `r.ok` et un `content-type` `text/xml`, sinon le membre n'a pas de fond (`inject.js:505` et `inject.js:566-567`). La trame `miu:{nom}` signale un changement de style : le pont oublie ce fond et l'interface le relit (`inject.js:3868-3872`).
+- Le fichier n'est jamais injecté ([ADR-0004](adr/0004-member-html-never-injected.md)). `parseMsgBg` en tire `{color, alpha, image, align, imageAlpha, tile}` : `bgc` en hex de 3 ou 6 chiffres seulement, opacités bornées de 0 à 100 (100 si l'attribut manque), `align` dans la liste fermée (sinon `tl`, la position par défaut du fond CSS de Torch). Tout autre attribut est ignoré. L'URL de `msgbg.jpg` vient du nom du membre, jamais du fichier. Le résultat va dans `u.msgBg`.
+- Rendu : la couleur est mêlée à la surface du thème, sauf avec `bgalp` à 0 (Torch affiche alors du blanc, `inject.js:484-487`). L'image est une `<img>` derrière le texte, à sa taille naturelle, placée selon `align` (`object-position`), avec l'opacité `ialp`. La répétition (`tile`), la vidéo et l'enregistrement ne sont pas repris. Le texte et le nom passent à 4,5:1 contre la couleur de fond, pas contre l'image. Une ligne qui mentionne l'utilisateur garde son surlignage, sans fond.
 
 ### Son propre profil
 
@@ -234,7 +243,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 
 ### Drapeaux
 
-Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans `src/bridge/live-model.js` (`GROUP_FLAG`, `PERM_FLAG`, `CHANNEL_FLAG`). Ils ont été relevés dans `chatango.flags` de Torch.
+Les bits de drapeaux de groupe, de droits de modérateur, de canaux et de message sont dans `src/bridge/live-model.js` (`GROUP_FLAG`, `PERM_FLAG`, `CHANNEL_FLAG`, `MSG_FLAG`). Ils ont été relevés dans `chatango.flags` de Torch.
 
 ## Réglages de démarrage de Torch
 

@@ -1,10 +1,21 @@
-function memberStyles(style, styles, theme, mention) {
-  var surf = SURFACE[theme], bg = surf.bg, out = { name: null, text: null, row: null };
-  if (styles.backgrounds && style.bg && !mention) {
-    bg = rgbToHex(mix(hexToRgb(surf.bg), hexToRgb(style.bg), theme === 'dark' ? 0.6 : 0.18));
+/**
+ * Permet de calculer le style Chatango d'une ligne de message, lisible sur son fond.
+ * @param {Object} style Style du membre.
+ * @param {Object} styles Réglages « Chatango styles ».
+ * @param {string} theme Thème résolu.
+ * @param {boolean} mention Ligne qui mentionne l'utilisateur.
+ * @param {?Object} [msgBg] Fond de message Premium lu par parseMsgBg, en live.
+ */
+function memberStyles(style, styles, theme, mention, msgBg) {
+  var surf = SURFACE[theme], bg = surf.bg, out = { name: null, text: null, row: null, image: null };
+  var shown = styles.backgrounds && !mention, color = msgBg ? msgBg.alpha && msgBg.color : style.bg;
+  if (shown && color) {
+    bg = rgbToHex(mix(hexToRgb(surf.bg), hexToRgb(color), theme === 'dark' ? 0.6 : 0.18));
     out.row = { background: bg };
     out.text = { color: ensureContrast(surf.body, bg, 4.5) };
+    out.name = out.text;
   }
+  if (shown && msgBg && msgBg.image) out.image = { src: msgBg.image, opacity: msgBg.imageAlpha / 100, position: MSG_BG_ALIGN[msgBg.align] };
   if (styles.names && style.nameColor) out.name = { color: ensureContrast(style.nameColor, bg, 4.5) };
   if (styles.fonts) {
     if (style.font) out.text = Object.assign({}, out.text, { fontFamily: FONT_STACKS[style.font] || style.font });
@@ -20,7 +31,10 @@ function MessageRow(p) {
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var u = userOf(s, m.author);
   var mention = m.author !== me && new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(m.text);
-  var ms = memberStyles(u.style || {}, prefs.styles, app.theme, mention), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
+  var ms = memberStyles(u.style || {}, prefs.styles, app.theme, mention, m.bg ? u.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
+  var bgUnknown = u.msgBg === undefined;
+  useEffect(function () { if (m.bg && prefs.styles.backgrounds && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, bgUnknown]);
+  var bgImage = ms.image && prefs.safety.embedImages && !prefs.safety.proxyMedia ? h(MessageBgImage, ms.image) : null;
   var role = roleOf(g, m.author), myRole = roleOf(g, me);
   // Chatango ne laisse supprimer et bannir qu'au staff, à partir d'un message reçu du serveur.
   var canDelete = LIVE ? isStaffRole(myRole) : (m.author === me || isStaffRole(myRole));
@@ -55,8 +69,20 @@ function MessageRow(p) {
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
     avatar: h(Person, { name: m.author, gid: g.id, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(role), chan), reply: reply, actions: actions,
-    msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle
+    msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle, background: bgImage
   }, body);
+}
+
+/**
+ * Image du fond de message Premium d'un membre, derrière le texte de la ligne.
+ * @param {string} p.src Adresse de msgbg.jpg.
+ * @param {number} p.opacity Opacité choisie par le membre, jamais augmentée.
+ * @param {string} p.position Coin de l'image en position CSS.
+ */
+function MessageBgImage(p) {
+  var st = useState(false), broken = st[0], setBroken = st[1];
+  if (broken) return null;
+  return h('img', { src: p.src, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer', style: { opacity: p.opacity, objectPosition: p.position }, onError: function () { setBroken(true); } });
 }
 
 /**

@@ -87,7 +87,7 @@ const C = {
 };
 const CH = {
   getAnon() { return '!anon1234'; }, path(p, sub) { return 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p; },
-  subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css' }, error: { creategroup: { groupexists: 'The group name is taken.' } }
+  subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css', msgbg: (n, ext) => 'https://ust.chatango.com/' + n + '/msgbg.' + ext }, error: { creategroup: { groupexists: 'The group name is taken.' } }
 };
 const SB = { renderGroup(dt) { calls.push(['renderGroup', dt.group]); } };
 w.__torchRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'torchenv' } };
@@ -102,6 +102,12 @@ const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</scrip
 // Fond Premium au format réel de custom_profile.css (compte goddess). Sans fichier, Chatango renvoie une image JPEG.
 const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
 const GODDESS_CSS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
+// Fond de message au format de msgbg.xml : attributs du premier élément, champs du formulaire de fond de Torch. Une réponse hors text/xml vaut absence de fond.
+const MSGBG = {
+  rosa: '<?xml version="1.0" ?><bgi bgc="FFCC99" bgalp="100" useimg="1" ialp="40" align="br" tile="0" hasrec="0" isvid="0"/>',
+  trap: '<?xml version="1.0" ?><bgi bgc="red;background:url(https://evil.test/a.png)" bgalp="100" useimg="1" ialp="250" align="constructor" tile="1" url="https://evil.test/b.jpg" onload="alert(1)"/>',
+  pale: '<?xml version="1.0" ?><bgi bgc="336699" bgalp="0" useimg="1" ialp="-20" align="tl" tile="0" hasrec="0" isvid="0"/>'
+};
 w.fetch = (url, opts) => {
   const f = {}; if (opts && opts.body && opts.body.forEach) opts.body.forEach((v, k) => { f[k] = v; });
   fetches.push({ url, f, credentials: opts && opts.credentials });
@@ -121,6 +127,7 @@ w.fetch = (url, opts) => {
   else if (/goddess\/custom_profile\.css/.test(url)) { body = GODDESS_CSS; type = 'text/css'; }
   else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
+  else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
   const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body) };
   return searchHold && /\/search$/.test(url) ? searchHold.then(() => res) : Promise.resolve(res);
 };
@@ -488,6 +495,38 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const ytFrame = $('.log iframe');
   step('youtube embed loads on click', !ytBefore.raw && ytBefore.card && !ytBefore.media && !!ytFrame && ytFrame.getAttribute('src').indexOf('https://www.youtube-nocookie.com/embed/PLe_UgXBBCU') === 0 && ytBefore.font === '', [ytBefore, ytFrame && ytFrame.getAttribute('src')]);
 
+  /* Fond de message Premium : msgbg.xml lu une fois par membre sous « Message backgrounds », valeurs filtrées, image seulement quand les médias externes ne sont pas bloqués */
+  const BG_PREMIUM = String(4 | 8), BG_TEXTS = ['Rosa first', 'Rosa again', 'Trap says hi', 'Pale says hi', 'Plain says hi', 'Nobg says hi', 'Guest says hi'];
+  [['Rosa', BG_PREMIUM], ['Rosa', BG_PREMIUM], ['Trap', BG_PREMIUM], ['Pale', BG_PREMIUM], ['Plain', BG_PREMIUM], ['Nobg', '8'], ['', BG_PREMIUM]].forEach((x, i) =>
+    g('b', 'test', [String(1700000290.1 + i), x[0], x[0] ? '' : 'visitor', 'u2' + i, 'UNIDBG' + i, 'tmpbg' + i, '4.4.4.' + i, x[1], '', '<n000/><f x11000="0">' + BG_TEXTS[i]]));
+  await until(() => d.body.textContent.includes('Guest says hi'));
+  const bgAsked = n => fetches.filter(x => x.url === 'https://ust.chatango.com/' + n + '/msgbg.xml').length;
+  const toggle = async (page, title) => {
+    click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', page));
+    click(byText('.tc-nav', page)); await until(() => !!row(title));
+    const was = row(title).checked;
+    click(row(title)); await until(() => row(title).checked !== was);
+    click(byText('.tc-nav', 'Back to chat')); await until(() => !!$('.log'));
+  };
+  const bgLook = txt => {
+    const p = $$('.log .tc-msg-text').find(x => x.textContent === txt), r = p && p.closest('article'), img = r && r.querySelector('img[src*="msgbg"]');
+    return r ? [r.style.backgroundColor, img ? [img.getAttribute('src'), img.style.opacity, img.style.objectPosition, img.getAttribute('referrerpolicy'), img.getAttribute('alt'), img.getAttribute('loading')] : null] : null;
+  };
+  const askedOff = ['rosa', 'trap', 'pale', 'plain'].map(bgAsked), ROSA = 'rgb(255, 246, 237)';
+  await toggle('Appearance', 'Message backgrounds');
+  await until(() => (bgLook('Rosa first') || [])[0] === ROSA);
+  const blockedBg = BG_TEXTS.slice(0, 4).map(bgLook);
+  await toggle('Safety', 'Block external media until I click');
+  await until(() => !!(bgLook('Pale says hi') || [])[1]);
+  const shownBg = BG_TEXTS.map(bgLook), askedBg = ['rosa', 'trap', 'pale', 'plain', 'nobg'].map(bgAsked).concat(fetches.filter(x => /visitor\/msgbg/.test(x.url)).length), leaked = /evil\.test|onload/.test($('.log').innerHTML);
+  await toggle('Safety', 'Block external media until I click');
+  await toggle('Appearance', 'Message backgrounds');
+  const bgImg = (n, opacity, position) => ['https://ust.chatango.com/' + n + '/msgbg.jpg', opacity, position, 'no-referrer', '', 'lazy'];
+  step('premium message backgrounds', JSON.stringify(askedOff) === '[0,0,0,0]'
+    && JSON.stringify(blockedBg) === JSON.stringify([[ROSA, null], [ROSA, null], ['', null], ['', null]])
+    && JSON.stringify(shownBg) === JSON.stringify([[ROSA, bgImg('rosa', '0.4', 'right bottom')], [ROSA, bgImg('rosa', '0.4', 'right bottom')], ['', bgImg('trap', '1', 'left top')], ['', bgImg('pale', '0', 'left top')], ['', null], ['', null], ['', null]])
+    && JSON.stringify(askedBg) === '[1,1,1,1,0,0]' && !leaked, { askedOff, blockedBg, shownBg, askedBg, leaked });
+
   /* Emphase reçue : liste blanche de Torch reconstruite en éléments, ni média ni identifiant de MP en italique, balises hors liste sans élément */
   const EMPH = '<b>Bold @alice</b> <I>Ital</I> <u>Under</u> <s>Gone</s> \u2593Struck\u2592 <iabc1234/>plain <i s="https://x.test/e.png"/>tail<script>alert(1)</script><img src="x" onerror="alert(2)">';
   const emphOf = scope => {
@@ -726,22 +765,22 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const NOW = Date.now() / 1000, KINDS = ['log', 'like', 'dislike', 'msg', 'refer'];
   const firstPage = Array.from({ length: 16 }, (_, i) => ({ user: i === 15 ? 'sentinel' : i === 5 ? '!anon5681' : 'visitor' + i, action: KINDS[i % 5], time: NOW - 600 * i - 0.25, msg: i % 5 === 3 ? 'Nice page' : undefined }));
   vissleReply = q => ({ action: 'activity', get: q.page === 1 ? firstPage : firstPage.slice(0, 3).map((x, i) => ({ user: 'older' + i, action: 'log', time: NOW - 86400 - i })) });
-  click($('button[aria-label="Settings"]')); await wait(50);
-  click(byText('.tc-nav', 'Profile')); await wait(50);
   const visitors = () => $('section[aria-label="Visitors"]') || d.createElement('section'), visitorRows = () => [...visitors().querySelectorAll('.lrow')].map(x => x.textContent);
+  click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Profile'));
+  click(byText('.tc-nav', 'Profile')); await until(() => visitorRows().length > 0);
   const rows1 = visitorRows();
   step('own visitors list: first page shows 15 rows with vissle labels',
     vissleReqs.length === 1 && vissleReqs[0].page === 1 && vissleReqs[0].get === 'all' && rows1.length === 15 && !visitors().textContent.includes('sentinel')
       && rows1[0].includes('visitor0 visited') && rows1[1].includes('visitor1 liked profile') && rows1[2].includes('visitor2 disliked profile')
       && rows1[3].includes('visitor3 commented on') && rows1[3].includes('Nice page') && rows1[4].includes('visitor4 referred by'), { reqs: vissleReqs, rows1 });
-  click(byText('section[aria-label="Visitors"] button', 'Load more')); await wait(50);
+  click(byText('section[aria-label="Visitors"] button', 'Load more')); await until(() => visitorRows().length > 15);
   step('own visitors list: load more sends the time of the 15th row',
     vissleReqs[1].page === firstPage[14].time && vissleReqs[1].get === 'all' && visitorRows().length === 18 && !byText('section[aria-label="Visitors"] button', 'Load more'), { req: vissleReqs[1], rows: visitorRows().length });
   vissleReply = () => ({ action: 'activity', get: [{ user: 'liker', time: NOW - 30 }] });
-  click(byText('section[aria-label="Visitors"] button', 'Likes')); await wait(50);
+  click(byText('section[aria-label="Visitors"] button', 'Likes')); await until(() => vissleReqs.length > 2 && visitorRows().length === 1);
   step('own visitors list: likes filter', vissleReqs[2].get === 'like' && vissleReqs[2].page === 1 && visitorRows().length === 1 && visitorRows()[0].includes('liker liked profile'), { req: vissleReqs[2], rows: visitorRows() });
   vissleReply = () => ({ error: 'This profile has tracking turned off.' });
-  click(visitors().querySelector('button[aria-label="Refresh"]')); await wait(50);
+  click(visitors().querySelector('button[aria-label="Refresh"]')); await until(() => visitors().textContent.includes('This profile has tracking turned off.'));
   step('own visitors list: vissle error shown as sent', vissleReqs[3].page === 1 && vissleReqs[3].get === 'like' && visitors().textContent.includes('This profile has tracking turned off.'), visitors().textContent);
   step('profile read from Torch fields', $('#pf-age').value === '34' && $('#pf-gender').value === 'Male' && $('#pf-loc').value === 'Rouen');
   type($('#pf-loc'), 'Paris'); await wait(20);

@@ -97,6 +97,9 @@ select.tc-input{padding:0 10px}
 .cmsg .tc-msg-text{margin:0;flex:1;min-width:0}
 .cmsg.tc-msg-mention{background:var(--accent-soft)}
 .cmsg .tc-msg-actions{top:-12px}
+.tc-msg-layered{isolation:isolate}
+.tc-msg-bg{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.tc-msg-bg img{display:block;width:100%;height:100%;object-fit:none}
 .tc-mention{padding:0 3px;border-radius:var(--radius-sm);background:var(--accent-soft);color:var(--accent-text);font-weight:500}
 .tc-day{display:flex;align-items:center;gap:var(--space-3);padding:14px var(--space-5) 8px;color:var(--text-3);font-size:12px;font-weight:500}
 .tc-day::before,.tc-day::after{content:"";flex:1;height:1px;background:var(--border)}

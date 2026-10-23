@@ -19,18 +19,30 @@ var liveBridge = (function () {
     if (data[2]) return '#' + lower(data[2]);
     try { return CH.getAnon(data[3], (/<n(\d+)\/>/.exec(data[9] || '') || [0, 3452])[1]); } catch (e) { return '!anon'; }
   }
-  function toMsg(data, temp) {
+  function toMsg(room, data, temp) {
     var parsed = parseContent(data.slice(9).join(':'));
-    var flags = parseInt(data[7], 10) || 0;
+    var flags = parseInt(data[7], 10) || 0, name = author(data);
     return {
-      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: author(data), text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
-      style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags)
+      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: name, text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
+      style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags),
+      // Comme Torch, les messages du propriétaire du groupe comptent comme Premium.
+      bg: !!(flags & MSG_FLAG.BG_ON) && (!!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner))
     };
   }
 
   // Identifiants définitifs (trame u) arrivés avant le message (trame b) correspondant.
   var earlyIds = {}, waitingIds = {};
-  var profileCache = {};
+  var profileCache = {}, msgBgCache = {}, CACHE_MS = 300000;
+  function cached(store, n, load) {
+    var hit = store[n];
+    if (hit && Date.now() - hit.at < CACHE_MS) return Promise.resolve(hit.data);
+    return load().then(function (data) { store[n] = { at: Date.now(), data: data }; return data; });
+  }
+  // Comme Torch, seule une réponse du type attendu compte : sans fichier de style, Chatango renvoie une petite image JPEG.
+  function memberFile(url, type, parse) {
+    return fetch(url).then(function (r) { return r.ok && type.test(r.headers.get('content-type')) ? r.text().then(parse) : null; })
+      .catch(function (e) { warn(e); return null; });
+  }
   // Sessions de chaque groupe, par horodatage de session comme Torch : { account }, { guest } ou { anon: true }.
   var sessions = {};
   function emitGuests(room) {
@@ -66,12 +78,12 @@ var liveBridge = (function () {
     if (room === ENV) return;
     switch (name) {
       case 'b': {
-        var bm = toMsg(data, true), k = room + '|' + data[5];
+        var bm = toMsg(room, data, true), k = room + '|' + data[5];
         if (earlyIds[k]) { bm.id = earlyIds[k]; delete earlyIds[k]; } else waitingIds[k] = true;
         emit({ op: 'msg', gid: room, msg: bm });
         break;
       }
-      case 'i': emit({ op: 'hist', gid: room, msg: toMsg(data, false) }); break;
+      case 'i': emit({ op: 'hist', gid: room, msg: toMsg(room, data, false) }); break;
       case 'u': {
         var ku = room + '|' + data[0];
         if (waitingIds[ku]) { delete waitingIds[ku]; emit({ op: 'msgid', gid: room, tmp: 'k:' + data[0], id: data[1] }); } else earlyIds[ku] = data[1];
@@ -110,6 +122,7 @@ var liveBridge = (function () {
       case 'unblocked': emit({ op: 'unbanned', gid: room, list: parseBans(data) }); break;
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
       case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
+      case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
       case 'updgroupinfo': emit({ op: 'info', gid: room, title: unquote(data[0]), description: unquote(data.slice(1).join(':')) }); break;
       case 'denied':
         // Ni inited ni participants n'arriveront : le fil et les membres quittent l'attente.
@@ -626,26 +639,32 @@ var liveBridge = (function () {
     fetchProfile: function (name) {
       var n = lower(name);
       if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.reject(new Error('Guests have no profile.'));
-      var hit = profileCache[n];
-      if (hit && Date.now() - hit.at < 300000) return Promise.resolve(hit.data);
-      return fetch(CH.subdomain.mod1(n)).then(function (r) { return r.text(); }).then(function (xml) {
-        var doc = new DOMParser().parseFromString(xml, 'text/xml');
-        if (doc.querySelector('parsererror')) return { missing: true };
-        var q = function (sel) { var el = doc.querySelector(sel); return el ? el.textContent.trim() : ''; };
-        var birth = new Date(q('b')).getFullYear();
-        var data = {
-          missing: false, age: isNaN(birth) ? '' : String(new Date().getFullYear() - birth),
-          gender: GENDERS[q('s')] || '', location: q('l'), about: unquote(q('body')),
-          premium: (parseInt(q('d'), 10) || 0) * 1000 > Date.now(), mini: null
-        };
-        if (!data.premium) return data;
-        return fetch(CH.subdomain.custom_profile(n)).then(function (r) {
-          // Sans fichier de style, Chatango répond par une petite image JPEG.
-          return r.ok && /^text\/css/.test(r.headers.get('content-type')) ? r.text().then(parseMiniCss) : null;
-        }).catch(function (e) { warn(e); return null; }).then(function (mini) { data.mini = mini; return data; });
-      }).then(function (data) {
-        profileCache[n] = { at: Date.now(), data: data };
-        return data;
+      return cached(profileCache, n, function () {
+        return fetch(CH.subdomain.mod1(n)).then(function (r) { return r.text(); }).then(function (xml) {
+          var doc = new DOMParser().parseFromString(xml, 'text/xml');
+          if (doc.querySelector('parsererror')) return { missing: true };
+          var q = function (sel) { var el = doc.querySelector(sel); return el ? el.textContent.trim() : ''; };
+          var birth = new Date(q('b')).getFullYear();
+          var data = {
+            missing: false, age: isNaN(birth) ? '' : String(new Date().getFullYear() - birth),
+            gender: GENDERS[q('s')] || '', location: q('l'), about: unquote(q('body')),
+            premium: (parseInt(q('d'), 10) || 0) * 1000 > Date.now(), mini: null
+          };
+          if (!data.premium) return data;
+          return memberFile(CH.subdomain.custom_profile(n), /^text\/css/, parseMiniCss).then(function (mini) { data.mini = mini; return data; });
+        });
+      });
+    },
+    /**
+     * Permet de lire le fond de message Premium d'un membre (msgbg.xml), au plus une fois par délai de cache.
+     * @param {string} name Membre visé.
+     * @returns {Promise<?Object>} Fond lu par parseMsgBg, null pour un invité ou un membre sans fond.
+     */
+    fetchMsgBg: function (name) {
+      var n = lower(name);
+      if (!ACCOUNT_NAME.test(n)) return Promise.resolve(null);
+      return cached(msgBgCache, n, function () {
+        return memberFile(CH.subdomain.msgbg(n, 'xml'), /^text\/xml/, function (xml) { return parseMsgBg(xml, CH.subdomain.msgbg(n, 'jpg')); });
       });
     },
     /** Profil complet (mod2.xml) : HTML écrit par le membre, à n'afficher que dans un cadre isolé. */

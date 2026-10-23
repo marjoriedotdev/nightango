@@ -126,6 +126,7 @@ Sizes:
 - \`actions\` fills the hover toolbar with icon buttons at size 28. Leave it out when nothing can be done, such as a deleted message.
 - \`mention\` tints a message that names the viewer. \`className\` and \`style\` go on the row, for states and member backgrounds.
 - \`msgId\` lands on the row as \`data-msg-id\`, so the app can find the message in the log. \`highlight\` gives the row the \`selected\` background, above a member background, for the message the reader just jumped to. The background fades in and out in 150ms.
+- \`background\` is drawn behind the whole row and under its text, such as a member's message background image. An image keeps its natural size, placed with \`object-position\` and clipped to the row. \`highlight\` hides it.
 
 - Members' Chatango fonts and colors are not applied here; see Appearance in the brand book.`,
     `  var actions = h(React.Fragment, null, h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16 }), h(T.IconButton, { icon: 'more', label: 'More actions', size: 28, iconSize: 16 }));

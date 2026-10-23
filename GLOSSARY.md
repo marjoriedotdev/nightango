@@ -160,7 +160,7 @@ Couleurs et image de fond qu'un membre Premium attache à son mini profil.
 _Avoid_: fond de mini, thème de profil
 
 **Fond de message**:
-Fond Premium affiché derrière les messages de groupe d'un membre. Torch Skin ne le gère pas.
+Couleur et image de fond qu'un membre Premium attache à ses messages de groupe. Torch Skin affiche la couleur et l'image sous « Message backgrounds ».
 
 **Tracker vissle**:
 Service de vissle que l'utilisateur installe sur son profil pour journaliser l'activité qu'il reçoit.
