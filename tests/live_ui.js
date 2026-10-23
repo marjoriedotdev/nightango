@@ -140,6 +140,8 @@ w.eval(fs.readFileSync(S + '/dist/app.js', 'utf8'));
 
 /* ---------- Outils ---------- */
 const wait = ms => new Promise(r => setTimeout(r, ms));
+// Au plafond, rend la main sans erreur : l'étape qui suit juge et donne son détail.
+const until = async (cond, ms = 2000) => { for (const end = Date.now() + ms; !cond() && Date.now() < end;) await wait(10); };
 const $ = s => d.querySelector(s), $$ = s => [...d.querySelectorAll(s)];
 function click(el) { if (!el) throw new Error('missing element'); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); }
 function byText(sel, txt) { return $$(sel).find(e => e.textContent.trim() === txt) || $$(sel).find(e => e.textContent.includes(txt)); }
@@ -592,21 +594,26 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const lastSearch = searches().pop();
   step('meet refresh', during.count === 1 && during.disabled && lastSearch.f.s === 'F' && String(lastSearch.f.o) === '1' && String(lastSearch.f.f) === '0' && !!refreshBtn() && !refreshBtn().disabled, { during, f: lastSearch.f });
 
-  /* Défilement infini de Meet people : pages pleines de 40 noms, la seconde reprend un nom déjà affiché, la sentinelle entre deux fois dans la zone visible */
+  /* Défilement infini de Meet people : deux pages pleines de 40 noms, la seconde reprend un nom déjà affiché, la troisième incomplète clôt la liste, la sentinelle entre deux fois dans la zone visible */
   const meetPage = (start, n) => Array.from({ length: n }, (_, i) => 'p' + (start + i) + ';1').join(':');
-  const reachBottom = async () => {
-    const o = observers.find(x => x.targets.length);
+  const cardCount = () => $$('.conv.person').length;
+  const watcher = () => observers.find(x => x.targets.length);
+  const reachBottom = () => {
+    const o = watcher();
     if (o) o.cb(o.targets.map(target => ({ isIntersecting: true, target })), o);
-    await wait(80);
     return !!o;
   };
   searchBody = 'h=' + meetPage(0, 40);
-  click(refreshBtn()); await wait(80);
+  click(refreshBtn());
+  await until(() => cardCount() === 40 && !!watcher());
   const searchesBeforeScroll = searches().length;
   searchBody = 'h=p0;1:' + meetPage(40, 39);
-  const observed = [await reachBottom()];
-  const cards = $$('.conv.person').length;
-  observed.push(await reachBottom());
+  const observed = [reachBottom()];
+  await until(() => cardCount() === 79 && !!watcher());
+  const cards = cardCount();
+  searchBody = 'h=' + meetPage(79, 1);
+  observed.push(reachBottom());
+  await until(() => searches().length - searchesBeforeScroll === 2 && !watcher() && !refreshBtn().disabled);
   const scrollSearches = searches().slice(searchesBeforeScroll);
   step('meet infinite scroll', scrollSearches.length === 2 && String(scrollSearches[0].f.f) === '40' && String(scrollSearches[0].f.t) === '80' && cards === 79
     && String(scrollSearches[1].f.f) === '80' && String(scrollSearches[1].f.t) === '120' && !byText('.convs button', 'Load more'),
