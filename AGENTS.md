@@ -55,9 +55,9 @@ Le lanceur `tests/run.mjs` juge chaque suite sur son code de sortie et sur sa so
 2. Lance `pnpm test` : toutes les suites vertes, build compris.
 3. Livre `dist/torch-skin.min.user.js`, le seul fichier que l'utilisateur installe, par l'un des deux chemins :
    - envoi direct du fichier à l'utilisateur ;
-   - tag : `git tag vX.Y.Z` (même numéro que `@version`), puis `git push origin vX.Y.Z`. Le workflow `.github/workflows/release.yml` rejoue les tests, refuse un tag qui ne correspond pas à `@version`, puis crée la release GitHub avec les deux userscripts attachés.
+   - fusion sur `main` : une fois les tests verts, la CI crée le tag `vX.Y.Z` du `@version` et la release GitHub avec les deux userscripts attachés. Un `@version` qui a déjà sa release ne publie rien : sans incrément, pas de livraison. Ne pousse pas de tag à la main.
 
-La CI (`.github/workflows/ci.yml`) lance `pnpm test` sur chaque push et pull request vers `main`.
+La CI (`.github/workflows/ci.yml`) lance `pnpm test` sur chaque push et pull request vers `main`, puis publie la release sur un push vers `main`.
 
 ## Carte des docs
 

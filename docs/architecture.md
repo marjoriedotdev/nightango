@@ -148,8 +148,8 @@ Politique de tests : [ADR-0009](adr/0009-test-only-complex-behaviour.md) et `doc
 
 ## Intégration continue
 
-- `.github/workflows/ci.yml` : `pnpm install --frozen-lockfile` puis `pnpm test` sur chaque push et pull request vers `main`.
-- `.github/workflows/release.yml` : sur un tag `v*`, mêmes étapes, puis contrôle que le tag vaut `v` suivi du `@version` de `src/loader/skin-loader.js`, puis release GitHub avec les deux userscripts attachés.
+- `.github/workflows/ci.yml`, job `test` : `pnpm install --frozen-lockfile` puis `pnpm test` sur chaque push et pull request vers `main`.
+- Même workflow, job `release` : sur un push vers `main`, après `test`. Il lit le `@version` de `src/loader/skin-loader.js`, puis, si la release `v` suivi de ce numéro n'existe pas encore, il refait `pnpm build` et crée le tag sur le commit testé et la release GitHub avec les deux userscripts attachés. Sinon il ne publie rien. Les publications passent une par une (`concurrency: release`).
 - Les actions sont épinglées sur le SHA complet du commit de leur release, la version en commentaire. pnpm vient du champ `packageManager` de `package.json`.
 
 ## Copie de référence de Torch
