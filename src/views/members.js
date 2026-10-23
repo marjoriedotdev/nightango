@@ -106,7 +106,8 @@ function ProfileDialog(p) {
     cover.shown ? h('div', { className: 'profile-cover' }, h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer' })) : null,
     h('div', { className: 'profile-card' },
       h(ProfilePhoto, { name: name, status: isMe ? s.meStatus : u.status, ring: 'var(--raised)' }),
-      h('h2', null, name),
+      // Focus initial sur le nom : sur le premier bouton, placé sous la bio, la fenêtre s'ouvrirait défilée.
+      h('h2', { tabIndex: -1, 'data-autofocus': true }, name),
       h('span', { className: 'muted', style: { fontSize: 13 } }, [statusLabel(isMe ? s.meStatus : u.status), u.friend ? 'Friend' : null, theirRole ? ROLE_LONG[theirRole] + ' in #' + g.id : null].filter(Boolean).join(' · ')),
       profileMeta(meta, name, u),
       mini ? coverReveal(cover, mini) : null),

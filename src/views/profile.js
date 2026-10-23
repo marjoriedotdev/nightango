@@ -130,7 +130,7 @@ function FullProfileDialog(p) {
   var sample = '<h2>' + String(p.name).replace(/[<>&"]/g, '') + '</h2><p>' + String(u.about || 'No full profile yet.').replace(/[<>&"]/g, '') + '</p>';
   var content = LIVE ? html : sample;
   return h(Dialog, {
-    title: p.name + "'s profile", wide: true, onClose: p.onClose,
+    title: p.name + "'s profile", focusTitle: true, wide: true, onClose: p.onClose,
     footer: [
       !media && content ? h(T.Button, { key: 'm', variant: 'ghost', onClick: function () { setMedia(true); } }, 'Load images') : null,
       h('a', { key: 'o', className: 'tc-btn', href: 'https://' + p.name + '.chatango.com', target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, 'Open on chatango.com', h(T.Icon, { name: 'external', size: 14 })),
