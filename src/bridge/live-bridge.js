@@ -504,6 +504,11 @@ var liveBridge = (function () {
       try { if (C.private) C.private.focus = user || false; } catch (e) { warn(e); }
       if (user && user !== connectTarget) connectPm(user);
     },
+    /**
+     * Permet de lire le MP que Torch considère ouvert, dont il joue lui-même le son.
+     * @returns {string|boolean|undefined} Membre de client.private.focus, false ou undefined sans MP ouvert pour Torch.
+     */
+    focusedPm: function () { return C.private.focus; },
     connectPm: connectPm,
     join: function (gid) {
       delete left[gid];

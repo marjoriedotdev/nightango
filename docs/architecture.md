@@ -101,7 +101,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - `LIVE = !!window.__TORCH_LIVE__` (`bridge/live-model.js`). `skin-page.js` pose le drapeau, le prototype hébergé ne le pose pas.
 - Les écarts entre les deux modes sont gardés par `if (LIVE)`.
 - En live, les actions de `app/root.js` sont surchargées par celles du bloc « Mode live ». Le pont (`liveBridge`) traduit les trames de Torch en opérations, que `handleLiveOp` applique à l'état.
-- Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens.
+- Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens. Torch Skin lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
 
 ## État React
 

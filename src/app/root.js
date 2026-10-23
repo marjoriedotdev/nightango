@@ -911,6 +911,12 @@ function Root(props) {
         });
         if (edit) break;
         if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
+        // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : la route ne suffit pas.
+        if (!op.offline && !ignored && op.from !== s0.me && op.from !== liveBridge.focusedPm()) {
+          var sounds = liveBridge.torchSounds();
+          // Lecture refusée par le navigateur : silence voulu, sans toast.
+          if (sounds && sounds.play_mention) liveBridge.playTorchSound('mention').then(null, function () {});
+        }
         // Les msgoff arrivent en rafale juste après la connexion : une seule notification pour toute la rafale.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
