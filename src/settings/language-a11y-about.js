@@ -31,11 +31,11 @@ function AccessibilityPage() {
 function WhatsNewPage() {
   var items = [
     ['0.1.0-b', 'Redesigned interface', 'A calmer layout with one accent color, light and dark themes, and compact density.'],
-    ['0.1.0-b', 'Notification matrix', 'Choose in-app, sound, desktop and email alerts per event on one screen.'],
-    ['0.1.0-b', 'Roles and permissions', 'Every staff permission is named and explained. Admin-only rights are visible but locked.'],
-    ['0.1.0-b', 'Message requests', 'Private messages from people outside your friends list wait in Requests.'],
-    ['0.1.0-b', 'Readable Chatango styles', "Members' colors and fonts are off by default. When on, Torch fixes colors that would be hard to read."]
-  ];
+    ['0.1.0-b', 'Notification matrix', LIVE ? 'Choose in-app and desktop alerts per event on one screen.' : 'Choose in-app, sound, desktop and email alerts per event on one screen.'],
+    ['0.1.0-b', 'Roles and permissions', LIVE ? 'Every moderator permission is named and explained.' : 'Every staff permission is named and explained. Admin-only rights are visible but locked.'],
+    LIVE ? null : ['0.1.0-b', 'Message requests', 'Private messages from people outside your friends list wait in Requests.'],
+    ['0.1.0-b', 'Readable Chatango styles', "Members' colors and fonts can be turned off in Appearance. Torch fixes colors that would be hard to read."]
+  ].filter(Boolean);
   return h(Page, { title: "What's new", lede: 'Changes in the redesigned client.' },
     h(T.SettingsSection, null, items.map(function (i, k) {
       return h('div', { key: k, className: 'lrow', style: k ? null : { borderTop: 0 } },
