@@ -25,8 +25,9 @@ function MessageRow(p) {
   // Chatango ne laisse supprimer et bannir qu'au staff, à partir d'un message reçu du serveur.
   var canDelete = LIVE ? isStaffRole(myRole) : (m.author === me || isStaffRole(myRole));
   var canBan = isStaffRole(myRole) && m.author !== me && role !== 'owner' && (!LIVE || !!m.unid);
+  var handle = m.author !== me ? mentionHandle(m.author) : null;
   var menuItems = [
-    { label: 'Mention ' + m.author, icon: 'message', onSelect: function () { app.ui.toast('Type @' + m.author + ' in the composer to mention them.'); } },
+    handle ? { label: 'Mention ' + m.author, icon: 'message', onSelect: function () { p.onMention(handle); } } : null,
     { label: 'Copy text', icon: 'list', onSelect: function () { copyText(messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed.'); }); } },
     m.author !== me ? { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(m.author, g.id); } } : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,
@@ -49,7 +50,9 @@ function MessageRow(p) {
   var reply = m.replyTo ? h('div', { className: 'tc-msg-reply' },
     h(T.Icon, { name: 'reply', size: 14 }), m.replyTo.author ? h(T.Avatar, { name: m.replyTo.author, size: 16 }) : null,
     m.replyTo.author ? h('span', { style: { fontWeight: 500, color: 'var(--text-2)' } }, m.replyTo.author) : null, h('span', { className: 'tc-msg-reply-text' }, m.replyTo.text)) : null;
-  var authorBtn = h('button', { type: 'button', className: 'tc-msg-author linkbtn', style: Object.assign({ textDecoration: 'none', color: 'var(--text)', fontWeight: 600, fontSize: 14 }, nameStyle), onClick: function () { app.ui.openProfile(m.author, g.id); } }, m.author);
+  var authorBtn = handle
+    ? h('button', { type: 'button', className: 'tc-msg-author linkbtn', title: 'Mention ' + m.author, style: Object.assign({ textDecoration: 'none', color: 'var(--text)', fontWeight: 600, fontSize: 14 }, nameStyle), onClick: function () { p.onMention(handle); } }, m.author)
+    : h('span', { className: 'tc-msg-author', style: nameStyle }, m.author);
 
   if (prefs.density === 'compact') {
     return h('article', { className: cx('cmsg', mention && 'tc-msg-mention', menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle },
@@ -68,6 +71,16 @@ function MessageRow(p) {
         h('div', { className: 'tc-msg-head' }, authorBtn, roleBadge, h('time', { className: 'tc-msg-time' }, time), chan),
         body)),
     actions);
+}
+
+/**
+ * Permet d'obtenir le nom à écrire après @ pour mentionner un membre, ou null pour un anonyme.
+ * @param {string} name Nom affiché du membre.
+ */
+function mentionHandle(name) {
+  // Comme Torch : un nom temporaire « #nom » se mentionne sans son #.
+  if (name.charAt(0) === '#') return name.slice(1);
+  return name.charAt(0) === '!' ? null : name;
 }
 
 /**
