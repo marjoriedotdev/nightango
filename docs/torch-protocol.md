@@ -173,6 +173,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - `updateannouncement:{0|1|3}:{secondes}:<n{nom}/><f x{taille}{couleur}="{police}">{emphase}{texte}{fin d'emphase}` (`updateAnnouncement`, `inject.js:9465` à `inject.js:9493`)
   - Mode : `0` désactivée, `1` activée, `3` activée avec le fond de message du propriétaire (« Enable announcement background », `save.enable += background + 1`, `inject.js:9481`). Torch affiche alors l'annonce sur le fond du propriétaire du groupe (`chatango.getBackground`, `inject.js:7749` à `inject.js:7751`). `getannc` et `annc` portent le même mode en `data[0]` (`inject.js:3810`, `inject.js:3834`). Torch Skin garde le mode lu dans `g.live.annc.mode` et renvoie `3` tant que l'annonce reste activée : l'interface ne règle pas le fond.
   - Emphase : Torch ouvre `<b>`, `<i>`, `<u>`, dans cet ordre, juste après `<f …>`, et les referme en fin de texte dans l'ordre inverse (`inject.js:9486` à `inject.js:9492`). Torch Skin garde ces balises avec le préfixe `<n…/><f …>` lu et les referme de même. Elles ne sont jamais injectées dans l'interface.
+  - Sauts de ligne : ils partent en `\r` (`inject.js:9489`), chez Torch comme chez Torch Skin. L'éditeur d'annonce de Torch retire toute balise à la relecture (`inject.js:3826` à `inject.js:3827`) : un `<br/>` y disparaît et colle les lignes. Torch Skin relit `\r` et `<br/>` comme des sauts de ligne (le `textarea` de `decodeHtml` change chaque `\r` en `\n`).
 - `getannouncement`
 - `get_more:20:{client.groups[g].load}`
 

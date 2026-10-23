@@ -478,7 +478,8 @@ var liveBridge = (function () {
       var close = (prefix.match(/<[biu]>/g) || []).reverse().join('').replace(/</g, '</');
       // Mode 3 : annonce activée avec le fond de message du propriétaire, gardé tant que l'interface ne le règle pas.
       var mode = !enabled ? 0 : read.mode === 3 ? 3 : 1;
-      var body = prefix + esc(text).replace(/\r?\n/g, '<br/>') + close;
+      // Sauts de ligne en \r comme Torch, dont l'éditeur retire les <br/> à la relecture.
+      var body = prefix + esc(text).replace(/\r?\n/g, '\r') + close;
       var ok = send(gid, 'updateannouncement:' + mode + ':' + seconds + ':' + body, 'The announcement could not be saved.');
       setTimeout(function () { send(gid, 'getannouncement', ''); }, 1000);
       return ok;
