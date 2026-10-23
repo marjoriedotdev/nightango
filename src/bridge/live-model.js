@@ -20,6 +20,12 @@ function profileImgSrc(name, file) {
  */
 function avatarSrc(name, size) { return profileImgSrc(name, (size || 36) <= 24 ? 'thumb' : 'thumb_m'); }
 
+/**
+ * Permet de nommer la clé de stockage local des données propres à un compte.
+ * @param {string} me Pseudo en minuscules.
+ */
+function skinKey(me) { return 'torch-skin:' + me; }
+
 var ACCOUNT_NAME = /^[a-z0-9_-]{1,20}$/;
 /**
  * Permet de savoir si le mini profil d'un compte est encore attendu.

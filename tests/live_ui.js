@@ -43,20 +43,53 @@ w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'blocked', 'unblocked', 'allunblocked', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
 const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
+// Enregistrement de la base d'historique de Torch (saveMessage) : clé ts, horodatage de la trame.
+const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const pmRecords = [
-  { target: 'dave', data: 'msg:dave:marjorie:unknown:1700000000.5:0:<n000/>Hello &amp; welcome', unread: 0 },
-  { target: 'dave', data: 'msg:marjorie:marjorie:unknown:1700000100.5:0:<n000/>Thanks', unread: 0 },
-  { target: 'fay', data: 'msg:fay:marjorie:unknown:1700000050.5:0:<n3366FF/><m v="1"><g x12s9900cc="4">Old styled</g></m>', unread: 0 }
+  // Archivé non lu avant la mise à jour : la migration le marque lu.
+  pmRecord('dave', 'msg:dave:marjorie:unknown:1700000000.5:0:<n000/>Hello &amp; welcome', 1),
+  pmRecord('dave', 'msg:marjorie:marjorie:unknown:1700000100.5:0:<n000/>Thanks', 0),
+  pmRecord('fay', 'msg:fay:marjorie:unknown:1700000050.5:0:<n3366FF/><m v="1"><g x12s9900cc="4">Old styled</g></m>', 0)
 ];
+// Comme Torch : un MP reçu est archivé non lu, le pont ne donnant jamais à Torch le focus des MP.
+function saveMessage(data) { pmRecords.push(pmRecord(data[0], 'msg:' + data.join(':'), 1)); }
+// Ordre des clés IndexedDB : une chaîne passe après tout nombre, un tableau se compare élément par élément.
+function keyCmp(a, b) {
+  if (Array.isArray(a)) { for (let i = 0; i < Math.min(a.length, b.length); i++) { const c = keyCmp(a[i], b[i]); if (c) return c; } return a.length - b.length; }
+  if (typeof a !== typeof b) return typeof a === 'string' ? 1 : -1;
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+w.IDBKeyRange = { bound: (lower, upper) => ({ lower, upper }) };
+const migrationFlag = () => !!JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').pmReadMigrated;
+// Comme IndexedDB, une transaction voit les enregistrements présents à sa création : un archivage créé après elle lui échappe.
+function pmTransaction(stores, mode) {
+  const seen = pmRecords.slice(), tx = {};
+  // Curseur en microtâches après une première tâche : un parcours lent ferait échouer les attentes courtes sous charge.
+  const cursor = list => {
+    const req = {}; let i = 0;
+    const read = () => {
+      const rec = list[i];
+      req.onsuccess({ target: { result: rec ? { value: Object.assign({}, rec), update(v) { Object.assign(rec, v); }, continue() { i++; Promise.resolve().then(read); } } : null } });
+      if (!rec) Promise.resolve().then(() => { if (mode === 'readwrite') calls.push(['written', migrationFlag()]); if (tx.oncomplete) tx.oncomplete(); });
+    };
+    setTimeout(read, 0); return req;
+  };
+  const inRange = range => r => !range || (keyCmp([r.target, r.ts], range.lower) >= 0 && keyCmp([r.target, r.ts], range.upper) <= 0);
+  tx.objectStore = () => ({
+    openCursor: () => cursor(seen),
+    index: name => ({ openCursor: range => cursor(name === 'target_ts_idx' ? seen.filter(inRange(range)).sort((a, b) => keyCmp([a.target, a.ts], [b.target, b.ts])) : []) })
+  });
+  return tx;
+}
 // Relevé du style de Torch au moment où il construit un corps de message (sendMessage avec length).
 let styleProbe = null;
 const styleAtBuild = [];
 function fakeGroup() { return { socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { information: { title: 'Test group', description: 'A test room' } }, load: 5 }; }
 const C = {
   // DENIED : Torch affiche un alert() bloquant.
-  // msgoff : Torch archive le message dans sa base d'historique (saveMessage), une seule fois.
+  // msg et msgoff : Torch archive le message dans sa base d'historique (saveMessage), une seule fois.
   // connect : Torch ouvre son propre écran de MP.
-  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msgoff() { calls.push(['archive', !!C.database.pm]); }, connect() { calls.push(['torchPmScreen']); } }) },
+  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['torchPmScreen']); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
   settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] } } },
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
@@ -79,11 +112,7 @@ const C = {
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
   post(url, form) { const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f }); return Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked'); },
   private: { focus: false, socket: { readyState: 0 }, clearHistory(t) { calls.push(['clearHistory', t]); } },
-  database: { pm: { transaction() { return { objectStore() { return { openCursor() {
-    const req = {}; let i = 0;
-    const next = () => setTimeout(() => req.onsuccess({ target: { result: i < pmRecords.length ? { value: pmRecords[i], continue() { i++; next(); } } : null } }), 0);
-    next(); return req;
-  } }; } }; } } }
+  database: { pm: { transaction: pmTransaction } }
 };
 const CH = {
   getAnon() { return '!anon1234'; }, path(p, sub) { return 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p; },
@@ -459,6 +488,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const torchSettings = JSON.parse(w.localStorage.getItem('settings') || '{}');
   step('favorite persisted in Torch settings', C.settings.privacy.groups.favorite.indexOf('test') >= 0 && torchSettings.privacy.groups.favorite.indexOf('test') >= 0, torchSettings);
 
+  /* Migration des non-lus : la base ouverte au démarrage passe lue avant la connexion privée, le drapeau suit la fin de la transaction */
+  const pmConnectAt = calls.findIndex(c => c[0] === 'connect' && c[1] === 'private_message'), migratedAt = calls.findIndex(c => c[0] === 'written');
+  step('old history unread cleared once before the private connection', migratedAt >= 0 && migratedAt < pmConnectAt && calls[migratedAt][1] === false && migrationFlag() && pmRecords.every(r => !r.unread),
+    { pmConnectAt, migratedAt, written: calls[migratedAt], flag: migrationFlag(), unread: pmRecords.filter(r => r.unread) });
+
   /* Messages privés : base d'historique de Torch ouverte par le pont, avec son schéma */
   const fakeDb = C.database.pm, schema = [];
   C.database.pm = false;
@@ -507,6 +541,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('msg', ['dave', 'marjorie', 'unknown', '1700000300.5', '0', '<n3366FF/><m v="1"><g x12s9900cc="4">Hi</g></m>']); await until(() => !!styled('Hi').p);
   const live = styled('Hi');
   step('pm style rendered', styleOk(live), live.p && [live.p.style.cssText, live.name && live.name.style.cssText]);
+  const hiRecord = pmRecords.find(r => r.target === 'dave' && r.ts === 1700000300.5);
+  step('pm received in the open conversation marked read after Torch archives it', !!hiRecord && hiRecord.unread === 0, hiRecord);
   const sentBeforeFay = sent.length;
   click(byText('.conv', 'fay')); await wait(50);
   const fayFrames = sent.slice(sentBeforeFay);
@@ -947,7 +983,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* Style d'un MP : l'historique privé rejoué à OK n'écrase pas le style d'un message plus récent reçu en direct */
   const threadFont = txt => { const p = $$('.thread .tc-msg-text').find(x => x.textContent === txt); return p ? p.style.fontFamily : null; };
-  pmRecords.push({ target: 'kim', data: 'msg:kim:marjorie:unknown:1700000700.5:0:<n000/><m v="1"><g x12s000="1">Older kim</g></m>', unread: 0 });
+  pmRecords.push(pmRecord('kim', 'msg:kim:marjorie:unknown:1700000700.5:0:<n000/><m v="1"><g x12s000="1">Older kim</g></m>', 0));
   pm('msg', ['kim', 'marjorie', 'unknown', '1700000800.5', '0', '<n000/><m v="1"><g x12s000="4">Newer kim</g></m>']); await wait(50);
   pm('OK', []); await wait(150);
   click(byText('.conv', 'kim')); await wait(50);
@@ -956,7 +992,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Médias d'un MP envoyé : affichés dès l'envoi, sans doublon quand OK rejoue l'archive de Torch */
   type($('.thread .tc-composer textarea'), 'Watch https://youtu.be/PLe_UgXBBCU'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
   const sentVideo = $$('.thread .embed-video').length;
-  pmRecords.push({ target: 'kim', data: 'msg:marjorie:marjorie:unknown:' + (Date.now() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', unread: 0 });
+  pmRecords.push(pmRecord('kim', 'msg:marjorie:marjorie:unknown:' + (Date.now() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', 0));
   pm('OK', []); await wait(150);
   const watch = { sentVideo, videos: $$('.thread .embed-video').length, texts: $$('.thread .tc-msg-text').filter(x => x.textContent.indexOf('Watch') === 0).length };
   step('own pm media shows at once and is not duplicated by history', watch.sentVideo === 1 && watch.videos === 1 && watch.texts === 1, watch);
@@ -968,7 +1004,6 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.conv', 'olga')); await wait(50);
   const olgaThread = () => ({ texts: $$('.thread .tc-msg-text').map(x => x.textContent), edited: $$('.thread .tc-msg').filter(x => x.textContent.includes('(edited)')).length });
   const editLive = olgaThread();
-  pmRecords.push({ target: 'olga', data: 'msg:olga:marjorie:unknown:1700000900.5:0:' + ORIG, unread: 1 }, { target: 'olga', data: 'msg:olga:marjorie:unknown:1700000960.5:0:' + EDIT, unread: 1 });
   pm('OK', []); await wait(150);
   const editHist = olgaThread();
   const editOk = r => JSON.stringify(r) === JSON.stringify({ texts: ['Final text'], edited: 1 });
@@ -976,8 +1011,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* MP reçus hors ligne : base ouverte avant la connexion privée, msgoff juste après OK, deux « ok » identiques à 10 s d'écart dans l'historique */
   pmRecords.push(
-    { target: 'gus', data: 'msg:gus:marjorie:unknown:1700000400.5:0:<n000/>ok', unread: 1 },
-    { target: 'gus', data: 'msg:gus:marjorie:unknown:1700000410.5:0:<n000/>ok', unread: 1 });
+    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000400.5:0:<n000/>ok', 1),
+    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000410.5:0:<n000/>ok', 1));
   C.database.pm = false;
   C.private.socket.readyState = 3; await wait(2300);
   w.dispatchEvent(new w.Event('online')); await wait(50);
@@ -986,7 +1021,18 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmConnect = calls.filter(c => c[0] === 'connect' && c[1] === 'private_message').pop();
   const archived = calls.filter(c => c[0] === 'archive');
   click(byText('.tc-nav', 'Private messages')); await wait(50);
-  click(byText('.conv', 'gus')); await until(() => $$('.thread .tc-msg-text').some(x => x.textContent === 'ok'));
+
+  /* Non-lus de la base : les deux « ok » archivés non lus comptent, le msgoff affiché et archivé non lu ne compte qu'une fois */
+  const gusUnreadRecords = () => pmRecords.filter(r => r.target === 'gus' && r.unread).length;
+  const unreadOf = n => { const r = convRow(n), b = r && r.querySelector('.tc-count'); return r ? (b ? +b.textContent : 0) : null; };
+  // Une migration écrit sans drapeau stocké : une seule pour toute la page, malgré les écritures de Torch Skin dans le même stockage.
+  const kept = gusUnreadRecords(), resumed = unreadOf('gus'), migrations = calls.filter(c => c[0] === 'written' && !c[1]).length;
+  pm('OK', []); await wait(150);
+  const again = unreadOf('gus');
+  step('unread migration not redone once flagged', kept === 3 && migrations === 1, { kept, migrations });
+  step('history unread resumed once, not doubled by a second OK', resumed === 3 && again === 3, { resumed, again });
+  click(byText('.conv', 'gus')); await until(() => $$('.thread .tc-msg-text').some(x => x.textContent === 'ok') && !gusUnreadRecords());
+  step('opening a conversation marks its history read', gusUnreadRecords() === 0, pmRecords.filter(r => r.target === 'gus'));
   const oks = $$('.thread .tc-msg-text').filter(x => x.textContent === 'ok').length;
   step('offline messages archived', !!pmConnect && pmConnect[2] === true && archived.length === 1 && archived[0][1] === true && oks === 2, { pmConnect, archived, oks });
   C.private.socket.readyState = 1; await wait(2300);

@@ -98,6 +98,7 @@ function Root(props) {
     setNavOpen(false);
     if (LIVE) {
       if (route.view === 'group' && route.id) liveBridge.focus(route.id);
+      if (route.view === 'dm' && route.id) liveBridge.markPmRead(route.id);
       liveBridge.focusPm(route.view === 'dm' && route.id ? route.id : false);
     }
   }
@@ -141,7 +142,7 @@ function Root(props) {
   }
   function receiveDm(from, text) {
     var s0 = stateRef.current;
-    var focused = s0.route.view === 'dm' && s0.route.id === from && document.visibilityState === 'visible';
+    var focused = isDmInView(s0, from);
     var isNew = !s0.dms[from];
     var friend = userOf(s0, from).friend, pmFrom = s0.prefs.privacy.pmFrom;
     var request = isNew && !friend && pmFrom !== 'everyone';
@@ -237,6 +238,7 @@ function Root(props) {
     },
     closeDm: function (name) {
       update(function (d) { d.dms[name].closed = true; d.dms[name].unread = 0; });
+      if (LIVE) liveBridge.markPmRead(name);
       var r = stateRef.current.route;
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
     },
@@ -404,7 +406,6 @@ function Root(props) {
   // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
   var pmAsked = useRef(null);
   var offlineCount = useRef(0);
-  function skinKey(me) { return 'torch-skin:' + me; }
   function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
@@ -970,7 +971,7 @@ function Root(props) {
       case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { icon: 'info', action: { label: op.button, run: op.action } } : { icon: 'info' }); break;
       case 'pm': {
         var s0 = stateRef.current;
-        var focused = s0.route.view === 'dm' && s0.route.id === op.from && document.visibilityState === 'visible';
+        var focused = isDmInView(s0, op.from);
         // Comme dans Torch, le MP d'un membre ignoré est reçu et archivé, sans alerte.
         var ignored = !!userOf(s0, op.from).ignored;
         var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
@@ -985,6 +986,7 @@ function Root(props) {
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
           if (!focused) c.unread += 1;
         });
+        if (focused) liveBridge.markPmRead(op.from);
         if (edit) break;
         if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
         // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : la route ne suffit pas.
@@ -1011,7 +1013,7 @@ function Root(props) {
               ensureLiveUser(d, t);
               var c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: localRef.current.hidden.indexOf(t) >= 0 });
               // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
-              var shown = c.messages.slice();
+              var shown = c.messages.slice(), fresh = 0;
               function claim(x) {
                 var k = pmContentKey(x);
                 for (var i = 0; i < shown.length; i++) {
@@ -1026,8 +1028,12 @@ function Root(props) {
                 var o = pmEditTarget(c, x);
                 if (o) { applyEdit(o, x); return; }
                 var m = pmMessage(x);
-                if (!claim(m)) c.messages.push(m);
+                if (claim(m)) return;
+                c.messages.push(m);
+                if (x.unread) fresh += 1;
               });
+              // Une entrée couverte par un message affiché ne compte plus : le compteur a déjà vu ce message.
+              if (!c.closed && !isDmInView(d, t)) c.unread += fresh;
               c.messages.sort(function (a, b) { return a.ts - b.ts; });
             });
           });
@@ -1093,7 +1099,8 @@ function Root(props) {
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
     prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
     Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
-    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageSet(skinKey(state.me), o); }
+    // Fusion avec le stockage : le pont y pose aussi le drapeau de migration des non-lus.
+    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
   });
   useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(handleLiveOp); }, []);
 

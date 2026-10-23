@@ -40,6 +40,7 @@ function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; 
 function isGuest(name) { return /^[!#]/.test(name); }
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* stockage indisponible : préférence non conservée */ } }
+function storageMerge(key, patch) { storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
 function copyText(text, onDone) {
   function fallback() {
     var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';

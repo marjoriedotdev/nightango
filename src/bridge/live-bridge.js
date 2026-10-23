@@ -321,8 +321,7 @@ var liveBridge = (function () {
    * de messages privés : on l'ouvre ici avec le même schéma, puis on la lui confie pour qu'il y archive.
    */
   function openPmDb() {
-    if (C.database && C.database.pm) return Promise.resolve(C.database.pm);
-    return new Promise(function (resolve) {
+    var open = C.database && C.database.pm ? Promise.resolve(C.database.pm) : new Promise(function (resolve) {
       try {
         var req = indexedDB.open(C.user.name + '_history', 1);
         req.onupgradeneeded = function (e) {
@@ -338,6 +337,35 @@ var liveBridge = (function () {
         req.onerror = function () { resolve(null); };
       } catch (e) { warn(e); resolve(null); }
     });
+    return open.then(migrateUnread);
+  }
+  /**
+   * Permet de marquer lus des messages de l'historique privé, par l'index de Torch (markRead).
+   * @param {IDBDatabase} db Base d'historique privé.
+   * @param {?IDBKeyRange} range Plage de target_ts_idx, null pour toute la base.
+   */
+  function markRead(db, range) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(['messages'], 'readwrite');
+      tx.objectStore('messages').index('target_ts_idx').openCursor(range).onsuccess = function (e) {
+        var cur = e.target.result;
+        if (!cur) return;
+        if (cur.value.unread) cur.update(Object.assign(cur.value, { unread: 0 }));
+        cur.continue();
+      };
+      tx.oncomplete = function () { resolve(); };
+      tx.onabort = function () { reject(tx.error); };
+    });
+  }
+  /**
+   * Permet de marquer lus, une fois par compte, les messages archivés avant Torch Skin, que Torch a tous archivés
+   * non lus faute de focus privé. Appelée par openPmDb avant la connexion privée, elle laisse non lus les msgoff de celle-ci.
+   * @param {?IDBDatabase} db Base d'historique privé.
+   */
+  function migrateUnread(db) {
+    var key = skinKey(lower(C.user.name));
+    if (!db || (storageGet(key) || {}).pmReadMigrated) return db;
+    return markRead(db, null).then(function () { storageMerge(key, { pmReadMigrated: true }); }, warn).then(function () { return db; });
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
   // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
@@ -601,7 +629,7 @@ var liveBridge = (function () {
     removeFriend: function (name) { return send('private_message', 'wldelete:' + name, 'The friend could not be removed.'); },
     block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', 'The block could not be sent.'); },
     unblock: function (name) { return send('private_message', 'unblock:' + name, 'The unblock could not be sent.'); },
-    /** Historique archivé par Torch dans IndexedDB, regroupé par interlocuteur ; lecture seule. */
+    /** Historique archivé par Torch dans IndexedDB, regroupé par interlocuteur, avec l'état lu de chaque message. */
     pmHistory: function (perTarget) {
       return openPmDb().then(function (db) { return new Promise(function (resolve) {
         try {
@@ -685,6 +713,17 @@ var liveBridge = (function () {
       });
     },
     fetchFullProfile: fetchFullProfile,
+    /**
+     * Permet de marquer lus les messages archivés d'un membre, comme Torch à l'ouverture d'une conversation.
+     * @param {string} name Membre de la conversation.
+     */
+    markPmRead: function (name) {
+      // Transaction créée après la pile en cours : Torch n'archive un MP reçu qu'après l'émission de pm.
+      openPmDb().then(function (db) {
+        // Borne haute en chaîne comme Torch : dans l'ordre IndexedDB, une chaîne passe après tout horodatage.
+        if (db) return markRead(db, IDBKeyRange.bound([name, 1], [name, '']));
+      }).catch(warn);
+    },
     /** Supprime l'historique que Torch garde dans ce navigateur ; Chatango n'en conserve pas. */
     clearPmHistory: function (target) { try { C.private.clearHistory(target); return true; } catch (e) { warn(e); return false; } },
     /* Profil : lu dans les champs que Torch remplit à la connexion, enregistré par client.post */

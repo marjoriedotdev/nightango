@@ -61,6 +61,12 @@ function listedDms(state) {
  * @param {Object} state État de l'application.
  */
 function unreadDmCount(state) { return listedDms(state).filter(function (n) { return state.dms[n].unread; }).length; }
+/**
+ * Permet de savoir si une conversation est ouverte sous les yeux de l'utilisateur.
+ * @param {Object} state État de l'application.
+ * @param {string} name Membre de la conversation.
+ */
+function isDmInView(state, name) { return state.route.view === 'dm' && state.route.id === name && document.visibilityState === 'visible'; }
 function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
 /**
  * Permet d'abréger le genre d'un profil.
