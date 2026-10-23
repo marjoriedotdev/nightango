@@ -15,7 +15,7 @@ erase=0&l=1&d={desc}&n={titre}&u={groupe}&lo={login}&p={mot de passe}&origin=st.
 
 Il exige le mot de passe (`p`) : exclu par ADR-0001. Torch ne l'appelle pas (son bouton Save de la section Information n'a pas de gestionnaire), et `client.post` de Torch refuse cet endpoint (hors de sa liste blanche). Aucune variante au jeton ou au cookie n'a été trouvée.
 
-**Icône.** Ce que Torch appelle icône de groupe n'est pas une fonction Chatango : c'est une fonction vissle, réservée aux groupes enregistrés chez vissle, envoyée vers `vissle.me/chatango/updateavatar` et `updateprofile` avec la clé de session vissle (`{ key: true }`), et affichée seulement dans Torch. Ni l'endpoint ni l'option `key` ne figurent dans la liste fermée des appels autorisés.
+**Icône.** Ce que Torch appelle icône de groupe n'est pas une fonction Chatango : c'est une fonction vissle, réservée aux groupes enregistrés chez vissle, envoyée vers `vissle.me/chatango/updateavatar` et `updateprofile` avec la clé de session vissle (`{ key: true }`), et affichée seulement dans Torch. L'endpoint ne figure pas dans la liste fermée des appels autorisés, où l'option `key` ne vaut que pour l'envoi de fichiers (`vissle.me/chatango/upload`, #96).
 
 ## Ce qui rouvrirait la question
 

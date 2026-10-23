@@ -110,11 +110,15 @@ const C = {
   },
   setFocus(o) { calls.push(['focus', o.group]); }, disconnectFrom(gid) { calls.push(['disconnect', gid]); delete C.groups[gid]; },
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
+  // Comme Torch, qui lit seul l'oEmbed d'un lien YouTube reçu (inject.js:7157).
+  renderYouTube(link) { w.fetch('https://www.youtube.com/oembed?url=' + link + '&format=json'); },
   post(url, form) { const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f }); return Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked'); },
   private: { focus: false, socket: { readyState: 0 }, clearHistory(t) { calls.push(['clearHistory', t]); } },
   database: { pm: { transaction: pmTransaction } }
 };
 const CH = {
+  // Comme Torch, qui lit seul le msgbg.xml de l'auteur d'un message Premium (inject.js:504).
+  getBackground(o) { w.fetch(CH.subdomain.msgbg(o.username, 'xml')); },
   getAnon() { return '!anon1234'; }, path(p, sub) { return 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p; },
   subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css', msgbg: (n, ext) => 'https://ust.chatango.com/' + n + '/msgbg.' + ext }, error: { creategroup: { groupexists: 'The group name is taken.' } }
 };
@@ -209,6 +213,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   C.emit('clientLogin', C);
   await wait(100);
   step('overlay shown after login', shown === 1);
+  const fetchesAtLogin = fetches.length;
+  C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
+  CH.getBackground({ username: 'alice', node: d.createElement('div') });
+  step("Torch's own oEmbed and message background requests muted", fetches.length === fetchesAtLogin, fetches.slice(fetchesAtLogin).map(x => x.url));
   SB.renderGroup({ group: 'test', header: 'Test' });
   g('ok', 'test', ['marjorie', '', '', '', '1700000000', '', 'alice,' + MOD + ';bob,' + (MOD | 2 | 16), String(64)]);
   await until(() => !!$('.log .tc-skeleton'));

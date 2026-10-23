@@ -464,6 +464,8 @@ var liveBridge = (function () {
     var onLogin = function (catchUp) {
       if (loggedIn) return;
       loggedIn = true;
+      // Torch lit seul l'oEmbed YouTube et msgbg.xml, hors des réglages de médias de Torch Skin : neutralisés en mémoire, pas dans les réglages de Torch.
+      C.renderYouTube = CH.getBackground = function () {};
       emit({ op: 'login', me: lower(C.user.name) });
       // Groupes déjà connectés avant nous : leurs trames inited et participants sont passées.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
