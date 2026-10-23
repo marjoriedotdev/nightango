@@ -79,15 +79,25 @@ function useFriendRequest() {
 }
 
 /**
- * Permet d'ajouter ou de retirer un ami depuis une fiche de profil.
+ * Permet de demander confirmation avant de retirer un ami.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Ami à retirer.
+ */
+function confirmRemoveFriend(app, name) {
+  app.ui.confirm({ title: 'Remove ' + name + ' from friends?', body: "You'll stop seeing when " + name + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
+}
+
+/**
+ * Permet d'ajouter ou de retirer un ami depuis une fiche de profil ou un menu.
  * @param {string} name Nom du membre.
  * @param {Object} u Membre dans l'état.
+ * @param {boolean} [menu] Entrée de menu, dont le libellé de retrait annonce le dialogue.
  */
-function useFriendAction(name, u) {
-  var request = useFriendRequest(), busy = request.pending === name;
+function useFriendAction(name, u, menu) {
+  var app = useApp(), request = useFriendRequest(), busy = request.pending === name;
   return {
-    busy: busy, icon: u.friend ? 'user-minus' : 'user-plus', label: busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend',
-    run: function () { request.toggle(name); }
+    busy: busy, icon: u.friend ? 'user-minus' : 'user-plus', label: busy ? 'Adding friend' : u.friend ? (menu ? 'Remove friend…' : 'Remove friend') : 'Add friend',
+    run: function () { if (u.friend) confirmRemoveFriend(app, name); else request.toggle(name); }
   };
 }
 

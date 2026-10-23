@@ -7,7 +7,7 @@ function DMView(p) {
   var logRef = useRef(null);
   var convo = id ? s.dms[id] : null;
   var len = convo ? convo.messages.length : 0;
-  var friend = useFriendAction(id, userOf(s, id));
+  var friend = useFriendAction(id, userOf(s, id), true);
   useLayoutEffect(function () { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [id, len]);
 
   var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
@@ -176,9 +176,7 @@ function friendActions(app, name) {
   var notify = isNotifyingOnline(app.state, name);
   return [
     { label: notifyOnlineLabel(notify), short: notify ? 'Notifying' : 'Notify', icon: 'bell', onSelect: function () { toggleNotifyOnline(app, name); } },
-    { label: 'Remove friend…', short: 'Remove', icon: 'user-minus', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Remove ' + name + ' from friends?', body: "You'll stop seeing when " + name + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
-    } }
+    { label: 'Remove friend…', short: 'Remove', icon: 'user-minus', danger: true, onSelect: function () { confirmRemoveFriend(app, name); } }
   ];
 }
 

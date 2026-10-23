@@ -164,7 +164,7 @@ function ProfilePanel(p) {
   var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
   var meta = [u.age, genderShort(u.gender), u.location].filter(Boolean).join(' · ');
   var notify = isNotifyingOnline(s, name);
-  var friend = useFriendAction(name, u);
+  var friend = useFriendAction(name, u, true);
   useEffect(function () { app.actions.loadProfile(name); }, [name]);
   return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + name },
     h('div', { className: 'scroll' },
