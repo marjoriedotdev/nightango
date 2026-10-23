@@ -22,7 +22,7 @@ function Demo() {
       h(T.Message, { author: 'nightowl', avatar: h(T.Avatar, { name: 'nightowl' }), time: '12:48', mention: true }, '@orrin the theme you exported imports cleanly now.'),
       h(T.Message, { author: 'kestrel', avatar: h(T.Avatar, { name: 'kestrel' }), time: '12:50', highlight: true }, 'Back online on s12.')),
     h('div', null,
-      h(T.Message, { compact: true, author: 'sable', time: '12:42', actions: actions }, parent),
+      h(T.Message, { compact: true, author: 'sable', meta: h(T.Badge, { icon: 'shield' }, 'Mod'), time: '12:42', actions: actions }, parent),
       h(T.Message, { compact: true, author: 'quill', time: '12:44', reply: { author: 'sable', avatar: h(T.Avatar, { name: 'sable', size: 16 }), text: parent } }, 'Confirmed, the second reconnect held.'),
       h(T.Message, { compact: true, author: 'nightowl', time: '12:48', mention: true }, '@orrin the theme you exported imports cleanly now.')));
 }

@@ -220,8 +220,9 @@
     var highlight = props.highlight ? { background: 'var(--selected)' } : null;
     function row(base, style) { return { className: cx(base, mention, props.className), style: Object.assign({}, style, props.style, highlight), 'data-msg-id': props.msgId }; }
     if (props.compact) {
+      // Base de 8em : sur un écran étroit, le texte passe à la ligne au lieu de s'écraser à côté du rôle et du canal.
       return h('article', row('cmsg'),
-        time, author, h('div', { style: { flex: 1, minWidth: 0 } }, reply, body), actions);
+        time, author, props.meta, h('div', { style: { flex: '1 1 8em', minWidth: 0 } }, reply, body), actions);
     }
     if (props.continued) {
       return h('article', row('tc-msg tc-msg-cont'),

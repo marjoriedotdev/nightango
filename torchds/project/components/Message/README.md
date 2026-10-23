@@ -6,7 +6,7 @@ Provide `time` and the body as children. A text child renders as `tc-msg-text`, 
 
 - Full row: `avatar`, then a header with `author`, `meta` (role badge, channel label) and the time. Pass `reply` as `{author, avatar, text}` to quote the parent above it, with a 16px avatar. Add `onJump` when the parent is in the log: the quoted text becomes a button that goes to it.
 - `continued`: a message from the same author within five minutes. No avatar or header, the time shows in the gutter on hover.
-- `compact`: the Compact density. Time first, then the author and the body on one line, no avatar. It wins over `continued`.
+- `compact`: the Compact density. Time first, then the author, `meta` and the body on one line, no avatar. On a narrow screen, what does not fit wraps to a second line. It wins over `continued`.
 - `author` as text renders as `tc-msg-author`. Pass an element for a styled or clickable name.
 - `actions` fills the hover toolbar with icon buttons at size 28. Leave it out when nothing can be done, such as a deleted message.
 - `mention` tints a message that names the viewer. `className` and `style` go on the row, for states and member backgrounds.
