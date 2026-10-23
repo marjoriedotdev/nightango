@@ -1,14 +1,10 @@
 /* ---------- Messages privés ---------- */
 function DMView(p) {
-  var app = useApp(), s = app.state, me = s.me, id = p.id;
+  var app = useApp(), s = app.state, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
   var a2 = useState(''), q = a2[0], setQ = a2[1];
   var column = useRightColumn(function () { app.ui.openProfile(id, null); });
-  var logRef = useRef(null);
   var convo = id ? s.dms[id] : null;
-  var len = convo ? convo.messages.length : 0;
-  var personActions = useProfileActions(id, null);
-  useLayoutEffect(function () { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [id, len]);
 
   var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
   useProfiles(names);
@@ -43,48 +39,65 @@ function DMView(p) {
       LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' })
       : shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'))));
 
-  var thread;
-  if (!convo) {
-    thread = h('main', { className: 'thread' }, h('div', { className: 'empty' },
+  var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column })
+    : h('main', { className: 'thread' }, h('div', { className: 'empty' },
       h(T.Icon, { name: 'message', size: 28, strokeWidth: 1.6 }), h('h2', null, 'Select a conversation'),
       h('p', { style: { margin: 0 } }, 'Or start a new one with a friend or someone from a group.'),
       h(T.Button, { variant: 'primary', icon: 'edit', onClick: app.ui.openNewDm }, 'New message')));
-  } else {
-    var u = userOf(s, id);
-    var typing = (s.typing['dm:' + id] || []).length > 0;
-    var rows = [], prev = null, lastDay = null;
-    convo.messages.forEach(function (m) {
-      var dk = dayKey(m.ts);
-      if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-      rows.push(h(DmMessageRow, { key: m.id, m: m, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN }));
-      prev = m;
-    });
-    var lastMsg = convo.messages[convo.messages.length - 1];
-    if (lastMsg && lastMsg.from === me && convo.seenTs && s.prefs.privacy.showIdle) rows.push(h('p', { key: 'seen', className: 'seen' }, 'Seen ' + fmtTime(convo.seenTs, s.prefs.h24)));
-    var bottom;
-    if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
-    else if (convo.request) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'info', size: 16 }), h('span', { className: 'grow' }, id + " isn't on your friends list. Accept to reply, or decline to remove the conversation."),
-      h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.actions.declineRequest(id); } }, 'Decline'),
-      h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); } }, 'Accept'));
-    else bottom = h(DmComposer, { key: id, id: id });
-    thread = h('main', { className: 'thread' },
-      h('header', { className: 'topbar' },
-        h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
-        h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
-        h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
-        h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(s, id)].filter(Boolean).join(' · ')),
-        h(T.IconButton, { icon: 'panel', label: column.pressed == null ? 'View profile' : column.pressed ? 'Hide profile' : 'Show profile', pressed: column.pressed, onClick: column.toggle }),
-        h(MenuButton, {
-          label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
-        })),
-      h('div', { className: 'log', role: 'log', 'aria-label': 'Messages with ' + id, ref: logRef }, h('div', { className: 'log-inner' }, rows)),
-      h('div', { className: 'composer-wrap' },
-        h('p', { className: 'typing', 'aria-live': 'polite' }, typing ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, id), ' is typing') : null),
-        bottom));
-  }
   return h('div', { className: 'main', style: { flexDirection: 'row' } },
     h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
     convo && column.open ? h(ProfilePanel, { name: id }) : null);
+}
+
+/**
+ * Fil d'une conversation privée, monté à neuf pour chaque correspondant.
+ * @param {{id: string, tab: ?string, column: Object}} p Correspondant, onglet de la liste et colonne du profil (useRightColumn).
+ */
+function DmThread(p) {
+  var app = useApp(), s = app.state, me = s.me, id = p.id, convo = s.dms[id];
+  var logRef = useRef(null), sentinelRef = useRef(null);
+  var len = convo.messages.length;
+  var personActions = useProfileActions(id, null);
+  var reading = useReadingPosition(logRef, len ? convo.messages[0].ts : null, [len], function (el) { el.scrollTop = el.scrollHeight; });
+  useInfiniteScroll(logRef, sentinelRef, !!(convo.olderMore && !convo.loadingOlder && !convo.olderFailed), function () { app.actions.loadOlderDm(id); }, '200px 0px 0px 0px');
+  function onScroll() {
+    reading.onScroll();
+    // Après un échec de lecture, la sentinelle ne relance la lecture qu'au défilement suivant.
+    if (convo.olderFailed) app.update(function (d) { d.dms[id].olderFailed = false; });
+  }
+
+  var u = userOf(s, id);
+  var typing = (s.typing['dm:' + id] || []).length > 0;
+  var rows = [], prev = null, lastDay = null;
+  convo.messages.forEach(function (m) {
+    var dk = dayKey(m.ts);
+    if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
+    rows.push(h(DmMessageRow, { key: m.id, m: m, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN }));
+    prev = m;
+  });
+  if (LIVE && s.pmLoaded) rows.unshift(convo.olderMore ? olderSentinel(sentinelRef, convo.loadingOlder) : historyStart('This is the start of the messages saved in this browser.'));
+  var lastMsg = convo.messages[convo.messages.length - 1];
+  if (lastMsg && lastMsg.from === me && convo.seenTs && s.prefs.privacy.showIdle) rows.push(h('p', { key: 'seen', className: 'seen' }, 'Seen ' + fmtTime(convo.seenTs, s.prefs.h24)));
+  var bottom;
+  if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
+  else if (convo.request) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'info', size: 16 }), h('span', { className: 'grow' }, id + " isn't on your friends list. Accept to reply, or decline to remove the conversation."),
+    h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.actions.declineRequest(id); } }, 'Decline'),
+    h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); } }, 'Accept'));
+  else bottom = h(DmComposer, { id: id });
+  return h('main', { className: 'thread' },
+    h('header', { className: 'topbar' },
+      h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
+      h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
+      h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
+      h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(s, id)].filter(Boolean).join(' · ')),
+      h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
+      h(MenuButton, {
+        label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
+      })),
+    h('div', { className: 'log', role: 'log', 'aria-label': 'Messages with ' + id, ref: logRef, onScroll: onScroll }, h('div', { className: 'log-inner' }, rows)),
+    h('div', { className: 'composer-wrap' },
+      h('p', { className: 'typing', 'aria-live': 'polite' }, typing ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, id), ' is typing') : null),
+      bottom));
 }
 
 /**

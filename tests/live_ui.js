@@ -59,7 +59,7 @@ function keyCmp(a, b) {
   if (typeof a !== typeof b) return typeof a === 'string' ? 1 : -1;
   return a < b ? -1 : a > b ? 1 : 0;
 }
-w.IDBKeyRange = { bound: (lower, upper) => ({ lower, upper }) };
+w.IDBKeyRange = { bound: (lower, upper, lowerOpen, upperOpen) => ({ lower, upper, lowerOpen: !!lowerOpen, upperOpen: !!upperOpen }) };
 const migrationFlag = () => !!JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').pmReadMigrated;
 // Comme IndexedDB, une transaction voit les enregistrements présents à sa création : un archivage créé après elle lui échappe.
 function pmTransaction(stores, mode) {
@@ -74,10 +74,15 @@ function pmTransaction(stores, mode) {
     };
     setTimeout(read, 0); return req;
   };
-  const inRange = range => r => !range || (keyCmp([r.target, r.ts], range.lower) >= 0 && keyCmp([r.target, r.ts], range.upper) <= 0);
+  const inRange = range => r => {
+    if (!range) return true;
+    const lo = keyCmp([r.target, r.ts], range.lower), hi = keyCmp([r.target, r.ts], range.upper);
+    return (range.lowerOpen ? lo > 0 : lo >= 0) && (range.upperOpen ? hi < 0 : hi <= 0);
+  };
+  const byIndex = (name, range) => name === 'target_ts_idx' ? seen.filter(inRange(range)).sort((a, b) => keyCmp([a.target, a.ts], [b.target, b.ts])) : [];
   tx.objectStore = () => ({
     openCursor: () => cursor(seen),
-    index: name => ({ openCursor: range => cursor(name === 'target_ts_idx' ? seen.filter(inRange(range)).sort((a, b) => keyCmp([a.target, a.ts], [b.target, b.ts])) : []) })
+    index: name => ({ openCursor: (range, dir) => { const list = byIndex(name, range); return cursor(dir === 'prev' ? list.reverse() : list); } })
   });
   return tx;
 }
@@ -1150,6 +1155,23 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const oks = $$('.thread .tc-msg-text').filter(x => x.textContent === 'ok').length;
   step('offline messages archived', !!pmConnect && pmConnect[2] === true && archived.length === 1 && archived[0][1] === true && oks === 2, { pmConnect, archived, oks });
   C.private.socket.readyState = 1; await wait(2300);
+
+  /* Historique privé par pages : les 100 dernières entrées à OK, les 30 plus anciennes au défilement, puis le début de l'historique */
+  for (let i = 1; i <= 130; i++) pmRecords.push(pmRecord('rhea', 'msg:rhea:marjorie:unknown:' + (1700001000 + i * 10) + '.5:0:<n000/>Page ' + i, 0));
+  pm('OK', []); await until(() => !!byText('.conv', 'rhea'));
+  click(byText('.conv', 'rhea')); await until(() => $$('.thread .tc-msg-text').length >= 100);
+  const rheaTexts = () => $$('.thread .tc-msg-text').map(x => x.textContent);
+  const pages = n => Array.from({ length: n }, (_, i) => 'Page ' + (131 - n + i));
+  const PM_START = 'This is the start of the messages saved in this browser.';
+  const rheaFirst = { texts: rheaTexts(), start: d.body.textContent.includes(PM_START) };
+  const olderWatcher = () => observers.find(x => x.targets.some(t => t.closest('.thread')));
+  await until(olderWatcher);
+  const rheaTop = olderWatcher();
+  if (rheaTop) rheaTop.cb(rheaTop.targets.map(target => ({ isIntersecting: true, target })), rheaTop);
+  await until(() => d.body.textContent.includes(PM_START));
+  const rheaAll = { texts: rheaTexts(), start: d.body.textContent.includes(PM_START) };
+  step('older private history loads by pages', JSON.stringify(rheaFirst.texts) === JSON.stringify(pages(100)) && !rheaFirst.start && !!rheaTop
+    && JSON.stringify(rheaAll.texts) === JSON.stringify(pages(130)) && rheaAll.start, { first: rheaFirst.texts.length, firstStart: rheaFirst.start, observed: !!rheaTop, all: rheaAll.texts.length, head: rheaAll.texts.slice(0, 3), allStart: rheaAll.start });
 
   /* Session coupée : connecté ailleurs, hors ligne, connexion perdue, session expirée */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };

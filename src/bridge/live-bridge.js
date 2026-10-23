@@ -383,6 +383,17 @@ var liveBridge = (function () {
     if (!db || (storageGet(key) || {}).pmReadMigrated) return db;
     return markRead(db, null).then(function () { storageMerge(key, { pmReadMigrated: true }); }, warn).then(function () { return db; });
   }
+  /**
+   * Permet de lire un enregistrement de l'historique privé au format des messages du pont.
+   * @param {Object} v Enregistrement de Torch (saveMessage).
+   * @returns {?Object} Entrée avec sa clé archiveTs, null pour une trame illisible.
+   */
+  function pmEntry(v) {
+    var parts = String(v.data || '').split(':').slice(1);
+    if (parts.length <= 5) return null;
+    var body = parsePm(parts);
+    return { from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, unread: !!v.unread };
+  }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
   // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
   function saveSettings() { localStorage.setItem('settings', JSON.stringify(C.settings)); }
@@ -665,7 +676,11 @@ var liveBridge = (function () {
     removeFriend: function (name) { return send('private_message', 'wldelete:' + name, 'The friend could not be removed.'); },
     block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', 'The block could not be sent.'); },
     unblock: function (name) { return send('private_message', 'unblock:' + name, 'The unblock could not be sent.'); },
-    /** Historique archivé par Torch dans IndexedDB, regroupé par interlocuteur, avec l'état lu de chaque message. */
+    /**
+     * Historique archivé par Torch dans IndexedDB, regroupé par interlocuteur, avec l'état lu de chaque message.
+     * @param {number} perTarget Nombre d'entrées gardées par interlocuteur, les plus récentes.
+     * @returns {Promise<Object>} Par interlocuteur, ses entrées de la plus ancienne à la plus récente (list) et s'il en reste de plus anciennes (more).
+     */
     pmHistory: function (perTarget) {
       return openPmDb().then(function (db) { return new Promise(function (resolve) {
         try {
@@ -674,18 +689,40 @@ var liveBridge = (function () {
           req.onsuccess = function (e) {
             var cur = e.target.result;
             if (!cur) {
-              Object.keys(out).forEach(function (k) { out[k].sort(function (a, b) { return a.ts - b.ts; }); out[k] = out[k].slice(-(perTarget || 100)); });
+              Object.keys(out).forEach(function (k) {
+                var list = out[k].sort(function (a, b) { return a.archiveTs - b.archiveTs; });
+                out[k] = { list: list.slice(-perTarget), more: list.length > perTarget };
+              });
               resolve(out); return;
             }
-            var v = cur.value || {}, parts = String(v.data || '').split(':').slice(1), target = lower(v.target);
-            if (target && parts.length > 5) {
-              var body = parsePm(parts);
-              (out[target] = out[target] || []).push({ from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, unread: !!v.unread });
-            }
+            var v = cur.value || {}, target = lower(v.target), x = target && pmEntry(v);
+            if (x) (out[target] = out[target] || []).push(x);
             cur.continue();
           };
           req.onerror = function () { resolve({}); };
         } catch (e) { warn(e); resolve({}); }
+      }); });
+    },
+    /**
+     * Permet de lire les entrées archivées d'un membre avant une clé, comme Torch au défilement (loadMessage).
+     * @param {string} target Membre de la conversation.
+     * @param {number} before Clé archiveTs de l'entrée la plus ancienne déjà chargée, exclue.
+     * @param {number} count Nombre d'entrées au plus.
+     * @returns {Promise<{list: Array, more: boolean}>} Entrées de la plus ancienne à la plus récente, et s'il en reste de plus anciennes. Rejetée sans base.
+     */
+    pmOlder: function (target, before, count) {
+      return openPmDb().then(function (db) { return new Promise(function (resolve, reject) {
+        if (!db) throw new Error('The private history of this browser could not be opened.');
+        var list = [], req = db.transaction(['messages'], 'readonly').objectStore('messages').index('target_ts_idx')
+          .openCursor(IDBKeyRange.bound([target, 0], [target, before], false, true), 'prev');
+        req.onsuccess = function (e) {
+          var cur = e.target.result, x = cur && pmEntry(cur.value);
+          if (x) list.push(x);
+          // Une entrée de plus que demandé dit s'il en reste.
+          if (cur && list.length <= count) { cur.continue(); return; }
+          resolve({ list: list.slice(0, count).reverse(), more: list.length > count });
+        };
+        req.onerror = function () { reject(req.error); };
       }); });
     },
     /**

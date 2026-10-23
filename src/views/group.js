@@ -21,18 +21,10 @@ function GroupView(p) {
   var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
   var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft);
-  var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
+  var logRef = useRef(null), sentinelRef = useRef(null);
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
-  useLayoutEffect(function () {
-    var el = logRef.current; if (!el) return;
-    var was = seen.current;
-    if (atBottom.current) el.scrollTop = el.scrollHeight;
-    // Position absolue : le navigateur a pu ancrer le défilement lui-même, l'ajouter au sien doublerait le décalage.
-    else if (firstTs < was.firstTs) el.scrollTop = was.top + el.scrollHeight - was.height;
-    else setJump(true);
-    seen.current = { firstTs: firstTs, top: el.scrollTop, height: el.scrollHeight };
-  }, [count, !!search]);
+  var reading = useReadingPosition(logRef, firstTs, [count, !!search], function () { setJump(true); });
   var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open');
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
   // Après le rendu qui ferme la recherche : la ligne de l'original n'existe qu'à ce moment.
@@ -61,10 +53,8 @@ function GroupView(p) {
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
 
   function onScroll() {
-    var el = logRef.current;
-    atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
-    seen.current.top = el.scrollTop; seen.current.height = el.scrollHeight;
-    if (atBottom.current && jump) setJump(false);
+    reading.onScroll();
+    if (reading.atBottom.current && jump) setJump(false);
   }
   // Comme Torch : la mention s'ajoute en fin de brouillon.
   function mention(handle) {
@@ -106,12 +96,12 @@ function GroupView(p) {
   function send(text) {
     if (mode && mode.kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
     if (runCommand(app, text, g.id)) return;
-    atBottom.current = true;
+    reading.atBottom.current = true;
     var kind = mode && mode.kind;
     app.actions.sendGroup(g.id, text, { replyTo: kind === 'reply' ? { id: mode.m.id } : null, quote: kind === 'quote' ? quoteOf(mode.m) : null, channel: channel });
     setMode(null);
   }
-  function toBottom() { var el = logRef.current; atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
+  function toBottom() { var el = logRef.current; reading.atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
   // Comme dans Torch, un message masqué compte encore dans les non-lus et les mentions.
   function shown(m) { return m.annc ? prefs.announcements : m.kind !== 'msg' || prefs.safety.guestMessages || !isGuest(m.author); }
   // Les messages d'exemple du prototype n'ont pas de canal.
@@ -148,10 +138,9 @@ function GroupView(p) {
   }
   if (LIVE && !q) items.unshift(!g.inited && !g.messages.length
     ? h(SkeletonRows, { key: 'top', count: 6, avatar: 36, twoLines: true, label: 'Loading messages' })
-    : g.historyDone
-      ? h('div', { key: 'top', className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), 'This is the beginning of the history Chatango keeps for #' + g.id + '.')
+    : g.historyDone ? historyStart('This is the beginning of the history Chatango keeps for #' + g.id + '.')
       : g.historyCapped ? null
-      : h('div', { key: 'top', ref: sentinelRef, className: 'ev history-more' }, g.loadingMore ? h(T.Spinner, { label: 'Loading earlier messages' }) : null));
+      : olderSentinel(sentinelRef, g.loadingMore));
   if (q && !items.length) items.push(h('div', { key: 'none', className: 'empty' }, h('h2', null, 'No messages match'), h('p', null, 'Search looks at loaded messages in #' + g.id + '.')));
 
   var composer;

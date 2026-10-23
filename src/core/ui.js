@@ -108,6 +108,47 @@ function useRightColumn(openFull) {
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
 
+/**
+ * Permet de garder la position de lecture d'un fil : il suit le bas tant que le lecteur y est, et ne bouge pas quand des messages s'ajoutent en tête.
+ * @param {Object} logRef Référence de la zone qui défile.
+ * @param {?number} firstTs Horodatage du premier message chargé.
+ * @param {Array} deps Valeurs dont le changement replace le fil.
+ * @param {Function} onBelow Reçoit la zone quand le fil change sous un lecteur qui n'est pas en bas.
+ * @returns {{atBottom: Object, onScroll: Function}} Lecteur en bas, et relevé de la position à brancher sur le défilement.
+ */
+function useReadingPosition(logRef, firstTs, deps, onBelow) {
+  var atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
+  useLayoutEffect(function () {
+    var el = logRef.current; if (!el) return;
+    var was = seen.current;
+    if (atBottom.current) el.scrollTop = el.scrollHeight;
+    // Position absolue : le navigateur a pu ancrer le défilement lui-même, l'ajouter au sien doublerait le décalage.
+    else if (firstTs < was.firstTs) el.scrollTop = was.top + el.scrollHeight - was.height;
+    else onBelow(el);
+    seen.current = { firstTs: firstTs, top: el.scrollTop, height: el.scrollHeight };
+  }, deps);
+  function onScroll() {
+    var el = logRef.current;
+    atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    seen.current.top = el.scrollTop; seen.current.height = el.scrollHeight;
+  }
+  return { atBottom: atBottom, onScroll: onScroll };
+}
+
+/**
+ * Permet de poser en tête d'un fil la sentinelle qui charge les messages plus anciens.
+ * @param {Object} sentinelRef Référence de la sentinelle.
+ * @param {boolean} loading Une lecture est en cours.
+ */
+function olderSentinel(sentinelRef, loading) {
+  return h('div', { key: 'top', ref: sentinelRef, className: 'ev history-more' }, loading ? h(T.Spinner, { label: 'Loading earlier messages' }) : null);
+}
+/**
+ * Permet de marquer le début d'un fil quand il ne reste rien de plus ancien à charger.
+ * @param {string} text Texte du début.
+ */
+function historyStart(text) { return h('div', { key: 'top', className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), text); }
+
 /* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, disabled, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];

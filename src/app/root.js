@@ -631,6 +631,22 @@ function Root(props) {
         update(function (d) { if (d.meet.token === token) Object.assign(d.meet, { loading: false, error: e && e.message ? e.message : 'The search failed.' }); });
       });
     };
+    /**
+     * Permet de charger les messages privés archivés avant le plus ancien message chargé d'une conversation.
+     * @param {string} name Membre de la conversation.
+     */
+    actions.loadOlderDm = function (name) {
+      var keys = stateRef.current.dms[name].messages.map(function (m) { return m.archiveTs; }).filter(Boolean);
+      update(function (d) { d.dms[name].loadingOlder = true; });
+      liveBridge.pmOlder(name, Math.min.apply(null, keys), 50).then(function (page) {
+        // Une page plus ancienne ne change aucun compteur de non-lus.
+        update(function (d) { var c = d.dms[name]; mergePmHistory(d, c, page.list); c.olderMore = page.more; c.loadingOlder = false; });
+      }, function (e) {
+        warn(e);
+        update(function (d) { Object.assign(d.dms[name], { loadingOlder: false, olderFailed: true }); });
+        toast('Earlier messages could not be loaded.');
+      });
+    };
     actions.loadMore = function (gid) {
       var result = liveBridge.loadMore(gid);
       // Échec : le pont l'annonce et la sentinelle reste en place pour réessayer.
@@ -659,11 +675,11 @@ function Root(props) {
     actions.deleteDm = function (name) {
       liveBridge.clearPmHistory(name);
       actions.closeDm(name);
-      update(function (d) { d.dms[name].messages = []; });
+      update(function (d) { d.dms[name].messages = []; d.dms[name].olderMore = false; });
     };
     actions.deleteAllDms = function () {
       Object.keys(stateRef.current.dms).forEach(function (n) { liveBridge.clearPmHistory(n); actions.closeDm(n); });
-      update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; }); });
+      update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; d.dms[n].olderMore = false; }); });
     };
     actions.createGroup = function (name, title, desc, listed) {
       return liveBridge.createGroup({ name: name, title: title, description: desc, discovery: listed }).then(function () {
@@ -863,9 +879,40 @@ function Root(props) {
   function pmEditTarget(c, m) { return m.editId ? c.messages.find(function (x) { return x.key === m.editId && x.from === m.from; }) : null; }
   function pmMessage(x) {
     // Modification sans original chargé : elle prend la clé de l'original, que visent l'archive et les modifications suivantes.
-    var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts };
+    var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
     if (x.editId) m.edited = true;
     return m;
+  }
+  /**
+   * Permet de fusionner des entrées de l'historique privé dans une conversation, sans doublon avec les messages affichés.
+   * @param {Object} d État en cours de modification.
+   * @param {Object} c Conversation dans cet état.
+   * @param {Array} list Entrées lues par le pont, de la plus ancienne à la plus récente.
+   * @returns {number} Entrées non lues que ne couvre aucun message affiché.
+   */
+  function mergePmHistory(d, c, list) {
+    // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
+    var shown = c.messages.slice(), fresh = 0;
+    function claim(x) {
+      var k = pmContentKey(x), i = shown.findIndex(function (y) { return y.archiveTs === x.archiveTs; });
+      // Un message qui porte déjà une clé d'archive est une autre entrée. Même clé de MP = même message, même si une modification a changé son texte.
+      if (i < 0) i = shown.findIndex(function (y) { return !y.archiveTs && (x.key && y.key ? y.key === x.key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000); });
+      if (i < 0) return false;
+      shown[i].archiveTs = x.archiveTs;
+      shown.splice(i, 1);
+      return true;
+    }
+    list.forEach(function (x) {
+      mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts);
+      var o = pmEditTarget(c, x);
+      if (o) { applyEdit(o, x); return; }
+      var m = pmMessage(x);
+      if (claim(m)) return;
+      c.messages.push(m);
+      if (x.unread) fresh += 1;
+    });
+    c.messages.sort(function (a, b) { return a.ts - b.ts; });
+    return fresh;
   }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
   /**
@@ -1103,29 +1150,11 @@ function Root(props) {
               if (t === d.me) return;
               ensureLiveUser(d, t);
               var c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: localRef.current.hidden.indexOf(t) >= 0 });
-              // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
-              var shown = c.messages.slice(), fresh = 0;
-              function claim(x) {
-                var k = pmContentKey(x);
-                for (var i = 0; i < shown.length; i++) {
-                  var y = shown[i];
-                  // Même clé = même message, même si une modification a changé son texte.
-                  if (x.key && y.key ? y.key === x.key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000) { shown.splice(i, 1); return true; }
-                }
-                return false;
-              }
-              hist[t].forEach(function (x) {
-                mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts);
-                var o = pmEditTarget(c, x);
-                if (o) { applyEdit(o, x); return; }
-                var m = pmMessage(x);
-                if (claim(m)) return;
-                c.messages.push(m);
-                if (x.unread) fresh += 1;
-              });
+              // Fixé au premier OK : à une reconnexion, les 100 dernières entrées ne disent rien des pages plus anciennes déjà chargées.
+              if (c.olderMore == null) c.olderMore = hist[t].more;
+              var fresh = mergePmHistory(d, c, hist[t].list);
               // Une entrée couverte par un message affiché ne compte plus : le compteur a déjà vu ce message.
               if (!c.closed && !isDmInView(d, t)) c.unread += fresh;
-              c.messages.sort(function (a, b) { return a.ts - b.ts; });
             });
           });
         });
