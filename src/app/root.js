@@ -122,6 +122,8 @@ function Root(props) {
   function receiveGroup(gid, msg) {
     var s0 = stateRef.current, me = s0.me;
     var mention = msg.kind === 'msg' && new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(msg.text);
+    // Comme dans Torch, un groupe coupé tait ses mentions sans changer les compteurs.
+    var quiet = !!(s0.groups[gid] && s0.groups[gid].muted);
     var focused = s0.route.view === 'group' && s0.route.id === gid && document.visibilityState === 'visible';
     update(function (d) {
       var g = d.groups[gid]; if (!g) return;
@@ -132,7 +134,7 @@ function Root(props) {
       if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
       if (focused) g.lastReadTs = Date.now();
     });
-    if (mention && !(s0.route.view === 'group' && s0.route.id === gid)) {
+    if (mention && !quiet && !(s0.route.view === 'group' && s0.route.id === gid)) {
       notify('mentions', { toast: msg.author + ' mentioned you in #' + gid, icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'group', id: gid }); } } });
     }
   }
@@ -385,7 +387,7 @@ function Root(props) {
   var profilePending = useRef({});
   var offlineCount = useRef(0);
   function skinKey(me) { return 'torch-skin:' + me; }
-  function blankLocal() { return { muted: [], ignored: [], hidden: [], style: null }; }
+  function blankLocal() { return { ignored: [], hidden: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -430,6 +432,18 @@ function Root(props) {
     else toast(sent ? 'Changes sent to Chatango.' : 'Nothing to save.', { icon: sent ? 'check' : 'info' });
     return sent;
   }
+  /**
+   * Permet de basculer un drapeau de groupe tenu par une liste de Torch, sans rien changer si Torch ne l'enregistre pas.
+   * @param {string} gid Groupe visé.
+   * @param {string} key favorite ou muted.
+   * @param {function(string, boolean): boolean} save Écriture du pont.
+   * @param {string} failure Toast affiché si Torch n'enregistre pas.
+   */
+  function toggleTorchList(gid, key, save, failure) {
+    var on = !stateRef.current.groups[gid][key];
+    if (!save(gid, on)) { toast(failure); return; }
+    update(function (d) { d.groups[gid][key] = on; });
+  }
 
   if (LIVE) {
     actions.logout = function () { location.reload(); };
@@ -458,11 +472,8 @@ function Root(props) {
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
-    actions.toggleFavorite = function (gid) {
-      var on = !stateRef.current.groups[gid].favorite;
-      if (!liveBridge.setFavorite(gid, on)) { toast('Torch could not save this favorite. Reload the page and try again.'); return; }
-      update(function (d) { d.groups[gid].favorite = on; });
-    };
+    actions.toggleFavorite = function (gid) { toggleTorchList(gid, 'favorite', liveBridge.setFavorite, 'Torch could not save this favorite. Reload the page and try again.'); };
+    actions.toggleMute = function (gid) { toggleTorchList(gid, 'muted', liveBridge.setMuted, 'Torch could not save the mute for #' + gid + '. Reload the page and try again.'); };
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
       var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
@@ -596,7 +607,7 @@ function Root(props) {
     if (!g) {
       g = d.groups[gid] = liveGroup(gid, gid);
       g.favorite = (liveBridge.favoriteGroups() || []).indexOf(gid) >= 0;
-      g.muted = localRef.current.muted.indexOf(gid) >= 0;
+      g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
     }
     return g;
   }
@@ -695,9 +706,11 @@ function Root(props) {
   function handleLiveOp(op) {
     switch (op.op) {
       case 'login': {
-        var stored = storageGet(skinKey(op.me)) || {};
-        // Favoris d'avant la synchronisation avec Torch : versés dans sa liste, retirés du stockage local une fois tous acceptés.
-        if (stored.fav && stored.fav.map(function (k) { return liveBridge.setFavorite(k, true); }).every(Boolean)) { delete stored.fav; storageSet(skinKey(op.me), stored); }
+        var stored = storageGet(skinKey(op.me)) || {}, raw = JSON.stringify(stored);
+        var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted };
+        // Listes d'avant la synchronisation avec Torch : versées dans les siennes, retirées du stockage local une fois toutes acceptées.
+        Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
+        if (JSON.stringify(stored) !== raw) storageSet(skinKey(op.me), stored);
         localRef.current = Object.assign(blankLocal(), stored);
         update(function (d) { Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style; d.auth = { loggedIn: true }; });
         // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
@@ -925,18 +938,17 @@ function Root(props) {
       default: break;
     }
   }
-  /* Sourdines, membres ignorés, conversations masquées et style perso, conservés par compte dans ce navigateur */
+  /* Membres ignorés, conversations masquées et style perso, conservés par compte dans ce navigateur */
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
-    // Favoris locaux que Torch n'a pas encore acceptés : gardés pour la prochaine connexion.
+    // Favoris et sourdines locaux que Torch n'a pas encore acceptés : gardés pour la prochaine connexion.
     o.fav = prev.fav;
+    o.muted = prev.muted;
     prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
-    prev.muted.forEach(function (k) { if (!state.groups[k]) o.muted.push(k); });
     prev.ignored.forEach(function (n) { if (!state.users[n]) o.ignored.push(n); });
-    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].muted) o.muted.push(k); });
     Object.keys(state.users).forEach(function (n) { if (state.users[n].ignored) o.ignored.push(n); });
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageSet(skinKey(state.me), o); }
   });

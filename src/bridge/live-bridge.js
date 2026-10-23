@@ -6,6 +6,7 @@ var liveBridge = (function () {
   var listeners = [], queue = [];
   var GENDERS = { M: 'Male', F: 'Female' };
   var STARTUP = { joinOwned: ['groups', 'connect_own'], joinRecent: ['groups', 'connect_recent'], joinFavorites: ['groups', 'connect_favorite'] };
+  var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'] };
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
@@ -266,6 +267,31 @@ var liveBridge = (function () {
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
   // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
   function saveSettings() { localStorage.setItem('settings', JSON.stringify(C.settings)); }
+  /**
+   * Permet de lire une liste des réglages de Torch.
+   * @param {string} kind Clé de LISTS.
+   * @returns {?Array<string>} Copie de la liste, null si les réglages de Torch sont illisibles.
+   */
+  function readList(kind) {
+    var p = LISTS[kind];
+    try { return C.settings[p[0]][p[1]][p[2]].slice(); } catch (e) { warn(e); return null; }
+  }
+  /**
+   * Permet d'ajouter ou de retirer une valeur d'une liste des réglages de Torch, comme lui : filter ou push sans doublon.
+   * @param {string} kind Clé de LISTS.
+   * @param {string} value Valeur visée.
+   * @param {boolean} on Vrai pour l'ajouter.
+   */
+  function writeList(kind, value, on) {
+    var p = LISTS[kind];
+    try {
+      var owner = C.settings[p[0]][p[1]];
+      if (!on) owner[p[2]] = owner[p[2]].filter(function (x) { return x !== value; });
+      else if (owner[p[2]].indexOf(value) < 0) owner[p[2]].push(value);
+      saveSettings();
+      return true;
+    } catch (e) { warn(e); return false; }
+  }
 
   /*
    * Style perso : écrit dans le formulaire de style de Torch, relu par client.sendMessage à chaque envoi.
@@ -599,23 +625,24 @@ var liveBridge = (function () {
      * Permet de lire les groupes favoris de Torch.
      * @returns {?Array<string>} Noms des groupes, null si les réglages de Torch sont illisibles.
      */
-    favoriteGroups: function () {
-      try { return C.settings.privacy.groups.favorite.slice(); } catch (e) { warn(e); return null; }
-    },
+    favoriteGroups: function () { return readList('favorite'); },
     /**
      * Permet d'ajouter ou de retirer un groupe des favoris de Torch.
      * @param {string} gid Groupe visé.
      * @param {boolean} on Vrai pour l'ajouter.
      */
-    setFavorite: function (gid, on) {
-      try {
-        var groups = C.settings.privacy.groups;
-        if (!on) groups.favorite = groups.favorite.filter(function (x) { return x !== gid; });
-        else if (groups.favorite.indexOf(gid) < 0) groups.favorite.push(gid);
-        saveSettings();
-        return true;
-      } catch (e) { warn(e); return false; }
-    },
+    setFavorite: function (gid, on) { return writeList('favorite', gid, on); },
+    /**
+     * Permet de lire les groupes coupés dans Torch, dont il tait les mentions.
+     * @returns {?Array<string>} Noms des groupes, null si les réglages de Torch sont illisibles.
+     */
+    mutedGroups: function () { return readList('muted'); },
+    /**
+     * Permet de couper ou de rétablir un groupe dans Torch.
+     * @param {string} gid Groupe visé.
+     * @param {boolean} on Vrai pour le couper.
+     */
+    setMuted: function (gid, on) { return writeList('muted', gid, on); },
     /**
      * Permet de lire l'activité de son propre profil enregistrée par vissle.me.
      * @param {{page: number, order: string, get: string}} q Curseur, ordre et filtre de la page demandée.
