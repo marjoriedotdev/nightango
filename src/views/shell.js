@@ -29,6 +29,7 @@ function Sidebar() {
   var app = useApp(), s = app.state, r = s.route;
   var joined = Object.keys(s.groups).map(function (k) { return s.groups[k]; }).filter(function (g) { return g.joined; });
   var favs = joined.filter(function (g) { return g.favorite; }), rest = joined.filter(function (g) { return !g.favorite; });
+  var groupsLoading = LIVE && !s.groupsSeen;
   var dmNames = listedDms(s).slice(0, 4);
   function toggle(k) { app.update(function (d) { d.sections[k] = !d.sections[k]; }); }
   function groupItem(g) {
@@ -67,8 +68,8 @@ function Sidebar() {
       h(T.NavItem, { icon: 'users', label: 'Friends', active: r.view === 'dm' && r.tab === 'friends', trailing: onlineFriends ? h('span', { className: 'tc-msg-time' }, onlineFriends + ' online') : null, onClick: function () { app.nav({ view: 'dm', id: null, tab: 'friends' }); } }),
       h(T.NavItem, { icon: 'search', label: 'Meet people', active: r.view === 'dm' && r.tab === 'meet', onClick: function () { app.nav({ view: 'dm', id: null, tab: 'meet' }); } }),
       favs.length ? section('favorites', 'Favorites', favs.map(groupItem)) : null,
-      section('groups', 'Groups', LIVE && !s.groupsSeen ? h(SkeletonRows, { count: 3, avatar: 22, square: true, label: 'Loading groups' })
-        : rest.length ? rest.map(groupItem) : h('p', { className: 'pal-empty' }, 'Join a group from Discover.')),
+      groupsLoading || rest.length || !joined.length ? section('groups', 'Groups', groupsLoading ? h(SkeletonRows, { count: 3, avatar: 22, square: true, label: 'Loading groups' })
+        : rest.length ? rest.map(groupItem) : h('p', { className: 'pal-empty' }, 'Join a group from Discover.')) : null,
       section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.length ? dmNames.map(function (n) {
         var u = userOf(s, n), c = s.dms[n];
         return h(T.NavItem, {
