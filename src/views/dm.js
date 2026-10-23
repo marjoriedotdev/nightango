@@ -20,6 +20,9 @@ function DMView(p) {
     return !q || n.indexOf(q.toLowerCase()) >= 0;
   });
 
+  var filters = [['all', 'All'], ['unread', 'Unread' + (unreadCount ? ' · ' + unreadCount : '')]];
+  // Ni Chatango ni Torch ne connaissent de demande de MP
+  if (!LIVE) filters.push(['requests', 'Requests' + (reqCount ? ' · ' + reqCount : '')]);
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
     h('div', { className: 'topbar', style: { padding: '0 12px 0 16px' } }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
@@ -33,7 +36,7 @@ function DMView(p) {
       h('label', { htmlFor: 'pm-search', className: 'tc-sr' }, 'Search conversations'),
       h('input', { id: 'pm-search', className: 'tc-input', style: { height: 34 }, type: 'search', placeholder: 'Search conversations', value: q, onChange: function (e) { setQ(e.target.value); } }),
       h('div', { className: 'tabs', role: 'group', 'aria-label': 'Filter conversations' },
-        [['all', 'All'], ['unread', 'Unread' + (unreadCount ? ' · ' + unreadCount : '')], ['requests', 'Requests' + (reqCount ? ' · ' + reqCount : '')]].map(function (t) {
+        filters.map(function (t) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },

@@ -46,8 +46,7 @@ function GroupSettingsViewLive(p) {
     { title: 'Moderation', items: [['automod', 'AutoMod'], ['media', 'Media and links'], ['bans', 'Bans']].concat(owner || perms.modLog ? [['audit', 'Audit log']] : []) },
     { title: 'People', items: [['roles', 'Staff and roles'], ['members', 'Members'], ['invites', 'Invites']] }
   ];
-  var allowed = [].concat.apply([], sections.map(function (x) { return x.items.map(function (i) { return i[0]; }); }));
-  var page = allowed.indexOf(p.page) >= 0 ? p.page : allowed[0];
+  var page = listedPage(sections, p.page);
   var dirty = JSON.stringify(draft) !== sig;
   function edit(fn) { setDraft(function (d0) { var d1 = JSON.parse(JSON.stringify(d0)); fn(d1); return d1; }); }
   function leave() {

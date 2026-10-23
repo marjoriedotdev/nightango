@@ -1,7 +1,8 @@
 /* ---------- Réglages utilisateur ---------- */
 var SETTINGS_NAV = [
   { title: 'Account', items: [['profile', 'Profile'], ['privacy', 'Privacy'], ['safety', 'Safety'], ['account', 'Password and email'], ['premium', 'Chatango Premium']] },
-  { title: 'App', items: [['appearance', 'Appearance'], ['notifications', 'Notifications'], ['language', 'Language'], ['accessibility', 'Accessibility']] },
+  // Torch ne traduit rien, la page Language serait sans effet en live
+  { title: 'App', items: [['appearance', 'Appearance'], ['notifications', 'Notifications'], ['language', 'Language'], ['accessibility', 'Accessibility']].filter(function (it) { return !LIVE || it[0] !== 'language'; }) },
   { title: 'Support', items: [['whatsnew', "What's new"], ['about', 'About Torch']] }
 ];
 
@@ -46,6 +47,17 @@ function SettingsShell(p) {
     h('div', { className: 'spage' }, p.children));
 }
 
+/**
+ * Permet de garder la page demandée si la navigation la liste, sinon la page de repli.
+ * @param {Array} sections Sections de la navigation, au format de SETTINGS_NAV.
+ * @param {string} page Page demandée par la route.
+ * @param {string} [fallback] Page de repli, la première listée par défaut.
+ */
+function listedPage(sections, page, fallback) {
+  var ids = [].concat.apply([], sections.map(function (sec) { return sec.items.map(function (it) { return it[0]; }); }));
+  return ids.indexOf(page) >= 0 ? page : fallback || ids[0];
+}
+
 function Page(p) {
   return h('div', { className: cx('spage-inner', p.wide && 'wide') },
     h('div', { className: p.aside ? 'page-head' : null },
@@ -66,9 +78,9 @@ function ActivityRow(p) {
 }
 
 function SettingsView(p) {
-  var app = useApp(), page = p.page || 'appearance';
+  var app = useApp();
   var map = { profile: ProfilePage, privacy: PrivacyPage, safety: SafetyPage, account: AccountPage, premium: PremiumPage, appearance: AppearancePage, notifications: NotificationsPage, language: LanguagePage, accessibility: AccessibilityPage, whatsnew: WhatsNewPage, about: AboutPage };
-  var Comp = map[page] || AppearancePage;
+  var page = listedPage(SETTINGS_NAV, p.page, 'appearance'), Comp = map[page];
   return h(SettingsShell, {
     navLabel: 'Settings', sections: SETTINGS_NAV, page: page,
     onBack: app.actions.backToChat, onPage: function (pg) { app.nav({ view: 'settings', page: pg }); },

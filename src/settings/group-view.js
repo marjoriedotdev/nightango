@@ -9,8 +9,7 @@ function GroupSettingsView(p) {
   var sections = manage
     ? [{ title: 'General', items: [['overview', 'Overview'], ['announcement', 'Announcement']] }, { title: 'Moderation', items: [['automod', 'AutoMod'], ['media', 'Media and links'], ['bans', 'Bans'], ['audit', 'Audit log']] }, { title: 'People', items: [['roles', 'Staff and roles'], ['members', 'Members'], ['invites', 'Invites']] }]
     : [{ title: 'Moderation', items: [['automod', 'AutoMod'], ['bans', 'Bans']].concat(perms.modLog ? [['audit', 'Audit log']] : []) }, { title: 'People', items: [['members', 'Members'], ['invites', 'Invites']] }];
-  var allowed = [].concat.apply([], sections.map(function (x) { return x.items.map(function (i) { return i[0]; }); }));
-  var page = allowed.indexOf(p.page) >= 0 ? p.page : allowed[0];
+  var page = listedPage(sections, p.page);
   function edit(fn) { setDraft(function (d0) { var d1 = JSON.parse(JSON.stringify(d0)); fn(d1); return d1; }); }
   function leave() {
     if (dirty) app.ui.confirm({ title: 'Discard unsaved changes?', body: 'Your changes to #' + g.id + ' are not saved yet.', confirmLabel: 'Discard', danger: true, onConfirm: function () { app.nav({ view: 'group', id: g.id }); } });
