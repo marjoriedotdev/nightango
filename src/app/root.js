@@ -155,6 +155,20 @@ function Root(props) {
     });
     if (!focused && !userOf(s0, from).ignored) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
   }
+  /**
+   * Permet d'annoncer le basculement d'un membre, en prototype comme en live.
+   * @param {string} name Membre visé.
+   * @param {string} key Marque basculée (friend, ignored, blocked ou unstyled).
+   * @param {boolean} was Marque avant le basculement.
+   */
+  function toggleUserText(name, key, was) {
+    return {
+      friend: name + ' removed from friends.',
+      ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + '.',
+      blocked: was ? name + ' unblocked.' : name + ' blocked.',
+      unstyled: was ? name + "'s style shown again." : name + "'s style hidden."
+    }[key];
+  }
   function setTyping(key, name, on) {
     update(function (d) {
       var list = (d.typing[key] || []).filter(function (n) { return n !== name; });
@@ -233,12 +247,7 @@ function Root(props) {
       var was = !!userOf(stateRef.current, name)[key];
       update(function (d) { if (!d.users[name]) d.users[name] = { status: 'offline', about: '', style: {} }; d.users[name][key] = !was; });
       if (key === 'friend' && !was) return;
-      var text = {
-        friend: name + ' removed from friends.',
-        ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + '.',
-        blocked: was ? name + ' unblocked.' : name + ' blocked.'
-      }[key];
-      toast(text, { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
+      toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
     },
     toggleMute: function (gid) { update(function (d) { d.groups[gid].muted = !d.groups[gid].muted; }); },
     toggleHiddenChannel: function (gid, k) {
@@ -396,7 +405,7 @@ function Root(props) {
   var pmAsked = useRef(null);
   var offlineCount = useRef(0);
   function skinKey(me) { return 'torch-skin:' + me; }
-  function blankLocal() { return { hidden: [], channels: {}, style: null }; }
+  function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -601,12 +610,7 @@ function Root(props) {
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
       if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('Torch could not save its ignore list. Reload the page and try again.'); return; }
       update(function (d) { ensureLiveUser(d, name)[key] = !was; });
-      var text = {
-        friend: name + ' removed from friends.',
-        ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + '.',
-        blocked: was ? name + ' unblocked.' : name + ' blocked.'
-      }[key];
-      toast(text, { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
+      toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
     actions.deleteDm = function (name) {
       liveBridge.clearPmHistory(name);
@@ -673,6 +677,7 @@ function Root(props) {
     if (!u) {
       u = d.users[name] = { status: 'online', about: '', style: {} };
       if ((liveBridge.ignoredUsers() || []).indexOf(name) >= 0) u.ignored = true;
+      if (localRef.current.unstyled.indexOf(name) >= 0) u.unstyled = true;
     }
     return u;
   }
@@ -1073,7 +1078,7 @@ function Root(props) {
       default: break;
     }
   }
-  /* Conversations masquées, canaux masqués et style perso, conservés par compte dans ce navigateur */
+  /* Conversations masquées, canaux masqués, membres au style coupé et style perso, conservés par compte dans ce navigateur */
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
@@ -1086,6 +1091,8 @@ function Root(props) {
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
     Object.keys(prev.channels).forEach(function (k) { if (!state.groups[k]) o.channels[k] = prev.channels[k]; });
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
+    prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
+    Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageSet(skinKey(state.me), o); }
   });
   useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(handleLiveOp); }, []);

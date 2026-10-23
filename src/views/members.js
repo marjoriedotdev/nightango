@@ -105,6 +105,17 @@ function ignoreItem(app, name) {
 }
 
 /**
+ * Permet de proposer de couper le style d'un membre ou de le rétablir.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Nom du membre.
+ * @param {boolean} [named] Libellé qui nomme le membre, pour le menu d'un message.
+ */
+function styleItem(app, name, named) {
+  var label = (userOf(app.state, name).unstyled ? 'Show ' : 'Hide ') + (named ? name + "'s style" : 'style');
+  return { id: 'style', label: label, icon: 'type', onSelect: function () { app.actions.toggleUser(name, 'unstyled'); } };
+}
+
+/**
  * Permet de proposer le bannissement d'un membre d'un groupe.
  * @param {Object} app Contexte de l'application.
  * @param {string} name Nom du membre.
@@ -133,6 +144,7 @@ function useProfileActions(name, gid) {
       onSelect: function () { if (u.friend) confirmRemoveFriend(app, name); else app.actions.toggleUser(name, 'friend'); }
     },
     u.friend ? notifyOnlineItem(app, name) : null,
+    styleItem(app, name),
     ignoreItem(app, name),
     {
       id: 'block', label: u.blocked ? 'Unblock' : 'Block…', icon: 'user-x', danger: !u.blocked, onSelect: function () {

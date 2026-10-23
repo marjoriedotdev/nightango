@@ -95,13 +95,13 @@ function DMView(p) {
 function DmMessageRow(p) {
   var app = useApp(), s = app.state, m = p.m;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
-  var ms = memberStyles(userOf(s, m.from).style || {}, s.prefs.styles, app.theme, false);
+  var ms = memberStyles(userOf(s, m.from), s.prefs.styles, app.theme, false);
   var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null];
   return h(T.Message, {
     compact: s.prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, s.prefs.h24),
     avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row,
     actions: moreActionsButton(items, setMenuOpen), className: cx(menuOpen && 'menu-open')
-  }, h(MessageContent, { m: m, style: ms.text }));
+  }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
 }
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };

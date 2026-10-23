@@ -185,6 +185,10 @@ Style de message enregistré chez Chatango pour le compte.
 Style de message choisi dans Torch Skin, gardé dans ce navigateur seulement et appliqué à chaque envoi. Il peut aussi barrer le texte, en MP seulement.
 _Avoid_: style local, thème de message
 
+**Style coupé**:
+Style de message et fond de message d'un membre que l'utilisateur a choisi de ne plus afficher, en groupe comme en MP. Gardé avec les données du compte dans ce navigateur.
+_Avoid_: style masqué, style bloqué
+
 ## Session
 
 **Session coupée**:

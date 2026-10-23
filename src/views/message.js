@@ -1,13 +1,18 @@
+var UNSTYLED = { names: false, fonts: false, backgrounds: false };
+
 /**
  * Permet de calculer le style Chatango d'une ligne de message, lisible sur son fond.
- * @param {Object} style Style du membre.
+ * Un membre au style coupé est rendu comme si les trois réglages étaient coupés pour lui seul, et son emphase retombe (plain).
+ * @param {{style: ?Object, unstyled: ?boolean}} u Membre, avec son style et son style coupé.
  * @param {Object} styles Réglages « Chatango styles ».
  * @param {string} theme Thème résolu.
  * @param {boolean} mention Ligne qui mentionne l'utilisateur.
  * @param {?Object} [msgBg] Fond de message Premium lu par parseMsgBg, en live.
  */
-function memberStyles(style, styles, theme, mention, msgBg) {
-  var surf = SURFACE[theme], bg = surf.bg, out = { name: null, text: null, row: null, image: null };
+function memberStyles(u, styles, theme, mention, msgBg) {
+  var style = u.style || {};
+  if (u.unstyled) styles = UNSTYLED;
+  var surf = SURFACE[theme], bg = surf.bg, out = { name: null, text: null, row: null, image: null, plain: !!u.unstyled };
   var shown = styles.backgrounds && !mention, color = msgBg ? msgBg.alpha && msgBg.color : style.bg;
   if (shown && color) {
     bg = rgbToHex(mix(hexToRgb(surf.bg), hexToRgb(color), theme === 'dark' ? 0.6 : 0.18));
@@ -31,9 +36,9 @@ function MessageRow(p) {
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var u = userOf(s, m.author);
   var mention = m.author !== me && new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(m.text);
-  var ms = memberStyles(u.style || {}, prefs.styles, app.theme, mention, m.bg ? u.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
+  var ms = memberStyles(u, prefs.styles, app.theme, mention, m.bg ? u.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
   var bgUnknown = u.msgBg === undefined;
-  useEffect(function () { if (m.bg && prefs.styles.backgrounds && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, bgUnknown]);
+  useEffect(function () { if (m.bg && prefs.styles.backgrounds && !u.unstyled && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, u.unstyled, bgUnknown]);
   var bgImage = ms.image && prefs.safety.embedImages && !prefs.safety.proxyMedia ? h(MessageBgImage, ms.image) : null;
   var role = roleOf(g, m.author), myRole = roleOf(g, me);
   // Chatango ne laisse supprimer et bannir qu'au staff, à partir d'un message reçu du serveur.
@@ -48,6 +53,7 @@ function MessageRow(p) {
     handle ? { label: 'Mention ' + m.author, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
     copyTextItem(app, m),
     m.author !== me ? viewProfileItem(app, m.author, g.id) : null,
+    m.author !== me ? styleItem(app, m.author, true) : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,
     canDelete ? { label: LIVE ? 'Delete message…' : 'Delete message', icon: 'trash', danger: true, onSelect: function () { if (LIVE) app.ui.confirm({ title: 'Delete this message?', body: 'Chatango removes it from #' + g.id + " for everyone. You can't undo this.", confirmLabel: 'Delete', danger: true, onConfirm: deleteMessage }); else deleteMessage(); } } : null,
     LIVE && canBan ? { label: 'Delete all from ' + m.author + '…', icon: 'message-square-x', danger: true, onSelect: function () { app.ui.confirm({ title: 'Delete every message from ' + m.author + '?', body: 'Chatango removes their recent messages in #' + g.id + ' for everyone.', confirmLabel: 'Delete all', danger: true, onConfirm: function () { app.actions.deleteAllFrom(g.id, m.author, m); } }); } } : null,
@@ -59,7 +65,7 @@ function MessageRow(p) {
     moreActionsButton(menuItems, setMenuOpen));
   var body = m.deleted
     ? h('p', { className: 'tc-msg-text deleted' }, m.deleted.by === m.author ? 'Message deleted' : 'Message deleted by ' + m.deleted.by)
-    : h(MessageContent, { m: m, style: textStyle, gid: g.id });
+    : h(MessageContent, { m: m, style: textStyle, plain: ms.plain, gid: g.id });
   var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
@@ -127,7 +133,7 @@ function authorName(name, style) {
 
 function MessageContent(p) {
   var m = p.m;
-  return h(Frag, null, m.text ? h(MessageText, { text: m.text, parts: m.parts, style: p.style, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
+  return h(Frag, null, m.text ? h(MessageText, { text: m.text, parts: m.parts, style: p.style, plain: p.plain, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
 }
 
 function MessageEmbeds(p) {

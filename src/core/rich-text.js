@@ -30,6 +30,8 @@ var EMPHASIS = ['b', 'i', 'u', 's'];
 /* Texte de message : emphase (segments de parseContent, absents sans emphase), mentions et liens */
 function MessageText(p) {
   var app = useApp();
+  // Style coupé (plain) : comme Torch, gras, italique et souligné retombent mais le barré reste.
+  var marks = p.plain ? ['s'] : EMPHASIS;
   return h('p', { className: 'tc-msg-text', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {
     var nodes = String(part.text).split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
       if (!s) return null;
@@ -45,7 +47,7 @@ function MessageText(p) {
       }
       return s;
     });
-    return EMPHASIS.reduce(function (node, mark) { return part[mark] ? h(mark, { key: k }, node) : node; }, nodes);
+    return marks.reduce(function (node, mark) { return part[mark] ? h(mark, { key: k }, node) : node; }, nodes);
   }));
 }
 

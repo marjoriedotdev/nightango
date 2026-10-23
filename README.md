@@ -45,7 +45,7 @@ Everything lives in Settings > Appearance and is saved on your device.
 - **Accent color**: Ember, Blue, Green, Violet, Pink, Slate, or any color you pick. Text on the accent is adjusted so it stays readable.
 - **Density**: comfortable, or compact with no avatars and the time before the name.
 - **Text size** for message text.
-- **Chatango styles**: turn members' name colors, fonts and text colors, message backgrounds and profile backgrounds on or off. Hard-to-read colors are corrected.
+- **Chatango styles**: turn members' name colors, fonts and text colors, message backgrounds and profile backgrounds on or off. Hard-to-read colors are corrected. To hide the style of one member only, use Hide style in their message menu or profile.
 - **Imported themes**: load a theme file (.json) from the old Torch theme editor and use its accent color.
 - **Message style**: pick the font, size and colors of your own messages. It applies to what you send from Torch Skin in this browser and does not change your Chatango account style.
 
