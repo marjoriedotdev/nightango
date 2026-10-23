@@ -66,7 +66,7 @@ function useTorchSettings(read, write) {
   var app = useApp();
   var st = useState(read), value = st[0], setValue = st[1];
   function set(key, v) {
-    if (!write(key, v)) { app.ui.toast('Torch could not save this setting. Reload the page and try again.'); return; }
+    if (!saveTorchSetting(app, write, key, v)) return;
     setValue(function (x) { var n = Object.assign({}, x); n[key] = v; return n; });
   }
   return [value, set];
@@ -74,7 +74,7 @@ function useTorchSettings(read, write) {
 
 function PrivacyPageLive() {
   var app = useApp(), pr = usePref();
-  var st = useTorchSettings(liveBridge.startupSettings, liveBridge.setStartupSetting), startup = st[0], setStartupSetting = st[1];
+  var st = useTorchSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
   return h(Page, { title: 'Privacy', lede: 'What Torch Skin keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
       h(T.SettingRow, {

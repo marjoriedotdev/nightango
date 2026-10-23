@@ -5,7 +5,10 @@ var liveBridge = (function () {
   var ENV = refs.torch && refs.torch.environment;
   var listeners = [], queue = [];
   var GENDERS = { M: 'Male', F: 'Female' };
-  var STARTUP = { joinOwned: ['groups', 'connect_own'], joinRecent: ['groups', 'connect_recent'], joinFavorites: ['groups', 'connect_favorite'] };
+  var SETTINGS = {
+    joinOwned: ['privacy', 'groups', 'connect_own'], joinRecent: ['privacy', 'groups', 'connect_recent'], joinFavorites: ['privacy', 'groups', 'connect_favorite'],
+    markdown: ['appearance', 'messages', 'parse_markdown']
+  };
   var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'] };
   var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
   // Seuls réglages de son que Torch lit, avec l'objet Audio que chacun règle.
@@ -336,6 +339,15 @@ var liveBridge = (function () {
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
   // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
   function saveSettings() { localStorage.setItem('settings', JSON.stringify(C.settings)); }
+  /**
+   * Permet de lire un interrupteur des réglages de Torch.
+   * @param {string} key Clé de SETTINGS.
+   * @returns {?boolean} Valeur lue, null si les réglages de Torch sont illisibles.
+   */
+  function readSetting(key) {
+    var p = SETTINGS[key];
+    try { return !!C.settings[p[0]][p[1]][p[2]]; } catch (e) { warn(e); return null; }
+  }
   /**
    * Permet de lire une liste des réglages de Torch.
    * @param {string} kind Clé de LISTS.
@@ -690,25 +702,24 @@ var liveBridge = (function () {
     saveProfile: function (p) {
       return Promise.resolve().then(function () { return saveProfileNow(p); });
     },
+    setting: readSetting,
     /**
      * Permet de lire les réglages de démarrage de Torch.
      * @returns {?Object} Les trois interrupteurs, null si les réglages de Torch sont illisibles.
      */
     startupSettings: function () {
-      try {
-        var privacy = C.settings.privacy, out = {};
-        Object.keys(STARTUP).forEach(function (k) { out[k] = !!privacy[STARTUP[k][0]][STARTUP[k][1]]; });
-        return out;
-      } catch (e) { warn(e); return null; }
+      var out = {};
+      return ['joinOwned', 'joinRecent', 'joinFavorites'].every(function (k) { out[k] = readSetting(k); return out[k] !== null; }) ? out : null;
     },
     /**
-     * Permet d'enregistrer un réglage de démarrage dans les réglages de Torch.
-     * @param {string} key Clé de STARTUP.
+     * Permet d'enregistrer un interrupteur dans les réglages de Torch, en place puis sous la clé settings.
+     * @param {string} key Clé de SETTINGS.
      * @param {boolean} value Nouvelle valeur.
      */
-    setStartupSetting: function (key, value) {
+    setSetting: function (key, value) {
+      var p = SETTINGS[key];
       try {
-        C.settings.privacy[STARTUP[key][0]][STARTUP[key][1]] = value;
+        C.settings[p[0]][p[1]][p[2]] = value;
         saveSettings();
         return true;
       } catch (e) { warn(e); return false; }

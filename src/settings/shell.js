@@ -24,6 +24,20 @@ function usePref() {
   };
 }
 
+/**
+ * Permet d'enregistrer un réglage dans ceux de Torch, avec un toast si Torch ne l'enregistre pas.
+ * @param {Object} app Contexte de l'application.
+ * @param {Function} write Écriture du pont, vraie si Torch a enregistré la valeur.
+ * @param {string} key Clé du réglage dans le pont.
+ * @param {boolean|number} value Nouvelle valeur.
+ * @returns {boolean} Vrai si Torch l'a enregistré.
+ */
+function saveTorchSetting(app, write, key, value) {
+  if (write(key, value)) return true;
+  app.ui.toast('Torch could not save this setting. Reload the page and try again.');
+  return false;
+}
+
 function SettingsShell(p) {
   var app = useApp();
   return h('div', { className: 'settings' },
