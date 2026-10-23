@@ -83,9 +83,9 @@ function PremiumPage() {
   } else {
     body = h(T.SettingsSection, { title: 'Review and pay' },
       h('div', { className: 'summary' },
-        h('div', null, h('span', null, plan.label), h('span', { className: 'mono' }, money(plan.price, cur))),
+        h('div', null, h('span', null, plan.label), h('span', { className: 'tnum' }, money(plan.price, cur))),
         h('div', null, h('span', { className: 'muted' }, 'For'), h('span', null, forWho === 'me' ? s.me : recips.join(', '))),
-        h('div', { className: 'total' }, h('span', null, 'Total'), h('span', { className: 'mono' }, money(plan.price, cur)))),
+        h('div', { className: 'total' }, h('span', null, 'Total'), h('span', { className: 'tnum' }, money(plan.price, cur)))),
       h(T.SettingRow, {
         asLabel: false, title: 'Payment method', description: "You confirm and pay on chatango.com. Torch never sees your payment details.",
         control: h(T.SegmentedControl, { label: 'Payment method', value: method, onChange: setMethod, options: [{ value: 'paypal', label: 'PayPal' }, { value: 'card', label: 'Card' }] })

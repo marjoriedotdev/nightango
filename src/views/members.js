@@ -158,6 +158,6 @@ function LinkDialog(p) {
     ]
   },
     h('div', { className: 'dialog-body' },
-      h('p', { className: 'mono', style: { margin: 0, padding: '10px 12px', borderRadius: 8, background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 12.5, overflowWrap: 'anywhere', color: 'var(--text-body)' } }, p.url),
+      h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 8, background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 12.5, overflowWrap: 'anywhere', color: 'var(--text-body)' } }, p.url),
       h(T.Checkbox, { label: "Don't warn me again", onChange: function (e) { var v = e.target.checked; app.update(function (d) { d.prefs.safety.warnLinks = !v; }); } })));
 }

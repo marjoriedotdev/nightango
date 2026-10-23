@@ -109,7 +109,7 @@ function GSBans(p) {
       g.bans.length ? g.bans.map(function (x) {
         return h('div', { key: x.name, className: 'lrow' },
           h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28 }), h('span', { className: 'lrow-sub person-sub' }, x.reason + ' · by ' + x.by + ' · ' + ago(x.at))),
-          showIp ? h('span', { className: 'mono muted', style: { fontSize: 12 } }, x.ip) : null,
+          showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
           h(T.Button, { size: 'sm', onClick: function () { app.actions.unban(g.id, x.name); } }, 'Unban'));
       }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
 }

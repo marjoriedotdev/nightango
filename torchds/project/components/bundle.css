@@ -77,9 +77,9 @@ select.tc-input{padding:0 10px}
 .tc-msg-body{flex:1;min-width:0}
 .tc-msg-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--space-2)}
 .tc-msg-author{font-weight:600;color:var(--text)}
-.tc-msg-time{font:400 11.5px var(--font-mono);color:var(--text-3)}
+.tc-msg-time{font:400 11.5px var(--font-sans);font-variant-numeric:tabular-nums;color:var(--text-3)}
 .tc-msg-text{margin:2px 0 0;color:var(--text-body);overflow-wrap:anywhere;white-space:pre-wrap}
-.tc-msg-gutter{width:36px;flex:none;padding-top:3px;text-align:right;font:400 10.5px var(--font-mono);color:transparent}
+.tc-msg-gutter{width:36px;flex:none;padding-top:3px;text-align:right;font:400 10.5px var(--font-sans);font-variant-numeric:tabular-nums;color:transparent}
 .tc-msg:hover .tc-msg-gutter{color:var(--text-3)}
 .tc-msg-reply{display:flex;align-items:center;gap:6px;min-width:0;margin:0 0 4px 18px;font-size:12.5px;color:var(--text-3)}
 .tc-msg-reply-author{font-weight:500;color:var(--text-2)}

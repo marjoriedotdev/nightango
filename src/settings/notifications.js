@@ -45,7 +45,7 @@ function NotificationsPage() {
       h(T.SettingRow, {
         asLabel: false, title: 'Volume', description: 'Applies to every alert sound.', control: h('div', { className: 'range-row' },
           h('input', { type: 'range', min: 0, max: 100, value: prefs.volume, 'aria-label': 'Volume', onChange: function (e) { pr.set('volume', +e.target.value); } }),
-          h('span', { className: 'mono', style: { width: 40, textAlign: 'right', fontSize: 12.5, color: 'var(--text-2)' } }, prefs.volume + '%'),
+          h('span', { className: 'tnum', style: { width: 40, textAlign: 'right', fontSize: 12.5, color: 'var(--text-2)' } }, prefs.volume + '%'),
           h(T.IconButton, { icon: 'volume', label: 'Play test sound', onClick: function () { beep(prefs.volume, true); } }))
       }),
       h(T.SettingRow, { title: 'Only when Torch is in focus', description: "Stay silent while you're in another tab or app.", control: pr.sw('soundFocusOnly') })),

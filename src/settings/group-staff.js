@@ -90,6 +90,6 @@ function GSInvites(p) {
   return h(Page, { title: 'Invites', lede: 'Anyone with the link can join. Banned members still cannot.' },
     h(T.SettingsSection, { title: 'Invite link', padded: true },
       h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },
-        h('input', { className: 'tc-input mono', style: { flex: '1 1 260px' }, readOnly: true, value: link, 'aria-label': 'Invite link', onFocus: function (e) { e.target.select(); } }),
+        h('input', { className: 'tc-input', style: { flex: '1 1 260px' }, readOnly: true, value: link, 'aria-label': 'Invite link', onFocus: function (e) { e.target.select(); } }),
         h(T.Button, { variant: 'primary', icon: 'link', onClick: function () { copyText(link, function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. Select the link and copy it.'); }); } }, 'Copy link'))));
 }

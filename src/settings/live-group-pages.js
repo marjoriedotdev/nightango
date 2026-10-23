@@ -94,7 +94,7 @@ function GSBansLive(p) {
         : g.bans.length ? g.bans.map(function (x) {
           return h('div', { key: x.unid + ':' + x.ip, className: 'lrow' },
             h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28, inert: !ACCOUNT_NAME.test(x.name) }), h('span', { className: 'lrow-sub person-sub' }, (x.by ? 'by ' + x.by + ' · ' : '') + ago(x.at))),
-            showIp ? h('span', { className: 'mono muted', style: { fontSize: 12 } }, x.ip) : null,
+            showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
             h(T.Button, { size: 'sm', onClick: function () { app.actions.unbanEntry(g.id, x); } }, 'Unban'));
         }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
 }

@@ -113,7 +113,7 @@ function ColorField(p) {
     h('label', { className: 'tc-label', htmlFor: p.id }, p.label),
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
       h('input', { id: p.id, type: 'color', className: 'color-in', style: { borderRadius: 7 }, value: p.value, onChange: function (e) { p.onChange(e.target.value); } }),
-      h('span', { className: 'mono', style: { fontSize: 12.5, color: 'var(--text-2)' } }, p.value)));
+      h('span', { className: 'tnum', style: { fontSize: 12.5, color: 'var(--text-2)' } }, p.value)));
 }
 
 var SKELETON_WIDTHS = ['62%', '44%', '70%', '52%', '66%', '40%'];
