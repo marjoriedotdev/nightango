@@ -26,8 +26,23 @@ function embedOf(src) {
   if (img) return { kind: 'photo', url: 'https://chatango.com/pmmessageimg?i=' + encodeURIComponent(img[1]) };
   return IMAGE_URL.test(src) ? { kind: 'image', url: src } : null;
 }
-/* Contenu Chatango brut : balises de style, réponses, modifications, médias, entités */
-function parseContent(raw, keepMedia) {
+/**
+ * Permet de rendre une émoticône sm:// en texte : son emoji, son premier raccourci si elle est Premium sans le drapeau, son nom seul si la table l'ignore.
+ * @param {string} name Nom lu dans la balise, affiché seul s'il est fait de [a-z0-9_-].
+ * @param {boolean} premium Le message porte le drapeau Premium.
+ */
+function emoticonText(name, premium) {
+  var e = EMOTICON_BY_NAME[name];
+  if (!e) return /^[a-z0-9_-]{1,32}$/.test(name) ? name : '';
+  return e.emoji && (premium || !e.premium) ? e.emoji : e.keys[0].split('?')[0];
+}
+/**
+ * Permet de lire un contenu Chatango brut : balises de style, réponses, modifications, médias, émoticônes, entités.
+ * @param {string} raw Corps du message.
+ * @param {boolean} [keepMedia] Garde la source des médias et des émoticônes dans le texte.
+ * @param {boolean} [premium] Le message porte le drapeau Premium.
+ */
+function parseContent(raw, keepMedia, premium) {
   var style = {}, embeds = [], s = String(raw);
   var n = /<n([a-f0-9]{3}|[a-f0-9]{6})\/>/i.exec(s);
   if (n) style.nameColor = '#' + n[1];
@@ -43,16 +58,22 @@ function parseContent(raw, keepMedia) {
   var r = /<r([^\s<>"\/]+)\/>/.exec(s), e = /<e([^\s<>"\/]+)\/>/.exec(s), k = /<i([a-z0-9]{7,8})\/>/.exec(s);
   var body = s
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<i s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src) {
-      var m = embedOf(decodeHtml(src));
+    .replace(/<i\s(?:[^>]*?\s)?s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src) {
+      var m = embedOf(decodeHtml(src)), sm = /^sm:\/\/(.*)/i.exec(src);
       if (m) embeds.push(m);
-      return m && !keepMedia ? ' ' : ' ' + src + ' ';
+      if (keepMedia) return ' ' + src + ' ';
+      return sm ? emoticonText(sm[1], premium) : m ? ' ' : ' ' + src + ' ';
     })
     .replace(STRIKE_PAIR, '<s>$1</s>');
   var text = decodeHtml(body.replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
   (text.match(/https:\/\/\S+/g) || []).forEach(function (url) { if (IMAGE_URL.test(url)) embeds.push({ kind: 'image', url: url }); });
   return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null, key: k ? decodeRef(k[1]) : null };
 }
+/**
+ * Permet de lire le corps d'un MP reçu ou archivé avec son drapeau Premium.
+ * @param {Array} data Champs de la trame msg ou msgoff, drapeaux en 4 et corps à partir de 5.
+ */
+function parsePm(data) { return parseContent(data.slice(5).join(':'), false, !!(parseInt(data[4], 10) & MSG_FLAG.PREMIUM)); }
 /**
  * Permet de découper un corps de message en segments marqués gras, italique, souligné ou barré.
  * Liste blanche de Torch (renderMessage) : b, i sans attribut, u, s et strike.

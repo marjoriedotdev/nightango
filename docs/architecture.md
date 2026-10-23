@@ -18,7 +18,8 @@ src/
     rich-text.js     MessageText (emphase, mentions, liens), RichText (mini profil assaini), fullProfileDoc
     selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées
   bridge/     le pont vers Torch
-    live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG), modèles live
+    live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG),
+                     table des émoticônes (EMOTICONS), modèles live
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
                      fond Premium (parseMiniCss), fond de message (parseMsgBg), présence, horodatages, références de message
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
@@ -113,6 +114,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 ## Contenu des membres
 
 - Messages : `parseContent` garde le texte brut dans `text`, sans les marqueurs d'une paire `▓…▒`, et découpe le corps en segments marqués (`parts`) selon la liste blanche de Torch : `b`, `i` sans attribut, `u`, `s`, `strike` et les paires `▓…▒`. `MessageText` les reconstruit en éléments `b`, `i`, `u`, `s`, quel que soit le réglage « Fonts and text colors ». Toute autre balise est retirée.
+- Émoticônes : `parseContent` remplace une balise `<i s="sm://{nom}"/>` par l'emoji système que la table `EMOTICONS` associe au nom, dans `text` comme dans `parts`. Du membre, seul le nom est gardé et comparé à la table (`docs/torch-protocol.md`, Émoticônes).
 - Mini profil : `RichText` reconstruit une liste blanche de balises en éléments React. Le mode `inline` (cartes Meet) ignore blocs, liens, images, taille et alignement.
 - Profil complet : `fullProfileDoc` produit un document isolé dans une `iframe` `sandbox`, avec une CSP et `referrer` `no-referrer` en `<meta>`. Sous `styles.profileBackgrounds`, son `<style>` reprend le fond Premium choisi par `miniStyleOf` (couleurs hex, image `https` avec sa répétition si les médias sont autorisés), chaque valeur vérifiée avant d'être écrite.
 - Fond Premium : couleurs tirées de `custom_profile.css` par `parseMiniCss`, contraste garanti. Dans la fenêtre de profil, `miniSkin` applique le fond, le texte et les jetons de couleur du thème (texte secondaire à 4,5:1, bordures, survols) à toute la fenêtre. L'image est une `<img>` en `referrerPolicy="no-referrer"`, en couverture de 120 px (`object-fit: cover`) derrière l'avatar, fondue vers la couleur de fond. Le panneau de profil des MP garde le fond sur le seul bloc de texte, avec l'image en bandeau au-dessus. Les cartes Meet n'affichent que la couleur. L'image du fond Premium suit les réglages de médias et `styles.profileBackgrounds`.

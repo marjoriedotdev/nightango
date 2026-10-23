@@ -144,6 +144,13 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Seuls préfixes connus (client officiel) : `vid://yt:{id de 11 caractères}`, `img://cam:{id}` et `img://lib:{id}`. Les deux derniers donnent `https://chatango.com/pmmessageimg?i={id}` (Torch). Le reste, ce sont des URL https.
 - Torch charge l'oEmbed YouTube automatiquement. Torch Skin ne l'appelle jamais, et l'iframe `youtube-nocookie.com` n'est créée qu'au clic.
 
+### Émoticônes
+
+- Balise `<i s="sm://{nom}" w="16" h="16"/>`. Comme Torch, le pont lit `s` à toute place parmi les attributs. Torch tire le nom de la classe `emoji-item-{nom}` de ses 66 SVG (`client.html:31-97`), pas du raccourci : `*werewolf*` part en `sm://warewolf` (`inject.js:12503-12509`).
+- Torch ne change les raccourcis en balises qu'en MP (`parseEmoji`, `inject.js:5215` et `6889-6918`). En groupe, il envoie le raccourci en texte.
+- Une émoticône `data-premium` ne s'affiche que si le message porte le drapeau `PREMIUM`, bit `1 << 2` (`renderEmoji`, `inject.js:6930-6934`), lu en `data[7]` en groupe et en `data[4]` en MP (`inject.js:4057-4061`). Le propriétaire du groupe l'a d'office (`inject.js:7810-7812`), une annonce aussi (`inject.js:3810` et `3834`).
+- Torch Skin affiche l'emoji système que la table `EMOTICONS` (`src/bridge/live-model.js`) associe au nom, sans image ni requête. Une Premium sans le drapeau devient son premier raccourci, `sm://stripes` le texte `*stripes*`. Un nom absent de la table reste seul en texte s'il est fait de 1 à 32 caractères `[a-z0-9_-]`, sinon il disparaît. Ses propres MP envoyés affichent l'emoji de chaque balise connue. Les raccourcis tapés en texte restent du texte.
+
 ## Profils
 
 ### Fichiers publics ust.chatango.com

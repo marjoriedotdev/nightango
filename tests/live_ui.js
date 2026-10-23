@@ -563,6 +563,26 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   step('pm image embed and settings', prevImage === 'Image' && prevPhoto === 'Photo' && imgsBefore === 0 && JSON.stringify(imgs) === JSON.stringify([['https://x.test/a.png', 'no-referrer'], ['https://chatango.com/pmmessageimg?i=abc123', 'no-referrer']]) && linksOnly, { prevImage, prevPhoto, imgsBefore, imgs, linksOnly });
 
+  /* Émoticônes reçues : emoji de la table, raccourci d'une Premium sans le drapeau, nom seul d'une inconnue, raccourci tapé gardé en texte */
+  const EMO = 'Emo <i s="sm://smile" w="16" h="16"/> <i w="16" h="16" s="sm://cat"/> <i s="sm://stripes" w="16" h="16"/> <i s="sm://inconnu" w="16" h="16"/> :)';
+  const EMO_PLAIN = 'Emo \u{1F642} *cat* *stripes* inconnu :)', EMO_PREMIUM = 'Emo \u{1F642} \u{1F431} *stripes* inconnu :)';
+  const emoShown = scope => { const p = $$(scope + ' .tc-msg-text').find(x => x.textContent.indexOf('Emo ') === 0); return p ? p.textContent : null; };
+  click(byText('.tc-nav', 'test')); await wait(50);
+  g('b', 'test', ['1700000273.1', 'Eve', '', 'u7', 'UNID7', 'tmp16', '9.9.9.9', '0', '', '<n000/><f x11000="0">' + EMO]);
+  g('u', 'test', ['tmp16', 'EMO1=']);
+  g('b', 'test', ['1700000274.1', 'Alice', '', 'u1', 'UNID1', 'tmp17', '1.2.3.4', '0', '', '<n000/><f x11000="0"><rEMO1/>So cute']); await wait(60);
+  const emoQuote = $$('.log .tc-msg-reply-text').find(x => x.textContent.indexOf('Emo ') === 0);
+  const groupEmo = { shown: emoShown('.log'), text: emoQuote ? emoQuote.textContent : null };
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  pm('msg', ['quinn', 'marjorie', 'unknown', '1700000402.5', '0', '<n000/><m v="1"><g x12s000="0">' + EMO + '</g></m>']); await wait(50);
+  pm('msg', ['pia', 'marjorie', 'unknown', '1700000403.5', '4', '<n000/><m v="1"><g x12s000="0">' + EMO + '</g></m>']); await wait(50);
+  click(byText('.conv', 'quinn')); await wait(50);
+  const pmEmo = { shown: emoShown('.thread'), text: convPrev('quinn') };
+  click(byText('.conv', 'pia')); await wait(50);
+  const premiumEmo = { shown: emoShown('.thread'), text: convPrev('pia') };
+  const emoOk = (r, want) => r.shown === want && r.text === want;
+  step('received emoticons become emojis, never sm://', emoOk(groupEmo, EMO_PLAIN) && emoOk(pmEmo, EMO_PLAIN) && emoOk(premiumEmo, EMO_PREMIUM), { groupEmo, pmEmo, premiumEmo });
+
   /* Fermer ou supprimer une conversation */
   const listed = n => $$('.convs .conv-name').some(x => x.textContent === n);
   const hiddenStored = () => JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').hidden || [];

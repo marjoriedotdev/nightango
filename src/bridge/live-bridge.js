@@ -23,13 +23,14 @@ var liveBridge = (function () {
     try { return CH.getAnon(data[3], (/<n(\d+)\/>/.exec(data[9] || '') || [0, 3452])[1]); } catch (e) { return '!anon'; }
   }
   function toMsg(room, data, temp) {
-    var parsed = parseContent(data.slice(9).join(':'));
     var flags = parseInt(data[7], 10) || 0, name = author(data);
+    // Comme Torch, les messages du propriétaire du groupe comptent comme Premium.
+    var premium = !!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner);
+    var parsed = parseContent(data.slice(9).join(':'), false, premium);
     return {
       id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: name, text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
       style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags),
-      // Comme Torch, les messages du propriétaire du groupe comptent comme Premium.
-      bg: !!(flags & MSG_FLAG.BG_ON) && (!!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner))
+      bg: !!(flags & MSG_FLAG.BG_ON) && premium
     };
   }
 
@@ -108,13 +109,14 @@ var liveBridge = (function () {
       case 'getannc':
         if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, mode: 0, enabled: false, interval: 0, text: '', displayText: '', embeds: [] });
         else {
-          var raw = data.slice(4).join(':'), shown = parseContent(raw, false);
+          // Comme Torch, une annonce a d'office le drapeau Premium.
+          var raw = data.slice(4).join(':'), shown = parseContent(raw, false, true);
           // Le style d'origine (couleurs, police, emphase posée par Torch après <f>) est conservé pour le prochain enregistrement, et les médias restent dans le texte renvoyé.
           emit({ op: 'annc', gid: room, mode: parseInt(data[0], 10) || 0, enabled: data[0] !== '0', interval: parseInt(data[3], 10) || 0, text: parseContent(raw, true).text, displayText: shown.text, embeds: shown.embeds, prefix: (/^(<n[^>]*\/>)?(<f [^>]*>(<b>)?(<i>)?(<u>)?)?/.exec(raw) || [''])[0] });
         }
         break;
       case 'annc': {
-        var posted = parseContent(data.slice(2).join(':'), false);
+        var posted = parseContent(data.slice(2).join(':'), false, true);
         emit({ op: 'anncPost', gid: room, text: posted.text, embeds: posted.embeds });
         break;
       }
@@ -142,7 +144,7 @@ var liveBridge = (function () {
   function tapPrivate(name, data) {
     switch (name) {
       case 'msg': case 'msgoff': {
-        var p2 = parseContent(data.slice(5).join(':'));
+        var p2 = parsePm(data);
         emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), offline: name === 'msgoff' });
         break;
       }
@@ -507,7 +509,8 @@ var liveBridge = (function () {
         var body = C.sendMessage(esc(text), true, 'private_message', user);
         if (typeof body !== 'string' || !body) return null;
         C.sendMessage(esc(text), false, 'private_message', user);
-        var parsed = parseContent(body);
+        // Torch n'écrit une balise Premium que pour un compte Premium : chaque balise de ce corps s'affiche.
+        var parsed = parseContent(body, false, true);
         return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds };
       } catch (e) { warn(e); return null; }
     },
@@ -610,7 +613,7 @@ var liveBridge = (function () {
             }
             var v = cur.value || {}, parts = String(v.data || '').split(':').slice(1), target = lower(v.target);
             if (target && parts.length > 5) {
-              var body = parseContent(parts.slice(5).join(':'));
+              var body = parsePm(parts);
               (out[target] = out[target] || []).push({ from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, unread: !!v.unread });
             }
             cur.continue();
