@@ -52,10 +52,13 @@ h1,h2,h3{text-wrap:balance}
 .pillbtn[aria-pressed="true"]{background:var(--selected);color:var(--text)}
 .grow{flex:1}
 
-.log{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;position:relative}
-.log-inner{display:flex;flex-direction:column;justify-content:flex-end;min-height:100%}
+/* Fil en column-reverse : l'origine du défilement est en bas, scrollTop vaut 0 en bas et devient négatif en remontant.
+   L'historique ajouté en haut et les images qui se chargent ne déplacent pas la vue sans qu'on écrive scrollTop, qu'iOS ignore pendant l'inertie. */
+.log{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;position:relative;display:flex;flex-direction:column-reverse}
+.log-inner{flex-shrink:0;display:flex;flex-direction:column;justify-content:flex-end;min-height:100%}
 .ev{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 20px 8px 68px;color:var(--text-3);font-size:12.5px}
-.history-more{min-height:34px}
+/* Sentinelle hors de l'ancrage natif : prise pour ancre, elle ferait suivre la vue jusqu'en haut à chaque page et relancerait le chargement. */
+.history-more{min-height:34px;overflow-anchor:none}
 .ev .embeds{flex-basis:100%;margin-top:0}
 .linkbtn{border:0;background:none;padding:0;color:var(--text-2);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:inherit}
 .linkbtn:hover{color:var(--text)}

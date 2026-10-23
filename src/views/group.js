@@ -10,17 +10,16 @@ function GroupView(p) {
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
   var inputRef = useRef(null);
-  var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
+  var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seenFirstTs = useRef(null);
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
   useLayoutEffect(function () {
     var el = logRef.current; if (!el) return;
-    var was = seen.current;
-    if (atBottom.current) el.scrollTop = el.scrollHeight;
-    // Position absolue : le navigateur a pu ancrer le défilement lui-même, l'ajouter au sien doublerait le décalage.
-    else if (firstTs < was.firstTs) el.scrollTop = was.top + el.scrollHeight - was.height;
-    else setJump(true);
-    seen.current = { firstTs: firstTs, top: el.scrollTop, height: el.scrollHeight };
+    // L'historique ajouté en haut ne déplace pas la vue (.log en column-reverse) : rien à restaurer.
+    var older = firstTs < seenFirstTs.current;
+    seenFirstTs.current = firstTs;
+    if (atBottom.current) el.scrollTop = 0;
+    else if (!older) setJump(true);
   }, [count, !!search]);
   var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open');
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
@@ -35,8 +34,8 @@ function GroupView(p) {
 
   function onScroll() {
     var el = logRef.current;
-    atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
-    seen.current.top = el.scrollTop; seen.current.height = el.scrollHeight;
+    // .log en column-reverse : scrollTop vaut 0 en bas et devient négatif en remontant.
+    atBottom.current = el.scrollTop > -48;
     if (atBottom.current && jump) setJump(false);
   }
   // Comme Torch : la mention s'ajoute en fin de brouillon.
@@ -44,7 +43,7 @@ function GroupView(p) {
     setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
     if (inputRef.current) inputRef.current.focus();
   }
-  function toBottom() { var el = logRef.current; atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
+  function toBottom() { atBottom.current = true; logRef.current.scrollTop = 0; setJump(false); }
 
   var items = [], prev = null, lastDay = null, marker = false;
   var msgs = q ? g.messages.filter(function (m) { return m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0); }) : g.messages;
