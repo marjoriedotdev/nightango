@@ -19,9 +19,9 @@ function useOutside(ref, open, onClose, extraRef) {
     if (!open) return;
     function onDown(e) {
       var path = e.composedPath ? e.composedPath() : [e.target];
-      if (ref.current && path.indexOf(ref.current) < 0 && !(extraRef && extraRef.current && path.indexOf(extraRef.current) >= 0)) onClose();
+      if (ref.current && path.indexOf(ref.current) < 0 && !(extraRef && extraRef.current && path.indexOf(extraRef.current) >= 0)) onClose(e);
     }
-    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    function onKey(e) { if (e.key === 'Escape') onClose(e); }
     document.addEventListener('mousedown', onDown);
     document.addEventListener('touchstart', onDown);
     document.addEventListener('keydown', onKey);
@@ -48,36 +48,54 @@ function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
   }, [enabled]);
 }
 
+var FLOAT_UNPLACED = { position: 'fixed', visibility: 'hidden', top: 0, left: 0 };
+/**
+ * Permet d'ancrer un calque flottant à son déclencheur, de le fermer au clic extérieur, à Escape, au défilement de la page ou d'un conteneur du déclencheur et au redimensionnement, et de donner le focus à son premier bouton.
+ * @param {Object} anchorRef Référence du déclencheur.
+ * @param {Object} floatRef Référence du calque.
+ * @param {boolean} open Le calque est ouvert.
+ * @param {function(Event)} onClose Fermeture, avec l'événement qui la provoque.
+ * @param {{up: boolean, align: string, at: ?{x: number, y: number}}} o Ouverture vers le haut, alignement sur le bord gauche du déclencheur, point d'ancrage qui remplace le déclencheur.
+ * @returns {Object} Style de position, masqué tant que le calque n'est pas mesuré.
+ */
+function useFloating(anchorRef, floatRef, open, onClose, o) {
+  useOutside(anchorRef, open, onClose, floatRef);
+  var ps = useState(null), place = ps[0], setPlace = ps[1];
+  // Position fixe calculée sur le déclencheur, retournée si le calque sortirait de l'écran.
+  useLayoutEffect(function () {
+    if (!open) { setPlace(null); return; }
+    if (!anchorRef.current) return;
+    var r = o.at ? { top: o.at.y, bottom: o.at.y, left: o.at.x, right: o.at.x } : anchorRef.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    var mh = floatRef.current ? floatRef.current.offsetHeight : 0, up = o.up ? r.top - mh - 4 >= 8 || r.bottom + mh + 4 > vh : r.bottom + mh + 4 > vh - 8 && r.top - mh - 4 >= 8;
+    var mw = floatRef.current ? floatRef.current.offsetWidth : 0, left = o.align === 'left' && r.left + mw <= vw - 8;
+    var st = { position: 'fixed' };
+    if (up) st.bottom = (vh - r.top + 4) + 'px'; else st.top = (r.bottom + 4) + 'px';
+    if (left) st.left = Math.max(8, r.left) + 'px'; else st.right = Math.max(8, vw - r.right) + 'px';
+    setPlace(st);
+  }, [open, o.at]);
+  useEffect(function () {
+    if (!open) return;
+    // Seul le défilement d'un conteneur du déclencheur déplace le calque, pas celui du fil qui reçoit un message.
+    function onMove(e) { if (e.type === 'scroll' && e.target !== document && !e.target.contains(anchorRef.current)) return; onClose(e); }
+    window.addEventListener('resize', onMove);
+    document.addEventListener('scroll', onMove, true);
+    return function () { window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); };
+  }, [open]);
+  // Après le placement : un calque encore en visibility hidden refuse le focus dans un vrai navigateur.
+  useEffect(function () {
+    if (place && floatRef.current) { var first = floatRef.current.querySelector('button:not(:disabled)'); if (first) first.focus(); }
+  }, [!!place]);
+  return place || FLOAT_UNPLACED;
+}
+
 /* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, disabled, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
   function setOpen(n) { if (p.open == null) st[1](n); if (p.onOpenChange) p.onOpenChange(n); }
   function close() { setOpen(false); }
-  useOutside(ref, open, close, menuRef);
-  var ps = useState(null), place = ps[0], setPlace = ps[1];
-  // Position fixe calculée sur le déclencheur, retournée si le menu sortirait de l'écran.
-  useLayoutEffect(function () {
-    if (!open || !ref.current) return;
-    var r = p.at ? { top: p.at.y, bottom: p.at.y, left: p.at.x, right: p.at.x } : ref.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
-    var mh = menuRef.current ? menuRef.current.offsetHeight : 0, up = p.up ? r.top - mh - 4 >= 8 || r.bottom + mh + 4 > vh : r.bottom + mh + 4 > vh - 8 && r.top - mh - 4 >= 8;
-    var mw = menuRef.current ? menuRef.current.offsetWidth : 0, left = p.align === 'left' && r.left + mw <= vw - 8;
-    var st = { position: 'fixed' };
-    if (up) st.bottom = (vh - r.top + 4) + 'px'; else st.top = (r.bottom + 4) + 'px';
-    if (left) st.left = Math.max(8, r.left) + 'px'; else st.right = Math.max(8, vw - r.right) + 'px';
-    setPlace(st);
-  }, [open, p.at]);
-  useEffect(function () {
-    if (!open) return;
-    function onMove(e) { if (menuRef.current && e.target && menuRef.current.contains(e.target)) return; close(); }
-    window.addEventListener('resize', onMove);
-    document.addEventListener('scroll', onMove, true);
-    return function () { window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); };
-  }, [open]);
-  useEffect(function () {
-    if (open && menuRef.current) { var first = menuRef.current.querySelector('button:not(:disabled)'); if (first) first.focus(); }
-  }, [open]);
-  function toggle() { setPlace(null); setOpen(!open); }
+  var place = useFloating(ref, menuRef, open, close, { up: p.up, align: p.align, at: p.at });
+  function toggle() { setOpen(!open); }
   function onKey(e) {
     if (!menuRef.current) return;
     var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button:not(:disabled)'));
@@ -90,7 +108,7 @@ function MenuButton(p) {
     : h(T.IconButton, { icon: p.icon || 'more', label: p.label, size: p.size || 32, iconSize: p.iconSize, onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' });
   return h('div', { className: 'menu-anchor', ref: ref },
     trigger,
-    open ? h(Portal, null, h('div', { className: 'menu floating', role: 'menu', ref: menuRef, onKeyDown: onKey, style: place || { position: 'fixed', visibility: 'hidden', top: 0, left: 0 } },
+    open ? h(Portal, null, h('div', { className: 'menu floating', role: 'menu', ref: menuRef, onKeyDown: onKey, style: place },
       p.items.filter(Boolean).map(function (it, i) {
         if (it.divider) return h('hr', { key: 'd' + i });
         return h('button', {

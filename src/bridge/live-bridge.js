@@ -567,6 +567,11 @@ var liveBridge = (function () {
      * @returns {string|boolean|undefined} Membre de client.private.focus, false ou undefined sans MP ouvert pour Torch.
      */
     focusedPm: function () { return C.private.focus; },
+    /**
+     * Permet de savoir si le compte est Premium, comme Torch avant d'écrire une émoticône Premium.
+     * @returns {boolean} Statut 200 ou 210 de la trame premium, faux tant que la connexion privée n'est pas ouverte.
+     */
+    premium: function () { return !!C.private && [200, 210].indexOf(C.private.premium.status) >= 0; },
     connectPm: connectPm,
     join: function (gid) {
       delete left[gid];

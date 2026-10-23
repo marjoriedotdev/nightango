@@ -32,6 +32,7 @@ export const APP_SOURCES = [
   'views/profile.js',
   'views/new-dm.js',
   'views/message-style.js',
+  'views/emoji-picker.js',
   'views/commands.js',
   'views/discover.js',
   'views/palette.js',

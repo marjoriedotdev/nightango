@@ -13,7 +13,7 @@ src/
     roles.js         permissions, rôles, réglages de groupe par défaut
     sample-data.js   données d'exemple du prototype, visites simulées
     prefs.js         préférences par défaut
-    ui.js            contexte React, Portal (calque #layer), MenuButton, Dialog, ConfirmDialog, Toasts,
+    ui.js            contexte React, Portal (calque #layer), useFloating (calque ancré à son déclencheur), MenuButton, Dialog, ConfirmDialog, Toasts,
                      Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes
     rich-text.js     MessageText (emphase, mentions, liens), RichText (mini profil assaini), fullProfileDoc
     selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées
@@ -29,6 +29,7 @@ src/
     members (liste, fiche profil, bannissement, lien externe, lien de profil), dm (Chats, Friends),
     meet (Meet people), mentions (mentions récentes de tous les groupes),
     profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
+    emoji-picker (sélecteur d'émoticônes des composeurs),
     commands (/join, /leave, /chat et /help des composeurs),
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages

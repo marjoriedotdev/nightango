@@ -66,7 +66,7 @@ function DMView(p) {
     else if (convo.request) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'info', size: 16 }), h('span', { className: 'grow' }, id + " isn't on your friends list. Accept to reply, or decline to remove the conversation."),
       h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.actions.declineRequest(id); } }, 'Decline'),
       h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); } }, 'Accept'));
-    else bottom = h(T.Composer, { key: id, placeholder: 'Message ' + id, onSend: function (text) { if (!runCommand(app, text, null)) app.actions.sendDm(id, text); }, beforeSend: h(MessageStyleButton, null) });
+    else bottom = h(DmComposer, { key: id, id: id });
     thread = h('main', { className: 'thread' },
       h('header', { className: 'topbar' },
         h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
@@ -102,6 +102,21 @@ function DmMessageRow(p) {
     avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row,
     actions: moreActionsButton(items, setMenuOpen), className: cx(menuOpen && 'menu-open')
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
+}
+
+/**
+ * Composeur d'une conversation privée, avec son brouillon et son sélecteur d'émoticônes.
+ * @param {{id: string}} p Correspondant de la conversation.
+ */
+function DmComposer(p) {
+  var app = useApp(), id = p.id;
+  var d = useState(''), draft = d[0], setDraft = d[1];
+  var inputRef = useRef(null);
+  var emoji = useEmojiPicker(inputRef, setDraft);
+  return h(Frag, null, h(T.Composer, {
+    placeholder: 'Message ' + id, value: draft, onChange: setDraft, inputRef: inputRef, onEmoji: emoji.onEmoji,
+    onSend: function (text) { if (!runCommand(app, text, null)) app.actions.sendDm(id, text); }, beforeSend: h(MessageStyleButton, null)
+  }), emoji.picker);
 }
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };

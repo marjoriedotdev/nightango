@@ -19,6 +19,7 @@ function GroupView(p) {
   var a10 = useState(null), target = a10[0], setTarget = a10[1];
   var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
   var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
+  var emoji = useEmojiPicker(inputRef, setDraft);
   var logRef = useRef(null), sentinelRef = useRef(null), atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
@@ -157,11 +158,10 @@ function GroupView(p) {
   } else if (ann.broadcast && !canBroadcast) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
-    composer = h(T.Composer, {
+    composer = h(Frag, null, h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: completeMention, inputRef: inputRef,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
-      onCancelContext: closeMode, onSend: send,
-      onEmoji: LIVE ? null : function () { app.ui.toast('The emoji picker is not part of this prototype.'); },
+      onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji,
       onAttach: LIVE ? null : function () { app.ui.toast('Uploading media is not part of this prototype.'); },
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
@@ -176,7 +176,7 @@ function GroupView(p) {
             h('span', { className: 'hide-mobile' }, CHANNELS[channel].label), hiddenChans.length ? h(T.Icon, { name: 'eye-off', size: 12 }) : null, h(T.Icon, { name: 'chevron-down', size: 12, className: 'hide-mobile' }));
         }
       })
-    });
+    }), emoji.picker);
   }
 
   return h(Frag, null,
