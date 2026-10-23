@@ -704,7 +704,7 @@ function Root(props) {
     actions.requestGroupSettings = function (gid) { liveBridge.requestSettings(gid); };
     actions.requestBans = function (gid) {
       // La réponse à la première page remplace la liste, même si une page suivante était attendue.
-      groupUpdate(gid, function (g) { g.live.banPage.loading = false; });
+      groupUpdate(gid, function (g) { g.live.banPage.loading = false; g.live.banSearch = null; });
       liveBridge.banList(gid, '0');
     };
     actions.moreBans = function (gid) {
@@ -712,6 +712,15 @@ function Root(props) {
       // Une ligne ajoutée en direct n'a pas d'horodatage de Chatango : la page repart alors de la plus récente.
       if (liveBridge.banList(gid, last && last.ts || '0')) groupUpdate(gid, function (g) { g.live.banPage.loading = true; });
     };
+    actions.searchBans = function (gid, query) {
+      var at = Date.now();
+      if (!liveBridge.searchBans(gid, query)) return;
+      groupUpdate(gid, function (g) { g.live.banSearch = { query: query, at: at, status: 'pending', ban: null, code: '' }; });
+      setTimeout(function () {
+        groupUpdate(gid, function (g) { var s = g.live.banSearch; if (s && s.at === at && s.status === 'pending') s.status = 'timeout'; });
+      }, CONFIRM_TIMEOUT);
+    };
+    actions.clearBanSearch = function (gid) { groupUpdate(gid, function (g) { g.live.banSearch = null; }); };
     actions.saveGroupSettings = function (gid, draft, base) { return saveLiveSettings(stateRef.current.groups[gid], draft, base || stateRef.current.groups[gid].settings); };
   }
 
@@ -1011,8 +1020,14 @@ function Root(props) {
         break;
       }
       case 'unbanned': groupUpdate(op.gid, function (g) {
-        g.bans = g.bans.filter(function (b) { return !op.list.some(function (x) { return x.unid === b.unid && x.ip === b.ip; }); });
+        function gone(b) { return op.list.some(function (x) { return x.unid === b.unid && x.ip === b.ip; }); }
+        g.bans = g.bans.filter(function (b) { return !gone(b); });
+        var s = g.live.banSearch;
+        if (s && s.ban && gone(s.ban)) s.ban = null;
       }); break;
+      // Une réponse arrivée après le délai d'attente reste valable, mais pas après Clear search.
+      case 'banSearch': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
+      case 'banSearchRefused': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
       case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
         var known = {}, list = (g.live.modlog || []).slice();

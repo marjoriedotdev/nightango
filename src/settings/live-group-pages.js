@@ -68,14 +68,36 @@ function GSMediaLive(p) {
     })));
 }
 
+var BAN_SEARCH_ERRORS = { 1: 'That search is too long.', 2: "That's not a valid username.", 4: "That's not a valid IP address." };
+
+/**
+ * Permet d'afficher un bannissement : membre, auteur, date, autres noms et IP selon le droit.
+ * @param {Object} g Groupe.
+ * @param {Object} x Bannissement lu par le pont.
+ * @param {boolean} showIp L'utilisateur peut voir les IP.
+ * @param {*} action Bouton de la ligne.
+ */
+function banRow(g, x, showIp, action) {
+  return h('div', { key: banKey(x), className: 'lrow' },
+    h('span', { className: 'grow' },
+      h(Person, { name: x.name, gid: g.id, size: 28, inert: !ACCOUNT_NAME.test(x.name) }),
+      h('span', { className: 'lrow-sub person-sub' }, [x.by && 'by ' + x.by, x.at && ago(x.at)].filter(Boolean).join(' · ')),
+      x.includes && x.includes.length ? h('span', { className: 'lrow-sub person-sub' }, 'Includes ' + x.includes.join(', ') + '.') : null),
+    showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
+    action);
+}
+
 function GSBansLive(p) {
-  var app = useApp(), g = p.g, owner = p.myRole === 'owner', page = g.live.banPage;
+  var app = useApp(), g = p.g, owner = p.myRole === 'owner', page = g.live.banPage, search = g.live.banSearch;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
   var c = useState(false), hideGuests = c[0], setHideGuests = c[1];
+  var q = useState(''), query = q[0], setQuery = q[1];
   var sentinelRef = useRef(null);
+  var searching = !!search && (search.status === 'pending' || search.status === 'done');
+  var searchError = !search ? '' : search.status === 'refused' ? BAN_SEARCH_ERRORS[search.code] || 'Chatango refused this search.' : search.status === 'timeout' ? "Chatango didn't answer the search. Try again." : '';
   useEffect(function () { app.actions.requestBans(g.id); }, [g.id]);
-  useInfiniteScroll(p.scrollRef, sentinelRef, page.loaded && page.more && !page.loading, function () { app.actions.moreBans(g.id); }, LOAD_BELOW_MARGIN);
+  useInfiniteScroll(p.scrollRef, sentinelRef, !searching && page.loaded && page.more && !page.loading, function () { app.actions.moreBans(g.id); }, LOAD_BELOW_MARGIN);
   var showIp = canSeeIps(p.myRole, p.perms);
   var rows = hideGuests ? g.bans.filter(function (x) { return !x.guest; }) : g.bans;
   function ban() {
@@ -85,6 +107,15 @@ function GSBansLive(p) {
     if (roleOf(g, n) === 'owner') { setErr("The owner can't be banned."); return; }
     setName(''); setErr(''); app.ui.ban(n, g.id);
   }
+  function runSearch() {
+    var v = query.trim();
+    if (v) app.actions.searchBans(g.id, v); else app.actions.clearBanSearch(g.id);
+  }
+  function unbanButton(x) { return h(T.Button, { size: 'sm', onClick: function () { app.actions.unbanEntry(g.id, x); } }, 'Unban'); }
+  var list = !page.loaded ? h(SkeletonRows, { count: 3, avatar: 28, twoLines: true, label: 'Loading the ban list from Chatango' })
+    : rows.length || page.more ? rows.map(function (x) { return banRow(g, x, showIp, unbanButton(x)); })
+      .concat(page.more ? [h('div', { key: 'more', ref: sentinelRef, className: 'list-more' }, page.loading ? h(T.Spinner, { label: 'Loading more bans' }) : null)] : [])
+      : h('p', { className: 'pal-empty' }, g.bans.length ? 'Only guests are banned.' : 'Nobody is banned.');
   return h(Page, {
     title: 'Bans', lede: 'Banned members cannot post. Chatango bans the account and the IP of one of their messages.',
     aside: g.bans.length && (owner || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: page.more ? 'Everyone banned in #' + g.id + ' will be able to post again.' : g.bans.length + ' members will be able to post in #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
@@ -95,13 +126,17 @@ function GSBansLive(p) {
         action: h(T.Button, { variant: 'danger', icon: 'ban', onClick: ban }, 'Ban')
       })),
     h(T.SettingsSection, { title: 'Banned · ' + g.bans.length + (page.more ? '+' : '') },
-      h(T.SettingRow, { title: 'Hide guests', control: h(T.Switch, { checked: hideGuests, onChange: function (e) { setHideGuests(e.target.checked); } }) }),
-      !page.loaded ? h(SkeletonRows, { count: 3, avatar: 28, twoLines: true, label: 'Loading the ban list from Chatango' })
-        : rows.length || page.more ? rows.map(function (x) {
-          return h('div', { key: banKey(x), className: 'lrow' },
-            h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28, inert: !ACCOUNT_NAME.test(x.name) }), h('span', { className: 'lrow-sub person-sub' }, (x.by ? 'by ' + x.by + ' · ' : '') + ago(x.at))),
-            showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
-            h(T.Button, { size: 'sm', onClick: function () { app.actions.unbanEntry(g.id, x); } }, 'Unban'));
-        }).concat(page.more ? [h('div', { key: 'more', ref: sentinelRef, className: 'list-more' }, page.loading ? h(T.Spinner, { label: 'Loading more bans' }) : null)] : [])
-          : h('p', { className: 'pal-empty' }, g.bans.length ? 'Only guests are banned.' : 'Nobody is banned.')));
+      h('div', { className: 'tc-section-pad' }, h(T.TextField, {
+        id: 'ban-search', label: 'Search bans', value: query, error: searchError || undefined, hint: searchError ? undefined : 'Username or IP address.',
+        onChange: function (e) { setQuery(e.target.value); if (searchError) app.actions.clearBanSearch(g.id); }, onKeyDown: function (e) { if (e.key === 'Enter') runSearch(); },
+        action: h(T.Button, { icon: 'search', onClick: runSearch }, 'Search')
+      })),
+      searching ? h(Frag, null,
+        search.status === 'pending' ? h(SkeletonRows, { count: 1, avatar: 28, twoLines: true, label: 'Searching the ban list' })
+          : search.ban ? banRow(g, search.ban, showIp, unbanButton(search.ban))
+            : h('p', { className: 'pal-empty' }, 'No ban found for ' + search.query + '.'),
+        h('div', { className: 'tc-section-pad' }, h(T.Button, { size: 'sm', onClick: function () { setQuery(''); app.actions.clearBanSearch(g.id); } }, 'Clear search')))
+        : h(Frag, null,
+          h(T.SettingRow, { title: 'Hide guests', control: h(T.Switch, { checked: hideGuests, onChange: function (e) { setHideGuests(e.target.checked); } }) }),
+          list)));
 }

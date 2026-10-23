@@ -151,6 +151,18 @@ function parseBans(data) {
     return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], ts: String(+t[3]), at: Math.round(parseFloat(t[3]) * 1000) || Date.now(), by: lower(t[4]) };
   }).filter(function (b) { return b.unid; });
 }
+/**
+ * Permet de lire la réponse bansearchresult de Torch : autres noms, nom, IP, unid, auteur et date.
+ * @param {Array<string>} data Trame découpée sur :, date comprise.
+ * @returns {?Object} Bannissement trouvé, null si aucun.
+ */
+function parseBanSearch(data) {
+  // Torch ne regarde que le nom et dirait introuvable un invité cherché par son IP.
+  if (!data[1] && !data[3]) return null;
+  // Comme Torch, la date se lit en heure du Pacifique fixe. Seul, GMT-0800 passe pour une année : la date se valide sans lui.
+  var date = data.slice(5).join(':'), at = isNaN(new Date(date).getTime()) ? 0 : new Date(date + ' GMT-0800').getTime();
+  return { unid: data[3], ip: data[2], name: lower(data[1]) || '!anon', guest: !data[1], by: lower(data[4]), at: at, includes: data[0] ? data[0].split(';').filter(Boolean).map(lower) : [] };
+}
 function parseModLog(data) {
   var raw = data.join(':');
   if (!raw) return [];

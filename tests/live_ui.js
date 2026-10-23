@@ -41,7 +41,7 @@ w.__TORCH_SKIN_VERSION__ = '0.2.0-test';
 w.__TORCH_SHOW__ = () => { shown++; };
 w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
-const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'blocked', 'unblocked', 'allunblocked', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
+const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
 const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
 // Enregistrement de la base d'historique de Torch (saveMessage) : clé ts, horodatage de la trame.
 const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
@@ -496,6 +496,31 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('ban list shown', !!byText('.lrow', 'alice') && !!byText('.lrow', '!anon'));
   click(byText('.lrow', 'alice').querySelector('.tc-btn')); await wait(20);
   step('unban frame', frame('removeblock:').pop() === 'removeblock:UNID1:1.2.3.4');
+  /* Recherche d'un bannissement comme Torch : searchban, puis bansearchresult (date en heure du Pacifique, avec ses :) ou badbansearchstring */
+  type($('#ban-search'), ' spamking '); key($('#ban-search'), 'Enter'); await wait(30);
+  const banSearch = { frame: frame('searchban:').pop() };
+  g('bansearchresult', 'test', ['alt1;alt2', 'spamking', '1.2.3.4', 'UNID7', 'marjorie', 'Oct 20 2026 10', '00', '00']);
+  await until(() => !!byText('.lrow', 'spamking'));
+  const banFound = byText('.lrow', 'spamking');
+  banSearch.found = banFound ? banFound.textContent : null;
+  banSearch.list = !!byText('.lrow', '!anon');
+  if (banFound) click(banFound.querySelector('.tc-btn'));
+  await wait(20);
+  banSearch.unban = frame('removeblock:').pop();
+  type($('#ban-search'), 'nobody'); click(byText('.spage button', 'Search')); await wait(30);
+  g('bansearchresult', 'test', ['', '', '', '', '', '']);
+  await until(() => d.body.textContent.includes('No ban found for nobody.'));
+  banSearch.none = d.body.textContent.includes('No ban found for nobody.');
+  click(byText('.spage button', 'Clear search')); await wait(30);
+  banSearch.cleared = !!byText('.lrow', '!anon') && !byText('.spage button', 'Clear search');
+  type($('#ban-search'), 'bad name'); key($('#ban-search'), 'Enter'); await wait(30);
+  g('badbansearchstring', 'test', ['2']);
+  await until(() => ($('#ban-search-hint') || {}).textContent === "That's not a valid username.");
+  banSearch.error = ($('#ban-search-hint') || {}).textContent || null;
+  step('ban search frame, result, unban and refusals',
+    banSearch.frame === 'searchban:spamking' && /spamking/.test(banSearch.found) && /by marjorie/.test(banSearch.found) && /Includes alt1, alt2\./.test(banSearch.found) && !banSearch.list
+      && banSearch.unban === 'removeblock:UNID7:1.2.3.4' && banSearch.none && banSearch.cleared && banSearch.error === "That's not a valid username.",
+    banSearch);
 
   click(byText('.tc-nav', 'Audit log')); await wait(50);
   step('audit entries', !!byText('.lrow', 'made bob a moderator') && !!byText('.lrow', 'changed banned words'));

@@ -133,6 +133,8 @@ var liveBridge = (function () {
       }
       case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', guest: !data[2], by: lower(data[3]), at: Date.now() } }); break;
       case 'unblocked': emit({ op: 'unbanned', gid: room, list: parseBans(data) }); break;
+      case 'bansearchresult': emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
+      case 'badbansearchstring': emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
       case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
       case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
@@ -618,6 +620,7 @@ var liveBridge = (function () {
      * @param {string} ts Horodatage de la dernière ligne chargée, 0 pour la première page.
      */
     banList: function (gid, ts) { return send(gid, 'blocklist:block:' + ts + ':next:' + BAN_PAGE + ':anons:1', 'The ban list could not be loaded.'); },
+    searchBans: function (gid, query) { return send(gid, 'searchban:' + query, 'The search could not be sent.'); },
     clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
     /* Réglages de groupe : trames relevées dans chadango et chatango-lib */
     requestSettings: function (gid) {
