@@ -186,11 +186,12 @@ function MessageEmbeds(p) {
 }
 
 /**
- * Permet de savoir si un média de message attend un clic avant tout chargement.
+ * Permet de savoir si un média attend un clic avant tout chargement : jamais pour un hôte de confiance.
  * @param {Object} safety Réglages Safety.
  * @param {string} kind Type du média lu par parseContent.
+ * @param {string} url Adresse que le média chargerait.
  */
-function waitsForClick(safety, kind) { return !!FILE_MEDIA[kind] || safety.proxyMedia; }
+function waitsForClick(safety, kind, url) { return !isTrustedUrl(url, safety.trustedHosts) && (!!FILE_MEDIA[kind] || safety.proxyMedia); }
 
 /**
  * Permet de construire un lien de média qui passe par l'avertissement de lien.
@@ -211,14 +212,14 @@ function mediaLink(app, url, className, content) {
  * @param {Function} p.onClick Chargement du média.
  */
 function RevealButton(p) {
-  var host = (/^https:\/\/([^\/?#]+)/.exec(p.url) || [])[1];
+  var host = httpsHost(p.url);
   return h('button', { type: 'button', className: 'embed-reveal', onClick: p.onClick }, h(T.Icon, { name: p.icon, size: 16 }), p.label, host ? h('span', null, host) : null);
 }
 
 function VideoEmbed(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var st = useState(false), playing = st[0], setPlaying = st[1];
-  var watch = 'https://www.youtube.com/watch?v=' + p.id;
+  var watch = 'https://www.youtube.com/watch?v=' + p.id, thumb = 'https://i.ytimg.com/vi/' + p.id + '/hqdefault.jpg';
   if (!safety.embedVideos) return mediaLink(app, watch, 'msg-link', watch);
   if (playing) {
     return h('iframe', {
@@ -227,12 +228,12 @@ function VideoEmbed(p) {
     });
   }
   return h('button', { type: 'button', className: 'embed-video', 'aria-label': 'Play video', onClick: function () { setPlaying(true); } },
-    waitsForClick(safety, 'youtube') ? null : h('img', { src: 'https://i.ytimg.com/vi/' + p.id + '/hqdefault.jpg', alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' }),
+    waitsForClick(safety, 'youtube', thumb) ? null : h('img', { src: thumb, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' }),
     h('span', { className: 'embed-play' }, h(T.Icon, { name: 'play', size: 22 })));
 }
 
 /**
- * Fichier vidéo ou audio d'un hôte quelconque, dont le lecteur n'existe qu'après le clic.
+ * Fichier vidéo ou audio d'un hôte quelconque, dont le lecteur n'existe qu'après le clic, sauf hôte de confiance où il ne démarre pas seul.
  * @param {string} p.kind video ou audio.
  * @param {string} p.url Adresse https du fichier.
  */
@@ -241,7 +242,7 @@ function FileEmbed(p) {
   var st = useState(false), playing = st[0], setPlaying = st[1];
   var f = useState(false), failed = f[0], setFailed = f[1];
   if (!safety.embedVideos || failed) return mediaLink(app, p.url, 'msg-link', p.url);
-  if (!playing && waitsForClick(safety, p.kind)) return h(RevealButton, { icon: media.icon, label: media.label, url: p.url, onClick: function () { setPlaying(true); } });
+  if (!playing && waitsForClick(safety, p.kind, p.url)) return h(RevealButton, { icon: media.icon, label: media.label, url: p.url, onClick: function () { setPlaying(true); } });
   return h(p.kind, { className: media.className, src: p.url, controls: true, autoPlay: playing, onError: function () { setFailed(true); } });
 }
 
@@ -249,7 +250,7 @@ function ImageEmbed(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var st = useState(false), shown = st[0], setShown = st[1];
   if (!safety.embedImages) return mediaLink(app, p.url, 'msg-link', p.url);
-  if (!shown && waitsForClick(safety, p.kind)) return h(RevealButton, { icon: 'image', label: 'Show image', url: p.url, onClick: function () { setShown(true); } });
+  if (!shown && waitsForClick(safety, p.kind, p.url)) return h(RevealButton, { icon: 'image', label: 'Show image', url: p.url, onClick: function () { setShown(true); } });
   return h('span', { className: 'embed-image-wrap' },
     mediaLink(app, p.url, 'embed-image', h('img', { src: p.url, alt: EMBED_LABEL[p.kind], loading: 'lazy', referrerPolicy: 'no-referrer' })),
     h(MediaStar, { url: p.url }));

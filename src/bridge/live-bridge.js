@@ -10,7 +10,7 @@ var liveBridge = (function () {
     markdown: ['appearance', 'messages', 'parse_markdown'], guestMessages: ['safety', 'messages', 'show_guest'], announcements: ['appearance', 'messages', 'show_annc'],
     pmrCheck: ['privacy', 'private_messages', 'check_pmr']
   };
-  var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'] };
+  var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'], trusted: ['safety', 'whitelist', 'domain'] };
   var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
   // Seuls réglages de son que Torch lit, avec l'objet Audio que chacun règle.
   var SOUND_KEYS = ['play_mention', 'volume_mention', 'play_online', 'volume_online'];
@@ -1151,6 +1151,17 @@ var liveBridge = (function () {
      * @param {boolean} on Vrai pour l'ignorer.
      */
     setIgnored: function (name, on) { return writeList('ignored', lower(name), on); },
+    /**
+     * Permet de lire les hôtes de confiance de Torch, dont il ouvre les liens sans avertir.
+     * @returns {?Array<string>} Hôtes en minuscules, null si les réglages de Torch sont illisibles.
+     */
+    trustedHosts: function () { var list = readList('trusted'); return list && list.map(lower); },
+    /**
+     * Permet d'ajouter un hôte aux hôtes de confiance de Torch ou de l'en retirer.
+     * @param {string} host Hôte en minuscules, sans schéma ni chemin.
+     * @param {boolean} on Vrai pour l'ajouter.
+     */
+    setTrustedHost: function (host, on) { return writeList('trusted', host, on); },
     /**
      * Permet de lire l'activité de son propre profil enregistrée par vissle.me.
      * @param {{page: number, order: string, get: string}} q Curseur, ordre et filtre de la page demandée.

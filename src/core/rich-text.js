@@ -1,6 +1,26 @@
 var EMBED_LABEL = { youtube: 'Video', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
 function messagePreview(m) { var e = m.embeds && m.embeds[0]; return m.text || (e ? EMBED_LABEL[e.kind] : ''); }
-function warnOnLink(app, url) { return function (e) { if (app.state.prefs.safety.warnLinks) { e.preventDefault(); app.ui.openLink(url); } }; }
+/**
+ * Permet de lire l'hôte d'une URL https tel que le navigateur le joindra.
+ * @param {string} url Adresse lue.
+ * @returns {?string} Hôte en minuscules, null pour une URL illisible ou qui n'est pas https.
+ */
+function httpsHost(url) {
+  // new URL plutôt qu'une regex : l'hôte de https://a.example@b.example/ est b.example.
+  try { var u = new URL(url); return u.protocol === 'https:' ? u.host.toLowerCase() : null; } catch (e) { return null; }
+}
+/**
+ * Permet de savoir si une URL https vient d'un hôte de confiance, à l'égalité stricte, sans joker ni sous-domaine.
+ * @param {string} url Adresse lue.
+ * @param {?Array<string>} hosts Hôtes de confiance en minuscules, null si la liste de Torch est illisible.
+ */
+function isTrustedUrl(url, hosts) { var host = httpsHost(url); return !!host && !!hosts && hosts.indexOf(host) >= 0; }
+function warnOnLink(app, url) {
+  return function (e) {
+    var safety = app.state.prefs.safety;
+    if (safety.warnLinks && !isTrustedUrl(url, safety.trustedHosts)) { e.preventDefault(); app.ui.openLink(url); }
+  };
+}
 var CHATANGO_SERVICE_HOSTS = ['www', 'st', 'ust', 'fp', 'm1', 'client'];
 /**
  * Nom du profil désigné par un lien {nom}.chatango.com, ou null.
@@ -11,7 +31,7 @@ function profileOfLink(url) {
   return ACCOUNT_NAME.test(name) && CHATANGO_SERVICE_HOSTS.indexOf(name) < 0 ? name : null;
 }
 /**
- * Clic sur un lien de profil : propose le profil ou la page, sauf clic modifié ou clic milieu.
+ * Clic sur un lien de profil : propose le profil ou la page, sauf clic modifié, clic milieu ou hôte de confiance.
  * @param {Object} app Contexte de l'application.
  * @param {string} url Adresse du lien.
  * @param {string} name Nom du profil.
@@ -19,7 +39,7 @@ function profileOfLink(url) {
  */
 function onProfileLink(app, url, name, gid) {
   return function (e) {
-    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || isTrustedUrl(url, app.state.prefs.safety.trustedHosts)) return;
     e.preventDefault();
     app.ui.openProfileLink({ url: url, name: name, gid: gid });
   };
@@ -101,7 +121,7 @@ function richNodes(node, ctx, key) {
       var src = String(c.getAttribute('src') || '');
       if (!/^https?:\/\//i.test(src)) return;
       if (!ctx.images) { out.push(h('a', { key: k, href: src, target: '_blank', rel: 'noopener noreferrer nofollow', className: 'msg-link', onClick: ctx.onLink(src) }, 'Image')); return; }
-      if (ctx.blocked) { out.push(h('button', { key: k, type: 'button', className: 'linkbtn', onClick: ctx.reveal }, 'Show image')); return; }
+      if (ctx.blocked(src)) { out.push(h('button', { key: k, type: 'button', className: 'linkbtn', onClick: ctx.reveal }, 'Show image')); return; }
       out.push(h('img', { key: k, src: src, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer', style: { maxWidth: '100%', height: 'auto', verticalAlign: 'middle' } }));
       return;
     }
@@ -133,9 +153,9 @@ function RichText(p) {
   try { doc = new DOMParser().parseFromString('<!doctype html><body>' + html, 'text/html'); } catch (e) { return h('p', { className: 'about' }, p.html); }
   var ctx = {
     bg: p.bg || SURFACE[app.theme].bg, inline: p.inline, link: p.link,
-    images: safety.embedImages, blocked: safety.proxyMedia && !revealed,
+    images: safety.embedImages, blocked: function (src) { return !revealed && waitsForClick(safety, 'image', src); },
     reveal: function () { setRevealed(true); },
-    onLink: function (url) { return function (e) { if (safety.warnLinks) { e.preventDefault(); app.ui.openLink(url); } }; }
+    onLink: function (url) { return warnOnLink(app, url); }
   };
   var nodes = richNodes(doc.body, ctx, 'r');
   return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich' }].concat(nodes));

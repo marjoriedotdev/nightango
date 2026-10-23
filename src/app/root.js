@@ -364,6 +364,16 @@ function Root(props) {
       update(function (d) { var l = d.groups[gid].hiddenChannels, i = l.indexOf(k); if (i >= 0) l.splice(i, 1); else l.push(k); });
     },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
+    /**
+     * Permet d'ajouter un hôte de confiance, sans doublon, ou de le retirer.
+     * @param {string} host Hôte en minuscules, sans schéma ni chemin.
+     * @param {boolean} on Vrai pour l'ajouter.
+     * @returns {boolean} Vrai si la liste est enregistrée.
+     */
+    setTrustedHost: function (host, on) {
+      update(function (d) { var l = d.prefs.safety.trustedHosts, i = l.indexOf(host); if (!on && i >= 0) l.splice(i, 1); else if (on && i < 0) l.push(host); });
+      return true;
+    },
     joinGroup: function (gid) {
       var me = stateRef.current.me;
       update(function (d) {
@@ -640,6 +650,11 @@ function Root(props) {
     };
     actions.toggleFavorite = function (gid) { toggleTorchList(gid, 'favorite', liveBridge.setFavorite, 'Torch could not save this favorite. Reload the page and try again.'); };
     actions.toggleMute = function (gid) { toggleTorchList(gid, 'muted', liveBridge.setMuted, 'Torch could not save the mute for #' + gid + '. Reload the page and try again.'); };
+    actions.setTrustedHost = function (host, on) {
+      if (!liveBridge.setTrustedHost(host, on)) { toast(TORCH_SAVE_FAILED); return false; }
+      update(function (d) { d.prefs.safety.trustedHosts = liveBridge.trustedHosts(); });
+      return true;
+    };
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
       var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
@@ -1050,6 +1065,7 @@ function Root(props) {
           Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.auth = { loggedIn: true };
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n); });
           Object.keys(TORCH_PREFS).forEach(function (path) { var v = liveBridge.setting(TORCH_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
+          d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
         });
         // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
         setTimeout(function () { update(function (d) { d.groupsSeen = true; }); }, 10000);

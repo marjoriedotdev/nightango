@@ -131,6 +131,10 @@ Refus des MP d'un compte, côté messages privés.
 Images favorites que Torch garde dans ce navigateur, communes à tous ses comptes, insérées dans un message par leur adresse. L'interface dit « Media ».
 _Avoid_: favoris (réservé aux groupes), galerie
 
+**Hôte de confiance**:
+Hôte exact choisi par l'utilisateur, dont les liens s'ouvrent sans avertissement et dont les images, vidéos et audios se chargent sans clic. En live, la liste est celle de Torch (`safety.whitelist.domain`). L'interface dit « Trusted sites ».
+_Avoid_: domaine de confiance, liste blanche (ambigu avec la liste de domaines que le serveur de Torch envoie)
+
 ## Présence
 
 **Présence**:

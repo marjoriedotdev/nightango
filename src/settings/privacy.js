@@ -59,22 +59,73 @@ function StartupSection(p) {
     }));
 }
 
+/**
+ * Permet de lire un hôte saisi seul, sans schéma, chemin ni identifiant, tel que new URL le rendrait.
+ * @param {string} text Saisie de l'utilisateur.
+ * @returns {?string} Hôte en minuscules, null si la saisie n'est pas un hôte seul.
+ */
+function typedHost(text) {
+  var v = text.trim().toLowerCase();
+  return /^[a-z0-9.-]+(?::\d+)?$/.test(v) && httpsHost('https://' + v) === v ? v : null;
+}
+
+/**
+ * Lignes d'une liste de Safety, chacune avec son bouton, ou le texte de la liste vide.
+ * @param {Array<string>} list Valeurs listées.
+ * @param {Function} content Contenu de la ligne d'une valeur.
+ * @param {string} action Texte du bouton.
+ * @param {Function} run Action du bouton sur une valeur.
+ * @param {string} empty Texte de la liste vide.
+ */
+function safetyRows(list, content, action, run, empty) {
+  return list.length ? list.map(function (x) {
+    return h('div', { key: x, className: 'lrow' }, h('span', { className: 'grow' }, content(x)),
+      h(T.Button, { size: 'sm', 'aria-label': action + ' ' + x, onClick: function () { run(x); } }, action));
+  }) : h('p', { className: 'pal-empty' }, empty);
+}
+
+/**
+ * Hôtes de confiance : ajout d'un hôte saisi et liste avec retrait.
+ * @param {{hosts: Array<string>}} p Hôtes de confiance en minuscules.
+ */
+function TrustedSites(p) {
+  var app = useApp();
+  var a = useState(''), text = a[0], setText = a[1];
+  var b = useState(''), err = b[0], setErr = b[1];
+  function add(e) {
+    e.preventDefault();
+    var host = typedHost(text);
+    if (!host) { setErr('Enter a site like i.imgur.com, without https:// or a path.'); return; }
+    if (p.hosts.indexOf(host) < 0 && !app.actions.setTrustedHost(host, true)) return;
+    setText(''); setErr('');
+  }
+  return h(Frag, null,
+    h(T.SettingRow, {
+      asLabel: false, title: 'Trusted sites', description: 'Links open without a warning. Images, videos and audio load without a click.',
+      control: h('form', { className: 'trust-add', onSubmit: add, noValidate: true },
+        h(T.TextField, {
+          id: 'trust-site', label: 'Add a site', placeholder: 'i.imgur.com', value: text, error: err || undefined, autoComplete: 'off', spellCheck: false,
+          onChange: function (e) { setText(e.target.value); setErr(''); },
+          action: h(T.Button, { type: 'submit' }, 'Add')
+        }))
+    }),
+    safetyRows(p.hosts, function (host) { return h('span', { className: 'trust-host' }, host); }, 'Remove', function (host) { app.actions.setTrustedHost(host, false); }, 'No trusted sites.'));
+}
+
 function SafetyPage() {
   var app = useApp(), s = app.state, pr = usePref(), prefs = s.prefs;
   var blocked = Object.keys(s.users).filter(function (n) { return s.users[n].blocked; });
   var ignored = Object.keys(s.users).filter(function (n) { return s.users[n].ignored; });
   function people(list, key, action, empty) {
-    return list.length ? list.map(function (n) {
-      return h('div', { key: n, className: 'lrow' }, h('span', { className: 'grow' }, h(Person, { name: n, size: 28 })),
-        h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(n, key); } }, action));
-    }) : h('p', { className: 'pal-empty' }, empty);
+    return safetyRows(list, function (n) { return h(Person, { name: n, size: 28 }); }, action, function (n) { app.actions.toggleUser(n, key); }, empty);
   }
   return h(Page, { title: 'Safety', lede: 'Decide what reaches your screen.' },
     h(T.SettingsSection, { title: 'Media and links' },
       h(T.SettingRow, { title: 'Embed images', description: 'Shows images in messages. When off, you see a link.', control: pr.sw('safety.embedImages') }),
       h(T.SettingRow, { title: 'Embed videos', description: 'Shows videos and audio in messages. Nothing plays until you click. When off, you see a link.', control: pr.sw('safety.embedVideos') }),
       h(T.SettingRow, { title: 'Block external media until I click', description: 'Images from other sites load only when you ask, so they cannot track you.', control: pr.sw('safety.proxyMedia') }),
-      h(T.SettingRow, { title: 'Warn before opening links', description: 'Shows the full address before you leave Torch.', control: pr.sw('safety.warnLinks') })),
+      h(T.SettingRow, { title: 'Warn before opening links', description: 'Shows the full address before you leave Torch.', control: pr.sw('safety.warnLinks') }),
+      prefs.safety.trustedHosts ? h(TrustedSites, { hosts: prefs.safety.trustedHosts }) : null),
     h(T.SettingsSection, { title: 'People' },
       h(T.SettingRow, {
         asLabel: false, title: 'Messages from ignored users', description: 'Collapse leaves a line you can expand. Hide removes them completely.',

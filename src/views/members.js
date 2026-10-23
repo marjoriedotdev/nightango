@@ -242,18 +242,23 @@ function linkAddress(url) {
   return h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 12.5, overflowWrap: 'anywhere', color: 'var(--text-body)' } }, url);
 }
 
+/**
+ * Avertissement avant un lien externe, qui propose de faire confiance à son hôte, ou de ne plus avertir si la liste de Torch est illisible.
+ * @param {{url: string, onClose: Function}} p Adresse du lien et fermeture de la fenêtre.
+ */
 function LinkDialog(p) {
-  var app = useApp();
+  var app = useApp(), hosts = app.state.prefs.safety.trustedHosts, host = httpsHost(p.url);
+  var t = useState(false), trust = t[0], setTrust = t[1];
+  // Seul un lien https propose sa confiance : isTrustedUrl ignore les autres.
+  var choice = !hosts ? h(T.Checkbox, { label: "Don't warn me again", onChange: function (e) { var v = e.target.checked; app.update(function (d) { d.prefs.safety.warnLinks = !v; }); } })
+    : host ? h(T.Checkbox, { label: 'Trust ' + host, checked: trust, onChange: function (e) { setTrust(e.target.checked); } }) : null;
   return h(Dialog, {
     title: 'This link leaves Torch', description: 'Check the address before you continue. Torch does not check external sites.', onClose: p.onClose,
     footer: [
       h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
-      openLinkButton(p.url, 'primary', p.onClose)
+      openLinkButton(p.url, 'primary', function () { if (trust) app.actions.setTrustedHost(host, true); p.onClose(); })
     ]
-  },
-    h('div', { className: 'dialog-body' },
-      linkAddress(p.url),
-      h(T.Checkbox, { label: "Don't warn me again", onChange: function (e) { var v = e.target.checked; app.update(function (d) { d.prefs.safety.warnLinks = !v; }); } })));
+  }, h('div', { className: 'dialog-body' }, linkAddress(p.url), choice));
 }
 
 function ProfileLinkDialog(p) {

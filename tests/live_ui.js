@@ -158,7 +158,7 @@ const C = {
   // connect : Torch ouvre son propre écran de MP.
   event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['torchPmScreen']); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
-  settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] } } },
+  settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
   emit(ev, data) { d.dispatchEvent(new w.CustomEvent('chatango_' + ev, { detail: data })); },
   socket(gid, frame) { sent.push([gid, frame]); },
@@ -863,6 +863,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(played.frames) === JSON.stringify(['dQw4w9WgXcQ', 'jNQXAC9IVRw'].map(id => 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1'))
     && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true]])
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
+
+  /* Hôte de confiance (liste de Torch) : sous proxyMedia, seule son image s'affiche sans clic, l'hôte lu comme le navigateur */
+  const TRUST_LINKS = ['https://i.imgur.com/a.png', 'https://evil.example/b.png', 'https://i.imgur.com@evil.example/c.png'];
+  g('b', 'test', ['1700000301.1', 'Eve', '', 'u7', 'UNID7', 'tmptrust', '9.9.9.9', '0', '', '<n000/><f x11000="0">Trusted ' + TRUST_LINKS.join(' ')]);
+  const trustRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Trusted ') === 0); return p && p.closest('article'); };
+  await until(() => !!trustRow() && trustRow().querySelectorAll('.embeds > *').length === 3);
+  const trustImgs = [...trustRow().querySelectorAll('.embeds img')].map(x => x.getAttribute('src'));
+  step('trusted host images load without a click', JSON.stringify(trustImgs) === JSON.stringify(['https://i.imgur.com/a.png']), trustImgs);
 
   /* Emphase reçue : liste blanche de Torch reconstruite en éléments, ni média ni identifiant de MP en italique, balises hors liste sans élément */
   const EMPH = '<b>Bold @alice</b> <I>Ital</I> <u>Under</u> <s>Gone</s> \u2593Struck\u2592 <iabc1234/>plain <i s="https://x.test/e.png"/>tail<script>alert(1)</script><img src="x" onerror="alert(2)">';

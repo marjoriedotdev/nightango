@@ -34,7 +34,7 @@ function usePref() {
  */
 function saveTorchSetting(app, write, key, value) {
   if (write(key, value)) return true;
-  app.ui.toast('Torch could not save this setting. Reload the page and try again.');
+  app.ui.toast(TORCH_SAVE_FAILED);
   return false;
 }
 

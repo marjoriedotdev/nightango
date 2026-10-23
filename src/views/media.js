@@ -6,11 +6,12 @@ var MEDIA_SUGGESTIONS = 3;
 var MEDIA_TOKEN = /(?:^|\s):(\S+)$/;
 
 /**
- * Permet de savoir si les vignettes de la médiathèque peuvent se charger, aux règles des images de message.
+ * Permet de savoir si une vignette de la médiathèque peut se charger, aux règles des images de message.
  * @param {Object} safety Réglages Safety.
  * @param {boolean} revealed L'utilisateur a demandé « Show images ».
+ * @param {string} url Adresse de l'image.
  */
-function mediaThumbsShown(safety, revealed) { return safety.embedImages && (revealed || !waitsForClick(safety, 'image')); }
+function mediaThumbShown(safety, revealed, url) { return safety.embedImages && (revealed || !waitsForClick(safety, 'image', url)); }
 
 /**
  * Vignette d'un média sans referrer, remplacée par une icône tant qu'elle ne peut pas se charger ou si elle échoue.
@@ -83,7 +84,7 @@ function MediaPanel(p) {
     });
   }
   if (lib.failed) return h('p', { className: 'media-note' }, 'Torch could not open your media library. Reload the page and try again.');
-  var grid = safety.embedImages, thumbs = mediaThumbsShown(safety, revealed);
+  var grid = safety.embedImages, held = lib.list.some(function (e) { return !mediaThumbShown(safety, revealed, e.url); });
   var note = !lib.list.length ? (lib.loading ? h(T.Spinner, { label: 'Loading media' })
     : h('p', { className: 'media-note' }, text ? 'No media matches your search.' : 'No media yet. Star an image in a message to add it here.')) : null;
   return h('div', { className: 'media-panel' },
@@ -94,12 +95,12 @@ function MediaPanel(p) {
         h('span', { className: 'grow' }),
         h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import'),
         h(T.Button, { size: 'sm', onClick: exportFile }, 'Export'))),
-    grid && !thumbs && lib.list.length ? h(T.Button, { size: 'sm', icon: 'image', onClick: function () { setRevealed(true); } }, 'Show images') : null,
+    grid && held ? h(T.Button, { size: 'sm', icon: 'image', onClick: function () { setRevealed(true); } }, 'Show images') : null,
     note,
     lib.list.length ? h('ul', { className: grid ? 'media-grid' : 'media-list', 'aria-label': 'Your media' }, lib.list.map(function (e) {
       return h('li', { key: e.url, className: 'media-item' },
         h('button', { type: 'button', className: 'media-pick', title: e.url, onClick: function () { p.onPick(e.url); } },
-          grid ? h(MediaThumb, { url: e.url, shown: thumbs }) : null,
+          grid ? h(MediaThumb, { url: e.url, shown: mediaThumbShown(safety, revealed, e.url) }) : null,
           h('span', { className: 'media-name' }, e.name)),
         h(MediaStarButton, { url: e.url, saved: true }));
     })) : null,
@@ -140,13 +141,12 @@ function useMediaCompletion(value, setValue) {
     else return;
     e.preventDefault();
   }
-  var shown = mediaThumbsShown(safety, false);
   var list = open ? h('ul', { className: 'media-suggest', role: 'listbox', 'aria-label': 'Media suggestions' }, found.list.map(function (e, i) {
     return h('li', {
       key: e.url, role: 'option', 'aria-selected': String(i === found.active), className: 'media-suggest-item',
       // Le champ garde le focus : le clic remplace le texte sans le quitter.
       onMouseDown: function (ev) { ev.preventDefault(); }, onClick: function () { accept(i); }
-    }, h(MediaThumb, { url: e.url, shown: shown }), h('span', { className: 'media-name' }, e.name), h('span', { className: 'media-url' }, e.url));
+    }, h(MediaThumb, { url: e.url, shown: mediaThumbShown(safety, false, e.url) }), h('span', { className: 'media-name' }, e.name), h('span', { className: 'media-url' }, e.url));
   })) : null;
   var said = open ? found.list[found.active].name + ', ' + (found.active + 1) + ' of ' + found.list.length + '. Press Tab to insert it.' : '';
   return { onKeyDown: onKeyDown, panel: h(Frag, null, list, h('p', { className: 'tc-sr', 'aria-live': 'polite' }, said)) };
