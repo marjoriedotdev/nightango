@@ -78,7 +78,7 @@ function authorName(name, style) {
 
 function MessageContent(p) {
   var m = p.m;
-  return h(Frag, null, m.text ? h(MessageText, { text: m.text, style: p.style, gid: p.gid }) : null, p.children, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
+  return h(Frag, null, m.text ? h(MessageText, { text: m.text, parts: m.parts, style: p.style, gid: p.gid }) : null, p.children, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
 }
 
 function MessageEmbeds(p) {

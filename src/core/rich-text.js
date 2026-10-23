@@ -2,20 +2,24 @@ var EMBED_LABEL = { youtube: 'Video', image: 'Image', photo: 'Photo' };
 function messagePreview(m) { var e = m.embeds && m.embeds[0]; return m.text || (e ? EMBED_LABEL[e.kind] : ''); }
 function warnOnLink(app, url) { return function (e) { if (app.state.prefs.safety.warnLinks) { e.preventDefault(); app.ui.openLink(url); } }; }
 
-/* Texte de message : mentions et liens */
+var EMPHASIS = ['b', 'i', 'u', 's'];
+
+/* Texte de message : emphase (segments de parseContent, absents sans emphase), mentions et liens */
 function MessageText(p) {
   var app = useApp();
-  var parts = String(p.text).split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g);
-  return h('p', { className: 'tc-msg-text', style: p.style }, parts.map(function (s, i) {
-    if (!s) return null;
-    if (s.charAt(0) === '@' && s.length > 1) {
-      var name = s.slice(1).toLowerCase();
-      return ACCOUNT_NAME.test(name)
-        ? h('button', { key: i, type: 'button', className: 'tc-mention', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
-        : h('span', { key: i, className: 'tc-mention' }, s);
-    }
-    if (/^https?:\/\//.test(s)) return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: warnOnLink(app, s) }, s);
-    return s;
+  return h('p', { className: 'tc-msg-text', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {
+    var nodes = String(part.text).split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
+      if (!s) return null;
+      if (s.charAt(0) === '@' && s.length > 1) {
+        var name = s.slice(1).toLowerCase();
+        return ACCOUNT_NAME.test(name)
+          ? h('button', { key: i, type: 'button', className: 'tc-mention', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
+          : h('span', { key: i, className: 'tc-mention' }, s);
+      }
+      if (/^https?:\/\//.test(s)) return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: warnOnLink(app, s) }, s);
+      return s;
+    });
+    return EMPHASIS.reduce(function (node, mark) { return part[mark] ? h(mark, { key: k }, node) : node; }, nodes);
   }));
 }
 

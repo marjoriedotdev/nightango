@@ -19,7 +19,7 @@ var liveBridge = (function () {
     var parsed = parseContent(data.slice(9).join(':'));
     var flags = parseInt(data[7], 10) || 0;
     return {
-      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: author(data), text: parsed.text, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
+      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: author(data), text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
       style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags)
     };
   }
@@ -94,7 +94,7 @@ var liveBridge = (function () {
     switch (name) {
       case 'msg': case 'msgoff': {
         var p2 = parseContent(data.slice(5).join(':'));
-        emit({ op: 'pm', from: lower(data[0]), text: p2.text, style: p2.style, embeds: p2.embeds, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), offline: name === 'msgoff' });
+        emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), offline: name === 'msgoff' });
         break;
       }
       case 'wl': {
@@ -418,7 +418,7 @@ var liveBridge = (function () {
      * @param {string} user Destinataire.
      * @param {string} text Texte saisi.
      * @param {?Object} style Style perso.
-     * @returns {?{style: Object, text: string, embeds: Array}} Corps construit par Torch analysé comme un MP reçu, null si rien n'est parti.
+     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array}} Corps construit par Torch analysé comme un MP reçu, null si rien n'est parti.
      */
     sendPm: function (user, text, style) {
       try {
@@ -428,7 +428,7 @@ var liveBridge = (function () {
         if (typeof body !== 'string' || !body) return null;
         C.sendMessage(esc(text), false, 'private_message', user);
         var parsed = parseContent(body);
-        return { style: parsed.style, text: parsed.text, embeds: parsed.embeds };
+        return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds };
       } catch (e) { warn(e); return null; }
     },
     /**
@@ -513,7 +513,7 @@ var liveBridge = (function () {
             var v = cur.value || {}, parts = String(v.data || '').split(':').slice(1), target = lower(v.target);
             if (target && parts.length > 5) {
               var body = parseContent(parts.slice(5).join(':'));
-              (out[target] = out[target] || []).push({ from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, text: body.text, style: body.style, embeds: body.embeds, unread: !!v.unread });
+              (out[target] = out[target] || []).push({ from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, unread: !!v.unread });
             }
             cur.continue();
           };

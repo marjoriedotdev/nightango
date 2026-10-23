@@ -460,7 +460,7 @@ function Root(props) {
       var me = stateRef.current.me;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
       if (!sent) { toast('Private message not sent.'); return; }
-      update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: sent.text, embeds: sent.embeds, ts: Date.now() }); });
+      update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
     };
     actions.setMessageStyle = function (style) {
@@ -702,7 +702,7 @@ function Root(props) {
   function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
   /** Applique une modification à l'original et aux citations qui le reprennent. */
   function applyEdit(g, o, m) {
-    o.text = m.text; o.embeds = m.embeds; o.edited = true;
+    o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true;
     g.messages.forEach(function (x) { if (x.replyTo && x.replyTo.id === o.id) x.replyTo.text = messagePreview(o); });
   }
   // Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
@@ -882,7 +882,7 @@ function Root(props) {
           mergeStyle(ensureLiveUser(d, op.from), op.style, ts);
           var c = d.dms[op.from] || (d.dms[op.from] = { messages: [], unread: 0, lastReadTs: 0 });
           c.closed = false;
-          c.messages.push({ id: uid(), from: op.from, text: op.text, embeds: op.embeds, ts: ts });
+          c.messages.push({ id: uid(), from: op.from, text: op.text, parts: op.parts, embeds: op.embeds, ts: ts });
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
           if (!focused) c.unread += 1;
         });
@@ -916,7 +916,7 @@ function Root(props) {
               }
               hist[t].forEach(function (x) {
                 mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts);
-                if (!claim(x)) c.messages.push({ id: uid(), from: x.from, text: x.text, embeds: x.embeds, ts: x.ts });
+                if (!claim(x)) c.messages.push({ id: uid(), from: x.from, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts });
               });
               c.messages.sort(function (a, b) { return a.ts - b.ts; });
             });

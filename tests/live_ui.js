@@ -437,6 +437,21 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const ytFrame = $('.log iframe');
   step('youtube embed loads on click', !ytBefore.raw && ytBefore.card && !ytBefore.media && !!ytFrame && ytFrame.getAttribute('src').indexOf('https://www.youtube-nocookie.com/embed/PLe_UgXBBCU') === 0 && ytBefore.font === '', [ytBefore, ytFrame && ytFrame.getAttribute('src')]);
 
+  /* Emphase reçue : liste blanche de Torch reconstruite en éléments, ni média ni identifiant de MP en italique, balises hors liste sans élément */
+  const EMPH = '<b>Bold @alice</b> <I>Ital</I> <u>Under</u> <s>Gone</s> \u2593Struck\u2592 <iabc1234/>plain <i s="https://x.test/e.png"/>tail<script>alert(1)</script><img src="x" onerror="alert(2)">';
+  const emphOf = scope => {
+    const p = $$(scope + ' .tc-msg-text').find(x => x.textContent.includes('Struck'));
+    return p && { els: [...p.querySelectorAll('*')].map(x => x.tagName.toLowerCase() + ':' + x.textContent), text: p.textContent, unsafe: !!p.closest('article').querySelector('script, [onerror]') };
+  };
+  const emphOk = r => !!r && JSON.stringify(r.els) === JSON.stringify(['b:Bold @alice', 'button:@alice', 'i:Ital', 'u:Under', 's:Gone', 's:Struck']) && !/[\u2592\u2593]/.test(r.text) && r.text.includes('plain') && r.text.includes('tail') && !r.unsafe;
+  g('b', 'test', ['1700000272.1', 'Eve', '', 'u7', 'UNID7', 'tmp15', '9.9.9.9', '0', '', '<n000/><f x11000="0">' + EMPH]); await wait(60);
+  const groupEmph = emphOf('.log');
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  pm('msg', ['nell', 'marjorie', 'unknown', '1700000350.5', '0', '<n000/><iabc1234/><m v="1"><g x12s000="0">' + EMPH + '</g></m>']); await wait(50);
+  click(byText('.conv', 'nell')); await wait(50);
+  const pmEmph = emphOf('.thread');
+  step('received emphasis rebuilt from the whitelist', emphOk(groupEmph) && emphOk(pmEmph), { groupEmph, pmEmph });
+
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   const convPrev = n => { const c = $$('.conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n); return c ? c.querySelector('.conv-prev').textContent : null; };
   pm('msg', ['gus', 'marjorie', 'unknown', '1700000400.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="https://x.test/a.png"/></g></m>']); await wait(50);

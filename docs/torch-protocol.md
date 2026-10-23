@@ -94,6 +94,7 @@ Un appel exclu pour cette raison : le formulaire de style de Torch (`updatemsgst
 - Le corps a la forme `<n{couleur nom}/><m v="1"><g x{taille}s{couleur}="{police}">…</g></m>`. Le format de groupe est différent : `<f x{taille}{couleur}="{police}">`. Sources : chadango `PrivateFontStyleRe`, Torch `renderMessage`, client officiel.
 - La police doit être lue sur la balise `<g x` ou `<f x`. Torch a une regex gourmande qui lit par erreur `h="93"` d'une balise `<i>`.
 - Taille de police d'un membre : Torch l'applique avec 11 = 100 %, bornée entre 82 et 200 % (`fontScale`). Torch Skin reprend la même échelle (`fontPercent`), et une balise sans taille vaut 100 %.
+- Emphase : le style et le Markdown de Torch écrivent `<b>`, `<i>`, `<u>` (`inject.js:5181-5191`, `mdParseStyle` `12260-12290`), en majuscules en MP (`inject.js:5207`). Torch marque le barré d'un MP par `▓…▒` (`inject.js:5185-5187`). Au rendu, sa liste blanche d'emphase garde `<[biusp]>` et `</[biuspf]>`, change `<strike>` en `<s>` en MP et `▓…▒` en `<s>` (`renderMessage`, `inject.js:7819-7822`). `<i s="…"/>` (média) et `<i{id}/>` (identifiant du MP) n'ouvrent pas d'italique.
 - Torch lit le style d'envoi dans son formulaire `msgstyles` (gras, italique, souligné, taille, couleurs, police). Torch Skin y écrit le style perso juste avant chaque envoi.
 
 ### Présence des amis

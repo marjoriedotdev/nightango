@@ -39,16 +39,40 @@ function parseContent(raw, keepMedia) {
     else if (f[3] && isNaN(+f[3])) style.font = f[3];
   }
   var r = /<r([^\s<>"\/]+)\/>/.exec(s), e = /<e([^\s<>"\/]+)\/>/.exec(s);
-  var text = decodeHtml(s
+  var body = s
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<i s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src) {
       var m = embedOf(decodeHtml(src));
       if (m) embeds.push(m);
       return m && !keepMedia ? ' ' : ' ' + src + ' ';
-    })
-    .replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
+    });
+  var text = decodeHtml(body.replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
   (text.match(/https:\/\/\S+/g) || []).forEach(function (url) { if (IMAGE_URL.test(url)) embeds.push({ kind: 'image', url: url }); });
-  return { text: text, style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null };
+  return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null };
+}
+/**
+ * Permet de découper un corps de message en segments marqués gras, italique, souligné ou barré.
+ * Liste blanche de Torch (renderMessage) : b, i sans attribut, u, s, strike et les marqueurs ▓…▒ du barré en MP.
+ * @param {string} body Corps dont les balises br et les médias sont déjà convertis.
+ * @returns {?Array} Segments {text, b, i, u, s} rognés comme le texte, null si aucun n'est marqué.
+ */
+function emphasisParts(body) {
+  var depth = { b: 0, i: 0, u: 0, s: 0 }, parts = [];
+  body.split(/(<[^>]+>|[\u2592\u2593])/).forEach(function (t, k) {
+    if (k % 2) {
+      var tag = t === '\u2593' ? ['', '', 's'] : t === '\u2592' ? ['', '/', 's'] : /^<(\/?)(b|i|u|s|strike)>$/i.exec(t);
+      var mark = tag && lower(tag[2]).charAt(0);
+      if (mark && !tag[1]) depth[mark] += 1;
+      else if (mark && depth[mark]) depth[mark] -= 1;
+      return;
+    }
+    var part = { text: decodeHtml(t).replace(/\r/g, '') };
+    EMPHASIS.forEach(function (m) { if (depth[m]) part[m] = true; });
+    if (part.text) parts.push(part);
+  });
+  while (parts.length && !(parts[0].text = parts[0].text.replace(/^\s+/, ''))) parts.shift();
+  while (parts.length && !(parts[parts.length - 1].text = parts[parts.length - 1].text.replace(/\s+$/, ''))) parts.pop();
+  return parts.some(function (x) { return EMPHASIS.some(function (m) { return x[m]; }); }) ? parts : null;
 }
 
 // -- Trames de groupe ---------------------------------------------------------
