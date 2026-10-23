@@ -37,6 +37,7 @@ function elapsedShort(ts) {
 }
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
+function isGuest(name) { return /^[!#]/.test(name); }
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* stockage indisponible : préférence non conservée */ } }
 function copyText(text, onDone) {

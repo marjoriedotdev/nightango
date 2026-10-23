@@ -7,7 +7,7 @@ var liveBridge = (function () {
   var GENDERS = { M: 'Male', F: 'Female' };
   var SETTINGS = {
     joinOwned: ['privacy', 'groups', 'connect_own'], joinRecent: ['privacy', 'groups', 'connect_recent'], joinFavorites: ['privacy', 'groups', 'connect_favorite'],
-    markdown: ['appearance', 'messages', 'parse_markdown']
+    markdown: ['appearance', 'messages', 'parse_markdown'], guestMessages: ['safety', 'messages', 'show_guest'], announcements: ['appearance', 'messages', 'show_annc']
   };
   var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'] };
   var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
