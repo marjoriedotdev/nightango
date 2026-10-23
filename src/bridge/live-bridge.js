@@ -36,10 +36,11 @@ var liveBridge = (function () {
 
   // Identifiants définitifs (trame u) arrivés avant le message (trame b) correspondant.
   var earlyIds = {}, waitingIds = {};
-  var profileCache = {}, msgBgCache = {}, CACHE_MS = 300000;
+  var profileCache = {}, fullProfileCache = {}, msgBgCache = {}, CACHE_MS = 300000;
+  function fresh(store, n) { var hit = store[n]; return hit && Date.now() - hit.at < CACHE_MS ? hit : null; }
   function cached(store, n, load) {
-    var hit = store[n];
-    if (hit && Date.now() - hit.at < CACHE_MS) return Promise.resolve(hit.data);
+    var hit = fresh(store, n);
+    if (hit) return Promise.resolve(hit.data);
     return load().then(function (data) { store[n] = { at: Date.now(), data: data }; return data; });
   }
   // Comme Torch, seule une réponse du type attendu compte : sans fichier de style, Chatango renvoie une petite image JPEG.
@@ -683,24 +684,18 @@ var liveBridge = (function () {
         return memberFile(CH.subdomain.msgbg(n, 'xml'), /^text\/xml/, function (xml) { return parseMsgBg(xml, CH.subdomain.msgbg(n, 'jpg')); });
       });
     },
-    /** Profil complet (mod2.xml) : HTML écrit par le membre, à n'afficher que dans un cadre isolé. */
-    fetchFullProfile: function (name) {
-      var n = lower(name);
-      if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.resolve('');
-      return fetch(CH.subdomain.mod2(n)).then(function (r) { return r.text(); }).then(function (xml) {
-        var doc = new DOMParser().parseFromString(xml, 'text/xml'), body = doc.querySelector('body');
-        return !doc.querySelector('parsererror') && body ? unquote(body.textContent) : '';
-      });
-    },
+    fetchFullProfile: fetchFullProfile,
     /** Supprime l'historique que Torch garde dans ce navigateur ; Chatango n'en conserve pas. */
     clearPmHistory: function (target) { try { C.private.clearHistory(target); return true; } catch (e) { warn(e); return false; } },
     /* Profil : lu dans les champs que Torch remplit à la connexion, enregistré par client.post */
     readProfile: function () {
       var dir = document.querySelector('[data-setting="show_profile"] input');
+      // Torch remplit ce champ en relisant mod2.xml après l'enregistrement, parfois depuis le cache HTTP.
+      var sent = fresh(fullProfileCache, lower(C.user && C.user.name));
       return {
         loaded: !!(C.user && C.user.avatar && typeof C.user.avatar === 'object' && document.querySelector('[data-text-field="age"]') && dir),
         age: readField('[data-text-field="age"]'), gender: readField('[data-text-field="gender"]'), location: readField('[data-text-field="location"]'),
-        about: readField('[data-text-field="about"]'), full: readField('[data-text-field="full"]'), dir: !!(dir && dir.checked)
+        about: readField('[data-text-field="about"]'), full: sent ? sent.data : readField('[data-text-field="full"]'), dir: !!(dir && dir.checked)
       };
     },
     saveProfile: function (p) {
@@ -814,15 +809,27 @@ var liveBridge = (function () {
     }
   };
 
+  /**
+   * Permet de lire le profil complet d'un membre (mod2.xml), HTML à n'afficher que dans un cadre isolé.
+   * @param {string} name Membre visé.
+   */
+  function fetchFullProfile(name) {
+      var n = lower(name);
+      if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.resolve('');
+      var hit = fresh(fullProfileCache, n);
+      if (hit) return Promise.resolve(hit.data);
+      return fetch(CH.subdomain.mod2(n)).then(function (r) { return r.ok ? r.text() : ''; }).then(function (xml) {
+        var doc = new DOMParser().parseFromString(xml, 'text/xml'), body = doc.querySelector('body');
+        return !doc.querySelector('parsererror') && body ? unquote(body.textContent) : '';
+      });
+  }
   function saveProfileNow(p) {
-      var me = lower(C.user && C.user.name);
-      // Le profil complet n'est pas édité ici : on le renvoie tel quel, relu chez Chatango s'il manque.
-      var full = p.full ? Promise.resolve(p.full) : fetch(CH.subdomain.mod2(me)).then(function (r) { return r.ok ? r.text() : ''; }).then(function (xml) {
-        var doc = new DOMParser().parseFromString(xml || '', 'text/xml'), body = doc.querySelector('body');
-        return body ? unquote(body.textContent) : '';
-      }).catch(function () { return null; });
+      var me = lower(C.user && C.user.name), sentFull;
+      // Chaîne vide envoyée telle quelle : seul un profil complet inconnu de la page est relu chez Chatango.
+      var full = p.full != null ? Promise.resolve(p.full) : fetchFullProfile(me).catch(function () { return null; });
       return full.then(function (fullText) {
         if (fullText === null) throw new Error('Your full profile could not be read. Nothing was saved.');
+        sentFull = fullText;
         var fields = { auth: 'token', arch: 'h5', src: 'group', action: 'update', age: p.age, gender: p.gender, location: p.location, line: p.about, full_profile: fullText };
         if (p.dir) fields.dir = 'checked';
         return post(CH.path('updateprofile'), fields, {});
@@ -832,9 +839,10 @@ var liveBridge = (function () {
         if (data.error) throw new Error(unquote(data.error));
         if (!('age' in data || 'sex' in data || 'loc' in data)) throw new Error('Chatango sent an unexpected reply. Check your profile on chatango.com.');
         try { C.setProfile(data); } catch (e) { warn(e); }
-        // mod1.xml peut revenir du cache HTTP sans la bio enregistrée : le cache local sert la version envoyée.
+        // mod1.xml et mod2.xml peuvent revenir du cache HTTP sans la version enregistrée : le cache local sert la version envoyée.
         var prev = profileCache[me] ? profileCache[me].data : {};
         profileCache[me] = { at: Date.now(), data: Object.assign({}, prev, { missing: false, age: String(p.age), gender: GENDERS[p.gender] || '', location: p.location, about: p.about }) };
+        fullProfileCache[me] = { at: Date.now(), data: sentFull };
         return data;
       });
   }

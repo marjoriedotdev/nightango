@@ -845,6 +845,22 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await wait(80);
   const pp = posts.find(p => /updateprofile/.test(p.url));
   step('profile posted through Torch', !!pp && pp.f.location === 'Paris' && pp.f.gender === 'M' && pp.f.full_profile === 'FULL PAGE' && pp.f.dir === 'checked' && pp.f.line === 'Hello there' && !('p' in pp.f), pp);
+  /* Profil complet : envoyé tel quel, chaîne vide comprise, sans relire mod2.xml */
+  const lastFull = () => posts.filter(p => /updateprofile/.test(p.url)).pop().f.full_profile;
+  const ownFullReads = () => fetches.filter(x => /\/marjorie\/mod2\.xml/.test(x.url)).length;
+  const fullEdit = {};
+  if ($('#pf-full')) {
+    type($('#pf-full'), '<h1>New page</h1>'); await until(() => !!$('.tc-savebar'));
+    fullEdit.bar = !!$('.tc-savebar');
+    if (fullEdit.bar) { click($('.tc-savebar .tc-btn-primary')); await until(() => !$('.tc-savebar')); }
+    fullEdit.saved = lastFull();
+    fullEdit.reads = ownFullReads();
+    type($('#pf-full'), ''); await until(() => !!$('.tc-savebar'));
+    if ($('.tc-savebar')) { click($('.tc-savebar .tc-btn-primary')); await until(() => !$('.tc-savebar')); }
+    fullEdit.cleared = lastFull();
+    fullEdit.readsAfter = ownFullReads();
+  }
+  step('full profile edited then cleared', fullEdit.bar && fullEdit.saved === '<h1>New page</h1>' && fullEdit.cleared === '' && fullEdit.readsAfter === fullEdit.reads, fullEdit);
   step('no password field anywhere in requests', posts.every(p => !('p' in p.f) && !('pwd' in p.f) && !('password' in p.f)));
   click(byText('.tc-nav', 'Password and email')); await wait(50);
   step('account page has no password form', !$('input[type=password]') && !!byText('.tc-banner', 'never handles your password'));

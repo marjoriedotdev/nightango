@@ -115,12 +115,32 @@ function profileMeta(meta, name, u) {
   return isProfilePending(name, u) ? h(T.Skeleton, { width: 120, height: 12 }) : null;
 }
 
+/**
+ * Permet de retenir les images d'un profil complet tant que les réglages de médias le demandent.
+ * @returns {{on: boolean, button: ?Object}} Images autorisées et bouton qui les charge.
+ */
+function useFullProfileMedia() {
+  var safety = useApp().state.prefs.safety;
+  var c = useState(!safety.proxyMedia && safety.embedImages), on = c[0], setOn = c[1];
+  return { on: on, button: on ? null : h(T.Button, { key: 'm', variant: 'ghost', onClick: function () { setOn(true); } }, 'Load images') };
+}
+
+/**
+ * Profil complet affiché dans un cadre isolé sans script, sur le fond Premium du membre.
+ * @param {string} p.name Membre dont c'est le profil.
+ * @param {string} p.html HTML écrit par le membre.
+ * @param {boolean} p.media Images autorisées, telles que les donne useFullProfileMedia.
+ */
+function FullProfileFrame(p) {
+  var app = useApp(), mini = miniStyleOf(app.state.prefs, userOf(app.state, p.name), app.theme);
+  return h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(p.html, p.media, mini) });
+}
+
 /** Profil complet : page HTML du membre, affichée dans un cadre isolé sans script. */
 function FullProfileDialog(p) {
-  var app = useApp(), s = app.state, u = userOf(s, p.name), safety = s.prefs.safety, mini = miniStyleOf(s.prefs, u, app.theme);
+  var app = useApp(), s = app.state, u = userOf(s, p.name), media = useFullProfileMedia();
   var a = useState(LIVE ? null : ''), html = a[0], setHtml = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
-  var c = useState(!safety.proxyMedia && safety.embedImages), media = c[0], setMedia = c[1];
   useEffect(function () {
     if (!LIVE) return;
     if (isProfilePending(p.name, u)) app.actions.loadProfile(p.name);
@@ -132,7 +152,7 @@ function FullProfileDialog(p) {
   return h(Dialog, {
     title: p.name + "'s profile", wide: true, onClose: p.onClose,
     footer: [
-      !media && content ? h(T.Button, { key: 'm', variant: 'ghost', onClick: function () { setMedia(true); } }, 'Load images') : null,
+      content ? media.button : null,
       h('a', { key: 'o', className: 'tc-btn', href: 'https://' + p.name + '.chatango.com', target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, 'Open on chatango.com', h(T.Icon, { name: 'external', size: 14 })),
       h(T.Button, { key: 'c', variant: 'primary', onClick: p.onClose }, 'Close')
     ]
@@ -141,7 +161,7 @@ function FullProfileDialog(p) {
       err ? h('p', { className: 'muted', style: { margin: 0 } }, err)
         : content === null ? h('p', { className: 'muted', style: { margin: 0 } }, 'Loading the profile from Chatango.')
           : !content ? h('p', { className: 'muted', style: { margin: 0 } }, p.name + " hasn't written a full profile.")
-            : h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(content, media, mini) })));
+            : h(FullProfileFrame, { name: p.name, html: content, media: media.on })));
 }
 
 function ProfilePanel(p) {

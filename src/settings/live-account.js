@@ -1,23 +1,36 @@
 /* ---------- Réglages du compte en mode live ---------- */
 var GENDER_LABEL = { M: 'Male', F: 'Female' };
 var GENDER_CODE = { Male: 'M', Female: 'F' };
+var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
 
 function ProfilePageLive() {
   var app = useApp(), s = app.state;
-  function load() { var r = liveBridge.readProfile(); return { loaded: r.loaded, age: r.age, gender: GENDER_LABEL[r.gender] || 'Not specified', location: r.location, about: r.about, dir: r.dir, full: r.full }; }
-  function editable(x) { return { age: x.age, gender: x.gender, location: x.location, about: x.about, dir: x.dir }; }
+  // Champ vide : profil complet vide ou pas encore relu par Torch, null jusqu'à la lecture de mod2.xml.
+  function load() { var r = liveBridge.readProfile(); return { loaded: r.loaded, age: r.age, gender: GENDER_LABEL[r.gender] || 'Not specified', location: r.location, about: r.about, dir: r.dir, full: r.full || null }; }
+  function editable(x) { return { age: x.age, gender: x.gender, location: x.location, about: x.about, dir: x.dir, full: x.full }; }
   var a = useState(load), base = a[0], setBase = a[1];
   var b = useState(function () { return editable(base); }), draft = b[0], setDraft = b[1];
   var c = useState(false), saving = c[0], setSaving = c[1];
+  var f = useState(false), fullFailed = f[0], setFullFailed = f[1];
+  var fv = useState('edit'), fullView = fv[0], setFullView = fv[1];
+  var media = useFullProfileMedia();
   var dirty = JSON.stringify(draft) !== JSON.stringify(editable(base));
   var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
   function set(k, v) { setDraft(function (d) { var n = Object.assign({}, d); n[k] = v; return n; }); }
-  function reload() { var nb = load(); setBase(nb); setDraft(editable(nb)); }
+  function fetchFull() {
+    setFullFailed(false);
+    liveBridge.fetchFullProfile(s.me).then(function (html) {
+      setBase(function (x) { return Object.assign({}, x, { full: html }); });
+      setDraft(function (x) { return Object.assign({}, x, { full: html }); });
+    }, function () { setFullFailed(true); });
+  }
+  useEffect(function () { if (base.full === null) fetchFull(); }, []);
+  function reload() { var nb = load(); setBase(nb); setDraft(editable(nb)); if (nb.full === null) fetchFull(); }
   function save() {
     if (ageErr) { app.ui.toast('Fix the age before saving.'); return; }
     if (!base.loaded) { app.ui.toast('Your profile is not loaded yet. Nothing was saved.'); return; }
     setSaving(true);
-    liveBridge.saveProfile({ age: draft.age, gender: GENDER_CODE[draft.gender] || '?', location: draft.location, about: draft.about, dir: draft.dir, full: base.full }).then(function () {
+    liveBridge.saveProfile({ age: draft.age, gender: GENDER_CODE[draft.gender] || '?', location: draft.location, about: draft.about, dir: draft.dir, full: draft.full }).then(function () {
       setBase(Object.assign({}, base, draft));
       setSaving(false);
       app.update(function (d) { var u = d.users[d.me]; if (u) { u.age = draft.age === '' ? '' : +draft.age; u.location = draft.location; u.about = draft.about; u.aboutHtml = draft.about; u.gender = draft.gender; } });
@@ -45,7 +58,17 @@ function ProfilePageLive() {
               h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'pf-gender' }, 'Gender'),
                 h('select', { id: 'pf-gender', className: 'tc-input', value: draft.gender, onChange: function (e) { set('gender', e.target.value); } }, ['Not specified', 'Male', 'Female'].map(function (g) { return h('option', { key: g }, g); }))),
               h(T.TextField, { id: 'pf-loc', label: 'Location', value: draft.location, onChange: function (e) { set('location', e.target.value); } })),
-            h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile. Your full profile page is kept as it is.', onChange: function (e) { set('about', e.target.value); } }))),
+            h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }))),
+        h(T.SettingsSection, { title: 'Full profile', description: 'Your page on chatango.com, written in HTML. Members open it from your mini profile.', padded: true },
+          h('div', { style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },
+            h('div', null, h(T.SegmentedControl, { label: 'Full profile view', value: fullView, options: FULL_PROFILE_VIEWS, onChange: setFullView })),
+            draft.full === null ? h('div', { className: 'btnrow', style: { alignItems: 'center' } },
+              h('span', { className: 'tc-hint' }, fullFailed ? 'Chatango did not return your full profile.' : 'Loading your full profile from Chatango.'),
+              fullFailed ? h(T.Button, { size: 'sm', onClick: fetchFull }, 'Try again') : null) : null,
+            fullView === 'edit' ? h(T.TextField, { id: 'pf-full', label: 'HTML', multiline: true, rows: 10, maxLength: 20000, value: draft.full || '', disabled: !base.loaded || saving || draft.full === null, labelAside: draft.full === null ? null : h('span', { className: 'tc-msg-time' }, draft.full.length + ' / 20000'), onChange: function (e) { set('full', e.target.value); } })
+              : draft.full === null ? null
+                : draft.full ? h(Frag, null, h(FullProfileFrame, { name: s.me, html: draft.full, media: media.on }), media.button ? h('div', null, media.button) : null)
+                  : h('p', { className: 'muted', style: { margin: 0 } }, "You haven't written a full profile."))),
         h(T.SettingsSection, { title: 'Visibility' },
           h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other Chatango users find you by age and location.', control: h(T.Switch, { checked: !!draft.dir, disabled: !base.loaded || saving, onChange: function (e) { set('dir', e.target.checked); } }) })),
         h(VisitorsSection, null)),
