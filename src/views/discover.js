@@ -8,6 +8,12 @@ function parseGroupName(v) {
  * @param {string} id Nom du groupe lu par parseGroupName.
  */
 function unknownGroupError(s, id) { return s.groups[id] || LIVE ? '' : 'No group named ' + id + '. Check the spelling, or create it.'; }
+function GroupJoinButton(p) {
+  var app = useApp(), g = p.group;
+  return g.joined
+    ? h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.nav({ view: 'group', id: g.id }); } }, 'Open')
+    : h(T.Button, { size: 'sm', onClick: function () { app.actions.joinGroup(g.id); } }, 'Join');
+}
 function Discover() {
   var app = useApp(), s = app.state;
   var a = useState(''), joinName = a[0], setJoinName = a[1];
@@ -28,11 +34,6 @@ function Discover() {
     if (unknown) { setErr({ text: unknown, name: id }); return; }
     setErr(null); setJoinName(''); app.actions.joinGroup(id);
   }
-  function joinBtn(g) {
-    return g.joined
-      ? h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.nav({ view: 'group', id: g.id }); } }, 'Open')
-      : h(T.Button, { size: 'sm', onClick: function () { app.actions.joinGroup(g.id); } }, 'Join');
-  }
   var topics = ['All', 'Gaming', 'Art', 'Music', 'Languages', 'Tech'];
   return h('main', { className: 'main' },
     h('header', { className: 'topbar' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Discover groups')),
@@ -51,7 +52,7 @@ function Discover() {
           h('div', { className: 'cards small' }, official.map(function (g) {
             return h('article', { key: g.id, className: 'card row' },
               h(T.Avatar, { name: g.id, square: true, size: 36, color: g.id === 'community' ? 'var(--accent)' : undefined, style: g.id === 'community' ? { color: 'var(--on-accent)' } : null }),
-              h('span', { className: 'card-title' }, h('strong', null, g.id), h('span', null, g.title)), joinBtn(g));
+              h('span', { className: 'card-title' }, h('strong', null, g.id), h('span', null, g.title)), h(GroupJoinButton, { group: g }));
           }))),
         LIVE ? null : h('section', { 'aria-labelledby': 'pop-h', style: { display: 'flex', flexDirection: 'column', gap: 14 } },
           h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 } },
@@ -66,7 +67,7 @@ function Discover() {
               h('div', { className: 'card-head' }, h(T.Avatar, { name: g.id, square: true, size: 40 }),
                 h('span', { className: 'card-title' }, h('strong', null, g.id), h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 6 } }, h('span', { className: 'online-dot' }), online(g) + ' online'))),
               h('p', null, g.discover.desc),
-              h('div', { className: 'card-foot' }, h('span', { className: 'grow muted', style: { fontSize: 12 } }, g.discover.topic), joinBtn(g)));
+              h('div', { className: 'card-foot' }, h('span', { className: 'grow muted', style: { fontSize: 12 } }, g.discover.topic), h(GroupJoinButton, { group: g })));
           })) : h('p', { className: 'pal-empty' }, 'No group matches. Try another topic, or create one.')))));
 }
 

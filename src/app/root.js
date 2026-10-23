@@ -774,6 +774,8 @@ function Root(props) {
           d.groupsSeen = true;
           if (op.ready) { g.inited = true; g.membersLoaded = true; }
           if (op.title) { g.title = op.title; g.topic = op.title; }
+          // Rejoindre rappelle renderGroup avec recent: true, owned ne revient donc jamais à faux.
+          if (op.owned) g.owned = true;
           g.joined = !op.hidden;
           if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: Date.now() }; }
         });

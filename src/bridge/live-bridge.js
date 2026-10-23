@@ -451,7 +451,7 @@ var liveBridge = (function () {
   if (SB && typeof SB.renderGroup === 'function') {
     var renderGroup = SB.renderGroup.bind(SB);
     SB.renderGroup = function (data) {
-      try { if (data && data.group && data.group !== ENV) emit({ op: 'group', id: lower(data.group), title: data.header ? String(data.header) : '', hidden: !!data.hidden }); } catch (e) { warn(e); }
+      try { if (data && data.group && data.group !== ENV) emit({ op: 'group', id: lower(data.group), title: data.header ? String(data.header) : '', hidden: !!data.hidden, owned: data.recent === false }); } catch (e) { warn(e); }
       return renderGroup(data);
     };
   }

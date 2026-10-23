@@ -1,12 +1,21 @@
-function LiveJoined() {
-  var app = useApp(), s = app.state;
-  var joined = Object.keys(s.groups).filter(function (k) { return s.groups[k].joined; });
-  return h('section', { 'aria-labelledby': 'lj-h', style: { display: 'flex', flexDirection: 'column', gap: 12 } },
-    h('h2', { id: 'lj-h', className: 'tc-section-title' }, 'Your groups'),
-    joined.length ? h('div', { className: 'cards small' }, joined.map(function (k) {
-      var g = s.groups[k];
+function LiveGroupSection(p) {
+  var s = useApp().state;
+  return h('section', { 'aria-labelledby': p.id, style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },
+    h('h2', { id: p.id, className: 'tc-section-title' }, p.title),
+    p.names.length ? h('div', { className: 'cards small' }, p.names.map(function (k) {
       return h('article', { key: k, className: 'card row' }, h(T.Avatar, { name: k, square: true, size: 36 }),
-        h('span', { className: 'card-title' }, h('strong', null, k), h('span', null, g.title)),
-        h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.nav({ view: 'group', id: k }); } }, 'Open'));
-    })) : h('p', { className: 'muted', style: { margin: 0 } }, 'Connecting to your groups. They appear here as Torch joins them.'));
+        h('span', { className: 'card-title' }, h('strong', null, k), h('span', null, s.groups[k].title)), h(GroupJoinButton, { group: s.groups[k] }));
+    })) : h('p', { className: 'muted', style: { margin: 0 } }, p.empty));
+}
+function LiveJoined() {
+  var s = useApp().state;
+  var names = Object.keys(s.groups);
+  var joined = names.filter(function (k) { return s.groups[k].joined; });
+  var rest = names.filter(function (k) { return !s.groups[k].joined; }).sort();
+  var owned = rest.filter(function (k) { return s.groups[k].owned; });
+  var recent = rest.filter(function (k) { return !s.groups[k].owned; });
+  return h(Frag, null,
+    h(LiveGroupSection, { id: 'lj-h', title: 'Joined groups', names: joined, empty: 'Connecting to your groups. They appear here as Torch joins them.' }),
+    owned.length ? h(LiveGroupSection, { id: 'lo-h', title: 'Groups you own', names: owned }) : null,
+    recent.length ? h(LiveGroupSection, { id: 'lr-h', title: 'Recent groups', names: recent }) : null);
 }
