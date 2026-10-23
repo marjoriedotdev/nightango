@@ -57,7 +57,7 @@ function ManageRoleDialog(p) {
       h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 8 } },
         h('div', { className: 'tc-field', style: { flex: 1 } }, h('label', { className: 'tc-label', htmlFor: 'add-staff' }, 'Add a member'),
           h('select', { id: 'add-staff', className: 'tc-input', value: pickName, onChange: function (e) { setPick(e.target.value); } }, h('option', { value: '' }, 'Choose a member'), candidates.map(function (n) { return h('option', { key: n, value: n }, n); }))),
-        h(T.Button, { disabled: !pickName, style: { height: 38 }, onClick: function () { var n = pickName; p.edit(function (d) { d.staff[n] = role; }); setPick(''); } }, 'Add'))));
+        h(T.Button, { disabled: !pickName, onClick: function () { var n = pickName; p.edit(function (d) { d.staff[n] = role; }); setPick(''); } }, 'Add'))));
 }
 
 function GSMembers(p) {

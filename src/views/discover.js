@@ -42,10 +42,13 @@ function Discover() {
         h('div', { className: 'page-head' },
           h('div', null, h('h2', { style: { margin: '0 0 6px', fontSize: 24, lineHeight: '32px', fontWeight: 600 } }, 'Find a group'), h('p', { className: 'lede', style: { margin: 0 } }, 'Join a group, or open one directly by its name.')),
           h(T.Button, { variant: 'primary', icon: 'plus', onClick: function () { app.ui.openCreate(''); } }, 'Create a group')),
-        h('form', { onSubmit: submit, className: 'tc-section', style: { padding: '16px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '10px 12px' }, noValidate: true },
-          h('div', { style: { flex: '1 1 320px' } }, h(T.TextField, { id: 'join', label: 'Join by name or link', placeholder: 'community, community.chatango.com or a full link', value: joinName, error: err ? err.text : undefined, onChange: function (e) { setJoinName(e.target.value); setErr(null); } })),
-          h(T.Button, { type: 'submit', style: { height: 38 } }, 'Join'),
-          err && err.name && !LIVE ? h(T.Button, { variant: 'ghost', icon: 'plus', style: { height: 38 }, onClick: function () { app.ui.openCreate(err.name); } }, 'Create ' + err.name) : null),
+        h('form', { onSubmit: submit, className: 'tc-section', style: { padding: '16px 20px' }, noValidate: true },
+          h(T.TextField, {
+            id: 'join', label: 'Join by name or link', placeholder: 'community, community.chatango.com or a full link', value: joinName, error: err ? err.text : undefined, onChange: function (e) { setJoinName(e.target.value); setErr(null); },
+            action: h(Frag, null,
+              h(T.Button, { type: 'submit' }, 'Join'),
+              err && err.name && !LIVE ? h(T.Button, { variant: 'ghost', icon: 'plus', onClick: function () { app.ui.openCreate(err.name); } }, 'Create ' + err.name) : null)
+          })),
         LIVE ? h(LiveJoined, null) : null,
         LIVE ? null : h('section', { 'aria-labelledby': 'off-h', style: { display: 'flex', flexDirection: 'column', gap: 12 } },
           h('h2', { id: 'off-h', className: 'tc-section-title' }, 'Official'),
@@ -58,7 +61,7 @@ function Discover() {
           h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 } },
             h('h2', { id: 'pop-h', className: 'tc-section-title', style: { flex: '1 1 160px' } }, 'Popular right now'),
             h('label', { htmlFor: 'find', className: 'tc-sr' }, 'Search groups'),
-            h('input', { id: 'find', className: 'tc-input', type: 'search', placeholder: 'Search groups', value: q, style: { flex: '0 1 260px', height: 34 }, onChange: function (e) { setQ(e.target.value); } })),
+            h('input', { id: 'find', className: 'tc-input', type: 'search', placeholder: 'Search groups', value: q, style: { flex: '0 1 260px' }, onChange: function (e) { setQ(e.target.value); } })),
           h('div', { className: 'chips', role: 'group', 'aria-label': 'Filter by topic' }, topics.map(function (t) {
             return h('button', { key: t, type: 'button', className: 'chip', 'aria-pressed': String(topic === t), onClick: function () { setTopic(t); } }, t);
           })),

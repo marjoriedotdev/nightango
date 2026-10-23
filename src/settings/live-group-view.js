@@ -1,7 +1,7 @@
 /* ---------- Écrans du mode live : réglages branchés sur Chatango par le client Torch ---------- */
 
 function liveSelect(id, label, value, options, onChange, disabled) {
-  return h('select', { id: id, className: 'tc-input', style: { width: 'auto', height: 34 }, 'aria-label': label, value: value, disabled: !!disabled, onChange: function (e) { onChange(+e.target.value); } },
+  return h('select', { id: id, className: 'tc-input', style: { width: 'auto' }, 'aria-label': label, value: value, disabled: !!disabled, onChange: function (e) { onChange(+e.target.value); } },
     options.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); }));
 }
 function withCurrent(options, value, label) {

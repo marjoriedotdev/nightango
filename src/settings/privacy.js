@@ -5,7 +5,7 @@ function PrivacyPage() {
     h(T.SettingsSection, { title: 'Private messages' },
       h(T.SettingRow, {
         asLabel: false, title: 'Who can message you', description: 'Messages from anyone else land in Requests, where you accept or decline them.',
-        control: h('select', { className: 'tc-input', style: { width: 'auto', height: 34 }, 'aria-label': 'Who can message you', value: prefs.privacy.pmFrom, onChange: function (e) { pr.set('privacy.pmFrom', e.target.value); } },
+        control: h('select', { className: 'tc-input', style: { width: 'auto' }, 'aria-label': 'Who can message you', value: prefs.privacy.pmFrom, onChange: function (e) { pr.set('privacy.pmFrom', e.target.value); } },
           h('option', { value: 'everyone' }, 'Everyone'), h('option', { value: 'groups' }, 'Members of my groups'), h('option', { value: 'friends' }, 'Friends only'))
       }),
       h(T.SettingRow, { title: 'Show read receipts and idle time', description: 'Others see when you read their message and how long you have been idle.', control: pr.sw('privacy.showIdle') }),
@@ -91,9 +91,10 @@ function AccountPage() {
         h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },
           h('span', { style: { fontWeight: 500 } }, s.account.email), s.account.verified ? h(T.Badge, { icon: 'check' }, 'Verified') : null,
           s.account.pending ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Waiting for confirmation of ' + s.account.pending) : null),
-        h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10 } },
-          h('div', { style: { flex: '1 1 260px' } }, h(T.TextField, { id: 'acc-email', label: 'New email', type: 'email', value: email, error: err.email, onChange: function (ev) { setEmail(ev.target.value); } })),
-          h(T.Button, { onClick: changeEmail, style: { height: 38 } }, 'Change email')))),
+        h(T.TextField, {
+          id: 'acc-email', label: 'New email', type: 'email', value: email, error: err.email, onChange: function (ev) { setEmail(ev.target.value); },
+          action: h(T.Button, { onClick: changeEmail }, 'Change email')
+        }))),
     h(T.SettingsSection, { title: 'Password', padded: true },
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 } },
         h(T.TextField, { id: 'pw-cur', label: 'Current password', type: 'password', autoComplete: 'current-password', value: pw.cur, error: err.cur, onChange: function (ev) { setPw(Object.assign({}, pw, { cur: ev.target.value })); } }),

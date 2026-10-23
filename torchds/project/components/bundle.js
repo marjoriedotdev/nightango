@@ -109,7 +109,7 @@
     var autoId = React.useId();
     var id = props.id || autoId;
     var hintId = id + '-hint';
-    var rest = omit(props, ['label', 'hint', 'error', 'multiline', 'id', 'className', 'labelAside']);
+    var rest = omit(props, ['label', 'hint', 'error', 'multiline', 'id', 'className', 'labelAside', 'action']);
     var describedBy = props.error || props.hint ? hintId : undefined;
     var control = h(props.multiline ? 'textarea' : 'input', Object.assign({
       id: id, className: cx('tc-input', props.className), 'aria-invalid': props.error ? 'true' : undefined, 'aria-describedby': describedBy
@@ -117,7 +117,7 @@
     return h('div', { className: 'tc-field' },
       props.label ? h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 } },
         h('label', { className: 'tc-label', htmlFor: id }, props.label), props.labelAside || null) : null,
-      control,
+      props.action ? h('div', { className: 'tc-field-row' }, control, props.action) : control,
       props.error ? h('span', { id: hintId, className: 'tc-error' }, props.error) : props.hint ? h('span', { id: hintId, className: 'tc-hint' }, props.hint) : null);
   }
 

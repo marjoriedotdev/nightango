@@ -34,7 +34,7 @@ function DMView(p) {
     section === 'friends' ? h(FriendsList, { current: id }) : section === 'meet' ? h(MeetPeople, null) : h(Frag, null,
     h('div', { style: { padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10 } },
       h('label', { htmlFor: 'pm-search', className: 'tc-sr' }, 'Search conversations'),
-      h('input', { id: 'pm-search', className: 'tc-input', style: { height: 34 }, type: 'search', placeholder: 'Search conversations', value: q, onChange: function (e) { setQ(e.target.value); } }),
+      h('input', { id: 'pm-search', className: 'tc-input', type: 'search', placeholder: 'Search conversations', value: q, onChange: function (e) { setQ(e.target.value); } }),
       h('div', { className: 'tabs', role: 'group', 'aria-label': 'Filter conversations' },
         filters.map(function (t) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
@@ -272,9 +272,11 @@ function FriendsList(p) {
     request.add(n);
   }
   return h(Frag, null,
-    h('form', { onSubmit: add, noValidate: true, style: { padding: '12px 12px 4px', display: 'flex', alignItems: 'flex-end', gap: 8 } },
-      h('div', { style: { flex: 1 } }, h(T.TextField, { id: 'add-friend', label: 'Add a friend', placeholder: 'Username', value: name, error: err || undefined, autoComplete: 'off', onChange: function (e) { setName(e.target.value); setErr(''); } })),
-      h(T.Button, { type: 'submit', style: { height: 38 }, disabled: !!request.pending }, request.pending ? 'Adding' : 'Add')),
+    h('form', { onSubmit: add, noValidate: true, style: { padding: '12px 12px 4px' } },
+      h(T.TextField, {
+        id: 'add-friend', label: 'Add a friend', placeholder: 'Username', value: name, error: err || undefined, autoComplete: 'off', onChange: function (e) { setName(e.target.value); setErr(''); },
+        action: h(T.Button, { type: 'submit', disabled: !!request.pending }, request.pending ? 'Adding' : 'Add')
+      })),
     LIVE && !s.friendsLoaded ? null : h('p', { className: 'mlabel', style: { margin: '8px 16px 4px' } }, online + ' online · ' + plural(friends.length, 'friend', 'friends')),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading friends' })
       : friends.length

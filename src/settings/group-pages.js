@@ -26,7 +26,7 @@ function GSAnnouncement(p) {
         h(T.TextField, { id: 'ann-text', label: 'Text', multiline: true, rows: 3, maxLength: 500, value: a.text, labelAside: h('span', { className: 'tc-msg-time' }, a.text.length + ' / 500'), onChange: function (e) { set('text', e.target.value); } })),
       h(T.SettingRow, {
         asLabel: false, title: 'Post it in the chat every', description: 'Only when more than 5 messages were sent since the last time.',
-        control: h('select', { className: 'tc-input', style: { width: 'auto', height: 34 }, 'aria-label': 'Repeat interval', value: a.interval, onChange: function (e) { set('interval', +e.target.value); } },
+        control: h('select', { className: 'tc-input', style: { width: 'auto' }, 'aria-label': 'Repeat interval', value: a.interval, onChange: function (e) { set('interval', +e.target.value); } },
           [[0, 'Never'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour']].map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); }))
       }),
       h(T.SettingRow, { title: 'Broadcast mode', description: 'Only staff with the broadcast permission can post. Use it for events.', control: h(T.Switch, { checked: a.broadcast, onChange: function (e) { set('broadcast', e.target.checked); } }) })),
@@ -102,9 +102,10 @@ function GSBans(p) {
     aside: g.bans.length && (p.myRole === 'owner' || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: g.bans.length + ' members will be able to join #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
   },
     h(T.SettingsSection, { title: 'Ban someone', padded: true },
-      h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10 } },
-        h('div', { style: { flex: '1 1 260px' } }, h(T.TextField, { id: 'ban-name', label: 'Username', value: name, error: err || undefined, onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') ban(); } })),
-        h(T.Button, { variant: 'danger', icon: 'ban', style: { height: 38 }, onClick: ban }, 'Ban'))),
+      h(T.TextField, {
+        id: 'ban-name', label: 'Username', value: name, error: err || undefined, onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') ban(); },
+        action: h(T.Button, { variant: 'danger', icon: 'ban', onClick: ban }, 'Ban')
+      })),
     h(T.SettingsSection, { title: 'Banned · ' + g.bans.length },
       g.bans.length ? g.bans.map(function (x) {
         return h('div', { key: x.name, className: 'lrow' },
@@ -122,7 +123,7 @@ function GSAudit(p) {
   return h(Page, {
     title: 'Audit log', lede: 'Every moderation and settings change in #' + g.id + ', newest first.',
     aside: h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } }, 'Staff member',
-      h('select', { className: 'tc-input', style: { width: 'auto', height: 34 }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, n); })))
+      h('select', { className: 'tc-input', style: { width: 'auto' }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, n); })))
   },
     h(T.SettingsSection, null, rows.length ? rows.map(function (x, i) {
       return h(ActivityRow, { key: x.id, first: !i, at: x.at }, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', x.text.charAt(0).toLowerCase() + x.text.slice(1));

@@ -56,15 +56,18 @@ const COMPONENTS = [
 - Pass \`pressed\` for toggles (members panel, profile panel) so the state is announced and shown with \`selected\`.
 - Color is \`text-2\` at rest and \`text\` on hover.`,
     `  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14 }));`],
-  ['TextField', 'Forms', 220,
+  ['TextField', 'Forms', 310,
     'A labelled text input or textarea with an optional hint or error.',
     `Always pass \`label\`; the field links it, the hint and the error for assistive tech. Use \`hint\` for format rules and \`error\` once the value is known to be wrong, written as what to do: "Enter a group name".
 
 - \`multiline\` renders a textarea (bio, group description). \`labelAside\` holds a counter like \`96 / 2000\` in \`meta-sm\`.
+- \`action\` puts a default size button on the input's line, \`space-2\` apart, for forms of one field: Join, Add, Ban. The hint or error goes under both, so the button stays level with the input.
+- Inputs are \`size-control-md\` tall, like default buttons.
 - Focus shows a \`focus-ring\` border and an \`accent-soft\` halo.`,
     `  return h('div', { className: 'col', style: { maxWidth: 360 } },
     h(T.TextField, { label: 'Username', defaultValue: 'orrin', hint: "It can't be changed later." }),
-    h(T.TextField, { label: 'Group name', defaultValue: 'my group!', error: 'Use letters, numbers and dashes only.' }));`],
+    h(T.TextField, { label: 'Group name', defaultValue: 'my group!', error: 'Use letters, numbers and dashes only.' }),
+    h(T.TextField, { label: 'Ban someone', placeholder: 'Username', hint: 'They need a recent message in the group.', action: h(T.Button, { variant: 'danger', icon: 'ban' }, 'Ban') }));`],
   ['Switch', 'Forms', 72,
     'An on or off setting that applies immediately.',
     `Use a Switch for preferences that take effect at once. Put it in a \`SettingRow\` so the whole row is the click target and the row title is its label. Alone, pass \`label\` for \`aria-label\`.

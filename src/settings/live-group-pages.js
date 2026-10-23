@@ -86,9 +86,10 @@ function GSBansLive(p) {
     aside: g.bans.length && (owner || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: g.bans.length + ' members will be able to post in #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
   },
     h(T.SettingsSection, { title: 'Ban someone', padded: true },
-      h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10 } },
-        h('div', { style: { flex: '1 1 260px' } }, h(T.TextField, { id: 'ban-name', label: 'Username', value: name, error: err || undefined, hint: err ? undefined : 'They need a recent message in #' + g.id + '.', onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') ban(); } })),
-        h(T.Button, { variant: 'danger', icon: 'ban', style: { height: 38 }, onClick: ban }, 'Ban'))),
+      h(T.TextField, {
+        id: 'ban-name', label: 'Username', value: name, error: err || undefined, hint: err ? undefined : 'They need a recent message in #' + g.id + '.', onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') ban(); },
+        action: h(T.Button, { variant: 'danger', icon: 'ban', onClick: ban }, 'Ban')
+      })),
     h(T.SettingsSection, { title: 'Banned · ' + g.bans.length },
       !g.live.bansLoaded ? h(SkeletonRows, { count: 3, avatar: 28, twoLines: true, label: 'Loading the ban list from Chatango' })
         : g.bans.length ? g.bans.map(function (x) {
