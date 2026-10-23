@@ -89,11 +89,26 @@ function useTorchSettings(read, write) {
   return [value, set];
 }
 
+var PMR_STATUS = {
+  ok: 'vissle reports no restriction on your private messages.',
+  restricted: 'vissle reports that your private messages appear to be restricted.',
+  unknown: 'vissle could not check your private message status.'
+};
+function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === null ? null : { pmrCheck: v }; }
+
 function PrivacyPageLive() {
   var app = useApp(), pr = usePref();
   var st = useTorchSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
+  var pc = useTorchSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
+  var ps = useState(null), pmrStatus = ps[0], setPmrStatus = ps[1];
+  var checking = !!(pmr && pmr.pmrCheck);
+  useEffect(function () { if (checking) liveBridge.pmrStatus().then(setPmrStatus); }, [checking]);
   return h(Page, { title: 'Privacy', lede: 'What Torch Skin keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
+      pmr ? h(T.SettingRow, {
+        title: 'Check my private message status', description: checking ? PMR_STATUS[pmrStatus] : null,
+        control: h(T.Switch, { checked: checking, onChange: function (e) { setPmrSetting('pmrCheck', e.target.checked); } })
+      }) : null,
       h(T.SettingRow, {
         asLabel: false, title: 'Delete saved conversations', description: 'Torch keeps a copy of your private messages in this browser. Chatango does not store them.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message Torch saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')

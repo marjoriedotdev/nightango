@@ -169,7 +169,8 @@ w.fetch = (url, opts) => {
   else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
-  const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body) };
+  else if (/^https:\/\/api\.vissle\.me\/v1\/pmr\//.test(url)) { body = '{"pmr":true}'; type = 'application/json'; }
+  const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body), json: () => Promise.resolve(body).then(JSON.parse) };
   return searchHold && /\/search$/.test(url) ? searchHold.then(() => res) : Promise.resolve(res);
 };
 
@@ -574,6 +575,15 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmConnectAt = calls.findIndex(c => c[0] === 'connect' && c[1] === 'private_message'), migratedAt = calls.findIndex(c => c[0] === 'written');
   step('old history unread cleared once before the private connection', migratedAt >= 0 && migratedAt < pmConnectAt && calls[migratedAt][1] === false && migrationFlag() && pmRecords.every(r => !r.unread),
     { pmConnectAt, migratedAt, written: calls[migratedAt], flag: migrationFlag(), unread: pmRecords.filter(r => r.unread) });
+
+  /* Restriction des MP de son compte : demandée avant la connexion privée, lue chez vissle une seule fois après elle */
+  C.settings.privacy.private_messages = { check_pmr: true };
+  const pmrRow = () => $$('section[aria-label="Private messages"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === 'Check my private message status');
+  const pmrView = () => { const r = pmrRow(); return r && { on: r.querySelector('[role=switch]').checked, status: (r.querySelector('.tc-row-desc') || {}).textContent || null, asked: fetches.filter(x => /vissle\.me/.test(x.url)).map(x => x.url) }; };
+  click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
+  click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow()); await wait(50);
+  const pmrSeen = [pmrView()];
+  click(byText('.tc-nav', 'Back to chat')); await until(() => !!$('.log'));
 
   /* Messages privés : base d'historique de Torch ouverte par le pont, avec son schéma */
   const fakeDb = C.database.pm, schema = [];
@@ -1027,6 +1037,19 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('notifications: no email or sound columns', !byText('th', 'Email') && !byText('th', 'Sound') && !byText('.tc-banner', 'Torch plays alert sounds')
     && !!byText('section[aria-label="Sounds"] .tc-section-desc', "Torch plays these sounds. Torch Skin stays silent so you don't hear every alert twice.")
     && JSON.stringify(sounds) === JSON.stringify({ mention: { on: true, range: '30', value: '30%', play: true }, online: { on: false, range: 'off', value: '45%', play: false } }), sounds);
+  click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow() && !!pmrView().status);
+  pmrSeen.push(pmrView());
+  if (pmrRow()) {
+    click(pmrRow().querySelector('[role=switch]')); await until(() => !pmrView().on);
+    pmrSeen.push(Object.assign(pmrView(), { torch: C.settings.privacy.private_messages.check_pmr, saved: JSON.parse(w.localStorage.getItem('settings')).privacy.private_messages.check_pmr }));
+    click(pmrRow().querySelector('[role=switch]')); await until(() => !!pmrView().status);
+    pmrSeen.push(pmrView());
+  }
+  const PMR_URL = ['https://api.vissle.me/v1/pmr/marjorie'], PMR_TEXT = 'vissle reports that your private messages appear to be restricted.';
+  step('own private message restriction read once from vissle after the private connection', JSON.stringify(pmrSeen) === JSON.stringify([
+    { on: true, status: null, asked: [] }, { on: true, status: PMR_TEXT, asked: PMR_URL },
+    { on: false, status: null, asked: PMR_URL, torch: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
+  ]), pmrSeen);
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
 
   /* Bio : line Chatango brute dans le champ, rendue dans l'aperçu */

@@ -7,7 +7,8 @@ var liveBridge = (function () {
   var GENDERS = { M: 'Male', F: 'Female' };
   var SETTINGS = {
     joinOwned: ['privacy', 'groups', 'connect_own'], joinRecent: ['privacy', 'groups', 'connect_recent'], joinFavorites: ['privacy', 'groups', 'connect_favorite'],
-    markdown: ['appearance', 'messages', 'parse_markdown'], guestMessages: ['safety', 'messages', 'show_guest'], announcements: ['appearance', 'messages', 'show_annc']
+    markdown: ['appearance', 'messages', 'parse_markdown'], guestMessages: ['safety', 'messages', 'show_guest'], announcements: ['appearance', 'messages', 'show_annc'],
+    pmrCheck: ['privacy', 'private_messages', 'check_pmr']
   };
   var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'] };
   var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
@@ -202,7 +203,7 @@ var liveBridge = (function () {
       }
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
       case 'unblocked': emit({ op: 'pmUnblocked', name: lower(data[0]) }); break;
-      case 'OK': emit({ op: 'pmReady' }); break;
+      case 'OK': emit({ op: 'pmReady' }); if (pmrConnected) pmrConnected(); break;
       case 'kickingoff': emit({ op: 'session', reason: 'kicked' }); break;
       case 'DENIED': emit({ op: 'session', reason: 'denied' }); break;
       case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: 'Flood warning: slow down or Chatango may disconnect your private messages.' }); break;
@@ -331,6 +332,17 @@ var liveBridge = (function () {
     var form = new FormData();
     Object.keys(fields).forEach(function (k) { if (fields[k] !== undefined && fields[k] !== null) form.set(k, fields[k]); });
     return C.post(url, form, item || {}).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
+  }
+  var pmrCheck = null, pmrConnected = null;
+  /**
+   * Permet de lire chez vissle la restriction des MP de son propre compte, comme Torch (inject.js:10631-10643).
+   * @returns {Promise<string>} restricted, ok, ou unknown si la réponse ne l'établit pas.
+   */
+  function fetchPmr() {
+    return fetch('https://api.vissle.me/v1/pmr/' + C.user.name).then(function (r) {
+      if (r.status !== 200) return 'unknown';
+      return r.json().then(function (data) { return data.pmr ? 'restricted' : 'ok'; });
+    }).catch(function (e) { warn(e); return 'unknown'; });
   }
   /**
    * Base d'historique privé de Torch (« <pseudo>_history »). Torch ne l'ouvre que depuis son propre écran
@@ -838,6 +850,20 @@ var liveBridge = (function () {
       return Promise.resolve().then(function () { return saveProfileNow(p); });
     },
     setting: readSetting,
+    /**
+     * Permet de lire la restriction des MP de son compte, un appel au plus par chargement de la page, après l'ouverture de la connexion privée.
+     * @returns {Promise<?string>} restricted, ok ou unknown, null sans appel si check_pmr est coupé ou illisible.
+     */
+    pmrStatus: function () {
+      if (!readSetting('pmrCheck')) return Promise.resolve(null);
+      if (!pmrCheck) pmrCheck = (pmOpen() ? Promise.resolve() : new Promise(function (resolve) { pmrConnected = resolve; })).then(function () {
+        if (readSetting('pmrCheck')) return fetchPmr();
+        // Réglage coupé en attendant la connexion privée : aucun appel, la demande suivante repart de zéro.
+        pmrCheck = null;
+        return null;
+      });
+      return pmrCheck;
+    },
     /**
      * Permet de lire les réglages de démarrage de Torch.
      * @returns {?Object} Les trois interrupteurs, null si les réglages de Torch sont illisibles.
