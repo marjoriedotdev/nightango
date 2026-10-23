@@ -48,7 +48,7 @@ function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
   }, [enabled]);
 }
 
-/* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
+/* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, disabled, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
@@ -75,12 +75,12 @@ function MenuButton(p) {
     return function () { window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); };
   }, [open]);
   useEffect(function () {
-    if (open && menuRef.current) { var first = menuRef.current.querySelector('button'); if (first) first.focus(); }
+    if (open && menuRef.current) { var first = menuRef.current.querySelector('button:not(:disabled)'); if (first) first.focus(); }
   }, [open]);
   function toggle() { setPlace(null); setOpen(!open); }
   function onKey(e) {
     if (!menuRef.current) return;
-    var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button'));
+    var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button:not(:disabled)'));
     var i = items.indexOf(menuRef.current.getRootNode().activeElement);
     if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
     if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
@@ -95,7 +95,7 @@ function MenuButton(p) {
         if (it.divider) return h('hr', { key: 'd' + i });
         return h('button', {
           key: i, type: 'button', role: it.checked != null ? 'menuitemradio' : 'menuitem', 'aria-checked': it.checked != null ? String(!!it.checked) : undefined,
-          className: it.danger ? 'danger' : undefined,
+          className: it.danger ? 'danger' : undefined, disabled: it.disabled,
           onClick: function () { close(); it.onSelect(); }
         },
           it.swatch ? h('span', { className: 'swatch', style: { background: it.swatch } }) : it.icon ? h(T.Icon, { name: it.icon, size: 15 }) : null,

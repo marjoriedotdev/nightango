@@ -7,6 +7,7 @@ function DMView(p) {
   var logRef = useRef(null);
   var convo = id ? s.dms[id] : null;
   var len = convo ? convo.messages.length : 0;
+  var friend = useFriendAction(id, userOf(s, id));
   useLayoutEffect(function () { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [id, len]);
 
   var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
@@ -81,7 +82,7 @@ function DMView(p) {
         h(MenuButton, {
           label: 'Conversation options', items: [
             { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(id, null); } },
-            { label: u.friend ? 'Remove friend' : 'Add friend', icon: u.friend ? 'user-minus' : 'user-plus', onSelect: function () { app.actions.toggleUser(id, 'friend'); } },
+            { label: friend.label, icon: friend.icon, disabled: friend.busy, onSelect: friend.run },
             { divider: true }
           ].concat(convActions(app, id))
         })),
