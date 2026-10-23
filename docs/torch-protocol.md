@@ -215,6 +215,7 @@ Les bits de drapeaux de groupe, de droits de modérateur et de canaux sont dans 
 - MP au démarrage : `client.settings.privacy.private_messages.connect_start`, lu à la connexion (`inject.js:1366`). Torch Skin ne le reprend pas : le pont ouvre toujours la connexion privée lui-même, 2,5 s après la connexion, et `app/root.js` la rouvre si elle tombe. Un interrupteur serait sans effet.
 - Le pont lit les trois valeurs de groupes (`startupSettings`), écrit l'une d'elles en place dans `client.settings` (`setStartupSetting`), puis réécrit `localStorage["settings"]` comme Torch. Hors de ces trois valeurs, il n'écrit que les listes `favorite[]`, `notifications.muted.groups[]` et `safety.users.ignore[]`. L'effet des trois valeurs vaut au prochain chargement.
 - « Qui peut m'écrire » (`client.settings.safety.users.allow_*`, `inject.js:9648`) est déclaré dans les défauts et l'écran de Torch mais lu nulle part : il est sans effet dans Torch et Torch Skin ne le reprend pas.
+- « Montrer mon inactivité » (`client.settings.privacy.private_messages.show_idle`, `inject.js:9690`) est déclaré dans les défauts et l'écran de Torch mais lu nulle part : il est sans effet dans Torch et Torch Skin ne le reprend pas.
 
 ## Ce qui reste dans Torch
 

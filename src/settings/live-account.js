@@ -76,8 +76,7 @@ function PrivacyPageLive() {
       })),
     h(T.SettingsSection, { title: 'Browser tab' },
       h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
-    startup ? h(StartupSection, { value: startup, onChange: setStartupSetting }) : null,
-    h(T.Banner, { icon: 'info' }, "Idle visibility stays in Torch's own settings. Torch Skin doesn't change it yet."));
+    startup ? h(StartupSection, { value: startup, onChange: setStartupSetting }) : null);
 }
 
 function AccountPageLive() {
