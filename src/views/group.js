@@ -19,28 +19,17 @@ function GroupView(p) {
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
-  var a10 = useState(null), target = a10[0], setTarget = a10[1];
   var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
   var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid, channel: channel });
   var logRef = useRef(null), sentinelRef = useRef(null);
+  var a10 = useMessageJump(logRef), target = a10[0], setTarget = a10[1];
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
   var reading = useReadingPosition(logRef, firstTs, [count, !!search], function () { setJump(true); });
   var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open');
   useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
-  // Après le rendu qui ferme la recherche : la ligne de l'original n'existe qu'à ce moment.
-  useEffect(function () {
-    if (!target) return;
-    var row = logRef.current.querySelector('[data-msg-id=' + JSON.stringify(target.id) + ']');
-    var still = prefs.a11y.reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    row.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
-    row.tabIndex = -1;
-    row.focus({ preventScroll: true });
-    var timer = setTimeout(function () { setTarget(null); }, 1500);
-    return function () { clearTimeout(timer); };
-  }, [target]);
   // Saut demandé par la page Mentions : jumpTo, déclarée plus bas, refuse un message que le fil masque.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));

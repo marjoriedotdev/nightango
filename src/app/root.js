@@ -92,8 +92,8 @@ function Root(props) {
   function nav(route) {
     update(function (d) {
       var cur = d.route;
-      // Le retour au fil ne refait pas le saut vers le message ouvert depuis Mentions.
-      if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; }
+      // Le retour au fil ne refait pas le saut vers le message ouvert depuis Mentions ou la recherche des MP.
+      if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; delete cur.seek; }
       var r = Object.assign({}, route);
       if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = Date.now(); g.unread = 0; g.mentions = 0; }
       if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].unread = 0; d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
@@ -709,7 +709,7 @@ function Root(props) {
      */
     actions.loadOlderDm = function (name) {
       var keys = stateRef.current.dms[name].messages.map(function (m) { return m.archiveTs; }).filter(Boolean);
-      update(function (d) { d.dms[name].loadingOlder = true; });
+      update(function (d) { Object.assign(d.dms[name], { loadingOlder: true, olderFailed: false }); });
       liveBridge.pmOlder(name, Math.min.apply(null, keys), 50).then(function (page) {
         // Une page plus ancienne ne change aucun compteur de non-lus.
         update(function (d) { var c = d.dms[name]; mergePmHistory(d, c, page.list); c.olderMore = page.more; c.loadingOlder = false; });
@@ -950,12 +950,6 @@ function Root(props) {
     list.page.loaded = true;
     list.page.loading = false;
   }
-  // Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
-  function pmContentKey(m) {
-    var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
-    return String(m.text).split(/\s+/).concat(media).filter(Boolean).sort().filter(function (v, i, a) { return v !== a[i - 1]; }).join(' ');
-  }
-  function pmEditTarget(c, m) { return m.editId ? c.messages.find(function (x) { return x.key === m.editId && x.from === m.from; }) : null; }
   function pmMessage(x) {
     // Modification sans original chargé : elle prend la clé de l'original, que visent l'archive et les modifications suivantes.
     var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
@@ -973,9 +967,7 @@ function Root(props) {
     // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
     var shown = c.messages.slice(), fresh = 0;
     function claim(x) {
-      var k = pmContentKey(x), i = shown.findIndex(function (y) { return y.archiveTs === x.archiveTs; });
-      // Un message qui porte déjà une clé d'archive est une autre entrée. Même clé de MP = même message, même si une modification a changé son texte.
-      if (i < 0) i = shown.findIndex(function (y) { return !y.archiveTs && (x.key && y.key ? y.key === x.key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000); });
+      var i = pmShownIndex(shown, x);
       if (i < 0) return false;
       shown[i].archiveTs = x.archiveTs;
       shown.splice(i, 1);

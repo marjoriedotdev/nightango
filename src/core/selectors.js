@@ -79,6 +79,24 @@ function unreadDmCount(state) { return listedDms(state).filter(function (n) { re
  * @param {string} name Membre de la conversation.
  */
 function isDmInView(state, name) { return state.route.view === 'dm' && state.route.id === name && document.visibilityState === 'visible'; }
+// Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
+function pmContentKey(m) {
+  var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
+  return String(m.text).split(/\s+/).concat(media).filter(Boolean).sort().filter(function (v, i, a) { return v !== a[i - 1]; }).join(' ');
+}
+function pmEditTarget(c, m) { return m.editId ? c.messages.find(function (x) { return x.key === m.editId && x.from === m.from; }) : null; }
+/**
+ * Permet de retrouver le message affiché qui couvre une entrée de l'historique privé autre qu'une modification appliquée.
+ * @param {Array} list Messages affichés.
+ * @param {Object} x Entrée de l'historique, avec sa clé archiveTs.
+ * @returns {number} Position du message dans list, -1 si aucun ne la couvre.
+ */
+function pmShownIndex(list, x) {
+  // Une modification sans original chargé s'affiche sous la clé de l'original.
+  var key = x.editId || x.key, k = pmContentKey(x), i = list.findIndex(function (y) { return y.archiveTs === x.archiveTs; });
+  // Un message qui porte déjà une clé d'archive est une autre entrée. Même clé de MP = même message, même si une modification a changé son texte.
+  return i >= 0 ? i : list.findIndex(function (y) { return !y.archiveTs && (key && y.key ? y.key === key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000); });
+}
 function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
 /**
  * Permet d'abréger le genre d'un profil.

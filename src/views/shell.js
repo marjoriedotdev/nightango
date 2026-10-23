@@ -26,7 +26,7 @@ function Shell() {
   if (r.view === 'gsettings') return h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
   if (LIVE && !app.state.groupsSeen) main = h(StartupScreen, null);
   else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id, msgId: r.msgId });
-  else if (r.view === 'dm') main = h(DMView, { id: r.id, tab: r.tab });
+  else if (r.view === 'dm') main = h(DMView, { id: r.id, tab: r.tab, seek: r.seek });
   else if (r.view === 'mentions') main = h(MentionsView, null);
   else main = h(Discover, null);
   return h('div', { className: cx('shell', app.navOpen && 'nav-open') },

@@ -17,7 +17,7 @@ src/
                      Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes,
                      useRightColumn (seul seuil de 1180 px : colonne de droite au-dessus, plein écran en dessous)
     rich-text.js     MessageText (emphase, citations, mentions, liens), RichText (mini profil assaini), fullProfileDoc
-    selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées
+    selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées, message affiché d'une entrée de l'historique privé
   bridge/     le pont vers Torch
     live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      table des émoticônes (EMOTICONS), modèles live
@@ -27,9 +27,9 @@ src/
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
                      profils, recherche, historique privé, vissle, création de groupe
   views/      écrans principaux
-    login, shell (barre latérale), group, message (ligne et médias),
-    members (liste, fiche profil, comptes liés, bannissement, lien externe, lien de profil), dm (Chats, Friends),
-    meet (Meet people), mentions (mentions récentes de tous les groupes),
+    login, shell (barre latérale), group, message (ligne, médias, saut vers un message du fil),
+    members (liste, fiche profil, comptes liés, bannissement, lien externe, lien de profil), dm (Chats et recherche dans les MP, Friends),
+    meet (Meet people), mentions (mentions récentes de tous les groupes, ligne d'un message hors de son fil),
     profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
     emoji-picker (sélecteur d'émoticônes des composeurs), attach (envoi de fichier des composeurs),
     commands (/join, /leave, /chat et /help des composeurs),

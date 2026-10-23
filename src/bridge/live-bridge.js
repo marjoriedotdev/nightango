@@ -368,7 +368,7 @@ var liveBridge = (function () {
     return open.then(migrateUnread);
   }
   /**
-   * Permet d'ouvrir la base d'historique privé pour une lecture par pages, un export ou un import, qui échouent sans elle.
+   * Permet d'ouvrir la base d'historique privé pour une lecture par pages, une recherche, un export ou un import, qui échouent sans elle.
    */
   function pmDbOrFail() {
     return openPmDb().then(function (db) {
@@ -415,6 +415,25 @@ var liveBridge = (function () {
     if (x.from !== m.from) return false;
     // Une modification appliquée change le texte affiché : la clé du MP, quand il en a une, désigne l'original et ses modifications.
     return m.key ? x.key === m.key || x.editId === m.key : x.text === m.text;
+  }
+  /**
+   * Permet de lire par curseur au plus count entrées retenues, plus une qui dit s'il en reste.
+   * @param {IDBRequest} req Curseur ouvert sur l'historique privé.
+   * @param {number} count Nombre d'entrées au plus.
+   * @param {Function} pick Entrée retenue pour un enregistrement, null pour l'écarter.
+   * @returns {Promise<{list: Array, more: boolean}>} Entrées dans l'ordre du curseur, et s'il en reste après elles.
+   */
+  function cursorPage(req, count, pick) {
+    return new Promise(function (resolve, reject) {
+      var list = [];
+      req.onsuccess = function (e) {
+        var cur = e.target.result, x = cur && pick(cur.value);
+        if (x) list.push(x);
+        if (cur && list.length <= count) { cur.continue(); return; }
+        resolve({ list: list.slice(0, count), more: list.length > count });
+      };
+      req.onerror = function () { reject(req.error); };
+    });
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
   // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
@@ -784,18 +803,26 @@ var liveBridge = (function () {
      * @returns {Promise<{list: Array, more: boolean}>} Entrées de la plus ancienne à la plus récente, et s'il en reste de plus anciennes. Rejetée sans base.
      */
     pmOlder: function (target, before, count) {
-      return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
-        var list = [], req = db.transaction(['messages'], 'readonly').objectStore('messages').index('target_ts_idx')
-          .openCursor(IDBKeyRange.bound([target, 0], [target, before], false, true), 'prev');
-        req.onsuccess = function (e) {
-          var cur = e.target.result, x = cur && pmRecordEntry(cur.value);
-          if (x) list.push(x);
-          // Une entrée de plus que demandé dit s'il en reste.
-          if (cur && list.length <= count) { cur.continue(); return; }
-          resolve({ list: list.slice(0, count).reverse(), more: list.length > count });
-        };
-        req.onerror = function () { reject(req.error); };
-      }); });
+      return pmDbOrFail().then(function (db) {
+        return cursorPage(db.transaction(['messages'], 'readonly').objectStore('messages').index('target_ts_idx')
+          .openCursor(IDBKeyRange.bound([target, 0], [target, before], false, true), 'prev'), count, pmRecordEntry);
+      }).then(function (page) { return { list: page.list.reverse(), more: page.more }; });
+    },
+    /**
+     * Permet de chercher un texte dans tout l'historique privé, par la clé primaire de Torch, du plus récent au plus ancien.
+     * @param {string} query Texte cherché, sans casse.
+     * @param {number} limit Nombre de résultats au plus.
+     * @returns {Promise<{list: Array, more: boolean}>} Résultats et si la limite a coupé la liste. Rejetée sans base.
+     */
+    searchPm: function (query, limit) {
+      var q = lower(query), me = lower(C.user.name);
+      return pmDbOrFail().then(function (db) {
+        return cursorPage(db.transaction(['messages'], 'readonly').objectStore('messages').openCursor(null, 'prev'), limit, function (v) {
+          var target = lower(v.target), x = target !== me && pmRecordEntry(v);
+          // Clé, référence de modification et médias servent au fil à retrouver le message affiché (dmHitMessage).
+          return x && lower(x.text).indexOf(q) >= 0 ? { target: target, from: x.from, ts: x.ts, archiveTs: x.archiveTs, text: x.text, key: x.key, editId: x.editId, embeds: x.embeds } : null;
+        });
+      });
     },
     /**
      * Recherche de membres comme le fait Torch, puis demande de leur présence sur la connexion privée.

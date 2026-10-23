@@ -20,6 +20,7 @@ function DMView(p) {
   // Ni Chatango ni Torch ne connaissent de demande de MP
   if (!LIVE) filters.push(['requests', 'Requests' + (reqCount ? ' · ' + reqCount : '')]);
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
+  var term = section === 'chats' ? q.trim() : '', found = useDmSearch(term);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
     h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
@@ -36,10 +37,11 @@ function DMView(p) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
-      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' })
-      : shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'))));
+      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
+        shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'),
+        term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
-  var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column })
+  var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column, seek: p.seek })
     : h('main', { className: 'thread' }, h('div', { className: 'empty' },
       h(T.Icon, { name: 'message', size: 28, strokeWidth: 1.6 }), h('h2', null, 'Select a conversation'),
       h('p', { style: { margin: 0 } }, 'Or start a new one with a friend or someone from a group.'),
@@ -49,14 +51,90 @@ function DMView(p) {
     convo && column.open ? h(ProfilePanel, { name: id }) : null);
 }
 
+var DM_SEARCH_MIN = 2, DM_SEARCH_MAX = 50, DM_SEARCH_DELAY = 300;
+/**
+ * Permet de chercher un texte dans les messages privés : base d'historique de Torch en live, messages de l'état dans le prototype.
+ * @param {Object} s État de l'application.
+ * @param {string} query Texte cherché, sans casse.
+ * @returns {Promise<{list: Array, more: boolean}>} Résultats du plus récent au plus ancien, et si la limite a coupé la liste.
+ */
+function searchDms(s, query) {
+  if (LIVE) return liveBridge.searchPm(query, DM_SEARCH_MAX);
+  var q = query.toLowerCase(), list = [];
+  Object.keys(s.dms).forEach(function (t) {
+    s.dms[t].messages.forEach(function (m) { if (m.text.toLowerCase().indexOf(q) >= 0) list.push({ target: t, from: m.from, ts: m.ts, id: m.id, text: m.text }); });
+  });
+  list.sort(function (a, b) { return b.ts - a.ts; });
+  return Promise.resolve({ list: list.slice(0, DM_SEARCH_MAX), more: list.length > DM_SEARCH_MAX });
+}
+/**
+ * Permet de chercher dans les messages privés après une pause de saisie.
+ * @param {string} term Texte saisi, sans espaces autour.
+ * @returns {?Object} Résultats du terme ({query, list, more}) ou échec ({query, failed}), null pendant la lecture.
+ */
+function useDmSearch(term) {
+  var app = useApp();
+  var st = useState(null), found = st[0], setFound = st[1];
+  useEffect(function () {
+    if (term.length < DM_SEARCH_MIN) return;
+    var current = true, timer = setTimeout(function () {
+      searchDms(app.state, term).then(function (r) { if (current) setFound({ query: term, list: r.list, more: r.more }); }, function (e) {
+        warn(e);
+        if (current) setFound({ query: term, failed: true });
+      });
+    }, DM_SEARCH_DELAY);
+    return function () { current = false; clearTimeout(timer); };
+  }, [term]);
+  return found && found.query === term ? found : null;
+}
+/**
+ * Permet de découper le passage d'un texte autour d'un terme, terme mis en évidence.
+ * @param {string} text Texte du message.
+ * @param {string} term Terme trouvé dans le texte, sans casse.
+ */
+function hitExcerpt(text, term) {
+  var at = text.toLowerCase().indexOf(term.toLowerCase()), end = at + term.length, start = Math.max(0, at - 30), space = text.indexOf(' ', start);
+  if (start && space >= 0 && space < at) start = space + 1;
+  return h(Frag, null, (start ? '…' : '') + text.slice(start, at), h('mark', null, text.slice(at, end)), text.slice(end));
+}
+/**
+ * Section Messages de la recherche des Chats, sous les conversations. Les onglets ne la filtrent pas.
+ * @param {{found: ?Object}} p Recherche lue par useDmSearch, null pendant la lecture.
+ */
+function DmSearchHits(p) {
+  var app = useApp(), me = app.state.me, found = p.found, body;
+  if (!found) body = h('div', { className: 'list-more' }, h(T.Spinner, { label: 'Searching messages' }));
+  else if (found.failed) body = h('p', { className: 'pal-empty' }, 'Messages could not be searched.');
+  else if (!found.list.length) body = h('p', { className: 'pal-empty' }, 'No message matches.');
+  else body = h(Frag, null, found.list.map(function (hit) {
+    return h(MessageEntry, {
+      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, hit.from === me ? 'You: ' : '', hitExcerpt(hit.text, found.query)),
+      onClick: function () { app.nav({ view: 'dm', id: hit.target, seek: hit }); }
+    });
+  }), found.more ? h('p', { className: 'pal-empty' }, 'Showing the ' + DM_SEARCH_MAX + ' most recent matches. Refine your search to see others.') : null);
+  return h('section', null, h('h2', { className: 'mlabel' }, 'Messages'), body);
+}
+/**
+ * Permet de retrouver dans une conversation le message d'un résultat de recherche.
+ * @param {Object} c Conversation dans l'état.
+ * @param {Object} hit Résultat de searchDms.
+ * @returns {?Object} Message affiché, null s'il n'est pas chargé.
+ */
+function dmHitMessage(c, hit) {
+  if (!LIVE) return c.messages.find(function (m) { return m.id === hit.id; }) || null;
+  // Une modification s'affiche dans son original, et un MP envoyé depuis le dernier OK n'a pas encore de clé d'archive.
+  return pmEditTarget(c, hit) || c.messages[pmShownIndex(c.messages, hit)] || null;
+}
+
 /**
  * Fil d'une conversation privée, monté à neuf pour chaque correspondant.
- * @param {{id: string, tab: ?string, column: Object}} p Correspondant, onglet de la liste et colonne du profil (useRightColumn).
+ * @param {{id: string, tab: ?string, column: Object, seek: ?Object}} p Correspondant, onglet de la liste, colonne du profil (useRightColumn) et résultat de recherche à montrer.
  */
 function DmThread(p) {
   var app = useApp(), s = app.state, me = s.me, id = p.id, convo = s.dms[id];
-  var logRef = useRef(null), sentinelRef = useRef(null);
+  var logRef = useRef(null), sentinelRef = useRef(null), asked = useRef(false);
   var len = convo.messages.length;
+  var jump = useMessageJump(logRef), target = jump[0], setTarget = jump[1];
   var personActions = useProfileActions(id, null);
   var reading = useReadingPosition(logRef, len ? convo.messages[0].ts : null, [len], function (el) { el.scrollTop = el.scrollHeight; });
   useInfiniteScroll(logRef, sentinelRef, !!(convo.olderMore && !convo.loadingOlder && !convo.olderFailed), function () { app.actions.loadOlderDm(id); }, '200px 0px 0px 0px');
@@ -65,6 +143,19 @@ function DmThread(p) {
     // Après un échec de lecture, la sentinelle ne relance la lecture qu'au défilement suivant.
     if (convo.olderFailed) app.update(function (d) { d.dms[id].olderFailed = false; });
   }
+  // Résultat de recherche : les pages plus anciennes se chargent une à une jusqu'à lui.
+  useEffect(function () {
+    var seek = p.seek, failed = asked.current && convo.olderFailed;
+    if (!seek) return;
+    var m = dmHitMessage(convo, seek);
+    if (m) setTarget({ id: m.id });
+    else if (convo.loadingOlder) return;
+    else if (convo.olderMore && !failed) { asked.current = true; app.actions.loadOlderDm(id); return; }
+    // Lecture en échec : loadOlderDm l'a déjà annoncée.
+    else if (!failed) app.ui.toast('This message is no longer saved in this browser.');
+    asked.current = false;
+    app.update(function (d) { delete d.route.seek; });
+  }, [p.seek, len, convo.loadingOlder]);
 
   var u = userOf(s, id);
   var typing = (s.typing['dm:' + id] || []).length > 0;
@@ -72,7 +163,7 @@ function DmThread(p) {
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    rows.push(h(DmMessageRow, { key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN }));
+    rows.push(h(DmMessageRow, { key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, highlight: !!target && target.id === m.id }));
     prev = m;
   });
   if (LIVE && s.pmLoaded) rows.unshift(convo.olderMore ? olderSentinel(sentinelRef, convo.loadingOlder) : historyStart('This is the start of the messages saved in this browser.'));
@@ -102,7 +193,7 @@ function DmThread(p) {
 
 /**
  * Ligne d'un message privé avec son menu d'actions locales, sans Reply faute de trame sourcée.
- * @param {{m: Object, peer: string, continued: boolean}} p Message, correspondant de la conversation et suite du message précédent du même auteur.
+ * @param {{m: Object, peer: string, continued: boolean, highlight: boolean}} p Message, correspondant de la conversation, suite du message précédent du même auteur et mise en évidence.
  */
 function DmMessageRow(p) {
   var app = useApp(), s = app.state, m = p.m;
@@ -118,7 +209,7 @@ function DmMessageRow(p) {
   return h(T.Message, {
     compact: s.prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, s.prefs.h24),
     avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row,
-    actions: moreActionsButton(items, setMenuOpen), className: cx(menuOpen && 'menu-open')
+    actions: moreActionsButton(items, setMenuOpen), msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open')
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
 }
 
