@@ -35,6 +35,8 @@ w.IntersectionObserver = function (cb, opts) {
 
 /* ---------- Faux client Torch ---------- */
 const sent = [], posts = [], calls = [];
+// Réponse de vissle à un envoi de fichier (chatango/upload).
+let uploadReply = () => Promise.resolve('data:abc/f.png');
 let shown = 0;
 w.__TORCH_LIVE__ = true;
 w.__TORCH_SKIN_VERSION__ = '0.2.0-test';
@@ -136,7 +138,10 @@ const C = {
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
   // Comme Torch, qui lit seul l'oEmbed d'un lien YouTube reçu (inject.js:7157).
   renderYouTube(link) { w.fetch('https://www.youtube.com/oembed?url=' + link + '&format=json'); },
-  post(url, form) { const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f }); return Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked'); },
+  post(url, form, item) {
+    const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f, item });
+    return /chatango\/upload$/.test(url) ? uploadReply() : Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
+  },
   private: { focus: false, socket: { readyState: 0 }, clearHistory(t) { calls.push(['clearHistory', t]); } },
   database: { pm: { transaction: pmTransaction } }
 };
@@ -411,7 +416,41 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await openMenu('Dana fixed'); click(menuItem('Delete message')); await wait(30);
   click(byText('.dialog-foot button', 'Delete')); await wait(30);
   step('delete also deletes the edits, like Torch', JSON.stringify(frame('delmsg:').slice(delBefore)) === JSON.stringify(['delmsg:H-1=', 'delmsg:E-1=']), frame('delmsg:').slice(delBefore));
+
+  /* Envoi de fichier par vissle : Torch Skin publie le lien dans le groupe du choix, jamais dans client.focus */
+  // Rend le texte de la confirmation. Sans bouton ni sélecteur, l'étape échoue sans arrêter la suite.
+  const pickFile = async name => {
+    const btn = $('button[aria-label="Attach media"]'), input = $('.composer-wrap input[type="file"]');
+    if (!btn || !input) return null;
+    click(btn);
+    Object.defineProperty(input, 'files', { configurable: true, value: [new w.File(['x'], name, { type: 'image/png' })] });
+    input.dispatchEvent(new w.Event('change', { bubbles: true })); await wait(30);
+    const ask = $('#layer .dialog'), ok = byText('.dialog-foot button', 'Upload'), text = ask && ask.textContent;
+    if (ok) click(ok);
+    await wait(30);
+    return text;
+  };
+  const linkFrames = from => sent.slice(from).filter(x => /^bm:/.test(x[1]));
+  let releaseUpload = null;
+  uploadReply = () => new Promise(resolve => { releaseUpload = () => resolve('data:abc/f.png'); });
+  const uploadFrom = { focus: C.focus, sent: sent.length, posts: posts.length };
+  const uploadAsk = await pickFile('f.png') || '';
+  const uploadPost = posts[uploadFrom.posts] || {};
+  const uploading = !!byText('.tc-composer', 'Uploading f.png');
   click(byText('.tc-nav', 'test')); await wait(50);
+  if (releaseUpload) releaseUpload();
+  await until(() => !!byText('.toast', 'File sent.'));
+  const uploadLinks = linkFrames(uploadFrom.sent);
+  step('uploaded file link sent to the group it was picked in, not client.focus',
+    uploadFrom.focus === 'test' && uploadAsk.includes('Upload f.png?') && uploadAsk.includes('vissle.me stores the file and Torch Skin posts its link in #edits. Anyone with the link can open it.') && posts.length === uploadFrom.posts + 1 && uploadPost.url === 'https://vissle.me/chatango/upload'
+      && JSON.stringify(uploadPost.item) === '{"key":true}' && JSON.stringify(Object.keys(uploadPost.f || {})) === '["filedata"]' && uploadPost.f.filedata.name === 'f.png' && uploading
+      && uploadLinks.length === 1 && uploadLinks[0][0] === 'edits' && /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">https:\/\/vissle\.me\/abc\/f\.png$/.test(uploadLinks[0][1]) && !!byText('.toast', 'File sent.'),
+    { uploadFrom, uploadAsk, uploadPost: { url: uploadPost.url, item: uploadPost.item, fields: Object.keys(uploadPost.f || {}) }, uploading, uploadLinks });
+  uploadReply = () => Promise.resolve('error:x');
+  const failFrom = sent.length;
+  await pickFile('g.png');
+  await until(() => !!byText('.toast', 'The file could not be uploaded. Try again.'));
+  step('rejected upload sends nothing', !!byText('.toast', 'The file could not be uploaded. Try again.') && !linkFrames(failFrom).length, linkFrames(failFrom));
 
   /* Avertissements et connexion */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));

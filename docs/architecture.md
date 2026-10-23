@@ -31,7 +31,7 @@ src/
     members (liste, fiche profil, bannissement, lien externe, lien de profil), dm (Chats, Friends),
     meet (Meet people), mentions (mentions récentes de tous les groupes),
     profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
-    emoji-picker (sélecteur d'émoticônes des composeurs),
+    emoji-picker (sélecteur d'émoticônes des composeurs), attach (envoi de fichier des composeurs),
     commands (/join, /leave, /chat et /help des composeurs),
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages

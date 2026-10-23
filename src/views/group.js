@@ -23,6 +23,7 @@ function GroupView(p) {
   var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
   var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft);
+  var attach = useAttachMedia({ kind: 'group', id: p.gid, channel: channel });
   var logRef = useRef(null), sentinelRef = useRef(null);
   var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
   var q = search ? search.trim().toLowerCase() : '';
@@ -159,8 +160,7 @@ function GroupView(p) {
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
       hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
-      onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji,
-      onAttach: LIVE ? null : function () { app.ui.toast('Uploading media is not part of this prototype.'); },
+      onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status,
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
@@ -174,7 +174,7 @@ function GroupView(p) {
             h('span', { className: 'hide-mobile' }, CHANNELS[channel].label), hiddenChans.length ? h(T.Icon, { name: 'eye-off', size: 12 }) : null, h(T.Icon, { name: 'chevron-down', size: 12, className: 'hide-mobile' }));
         }
       })
-    }), emoji.picker);
+    }), emoji.picker, attach.input);
   }
 
   return h(Frag, null,

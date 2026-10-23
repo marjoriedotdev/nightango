@@ -18,6 +18,7 @@ function Root(props) {
   var u9 = useState(false), navOpen = u9[0], setNavOpen = u9[1];
   var u11 = useState(null), fullProfile = u11[0], setFullProfile = u11[1];
   var u12 = useState(null), profileLink = u12[0], setProfileLink = u12[1];
+  var u13 = useState({}), uploads = u13[0], setUploads = u13[1];
   var u10 = useState(0), themeTick = u10[1];
   var prefs = state.prefs;
 
@@ -540,11 +541,21 @@ function Root(props) {
    * @param {string} gid Groupe visé.
    * @param {string} text Texte saisi.
    * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string}} opts Réponse, original modifié ou citation, et canal.
-   * @param {string} failure Toast affiché si rien n'est parti.
+   * @param {?string} failure Toast affiché si rien n'est parti, null quand l'appelant l'annonce lui-même.
+   * @returns {boolean} Vrai si le pont a émis la trame.
    */
   function sendStyled(gid, text, opts, failure) {
     var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
-    if (style) setOwnStyle(style); else toast(failure);
+    if (style) setOwnStyle(style); else if (failure) toast(failure);
+    return !!style;
+  }
+  /**
+   * Permet de noter le fichier en cours d'envoi vers un groupe ou un MP.
+   * @param {{kind: string, id: string}} to Destination de l'envoi.
+   * @param {?string} name Nom du fichier, null une fois l'envoi fini.
+   */
+  function setUpload(to, name) {
+    setUploads(function (u) { var o = Object.assign({}, u); if (name) o[uploadKey(to)] = name; else delete o[uploadKey(to)]; return o; });
   }
 
   if (LIVE) {
@@ -554,17 +565,33 @@ function Root(props) {
     actions.sendGroup = function (gid, text, opts) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
-      if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return; }
-      sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, 'Message not sent. Torch rejected it.');
+      if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
+      return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. Torch rejected it.');
     };
     // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
     actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. Torch rejected it.'); };
-    actions.sendDm = function (name, text) {
+    actions.sendDm = function (name, text, opts) {
       var me = stateRef.current.me;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
-      if (!sent) { toast('Private message not sent.'); return; }
+      if (!sent) { if (!(opts && opts.quiet)) toast('Private message not sent.'); return false; }
       update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
+      return true;
+    };
+    /**
+     * Permet d'envoyer un fichier par vissle, puis d'en publier le lien dans le groupe ou le MP choisi, jamais dans client.focus.
+     * @param {{kind: string, id: string, channel: ?string}} to Destination figée au choix du fichier.
+     * @param {File} file Fichier choisi.
+     */
+    actions.uploadFile = function (to, file) {
+      setUpload(to, file.name);
+      liveBridge.uploadFile(file).then(function (link) {
+        var sent = to.kind === 'dm' ? actions.sendDm(to.id, link, { quiet: true }) : actions.sendGroup(to.id, link, { channel: to.channel, quiet: true });
+        if (sent) { toast('File sent.', { icon: 'check' }); return; }
+        toast('The file was uploaded, but its link was not sent.', { action: { label: 'Copy link', run: function () {
+          copyText(link, function (ok) { toast(ok ? 'Link copied.' : 'Copy failed. The link is ' + link); });
+        } } });
+      }, function (e) { toast(e.message); }).then(function () { setUpload(to, null); });
     };
     actions.setMessageStyle = function (style) {
       liveBridge.applyStyle(style);
@@ -1274,7 +1301,7 @@ function Root(props) {
     openNav: function () { setNavOpen(true); },
     closeNav: function () { setNavOpen(false); }
   };
-  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, theme: resolvedTheme(prefs, VIEWER_THEME) };
+  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, uploads: uploads, theme: resolvedTheme(prefs, VIEWER_THEME) };
 
   return h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),

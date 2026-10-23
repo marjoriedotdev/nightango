@@ -117,7 +117,7 @@ function DmMessageRow(p) {
 }
 
 /**
- * Composeur d'une conversation privée, avec son brouillon et son sélecteur d'émoticônes.
+ * Composeur d'une conversation privée, avec son brouillon, son sélecteur d'émoticônes et l'envoi de fichier.
  * @param {{id: string}} p Correspondant de la conversation.
  */
 function DmComposer(p) {
@@ -125,10 +125,11 @@ function DmComposer(p) {
   var d = useState(''), draft = d[0], setDraft = d[1];
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft);
+  var attach = useAttachMedia({ kind: 'dm', id: id });
   return h(Frag, null, h(T.Composer, {
-    placeholder: 'Message ' + id, value: draft, onChange: setDraft, inputRef: inputRef, onEmoji: emoji.onEmoji,
+    placeholder: 'Message ' + id, value: draft, onChange: setDraft, inputRef: inputRef, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status,
     onSend: function (text) { if (!runCommand(app, text, null)) app.actions.sendDm(id, text); }, beforeSend: h(MessageStyleButton, null)
-  }), emoji.picker);
+  }), emoji.picker, attach.input);
 }
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };

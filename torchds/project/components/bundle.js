@@ -320,9 +320,12 @@
       ref.current.focus();
     }
     return h('div', { className: 'tc-composer', onMouseDown: focusInput },
+      props.status ? h('div', { className: 'tc-composer-context', role: 'status' },
+        h(Spinner, { size: 14 }),
+        h('span', { className: 'tc-composer-context-text' }, props.status)) : null,
       ctx ? h('div', { className: 'tc-composer-context' },
         h(Icon, { name: ctx.icon, size: 14 }),
-        h('span', { style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+        h('span', { className: 'tc-composer-context-text' },
           ctx.verb, ' ', h('strong', { style: { color: 'var(--text-2)', fontWeight: 600 } }, ctx.author), ' ', ctx.text),
         h(IconButton, { icon: 'x', label: ctx.cancelLabel, size: 24, iconSize: 13, onClick: props.onCancelContext })) : null,
       h('label', { htmlFor: id, className: 'tc-sr' }, props.label || 'Message'),

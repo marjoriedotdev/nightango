@@ -81,7 +81,7 @@ Cette liste est fermée. Elle couvre les appels que le code applicatif (pont, lo
 
 - `client.post(url, form, {})`, vers `chatango.com` seulement. Sans option, Torch ajoute le jeton Chatango `s` au formulaire quel que soit l'hôte de sa liste, chemins vissle compris (`inject.js:4748-4749`, liste `inject.js:4687-4730`).
 - `client.post(url, form, { cookie: true })`.
-- `client.post('https://vissle.me/chatango/upload', form, { key: true })`, et cette URL seulement : envoi de fichiers par vissle. Torch ajoute au formulaire la clé de session vissle (`inject.js:4744-4745`), que notre code ne lit jamais. Jamais l'option `progress`, dont la branche publie elle-même le lien dans `client.focus` (`inject.js:4758-4787`). Source de l'appel : `inject.js:7551`, `inject.js:11048-11067`.
+- `client.post('https://vissle.me/chatango/upload', form, { key: true })`, et cette URL seulement : envoi de fichiers par vissle. Torch ajoute au formulaire la clé de session vissle (`inject.js:4744-4745`), que notre code ne lit jamais. Jamais l'option `progress`, dont la branche publie elle-même le lien dans `client.focus` (`inject.js:4758-4787`). Source de l'appel : `inject.js:7551`, `inject.js:11048-11067`. Détail dans Envoi de fichiers (vissle).
 - Jamais d'option `credential`, qui ajoute le mot de passe.
 - `GET https://api.vissle.me/v1/pmr/{nom}` par `fetch`, sans cookie ni credential, `{nom}` lu par le pont dans `client.user.name`, seulement si `client.settings.privacy.private_messages.check_pmr` est actif : restriction des MP de son propre compte (voir Restriction des MP). Source : `inject.js:10631-10643`.
 - Les GET publics sur `ust.chatango.com` : `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml`.
@@ -127,7 +127,7 @@ Un appel exclu par décision du propriétaire (2026-10-23, #96) : `GET https://a
 - Les deux appels qui transportent le mot de passe, `vissle.me/client/login` et `script/setcookies`, appartiennent à la connexion de Torch, sur son écran. Notre code n'y touche pas.
 - Torch Skin neutralise ceux qui contredisent ses réglages de médias : à la connexion (`clientLogin`), le pont remplace en mémoire `client.renderYouTube` (oEmbed) et `chatango.getBackground` (`msgbg.xml`, de son compte comme des auteurs) par une fonction qui ne fait rien. Dès que le pont voit la connexion, aucun `www.youtube.com/oembed` ni `msgbg.xml` ne part donc plus de Torch en live. Torch Skin lit lui-même `msgbg.xml` selon « Message backgrounds » (voir Fond de message). Rien n'est écrit dans `localStorage["settings"]` : Torch sans habillage garde son comportement. Le prototype n'est pas concerné.
 - Le chargement d'une image `lazy` ou d'une `<video>` dans un élément détaché n'est pas établi : il dépend du navigateur.
-- N'ont lieu que depuis l'écran de Torch, donc jamais en live : `check_pmr` (au clic sur l'onglet MP de Torch, `inject.js:10601`, que le pont refait lui-même, voir Restriction des MP), `check_block` (Torch n'envoie `connect:` qu'au clic dans son écran, et le pont n'appelle pas son gestionnaire `connect`, voir Présence des amis), les envois de fichiers, `/api/v1/uploads`, `/api/v1/who`, `/api/v1/profile`, `/track`, l'enregistrement de groupe (`vissle /chatango/room`).
+- N'ont lieu que depuis l'écran de Torch, donc jamais en live : `check_pmr` (au clic sur l'onglet MP de Torch, `inject.js:10601`, que le pont refait lui-même, voir Restriction des MP), `check_block` (Torch n'envoie `connect:` qu'au clic dans son écran, et le pont n'appelle pas son gestionnaire `connect`, voir Présence des amis), les envois de fichiers de sa fenêtre Upload (Torch Skin envoie les siens par la liste fermée, voir Envoi de fichiers), `/api/v1/uploads`, `/api/v1/who`, `/api/v1/profile`, `/track`, l'enregistrement de groupe (`vissle /chatango/room`).
 
 ## Messages privés
 
@@ -271,6 +271,20 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 ## Création de groupe
 
 `client.post(chatango.path('script/creategrouploginjs','st'), form, { cookie: true })` avec `authType=cookie`, `uns=0`, `u`, `n`, `d`, `owner` et `discovery`. La réponse attendue est `groupcreated`.
+
+## Envoi de fichiers (vissle)
+
+- Fenêtre Upload de Torch : l'icône `fa-fire` vise `${torch.domain}/chatango/upload`, soit `https://vissle.me/chatango/upload`, et limite le sélecteur à `.png, .apng, .jpg, .jpeg, .gif, .bmp, .webp, .mp3, .ogg, .wav, .mp4, .wmv, .webm` (`inject.js:2911`, `inject.js:7548-7553`). Le formulaire n'a qu'un champ fichier, `filedata` (`client.html:3345-3347`, liste blanche de `client.post`, `inject.js:4698-4702`). Torch l'envoie par `client.post(server, form, { progress: true, status: {…}, key: true })` (`inject.js:11048-11067`).
+- `{ key: true }` : Torch ajoute au formulaire la clé de session vissle `key`, jamais le mot de passe (`inject.js:4744-4745`). Notre code ne lit jamais cette clé.
+- Torch Skin : `liveBridge.uploadFile(file)` appelle `client.post('https://vissle.me/chatango/upload', form, { key: true })`, avec le seul champ `filedata`. Jamais `progress`, jamais `credential` (voir Appels HTTP autorisés). Sans `progress`, `client.post` envoie le formulaire par `fetch`, en `FormData` puisque l'URL ne finit pas par `chatango/updateprofile`, et se résout avec le texte de la réponse sans rien publier (`inject.js:4830-4855`). La lecture de la réponse obéit aux mêmes règles CORS que l'`XMLHttpRequest` de Torch.
+- Réponses, lues par Torch dans sa branche `progress` (`inject.js:4774-4809`) :
+  - `data:{chemin}` : le fichier est chez vissle, à `https://vissle.me/{chemin}`. Le pont n'accepte que `{chemin}` fait de `[A-Za-z0-9._/-]`.
+  - `unauthed` : vissle refuse la session (Torch affiche « Relogin required. »). Torch Skin : « vissle did not accept your session. Reload the page and sign in again. ».
+  - Toute autre réponse (`error:{texte}` compris) ou erreur réseau : « The file could not be uploaded. Try again. ». Le texte renvoyé par vissle n'est jamais affiché.
+- Pourquoi pas `progress` : cette branche (`inject.js:4758-4829`) publie elle-même `https://vissle.me/{chemin}` par `client.sendMessage(...)` sans groupe (`inject.js:4786`), donc dans `client.focus`, ou vers `client.private.focus` en MP (`inject.js:5139-5140`) : le groupe ou le MP que Torch croit ouvert, pas forcément celui de Torch Skin. Elle touche aussi l'écran masqué de Torch (`.chat-upload`, `.external-modal-avatar`, `inject.js:4780`, `4798`, `4813`) et charge `noimage.jpg` chez vissle si le champ fichier est vide (`inject.js:4760-4765`). Seul coût de son absence : pas de pourcentage d'avancement.
+- Limites du chemin `fetch` : le statut HTTP n'est pas vérifié (les gestionnaires `status` de Torch ne servent qu'à la branche `progress`, `inject.js:4826`), et `client.post` refuse une requête tant qu'une autre est en cours, en rejetant avec l'URL de celle-ci (`inject.js:4752-4755`). Torch Skin l'annonce : « Torch is busy with another request. Try again in a moment. ».
+- Publication : Torch Skin publie le lien lui-même, par `actions.sendGroup` ou `actions.sendDm`, dans le groupe (et son canal) ou le MP où le fichier a été choisi, figé à ce moment. « File sent. » ne s'affiche qu'après la réponse `data:` et l'envoi de la trame du lien. Si la trame ne part pas, le lien reste à copier depuis la notification.
+- Le prototype n'envoie rien : « Uploading media is not part of this prototype. ».
 
 ## Activité du profil (vissle)
 

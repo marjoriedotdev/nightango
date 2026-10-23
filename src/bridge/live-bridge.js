@@ -990,6 +990,24 @@ var liveBridge = (function () {
         document.dispatchEvent(new CustomEvent('torch-skin:vissle-request', { detail: JSON.stringify({ id: id, page: q.page, order: q.order, get: q.get }) }));
       });
     },
+    /**
+     * Permet d'envoyer un fichier chez vissle comme la fenêtre Upload de Torch, sans que Torch en publie le lien.
+     * @param {File} file Fichier choisi.
+     * @returns {Promise<string>} Lien https://vissle.me/{chemin}, rejetée avec le texte à afficher sur toute autre réponse.
+     */
+    uploadFile: function (file) {
+      var failed = 'The file could not be uploaded. Try again.';
+      // Jamais progress : cette branche de Torch publie elle-même le lien dans client.focus.
+      return post('https://vissle.me/chatango/upload', { filedata: file }, { key: true }).then(function (resp) {
+        var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
+        if (path) return 'https://vissle.me/' + path[1];
+        throw new Error(resp.split(':')[0] === 'unauthed' ? 'vissle did not accept your session. Reload the page and sign in again.' : failed);
+      }, function (e) {
+        warn(e);
+        // Torch refuse une requête tant qu'une autre est en cours en rejetant avec l'URL de celle-ci, une chaîne.
+        throw new Error(typeof e === 'string' ? 'Torch is busy with another request. Try again in a moment.' : failed);
+      });
+    },
     createGroup: function (o) {
       return Promise.resolve().then(function () { return createGroupNow(o); });
     }
