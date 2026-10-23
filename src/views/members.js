@@ -158,29 +158,15 @@ function useProfileActions(name, gid) {
 
 function ProfileDialog(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), isMe = name === s.me;
-  var g = p.gid ? s.groups[p.gid] : null;
-  var theirRole = g ? roleOf(g, name) : null;
-  var common = Object.keys(s.groups).filter(function (k) { var x = s.groups[k]; return x.joined && x.members.indexOf(name) >= 0; });
-  var meta = [u.age && (isMe ? s.profile.visibility.age : true) ? u.age : null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
   var guest = /^[!#]/.test(name);
   var actions = useProfileActions(name, p.gid).map(function (it) {
     return it.closes ? Object.assign({}, it, { onSelect: function () { p.onClose(); it.onSelect(); } }) : it;
   });
   var buttons = actions.filter(function (it) { return it.id === 'message' || it.id === 'friend'; });
-  var mini = miniStyleOf(s.prefs, u, app.theme), cover = useMiniCover(mini);
-  useEffect(function () { if (!guest) app.actions.loadProfile(name); }, [name]);
+  var mini = miniStyleOf(s.prefs, u, app.theme);
   function go(route) { p.onClose(); app.nav(route); }
   return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: 'profile-dialog', style: mini ? miniSkin(mini) : null },
-    cover.shown ? h('div', { className: 'profile-cover' }, h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer' })) : null,
-    h('div', { className: 'profile-card' },
-      h(ProfilePhoto, { name: name, status: isMe ? s.meStatus : u.status, ring: 'var(--raised)' }),
-      h('h2', null, name),
-      h('span', { className: 'muted', style: { fontSize: 13 } }, [statusLabel(isMe ? s.meStatus : u.status), u.friend ? 'Friend' : null, theirRole ? ROLE_LONG[theirRole] + ' in #' + g.id : null].filter(Boolean).join(' · ')),
-      profileMeta(meta, name, u),
-      mini ? coverReveal(cover, mini) : null),
-    profileAbout(u, true),
-    !guest ? h('div', { style: { padding: '0 20px 4px' } }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'id-card', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')) : null,
-    common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length), h('p', { className: 'about', style: { color: 'var(--text-2)' } }, common.map(function (c) { return '#' + c; }).join(', '))) : null,
+    h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
       : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,

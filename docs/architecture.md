@@ -27,7 +27,7 @@ src/
   views/      écrans principaux
     login, shell (barre latérale), group, message (ligne et médias),
     members (liste, fiche profil, bannissement, lien externe, lien de profil), dm (Chats, Friends),
-    meet (Meet people), profile (profil complet, panneau), new-dm, message-style (style perso),
+    meet (Meet people), profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),
     commands (/join, /leave, /chat et /help des composeurs),
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages
@@ -120,7 +120,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - Fond Premium : couleurs tirées de `custom_profile.css` par `parseMiniCss`, contraste garanti. Dans la fenêtre de profil, `miniSkin` applique le fond, le texte et les jetons de couleur du thème (texte secondaire à 4,5:1, bordures, survols) à toute la fenêtre. L'image est une `<img>` en `referrerPolicy="no-referrer"`, en couverture de 120 px (`object-fit: cover`) derrière l'avatar, fondue vers la couleur de fond. Le panneau de profil des MP garde le fond sur le seul bloc de texte, avec l'image en bandeau au-dessus. Les cartes Meet n'affichent que la couleur. L'image du fond Premium suit les réglages de médias et `styles.profileBackgrounds`.
 - Fond de message : sous `styles.backgrounds`, la couleur tirée de `msgbg.xml` par `parseMsgBg` colore la ligne d'un message de groupe marqué `bg`, texte et nom à 4,5:1. L'image `msgbg.jpg` est une `<img>` `no-referrer` derrière le texte (emplacement `background` de `T.Message`), à sa taille naturelle, placée selon l'alignement du membre, seulement si `embedImages` est actif et `proxyMedia` coupé.
 - Style coupé : « Hide style », dans le menu d'un message ou les actions sur une personne, marque le membre `unstyled`. `memberStyles` rend alors ses lignes, en groupe et en MP, comme si `styles.names`, `styles.fonts` et `styles.backgrounds` étaient coupés pour lui seul, sans lire son fond de message, et `MessageText` retire son gras, son italique et son souligné, le barré restant. Référence : `/style nom` de Torch (`inject.js:7308-7350`), qui ne touche que les messages déjà affichés et ne garde rien au rechargement.
-- Photo de profil : l'avatar de la fenêtre de profil, une fois sa miniature chargée, ouvre une visionneuse plein écran de `full.jpg` en `<img>` `no-referrer`, avec repli sur la miniature.
+- Photo de profil : l'avatar de la fenêtre et du panneau de profil, une fois sa miniature chargée, ouvre une visionneuse plein écran de `full.jpg` en `<img>` `no-referrer`, avec repli sur la miniature.
 - Médias des messages : rien n'est chargé avant le clic quand `embedImages`, `embedVideos` ou `proxyMedia` le demandent.
 
 Voir [ADR-0004](adr/0004-member-html-never-injected.md).

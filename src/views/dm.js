@@ -72,8 +72,8 @@ function DMView(p) {
         h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
         h(T.Avatar, { name: id, size: 30, status: u.status, ring: 'var(--bg)' }),
         h('h2', null, id),
-        h('span', { className: 'topic', style: { flex: 1 } }, [presenceText(u), u.friend ? 'Friend' : null].filter(Boolean).join(' · ')),
-        h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personMeta(u)].filter(Boolean).join(' · ')),
+        h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
+        h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(s, id)].filter(Boolean).join(' · ')),
         h(T.IconButton, { icon: 'panel', label: showProfile ? 'Hide profile' : 'Show profile', pressed: showProfile, className: 'hide-mobile', onClick: function () { setShowProfile(!showProfile); } }),
         h(MenuButton, {
           label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
@@ -111,8 +111,24 @@ function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
  * @param {Object} u Membre dans l'état.
  */
 function presenceText(u) { return u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : statusLabel(u.status); }
-function personMeta(u) {
-  return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
+/**
+ * Permet d'écrire la ligne de statut d'une personne : présence, ami et rôle dans le groupe d'où son profil est ouvert.
+ * @param {Object} s État de l'application.
+ * @param {string} name Nom du membre.
+ * @param {?string} gid Groupe d'où le profil est ouvert.
+ */
+function personStatus(s, name, gid) {
+  var u = userOf(s, name), role = gid ? roleOf(s.groups[gid], name) : null;
+  return [name === s.me ? statusLabel(s.meStatus) : presenceText(u), u.friend ? 'Friend' : null, role ? ROLE_LONG[role] + ' in #' + gid : null].filter(Boolean).join(' · ');
+}
+/**
+ * Permet d'écrire l'ASL d'une personne, sans l'âge de son propre compte quand le profil le masque.
+ * @param {Object} s État de l'application.
+ * @param {string} name Nom du membre.
+ */
+function personAsl(s, name) {
+  var u = userOf(s, name), age = name === s.me && !s.profile.visibility.age ? null : u.age;
+  return [age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
 /**
  * Permet de dater l'inactivité ou la dernière connexion d'un ami.
@@ -139,11 +155,11 @@ function PresenceTime(p) {
 }
 /**
  * Ligne d'informations d'une personne.
+ * @param {Object} s État de l'application.
  * @param {string} n Nom du membre.
- * @param {Object} u Membre dans l'état.
  */
-function personMetaLine(n, u) {
-  return h('span', { className: 'conv-meta' }, personMeta(u), isProfilePending(n, u) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
+function personMetaLine(s, n) {
+  return h('span', { className: 'conv-meta' }, personAsl(s, n), isProfilePending(n, userOf(s, n)) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
 }
 function useProfiles(names) {
   var app = useApp();
@@ -156,7 +172,7 @@ function personRow(s, n, onClick, current) {
     h('span', { className: 'conv-main conv-grid' },
       h('span', { className: 'conv-name' }, n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
-      personMetaLine(n, u),
+      personMetaLine(s, n),
       c ? h('span', { className: 'conv-prev' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
 }

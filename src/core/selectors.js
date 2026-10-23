@@ -33,6 +33,14 @@ function resolvedTheme(prefs, viewerTheme) {
  * @param {string} name Membre suivi.
  */
 function isNotifyingOnline(state, name) { return !!state.notifyOnline[name]; }
+/**
+ * Permet de lister les groupes rejoints dont un membre fait partie.
+ * @param {Object} state État de l'application.
+ * @param {string} name Nom du membre.
+ */
+function commonGroups(state, name) {
+  return Object.keys(state.groups).filter(function (k) { var g = state.groups[k]; return g.joined && g.members.indexOf(name) >= 0; });
+}
 function lastTs(c) { return c.messages.length ? c.messages[c.messages.length - 1].ts : 0; }
 /**
  * Permet de lister les conversations affichées, hors demandes et conversations fermées, de la plus récente à la plus ancienne.
