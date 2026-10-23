@@ -817,7 +817,7 @@ function Root(props) {
       }); break;
       case 'member': groupUpdate(op.gid, function (g, d) {
         if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensurePresentUser(d, op.name); }
-        if (op.action === 0) g.members = g.members.filter(function (n) { return n !== op.name; });
+        if (op.action === 0 && op.name !== d.me) g.members = g.members.filter(function (n) { return n !== op.name; });
       }); break;
       case 'count': groupUpdate(op.gid, function (g) { g.liveCount = op.n; }); break;
       case 'room': update(function (d) {

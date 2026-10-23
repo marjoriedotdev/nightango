@@ -200,6 +200,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && JSON.stringify(guests2.rows) === '["#carl","#dana"]' && !guests2.anon
       && JSON.stringify(guests3.rows) === '["#carl"]' && !guests3.anon,
     { guests1, guests2, guests3 });
+
+  /* Connexion, déconnexion et changement de compte sans quitter le groupe (participant, action 2), plusieurs sessions d'un compte */
+  const sessionView = () => ({ members: $$('.members .mrow .grow').map(x => x.textContent).filter(t => t[0] !== '#'), anon: guestView().anon });
+  const switches = [];
+  g('g_participants', 'test', ['S6:1801:U6:None:None;S7:1802:U7:Dan:None;S8:1803:U8:Dan:None']); await wait(80);
+  switches.push(sessionView());
+  for (const data of [
+    ['2', 'S6', 'U6', 'Eve', 'None', '', '1801'], ['2', 'S6', 'U6', 'None', 'None', '', '1801'], ['2', 'S6', 'U6', 'Finn', 'None', '', '1801'],
+    ['2', 'S6', 'U6', 'Gus', 'None', '', '1801'], ['0', 'S7', 'U7', 'Dan', 'None', '', '1802'], ['0', 'S8', 'U8', 'Dan', 'None', '', '1803']
+  ]) { g('participant', 'test', data); await wait(80); switches.push(sessionView()); }
+  const has = (i, n) => switches[i].members.indexOf(n) >= 0;
+  step('account sign in, sign out and switch keep the member list',
+    has(0, 'dan') && !has(0, 'eve') && switches[0].anon === '1 anonymous'
+      && has(1, 'eve') && !switches[1].anon
+      && !has(2, 'eve') && switches[2].anon === '1 anonymous'
+      && has(3, 'finn') && !has(4, 'finn') && has(4, 'gus')
+      && has(5, 'dan') && !has(6, 'dan') && has(6, 'marjorie'),
+    switches);
   g('g_participants', 'test', ['S1:1700:U1:Alice:None;S2:1700:U2:Bob:None;S3:1700:U3:None:None']); await wait(80);
 
   /* Messages, réponses, modifications */

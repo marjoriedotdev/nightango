@@ -44,12 +44,19 @@ var liveBridge = (function () {
     emit({ op: 'members', gid: room, names: p.names });
     emitGuests(room);
   }
+  function holders(t, name) { return Object.keys(t).filter(function (k) { return t[k].account === name; }).length; }
   function participant(room, data) {
     var t = sessions[room] || (sessions[room] = {}), ts = data[6], action = +data[0];
+    // Départ d'une session inconnue (trame reçue avant g_participants) : seul data[3] dit quel compte part.
+    var before = t[ts] || (action === 0 ? sessionOf(data[3]) : {});
     if (action === 0) delete t[ts];
     // Action 2 : Torch teste le nom d'invité avant le compte.
     else if (action === 2 && notNone(data[4])) t[ts] = sessionOf('None', data[4]);
     else t[ts] = sessionOf(data[3], data[4]);
+    var after = t[ts] || {};
+    // Un compte ouvert dans plusieurs sessions reste membre jusqu'à la dernière.
+    if (before.account && before.account !== after.account && !holders(t, before.account)) emit({ op: 'member', gid: room, action: 0, name: before.account });
+    if (after.account && after.account !== before.account && holders(t, after.account) === 1) emit({ op: 'member', gid: room, action: 1, name: after.account });
     emitGuests(room);
   }
   function tapGroup(name, room, data) {
@@ -72,10 +79,7 @@ var liveBridge = (function () {
       case 'clearall': if (data[0] === 'ok') emit({ op: 'cleared', gid: room }); else emit({ op: 'notice', gid: room, text: 'Chatango refused to clear the messages.' }); break;
       case 'g_participants': participants(room, data.join(':').split(';')); break;
       case 'gparticipants': participants(room, data.slice(1).join(':').split(';')); break;
-      case 'participant':
-        if (notNone(data[3])) emit({ op: 'member', gid: room, action: +data[0], name: lower(data[3]) });
-        participant(room, data);
-        break;
+      case 'participant': participant(room, data); break;
       case 'n': emit({ op: 'count', gid: room, n: parseInt(data[0], 16) || 0 }); break;
       case 'ok': emit({ op: 'room', gid: room, owner: lower(data[0]), mods: parseMods(String(data[6] || '').split(';')), flags: parseInt(data[7], 10) || 0 }); break;
       case 'mods': emit({ op: 'mods', gid: room, mods: parseMods(data) }); break;
