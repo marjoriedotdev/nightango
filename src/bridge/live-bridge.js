@@ -8,6 +8,9 @@ var liveBridge = (function () {
   var STARTUP = { joinOwned: ['groups', 'connect_own'], joinRecent: ['groups', 'connect_recent'], joinFavorites: ['groups', 'connect_favorite'] };
   var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'] };
   var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
+  // Seuls réglages de son que Torch lit, avec l'objet Audio que chacun règle.
+  var SOUND_KEYS = ['play_mention', 'volume_mention', 'play_online', 'volume_online'];
+  var SOUND_AUDIO = { mention: 'message', online: 'play_online' };
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
@@ -685,6 +688,43 @@ var liveBridge = (function () {
         saveSettings();
         return true;
       } catch (e) { warn(e); return false; }
+    },
+    /**
+     * Permet de lire les réglages de son que Torch applique.
+     * @returns {?Object} Interrupteurs et volumes de 0 à 100, null si les réglages de Torch sont illisibles.
+     */
+    torchSounds: function () {
+      try {
+        var sound = C.settings.notifications.sound, out = {};
+        // Le curseur de Torch enregistre le volume en texte.
+        SOUND_KEYS.forEach(function (k) { out[k] = k.indexOf('volume_') === 0 ? parseInt(sound[k], 10) : !!sound[k]; });
+        return out;
+      } catch (e) { warn(e); return null; }
+    },
+    /**
+     * Permet d'enregistrer un réglage de son dans les réglages de Torch, relus à chaque son.
+     * @param {string} key Clé de SOUND_KEYS.
+     * @param {boolean|number} value Interrupteur, ou volume de 0 à 100.
+     */
+    setTorchSound: function (key, value) {
+      if (SOUND_KEYS.indexOf(key) < 0) return false;
+      try {
+        C.settings.notifications.sound[key] = key.indexOf('volume_') === 0 ? Math.max(0, Math.min(100, Math.round(value))) : !!value;
+        saveSettings();
+        return true;
+      } catch (e) { warn(e); return false; }
+    },
+    /**
+     * Permet de jouer un son de Torch à son volume réglé, comme Torch.
+     * @param {string} kind mention ou online.
+     * @returns {Promise} Rejetée si le navigateur refuse la lecture.
+     */
+    playTorchSound: function (kind) {
+      try {
+        var audio = C.sound[SOUND_AUDIO[kind]];
+        audio.volume = parseInt(C.settings.notifications.sound['volume_' + kind], 10) / 100;
+        return audio.play();
+      } catch (e) { warn(e); return Promise.reject(e); }
     },
     /**
      * Permet de lire les groupes favoris de Torch.

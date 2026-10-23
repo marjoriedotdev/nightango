@@ -61,13 +61,20 @@ function ProfilePageLive() {
     dirty && base.loaded ? h(T.SaveBar, { onDiscard: function () { setDraft(editable(base)); }, onSave: saving ? function () {} : save, saveLabel: saving ? 'Saving' : 'Save profile' }, 'Unsaved changes to your Chatango profile') : null);
 }
 
+// L'interface ne change que si Torch a enregistré la valeur, sinon un toast le dit.
+function useTorchSettings(read, write) {
+  var app = useApp();
+  var st = useState(read), value = st[0], setValue = st[1];
+  function set(key, v) {
+    if (!write(key, v)) { app.ui.toast('Torch could not save this setting. Reload the page and try again.'); return; }
+    setValue(function (x) { var n = Object.assign({}, x); n[key] = v; return n; });
+  }
+  return [value, set];
+}
+
 function PrivacyPageLive() {
   var app = useApp(), pr = usePref();
-  var st = useState(function () { return liveBridge.startupSettings(); }), startup = st[0], setStartup = st[1];
-  function setStartupSetting(key, value) {
-    if (!liveBridge.setStartupSetting(key, value)) { app.ui.toast('Torch could not save this setting. Reload the page and try again.'); return; }
-    setStartup(function (x) { var n = Object.assign({}, x); n[key] = value; return n; });
-  }
+  var st = useTorchSettings(liveBridge.startupSettings, liveBridge.setStartupSetting), startup = st[0], setStartupSetting = st[1];
   return h(Page, { title: 'Privacy', lede: 'What Torch Skin keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
       h(T.SettingRow, {
