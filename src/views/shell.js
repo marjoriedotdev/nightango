@@ -55,8 +55,8 @@ function Sidebar() {
       h(MenuButton, {
         icon: 'plus', label: 'Join or create a group', items: [
           { label: 'Discover groups', icon: 'compass', onSelect: function () { app.nav({ view: 'discover' }); } },
-          { label: 'Create a group', icon: 'plus', onSelect: function () { app.ui.openCreate(''); } },
-          { label: 'New private message', icon: 'message', onSelect: function () { app.ui.openNewDm(); } }
+          { label: 'Create a group…', icon: 'plus', onSelect: function () { app.ui.openCreate(''); } },
+          { label: 'New private message…', icon: 'message', onSelect: function () { app.ui.openNewDm(); } }
         ]
       })),
     h('div', { style: { padding: '0 10px 8px' } },

@@ -4,6 +4,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 
 - Write interface copy in English, sentence case: "Save changes", "Private messages", "Discover groups". Capitals only for `label-caps` section labels (FAVORITES, STAFF · 3).
 - Buttons start with a verb and say what happens: "Join", "Send reset link", "Create account". Never "OK" or "Submit".
+- A menu entry that opens a dialog to confirm or complete the action ends with an ellipsis (…, not three dots): "Block…", "Leave group…", "Create a group…". Entries that act at once or only show something ("Copy text", "View profile") have none, and neither do buttons, even one that asks for confirmation ("Clear all").
 - Address the reader as "you", the product as "Torch". Chatango is named when an action goes to Chatango: "This is your Chatango profile. Everyone on Chatango sees it."
 - Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read."
 - Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input".

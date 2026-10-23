@@ -86,6 +86,16 @@ function notifyOnlineItem(app, name) {
 }
 
 /**
+ * Permet de proposer l'ouverture de la fenêtre de profil d'un membre.
+ * @param {Object} app Contexte de l'application.
+ * @param {string} name Nom du membre.
+ * @param {?string} gid Groupe d'où le profil est ouvert.
+ */
+function viewProfileItem(app, name, gid) {
+  return { label: 'View profile', icon: 'user', onSelect: function () { app.ui.openProfile(name, gid); } };
+}
+
+/**
  * Permet de proposer d'ignorer un membre ou de ne plus l'ignorer.
  * @param {Object} app Contexte de l'application.
  * @param {string} name Nom du membre.
@@ -102,7 +112,7 @@ function ignoreItem(app, name) {
  * @param {Object} [msg] Message d'où part le bannissement.
  */
 function banItem(app, name, gid, msg) {
-  return { id: 'ban', label: 'Ban from #' + gid, icon: 'ban', danger: true, closes: true, onSelect: function () { app.ui.ban(name, gid, msg); } };
+  return { id: 'ban', label: 'Ban from #' + gid + '…', icon: 'ban', danger: true, closes: true, onSelect: function () { app.ui.ban(name, gid, msg); } };
 }
 
 /**
@@ -125,7 +135,7 @@ function useProfileActions(name, gid) {
     u.friend ? notifyOnlineItem(app, name) : null,
     ignoreItem(app, name),
     {
-      id: 'block', label: u.blocked ? 'Unblock' : 'Block', icon: 'ban', danger: !u.blocked, onSelect: function () {
+      id: 'block', label: u.blocked ? 'Unblock' : 'Block…', icon: 'user-x', danger: !u.blocked, onSelect: function () {
         if (u.blocked) app.actions.toggleUser(name, 'blocked');
         else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } });
       }
@@ -157,7 +167,7 @@ function ProfileDialog(p) {
       profileMeta(meta, name, u),
       mini ? coverReveal(cover, mini) : null),
     profileAbout(u, true),
-    !guest ? h('div', { style: { padding: '0 20px 4px' } }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'external', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')) : null,
+    !guest ? h('div', { style: { padding: '0 20px 4px' } }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'id-card', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')) : null,
     common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length), h('p', { className: 'about', style: { color: 'var(--text-2)' } }, common.map(function (c) { return '#' + c; }).join(', '))) : null,
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
@@ -225,7 +235,7 @@ function ProfileLinkDialog(p) {
     footer: [
       h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
       openLinkButton(link.url, 'secondary', p.onClose),
-      h(T.Button, { key: 'v', variant: 'primary', icon: 'users', onClick: function () { p.onClose(); app.ui.openProfile(link.name, link.gid); } }, 'View profile')
+      h(T.Button, { key: 'v', variant: 'primary', icon: 'user', onClick: function () { p.onClose(); app.ui.openProfile(link.name, link.gid); } }, 'View profile')
     ]
   }, h('div', { className: 'dialog-body' }, linkAddress(link.url)));
 }

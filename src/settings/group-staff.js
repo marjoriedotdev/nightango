@@ -75,11 +75,11 @@ function GSMembers(p) {
         youBadge(isMe),
         isMe || r === 'owner' ? null : h(MenuButton, {
           label: 'Actions for ' + n, items: [
-            { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(n, g.id); } },
+            viewProfileItem(app, n, g.id),
             canMods && !r ? { label: 'Make moderator', icon: 'shield', onSelect: function () { p.edit(function (d) { d.staff[n] = 'mod'; if (LIVE) d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); }); app.ui.toast(n + ' will be a moderator once you save.'); } } : null,
             canMods && (r === 'mod' || (LIVE && r === 'admin')) ? { label: 'Remove from staff', icon: 'user-minus', onSelect: function () { p.edit(function (d) { delete d.staff[n]; if (LIVE) delete d.modFlags[n]; }); app.ui.toast(n + ' leaves staff once you save.'); } } : null,
             { divider: true },
-            { label: 'Ban', icon: 'ban', danger: true, onSelect: function () { app.ui.ban(n, g.id); } }
+            banItem(app, n, g.id)
           ]
         }));
     }) : h('p', { className: 'pal-empty' }, 'No member matches.')));

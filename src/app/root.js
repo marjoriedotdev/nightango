@@ -136,7 +136,7 @@ function Root(props) {
       if (focused) g.lastReadTs = Date.now();
     });
     if (mention && !quiet && !(s0.route.view === 'group' && s0.route.id === gid)) {
-      notify('mentions', { toast: msg.author + ' mentioned you in #' + gid, icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'group', id: gid }); } } });
+      notify('mentions', { toast: msg.author + ' mentioned you in #' + gid, icon: 'at-sign', action: { label: 'Open', run: function () { nav({ view: 'group', id: gid }); } } });
     }
   }
   function receiveDm(from, text) {

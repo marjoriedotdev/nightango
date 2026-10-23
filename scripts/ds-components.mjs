@@ -47,7 +47,7 @@ const COMPONENTS = [
 - \`danger\`: destructive actions, always followed by a confirmation.
 - Sizes: \`sm\` inside cards and lists, \`md\` default, \`lg\` for login and dialogs. Use \`block\` to fill a form column.`,
     `  return h('div', { className: 'col' },
-    h('div', { className: 'row' }, h(T.Button, { variant: 'primary' }, 'Save changes'), h(T.Button, null, 'Manage'), h(T.Button, { variant: 'ghost' }, 'Discard'), h(T.Button, { variant: 'danger', icon: 'ban' }, 'Block')),
+    h('div', { className: 'row' }, h(T.Button, { variant: 'primary' }, 'Save changes'), h(T.Button, null, 'Manage'), h(T.Button, { variant: 'ghost' }, 'Discard'), h(T.Button, { variant: 'danger', icon: 'user-x' }, 'Block')),
     h('div', { className: 'row' }, h(T.Button, { variant: 'primary', size: 'lg', icon: 'plus' }, 'Create a group'), h(T.Button, { size: 'sm' }, 'Join'), h(T.Button, { variant: 'primary', disabled: true }, 'Disabled')));`],
   ['IconButton', 'Actions', 64,
     'A square button that holds a single icon, with a required accessible label.',
