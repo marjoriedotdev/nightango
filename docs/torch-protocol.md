@@ -96,8 +96,8 @@ Ce ne sont pas des appels du code applicatif mais des ressources que le navigate
 - React et ReactDOM 18.3.1 depuis `cdnjs.cloudflare.com`, avec SRI (`skin-page.js`).
 - Le script de démarrage de Torch, `https://vissle.me/client/start`, qui charge à son tour la page et le code de Torch.
 - L'iframe `www.youtube-nocookie.com/embed/`, créée seulement au clic. La miniature `i.ytimg.com` s'affiche si `embedVideos` est actif et si `proxyMedia` est coupé ou `i.ytimg.com` de confiance.
-- Les images de message et les vignettes de la médiathèque (URL https, `chatango.com/pmmessageimg`) selon `embedImages`, `proxyMedia` et les hôtes de confiance (voir Réglages de démarrage de Torch, Hôtes de confiance).
-- Les fichiers vidéo (mp4, webm) et audio (mp3, ogg, wav) de message, en URL https d'un hôte quelconque, en `<video>` ou `<audio>`, selon `embedVideos` et les hôtes de confiance : créés seulement au clic, ou dès l'affichage sans lecture automatique pour un hôte de confiance.
+- Les images de message et les vignettes de la médiathèque (URL https, ou http chargée en https et `fp.chatango.com` sur `ust.chatango.com` comme Torch, `inject.js:1112` ; `chatango.com/pmmessageimg`) selon `embedImages`, `proxyMedia` et les hôtes de confiance (voir Réglages de démarrage de Torch, Hôtes de confiance).
+- Les fichiers vidéo (mp4, webm) et audio (mp3, ogg, wav) de message, en URL https d'un hôte quelconque (http chargée en https, comme les images), en `<video>` ou `<audio>`, selon `embedVideos` et les hôtes de confiance : créés seulement au clic, ou dès l'affichage sans lecture automatique pour un hôte de confiance.
 - Les avatars `ust.chatango.com/profileimg/…/thumb.jpg` ou `thumb_m.jpg`, en `<img>`.
 - La photo de profil complète `ust.chatango.com/profileimg/…/full.jpg`, en `<img>` `referrerPolicy="no-referrer"`, chargée seulement au clic sur l'avatar du mini profil.
 - L'image du fond de message `ust.chatango.com/profileimg/…/msgbg.jpg`, en `<img>` `referrerPolicy="no-referrer"`, seulement si `embedImages` est actif et `proxyMedia` coupé.
