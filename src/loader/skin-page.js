@@ -2,6 +2,7 @@
   'use strict';
   if (window.__TORCH_SKIN__) return;
   window.__TORCH_SKIN__ = true;
+/*JOURNAL*/
   var CSS = /*CSS*/;
   var LOGIN_CSS = /*LOGIN_CSS*/;
   var FONTS_CSS = /*FONTS_CSS*/;
