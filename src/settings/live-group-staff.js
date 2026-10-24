@@ -17,14 +17,12 @@ function GSAuditLive(p) {
   return h(Page, {
     title: 'Audit log', lede: 'The latest moderation changes Chatango recorded in #' + g.id + ', newest first.',
     aside: h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } }, 'Staff member',
-      h('select', { className: 'tc-input', style: { width: 'auto', height: 34 }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, n); })))
+      h('select', { className: 'tc-input', style: { width: 'auto' }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, n); })))
   },
-    h(T.SettingsSection, null, log == null ? h('p', { className: 'pal-empty' }, 'Loading the log from Chatango.') : rows.length ? rows.map(function (x, i) {
+    h(T.SettingsSection, null, log == null ? h(SkeletonRows, { count: 5, avatar: 28, label: 'Loading the log from Chatango' }) : rows.length ? rows.map(function (x, i) {
       var sys = MODLOG_SYSTEM[x.type], text = (MODLOG_TEXT[x.type] || 'did ' + x.type).replace('*t*', x.target || 'someone');
-      return h('div', { key: x.id, className: 'lrow', style: i ? null : { borderTop: 0 } },
-        sys ? h('span', { className: 'role-ico' }, h(T.Icon, { name: 'lock', size: 14 })) : h(T.Avatar, { name: x.actor, size: 28 }),
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title', style: { fontWeight: 400 } }, sys || h(Frag, null, h('b', { style: { fontWeight: 600 } }, x.actor), ' ', text))),
-        x.at ? h('time', { className: 'tc-msg-time', title: new Date(x.at).toLocaleString('en-GB') }, ago(x.at)) : null);
+      return h(ActivityRow, { key: x.id, first: !i, at: x.at, lead: sys ? h('span', { className: 'role-ico' }, h(T.Icon, { name: 'lock', size: 14 })) : null },
+        sys || h(Frag, null, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', text));
     }) : h('p', { className: 'pal-empty' }, 'No entries.')));
 }
 
@@ -62,9 +60,11 @@ function GSStaffLive(p) {
               h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, n), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, ROLE_LONG[liveRole(draft.modFlags[n])])),
               h(T.Icon, { name: 'chevron-right', size: 14, style: { color: 'var(--text-3)' } }));
           })),
-        canEdit ? h('div', { style: { padding: '12px 14px 14px', borderTop: '1px solid var(--divider)', display: 'flex', alignItems: 'flex-end', gap: 8 } },
-          h('div', { style: { flex: 1 } }, h(T.TextField, { id: 'add-mod', label: 'Add a moderator', value: add, error: err || undefined, autoComplete: 'off', onChange: function (e) { setAdd(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') addMod(); } })),
-          h(T.Button, { style: { height: 38 }, onClick: addMod }, 'Add')) : null),
+        canEdit ? h('div', { style: { padding: '12px 14px 14px', borderTop: '1px solid var(--divider)' } },
+          h(T.TextField, {
+            id: 'add-mod', label: 'Add a moderator', value: add, error: err || undefined, autoComplete: 'off', onChange: function (e) { setAdd(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') addMod(); },
+            action: h(T.Button, { onClick: addMod }, 'Add')
+          })) : null),
       h('div', { className: 'grow' }, sel ? h(Frag, null,
         h('section', { className: 'tc-section', 'aria-label': sel, style: { padding: '16px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px 16px' } },
           h('div', { style: { flex: '1 1 240px' } }, h('h2', { style: { margin: '0 0 2px', fontSize: 17, fontWeight: 600 } }, sel), h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, ROLE_DESC[liveRole(draft.modFlags[sel])])),
@@ -81,5 +81,5 @@ function GSStaffLive(p) {
             });
           }));
         }))
-        : h(T.SettingsSection, { padded: true }, h('p', { className: 'muted', style: { margin: 0 } }, 'No moderators yet.' + (canEdit ? ' Add one with their Chatango username.' : ''))))));
+        : h(T.SettingsSection, { padded: true }, h('p', { className: 'pal-empty' }, 'No moderators yet.' + (canEdit ? ' Add one with their Chatango username.' : ''))))));
 }

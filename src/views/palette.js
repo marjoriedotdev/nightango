@@ -8,10 +8,10 @@ function Palette(p) {
     var g = s.groups[k];
     if (g.joined) entries.push({ group: 'Groups', label: '#' + k, hint: g.mentions ? '@' + g.mentions : g.unread ? g.unread + ' new' : '', icon: 'hash', run: function () { app.nav({ view: 'group', id: k }); } });
   });
-  Object.keys(s.dms).forEach(function (n) { entries.push({ group: 'People', label: n, hint: statusLabel(userOf(s, n).status), icon: 'message', run: function () { app.nav({ view: 'dm', id: n }); } }); });
+  listedDms(s).forEach(function (n) { entries.push({ group: 'People', label: n, hint: statusLabel(userOf(s, n).status), icon: 'message', run: function () { app.actions.openDm(n); } }); });
   Object.keys(s.groups).forEach(function (k) { if (!s.groups[k].joined && s.groups[k].discover) entries.push({ group: 'Join', label: 'Join #' + k, hint: s.groups[k].discover.topic, icon: 'plus', run: function () { app.actions.joinGroup(k); } }); });
-  [['Profile', 'profile'], ['Appearance', 'appearance'], ['Notifications', 'notifications'], ['Privacy', 'privacy'], ['Safety', 'safety'], ['Password and email', 'account'], ['Language', 'language'], ['Accessibility', 'accessibility'], ['Chatango Premium', 'premium'], ['About Torch', 'about']].forEach(function (x) {
-    entries.push({ group: 'Settings', label: x[0], hint: 'Settings', icon: 'sliders', run: function () { app.nav({ view: 'settings', page: x[1] }); } });
+  SETTINGS_NAV.forEach(function (sec) {
+    sec.items.forEach(function (it) { entries.push({ group: 'Settings', label: it[1], hint: 'Settings', icon: 'sliders', run: function () { app.nav({ view: 'settings', page: it[0] }); } }); });
   });
   entries.push({ group: 'Actions', label: 'Discover groups', icon: 'compass', run: function () { app.nav({ view: 'discover' }); } });
   entries.push({ group: 'Actions', label: 'Friends', icon: 'users', run: function () { app.nav({ view: 'dm', id: null, tab: 'friends' }); } });

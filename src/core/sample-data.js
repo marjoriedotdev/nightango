@@ -39,11 +39,12 @@ function seedWorld(me) {
 
   function group(id, o) {
     return Object.assign({
-      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, unread: 0, mentions: 0, lastReadTs: now,
+      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: now,
       members: [], guests: 0, messages: [], closed: false, discover: null, bans: [], audit: [], dismissedAnnouncement: false
     }, o);
   }
   var groups = {};
+  var known = msg('sable', "Known issue on server s12, it's on Chatango's side. Reconnecting twice usually sticks.", 18);
   groups.community = group('community', {
     title: 'Official Torch Client community', topic: 'Official Torch Client community. Bug reports go to #torchdev.', joined: true, favorite: true,
     members: ['ember', 'sable', 'vantage', me, 'kestrel', 'marrow', 'nightowl', 'quill', 'drift', 'halcyon', 'petrichor', 'rook', 'tallow'], guests: 12,
@@ -67,9 +68,9 @@ function seedWorld(me) {
       msg('ember', 'Torch 0.1.0-b is out. Changelog: https://github.com/Vissle-Drissle/Torch-Client', 60 * 24 + 40),
       msg('quill', 'The new sidebar is so much calmer.', 60 * 24 + 35),
       msg('kestrel', 'Anyone else getting dropped from #trade every few minutes since this morning?', 19),
-      msg('sable', "Known issue on server s12, it's on Chatango's side. Reconnecting twice usually sticks.", 18),
+      known,
       msg('sable', "I've put a note in the group announcement until it's fixed.", 18),
-      msg('quill', 'Confirmed, the second reconnect held. Thanks.', 16, { replyTo: { author: 'sable', text: "Known issue on server s12, it's on Chatango's side." } }),
+      msg('quill', 'Confirmed, the second reconnect held. Thanks.', 16, { replyTo: { id: known.id } }),
       msg('marrow', "Here's what the reconnect loop looks like on my side:", 14, { embeds: [{ kind: 'image', url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#0d0e10"/><g font-family="monospace" font-size="11" fill="#8a8e96"><text x="14" y="26">[ws] connecting s12.chatango.com:8081</text><text x="14" y="46" fill="#f08a8a">[ws] closed (1006) after 41s</text><text x="14" y="66">[ws] reconnect 1/3</text><text x="14" y="86" fill="#f08a8a">[ws] closed (1006) after 2s</text><text x="14" y="106">[ws] reconnect 2/3</text><text x="14" y="126" fill="#3fb27f">[ws] connected, joined #community</text></g></svg>') }] }),
       msg('nightowl', '@' + me + ' the theme you exported imports cleanly now, nice work.', 12),
       msg(me, "Good to hear. I'll publish the light variant tonight.", 11)
@@ -140,7 +141,7 @@ function seedWorld(me) {
     pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60), request: true }
   };
   return {
-    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, typing: {},
+    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, typing: {}, mentionLog: [], mediaRev: 0,
     meStatus: 'online', awayText: '',
     profile: { visibility: { age: true, gender: false, location: true, meet: false, fullPage: true }, colors: { bg: '#1b1c20', text: '#e6e6e6', link: '#f27a3f' } },
     account: { email: 'orrin@example.com', verified: true },
@@ -164,3 +165,29 @@ var SAMPLE_VISITS = (function () {
 function sampleVisits(q) {
   return SAMPLE_VISITS.filter(function (x) { return (q.get === 'all' || x.action === q.get) && (q.page === 1 || x.time < q.page); }).slice(0, VISIT_PAGE);
 }
+
+/* Médiathèque d'exemple du prototype, en mémoire, avec les appels que le pont fait sur la base de Torch. */
+var sampleMedia = (function () {
+  var list = ['wave', 'thumbs up', 'party', 'facepalm', 'coffee', 'cat nap', 'good night', 'popcorn'].map(function (n) {
+    return { url: 'https://media.example/' + n.replace(/ /g, '-') + '.gif', name: n };
+  });
+  function byIndex(index) { return function (a, b) { return a[index] < b[index] ? -1 : a[index] > b[index] ? 1 : a.url < b.url ? -1 : 1; }; }
+  function read(index, after, text, count) {
+    var kept = list.filter(function (e) { return mediaMatch(index, e, after, text); }).sort(byIndex(index));
+    return Promise.resolve({ list: kept.slice(0, count), more: kept.length > count });
+  }
+  function put(e) { list = list.filter(function (x) { return x.url !== e.url; }).concat([e]); }
+  return {
+    mediaPage: function (index, after, text) { return read(index, after, text, MEDIA_PAGE); },
+    searchMedia: function (text, count) { return read('name', null, text, count).then(function (r) { return r.list; }); },
+    hasMedia: function (url) { return Promise.resolve(list.some(function (e) { return e.url === url; })); },
+    addMedia: function (e) { put(e); return Promise.resolve(); },
+    removeMedia: function (url) { list = list.filter(function (e) { return e.url !== url; }); return Promise.resolve(); },
+    exportMedia: function () { return Promise.resolve(list.slice().sort(byIndex('url'))); },
+    importMedia: function (entries) {
+      var screened = screenMediaEntries(entries);
+      screened.valid.forEach(put);
+      return Promise.resolve({ added: screened.valid.length, skipped: screened.skipped });
+    }
+  };
+})();

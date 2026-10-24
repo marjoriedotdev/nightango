@@ -40,13 +40,10 @@ function NotificationsPage() {
                   : h(T.Checkbox, { ariaLabel: r[1] + ', ' + c[1], checked: !!v, onChange: function (e) { pr.set('notify.' + r[0] + '.' + c[0], e.target.checked); } }));
               }));
           }))))),
-    LIVE ? h(T.Banner, { icon: 'volume', title: 'Sounds' }, 'Torch plays alert sounds with its own settings, so Torch Skin stays silent to avoid hearing every alert twice.') : null,
-    LIVE ? null : h(T.SettingsSection, { title: 'Sound' },
+    LIVE ? h(TorchSoundsSection) : h(T.SettingsSection, { title: 'Sound' },
       h(T.SettingRow, {
-        asLabel: false, title: 'Volume', description: 'Applies to every alert sound.', control: h('div', { className: 'range-row' },
-          h('input', { type: 'range', min: 0, max: 100, value: prefs.volume, 'aria-label': 'Volume', onChange: function (e) { pr.set('volume', +e.target.value); } }),
-          h('span', { className: 'mono', style: { width: 40, textAlign: 'right', fontSize: 12.5, color: 'var(--text-2)' } }, prefs.volume + '%'),
-          h(T.IconButton, { icon: 'volume', label: 'Play test sound', onClick: function () { beep(prefs.volume, true); } }))
+        asLabel: false, title: 'Volume', description: 'Applies to every alert sound.',
+        control: h(VolumeControl, { label: 'Volume', value: prefs.volume, onChange: function (v) { pr.set('volume', v); }, onPlay: function () { beep(prefs.volume, true); } })
       }),
       h(T.SettingRow, { title: 'Only when Torch is in focus', description: "Stay silent while you're in another tab or app.", control: pr.sw('soundFocusOnly') })),
     h(T.SettingsSection, { title: 'In the app' },
@@ -54,4 +51,34 @@ function NotificationsPage() {
       h(T.SettingRow, { title: 'Mark new messages', description: "Draws a line above the first message you haven't read.", control: pr.sw('markNew') }),
       h(T.SettingRow, { title: 'Preview private messages', description: 'Shows the text in the alert instead of only the sender.', control: pr.sw('pmPreview') }),
       h(T.SettingRow, { title: 'Highlight new features', description: 'Marks settings and tools added in recent updates.', control: pr.sw('featureHints') })));
+}
+
+function VolumeControl(p) {
+  return h('div', { className: 'range-row' },
+    h('input', { type: 'range', min: 0, max: 100, value: p.value, disabled: p.disabled, 'aria-label': p.label, onChange: function (e) { p.onChange(+e.target.value); } }),
+    h('span', { className: 'tc-msg-time', style: { width: 40, textAlign: 'right' } }, p.value + '%'),
+    h(T.IconButton, { icon: 'volume', label: 'Play test sound', disabled: p.disabled, onClick: p.onPlay }));
+}
+
+var TORCH_SOUND_ROWS = [
+  ['mention', 'Mention sound', 'When someone mentions you or sends you a private message.', 'Mention volume'],
+  ['online', 'Friend online sound', 'When a friend connects, at most once every 5 minutes per friend.', 'Friend online volume']
+];
+
+function TorchSoundsSection() {
+  var app = useApp();
+  var st = useTorchSettings(liveBridge.torchSounds, liveBridge.setTorchSound), sounds = st[0], set = st[1];
+  function play(kind) {
+    liveBridge.playTorchSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.'); });
+  }
+  return h(T.SettingsSection, { title: 'Sounds', description: "Torch plays these sounds. Torch Skin stays silent so you don't hear every alert twice." },
+    sounds ? TORCH_SOUND_ROWS.map(function (r) {
+      var on = sounds['play_' + r[0]];
+      return h(T.SettingRow, {
+        key: r[0], asLabel: false, title: r[1], description: r[2],
+        control: h(Frag, null,
+          h(T.Switch, { label: r[1], checked: on, onChange: function (e) { set('play_' + r[0], e.target.checked); } }),
+          h(VolumeControl, { label: r[3], value: sounds['volume_' + r[0]], disabled: !on, onChange: function (v) { set('volume_' + r[0], v); }, onPlay: function () { play(r[0]); } }))
+      });
+    }) : h('p', { className: 'pal-empty' }, "Torch's sound settings could not be read. Reload the page and try again."));
 }

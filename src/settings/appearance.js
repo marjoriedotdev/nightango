@@ -1,6 +1,6 @@
 function AppearancePage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
-  var fileRef = useRef(null);
+  var md = useState(function () { return LIVE ? liveBridge.setting('markdown') : null; }), markdown = md[0], setMarkdown = md[1];
   var themes = [
     ['dark', 'Dark', ['#16171a', '#111214', '#3a3d44', '#2e3036', '#1d1f23']],
     ['light', 'Light', ['#ffffff', '#f6f6f7', '#c9cbd1', '#e4e4e8', '#ffffff']],
@@ -17,23 +17,15 @@ function AppearancePage() {
         h('span', { style: { height: 5, width: '80%', borderRadius: 3, background: c[2] } }), h('span', { style: { height: 5, width: '60%', borderRadius: 3, background: c[3] } }),
         h('span', { style: { marginTop: 'auto', height: 12, borderRadius: 4, background: c[4], border: '1px solid ' + c[3] } })));
   }
-  function importFile(e) {
-    var file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      try {
-        var src = JSON.parse(reader.result);
-        var accent = src.active || src.highlight || src.accent;
-        if (!hexToRgb(accent)) throw new Error('no accent');
-        var name = (file.name || 'Theme').replace(/\.json$/i, '');
-        var colors = [src.backdrop, src.primary, src.secondary, accent].filter(hexToRgb);
-        app.update(function (d) { d.prefs.customThemes = (d.prefs.customThemes || []).concat([{ id: uid(), name: name, accent: accent, colors: colors, at: Date.now() }]); });
-        app.ui.toast('Imported ' + name + '.', { icon: 'check' });
-      } catch (err) { app.ui.toast('This file is not a Torch theme. Export one from the old theme editor and try again.'); }
-    };
-    reader.readAsText(file);
+  function importFile(file) {
+    readJsonFile(file).then(function (src) {
+      var accent = src.active || src.highlight || src.accent;
+      if (!hexToRgb(accent)) throw new Error('no accent');
+      var name = (file.name || 'Theme').replace(/\.json$/i, '');
+      var colors = [src.backdrop, src.primary, src.secondary, accent].filter(hexToRgb);
+      app.update(function (d) { d.prefs.customThemes = (d.prefs.customThemes || []).concat([{ id: uid(), name: name, accent: accent, colors: colors, at: Date.now() }]); });
+      app.ui.toast('Imported ' + name + '.', { icon: 'check' });
+    }).catch(function () { app.ui.toast('This file is not a Torch theme. Export one from the old theme editor and try again.'); });
   }
   var custom = prefs.customThemes || [];
   var palette = accents.some(function (a) { return a[1] === prefs.accent; });
@@ -61,19 +53,22 @@ function AppearancePage() {
           h('span', { 'aria-hidden': 'true', style: { fontSize: 12, color: 'var(--text-3)' } }, 'A'),
           h('input', { type: 'range', min: 12, max: 18, step: 1, value: prefs.textSize, 'aria-label': 'Text size', onChange: function (e) { pr.set('textSize', +e.target.value); } }),
           h('span', { 'aria-hidden': 'true', style: { fontSize: 18, color: 'var(--text-3)' } }, 'A'),
-          h('span', { className: 'mono', style: { width: 38, textAlign: 'right', fontSize: 12.5, color: 'var(--text-2)' } }, prefs.textSize + 'px'))
+          h('span', { className: 'tnum', style: { width: 38, textAlign: 'right', fontSize: 12.5, color: 'var(--text-2)' } }, prefs.textSize + 'px'))
       }),
-      h(T.SettingRow, { title: '24-hour time', description: 'Shows 14:05 instead of 2:05 PM.', control: pr.sw('h24') })),
+      h(T.SettingRow, { title: '24-hour time', description: 'Shows 14:05 instead of 2:05 PM.', control: pr.sw('h24') }),
+      h(T.SettingRow, { title: 'Show group announcements', description: 'Announcements staff post on a timer, and the banner at the top of a group.', control: pr.sw('announcements') }),
+      markdown === null ? null : h(T.SettingRow, {
+        title: 'Format Markdown when sending', description: '*text* sends as italic, **text** as bold and __text__ as underlined, in groups and private messages.',
+        control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveTorchSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
+      })),
     h(T.SettingsSection, { title: 'Chatango styles', description: 'Members can style their name, messages and mini profile on Chatango. Torch corrects colors that would be hard to read.' },
       h(T.SettingRow, { title: 'Name colors', description: 'The color each member picked for their username.', control: pr.sw('styles.names') }),
       h(T.SettingRow, { title: 'Fonts and text colors', description: 'Custom typefaces, text sizes and text colors in messages.', control: pr.sw('styles.fonts') }),
-      h(T.SettingRow, { title: 'Message backgrounds', description: 'Background colors set by Premium members.', control: pr.sw('styles.backgrounds') }),
+      h(T.SettingRow, { title: 'Message backgrounds', description: 'Background colors and images set by Premium members.', control: pr.sw('styles.backgrounds') }),
       h(T.SettingRow, { title: 'Profile backgrounds', description: 'Colors and images Premium members set on their mini profile.', control: pr.sw('styles.profileBackgrounds') })),
     h(T.SettingsSection, {
       title: 'Imported themes', description: 'Theme files (.json) exported from the old Torch theme editor. Torch uses their accent color.',
-      headerAside: h(Frag, null,
-        h('input', { ref: fileRef, type: 'file', accept: '.json,application/json', hidden: true, onChange: importFile }),
-        h(T.Button, { icon: 'upload', onClick: function () { fileRef.current.click(); } }, 'Import file'))
+      headerAside: h(JsonFileButton, { icon: 'upload', onFile: importFile }, 'Import file')
     },
       custom.length ? custom.map(function (t) {
         return h('div', { key: t.id, className: 'lrow' },
@@ -81,5 +76,5 @@ function AppearancePage() {
           h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, t.name), h('span', { className: 'lrow-sub' }, 'Imported ' + new Date(t.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))),
           h(T.Button, { size: 'sm', onClick: function () { pr.set('accent', t.accent); } }, 'Apply'),
           h(T.IconButton, { icon: 'trash', label: 'Delete ' + t.name, onClick: function () { app.update(function (d) { d.prefs.customThemes = d.prefs.customThemes.filter(function (x) { return x.id !== t.id; }); }); } }));
-      }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, 'No imported themes.')));
+      }) : h('p', { className: 'pal-empty' }, 'No imported themes.')));
 }

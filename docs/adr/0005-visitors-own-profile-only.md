@@ -16,4 +16,4 @@ La section Visitors n'affiche que l'activité du profil de l'utilisateur connect
 ## Conséquences
 
 - Même un code page compromis ne peut pas interroger un autre profil par le pont.
-- La section reste vide tant que l'utilisateur n'a pas installé le tracker dans Torch.
+- La section reste vide tant que l'utilisateur n'a pas installé le tracker.

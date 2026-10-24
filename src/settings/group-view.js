@@ -9,8 +9,7 @@ function GroupSettingsView(p) {
   var sections = manage
     ? [{ title: 'General', items: [['overview', 'Overview'], ['announcement', 'Announcement']] }, { title: 'Moderation', items: [['automod', 'AutoMod'], ['media', 'Media and links'], ['bans', 'Bans'], ['audit', 'Audit log']] }, { title: 'People', items: [['roles', 'Staff and roles'], ['members', 'Members'], ['invites', 'Invites']] }]
     : [{ title: 'Moderation', items: [['automod', 'AutoMod'], ['bans', 'Bans']].concat(perms.modLog ? [['audit', 'Audit log']] : []) }, { title: 'People', items: [['members', 'Members'], ['invites', 'Invites']] }];
-  var allowed = [].concat.apply([], sections.map(function (x) { return x.items.map(function (i) { return i[0]; }); }));
-  var page = allowed.indexOf(p.page) >= 0 ? p.page : allowed[0];
+  var page = listedPage(sections, p.page);
   function edit(fn) { setDraft(function (d0) { var d1 = JSON.parse(JSON.stringify(d0)); fn(d1); return d1; }); }
   function leave() {
     if (dirty) app.ui.confirm({ title: 'Discard unsaved changes?', body: 'Your changes to #' + g.id + ' are not saved yet.', confirmLabel: 'Discard', danger: true, onConfirm: function () { app.nav({ view: 'group', id: g.id }); } });
@@ -23,7 +22,7 @@ function GroupSettingsView(p) {
     navLabel: 'Group settings', sections: sections, page: page, onBack: leave,
     onPage: function (pg) { app.nav({ view: 'gsettings', id: g.id, page: pg }); },
     header: h('div', { className: 'snav-head' },
-      h(T.Avatar, { name: g.id, square: true, size: 32, color: g.id === 'community' ? 'var(--accent)' : undefined, style: g.id === 'community' ? { color: 'var(--on-accent)' } : null }),
+      h(T.Avatar, { name: g.id, square: true, size: 32 }),
       h('span', { style: { display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 } }, h('span', { style: { fontWeight: 600 } }, g.id), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, 'Group settings · ' + ROLE_LONG[myRole]))),
     footer: canClose ? h(T.NavItem, {
       icon: 'lock', label: g.closed ? 'Reopen group' : 'Close group',

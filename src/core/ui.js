@@ -19,14 +19,119 @@ function useOutside(ref, open, onClose, extraRef) {
     if (!open) return;
     function onDown(e) {
       var path = e.composedPath ? e.composedPath() : [e.target];
-      if (ref.current && path.indexOf(ref.current) < 0 && !(extraRef && extraRef.current && path.indexOf(extraRef.current) >= 0)) onClose();
+      if (ref.current && path.indexOf(ref.current) < 0 && !(extraRef && extraRef.current && path.indexOf(extraRef.current) >= 0)) onClose(e);
     }
-    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    function onKey(e) { if (e.key === 'Escape') onClose(e); }
     document.addEventListener('mousedown', onDown);
     document.addEventListener('touchstart', onDown);
     document.addEventListener('keydown', onKey);
     return function () { document.removeEventListener('mousedown', onDown); document.removeEventListener('touchstart', onDown); document.removeEventListener('keydown', onKey); };
   }, [open]);
+}
+
+var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
+
+/**
+ * Permet de demander la page suivante quand une sentinelle approche de la zone visible.
+ * @param {Object} rootRef Référence de la zone qui défile.
+ * @param {Object} sentinelRef Référence de la sentinelle.
+ * @param {boolean} enabled Une page suivante peut être demandée.
+ * @param {Function} onReach Demande de la page suivante.
+ * @param {string} margin Marge d'approche au format rootMargin.
+ */
+function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
+  useEffect(function () {
+    if (!enabled) return;
+    var io = new IntersectionObserver(function (entries) {
+      if (entries.some(function (e) { return e.isIntersecting; })) onReach();
+    }, { root: rootRef.current, rootMargin: margin });
+    io.observe(sentinelRef.current);
+    return function () { io.disconnect(); };
+  }, [enabled]);
+}
+
+var FLOAT_UNPLACED = { position: 'fixed', visibility: 'hidden', top: 0, left: 0 };
+/**
+ * Permet d'ancrer un calque flottant à son déclencheur, de le fermer au clic extérieur, à Escape, au défilement de la page ou d'un conteneur du déclencheur et au redimensionnement, et de donner le focus à son premier bouton.
+ * @param {Object} anchorRef Référence du déclencheur.
+ * @param {Object} floatRef Référence du calque.
+ * @param {boolean} open Le calque est ouvert.
+ * @param {function(Event)} onClose Fermeture, avec l'événement qui la provoque.
+ * @param {{up: boolean, align: string, at: ?{x: number, y: number}}} o Ouverture vers le haut, alignement sur le bord gauche du déclencheur, point d'ancrage qui remplace le déclencheur.
+ * @returns {Object} Style de position, masqué tant que le calque n'est pas mesuré.
+ */
+function useFloating(anchorRef, floatRef, open, onClose, o) {
+  useOutside(anchorRef, open, onClose, floatRef);
+  var ps = useState(null), place = ps[0], setPlace = ps[1];
+  // Position fixe calculée sur le déclencheur, retournée si le calque sortirait de l'écran.
+  useLayoutEffect(function () {
+    if (!open) { setPlace(null); return; }
+    if (!anchorRef.current) return;
+    var r = o.at ? { top: o.at.y, bottom: o.at.y, left: o.at.x, right: o.at.x } : anchorRef.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    var mh = floatRef.current ? floatRef.current.offsetHeight : 0, up = o.up ? r.top - mh - 4 >= 8 || r.bottom + mh + 4 > vh : r.bottom + mh + 4 > vh - 8 && r.top - mh - 4 >= 8;
+    var mw = floatRef.current ? floatRef.current.offsetWidth : 0, left = o.align === 'left' && r.left + mw <= vw - 8;
+    var st = { position: 'fixed' };
+    if (up) st.bottom = (vh - r.top + 4) + 'px'; else st.top = (r.bottom + 4) + 'px';
+    if (left) st.left = Math.max(8, r.left) + 'px'; else st.right = Math.max(8, vw - r.right) + 'px';
+    setPlace(st);
+  }, [open, o.at]);
+  useEffect(function () {
+    if (!open) return;
+    // Seul le défilement d'un conteneur du déclencheur déplace le calque, pas celui du fil qui reçoit un message.
+    function onMove(e) { if (e.type === 'scroll' && e.target !== document && !e.target.contains(anchorRef.current)) return; onClose(e); }
+    window.addEventListener('resize', onMove);
+    document.addEventListener('scroll', onMove, true);
+    return function () { window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); };
+  }, [open]);
+  // Après le placement : un calque encore en visibility hidden refuse le focus dans un vrai navigateur.
+  useEffect(function () {
+    if (place && floatRef.current) { var first = floatRef.current.querySelector('button:not(:disabled)'); if (first) first.focus(); }
+  }, [!!place]);
+  return place || FLOAT_UNPLACED;
+}
+
+// Seul seuil de la colonne de droite : app.css ne le répète pas, la colonne n'est rendue qu'au-dessus.
+var NARROW_LAYOUT = '(max-width:1180px)';
+/**
+ * Permet de basculer la colonne de droite quand la fenêtre lui laisse la place, et sinon d'ouvrir son contenu en plein écran.
+ * @param {Function} openFull Ouverture du même contenu en plein écran.
+ */
+function useRightColumn(openFull) {
+  var a = useState(function () { return !window.matchMedia(NARROW_LAYOUT).matches; }), fits = a[0], setFits = a[1];
+  var b = useState(true), shown = b[0], setShown = b[1];
+  useEffect(function () {
+    var mq = window.matchMedia(NARROW_LAYOUT);
+    function onChange() { setFits(!mq.matches); }
+    mq.addEventListener('change', onChange);
+    return function () { mq.removeEventListener('change', onChange); };
+  }, []);
+  return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
+}
+
+/**
+ * Permet de garder la position de lecture d'un fil : il suit le bas tant que le lecteur y est, et ne bouge pas quand des messages s'ajoutent en tête.
+ * @param {Object} logRef Référence de la zone qui défile.
+ * @param {?number} firstTs Horodatage du premier message chargé.
+ * @param {Array} deps Valeurs dont le changement replace le fil.
+ * @param {Function} onBelow Reçoit la zone quand le fil change sous un lecteur qui n'est pas en bas.
+ * @returns {{atBottom: Object, onScroll: Function}} Lecteur en bas, et relevé de la position à brancher sur le défilement.
+ */
+function useReadingPosition(logRef, firstTs, deps, onBelow) {
+  var atBottom = useRef(true), seenFirstTs = useRef(null);
+  useLayoutEffect(function () {
+    var el = logRef.current; if (!el) return;
+    // L'historique ajouté en tête ne déplace pas la vue (.log en column-reverse) : rien à restaurer.
+    var older = firstTs < seenFirstTs.current;
+    seenFirstTs.current = firstTs;
+    if (atBottom.current) el.scrollTop = 0;
+    else if (!older) onBelow(el);
+  }, deps);
+  useLogAnchor(logRef);
+  function onScroll() {
+    // .log en column-reverse : scrollTop vaut 0 en bas et devient négatif en remontant.
+    atBottom.current = logRef.current.scrollTop > -LOG_BOTTOM_SLACK;
+  }
+  return { atBottom: atBottom, onScroll: onScroll };
 }
 
 // Distance au bas d'un fil sous laquelle il reste collé en bas.
@@ -35,10 +140,9 @@ var LOG_BOTTOM_SLACK = 48;
 /**
  * Permet de garder la lecture en place dans un fil quand le contenu sous la vue change, là où le navigateur ne le fait pas.
  * Le fil est en column-reverse : ce qui change au-dessus de la vue ne la déplace déjà pas.
- * @param {Object} logRef Référence du fil (.log).
- * @param {Array} deps Valeurs qui remplacent l'élément du fil.
+ * @param {Object} logRef Référence du fil (.log), dont l'élément ne change pas tant que le composant est monté.
  */
-function useLogAnchor(logRef, deps) {
+function useLogAnchor(logRef) {
   useEffect(function () {
     var el = logRef.current;
     // Safari avant 27 n'a pas d'ancrage natif du défilement. Ailleurs, corriger ici doublerait le décalage.
@@ -64,61 +168,34 @@ function useLogAnchor(logRef, deps) {
     el.addEventListener('scroll', pick, { passive: true });
     pick();
     return function () { ro.disconnect(); el.removeEventListener('scroll', pick); };
-  }, deps);
+  }, []);
 }
 
 /**
- * Permet de demander la page suivante quand une sentinelle approche de la zone visible.
- * @param {Object} rootRef Référence de la zone qui défile.
+ * Permet de poser en tête d'un fil la sentinelle qui charge les messages plus anciens.
  * @param {Object} sentinelRef Référence de la sentinelle.
- * @param {boolean} enabled Une page suivante peut être demandée.
- * @param {Function} onReach Demande de la page suivante.
- * @param {string} margin Marge d'approche au format rootMargin.
+ * @param {boolean} loading Une lecture est en cours.
  */
-function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
-  useEffect(function () {
-    if (!enabled) return;
-    var io = new IntersectionObserver(function (entries) {
-      if (entries.some(function (e) { return e.isIntersecting; })) onReach();
-    }, { root: rootRef.current, rootMargin: margin });
-    io.observe(sentinelRef.current);
-    return function () { io.disconnect(); };
-  }, [enabled]);
+function olderSentinel(sentinelRef, loading) {
+  return h('div', { key: 'top', ref: sentinelRef, className: 'ev history-more' }, loading ? h(T.Spinner, { label: 'Loading earlier messages' }) : null);
 }
+/**
+ * Permet de marquer le début d'un fil quand il ne reste rien de plus ancien à charger.
+ * @param {string} text Texte du début.
+ */
+function historyStart(text) { return h('div', { key: 'top', className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), text); }
 
-/* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
+/* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, disabled, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
   function setOpen(n) { if (p.open == null) st[1](n); if (p.onOpenChange) p.onOpenChange(n); }
   function close() { setOpen(false); }
-  useOutside(ref, open, close, menuRef);
-  var ps = useState(null), place = ps[0], setPlace = ps[1];
-  // Position fixe calculée sur le déclencheur, retournée si le menu sortirait de l'écran.
-  useLayoutEffect(function () {
-    if (!open || !ref.current) return;
-    var r = p.at ? { top: p.at.y, bottom: p.at.y, left: p.at.x, right: p.at.x } : ref.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
-    var mh = menuRef.current ? menuRef.current.offsetHeight : 0, up = p.up ? r.top - mh - 4 >= 8 || r.bottom + mh + 4 > vh : r.bottom + mh + 4 > vh - 8 && r.top - mh - 4 >= 8;
-    var mw = menuRef.current ? menuRef.current.offsetWidth : 0, left = p.align === 'left' && r.left + mw <= vw - 8;
-    var st = { position: 'fixed' };
-    if (up) st.bottom = (vh - r.top + 4) + 'px'; else st.top = (r.bottom + 4) + 'px';
-    if (left) st.left = Math.max(8, r.left) + 'px'; else st.right = Math.max(8, vw - r.right) + 'px';
-    setPlace(st);
-  }, [open, p.at]);
-  useEffect(function () {
-    if (!open) return;
-    function onMove(e) { if (menuRef.current && e.target && menuRef.current.contains(e.target)) return; close(); }
-    window.addEventListener('resize', onMove);
-    document.addEventListener('scroll', onMove, true);
-    return function () { window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); };
-  }, [open]);
-  useEffect(function () {
-    if (open && menuRef.current) { var first = menuRef.current.querySelector('button'); if (first) first.focus(); }
-  }, [open]);
-  function toggle() { setPlace(null); setOpen(!open); }
+  var place = useFloating(ref, menuRef, open, close, { up: p.up, align: p.align, at: p.at });
+  function toggle() { setOpen(!open); }
   function onKey(e) {
     if (!menuRef.current) return;
-    var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button'));
+    var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button:not(:disabled)'));
     var i = items.indexOf(menuRef.current.getRootNode().activeElement);
     if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
     if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
@@ -128,12 +205,12 @@ function MenuButton(p) {
     : h(T.IconButton, { icon: p.icon || 'more', label: p.label, size: p.size || 32, iconSize: p.iconSize, onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' });
   return h('div', { className: 'menu-anchor', ref: ref },
     trigger,
-    open ? h(Portal, null, h('div', { className: 'menu floating', role: 'menu', ref: menuRef, onKeyDown: onKey, style: place || { position: 'fixed', visibility: 'hidden', top: 0, left: 0 } },
+    open ? h(Portal, null, h('div', { className: 'menu floating', role: 'menu', ref: menuRef, onKeyDown: onKey, style: place },
       p.items.filter(Boolean).map(function (it, i) {
         if (it.divider) return h('hr', { key: 'd' + i });
         return h('button', {
           key: i, type: 'button', role: it.checked != null ? 'menuitemradio' : 'menuitem', 'aria-checked': it.checked != null ? String(!!it.checked) : undefined,
-          className: it.danger ? 'danger' : undefined,
+          className: it.danger ? 'danger' : undefined, disabled: it.disabled,
           onClick: function () { close(); it.onSelect(); }
         },
           it.swatch ? h('span', { className: 'swatch', style: { background: it.swatch } }) : it.icon ? h(T.Icon, { name: it.icon, size: 15 }) : null,
@@ -151,7 +228,24 @@ function ColorField(p) {
     h('label', { className: 'tc-label', htmlFor: p.id }, p.label),
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
       h('input', { id: p.id, type: 'color', className: 'color-in', style: { borderRadius: 7 }, value: p.value, onChange: function (e) { p.onChange(e.target.value); } }),
-      h('span', { className: 'mono', style: { fontSize: 12.5, color: 'var(--text-2)' } }, p.value)));
+      h('span', { className: 'tnum', style: { fontSize: 12.5, color: 'var(--text-2)' } }, p.value)));
+}
+
+/**
+ * Bouton qui ouvre le sélecteur de fichiers JSON.
+ * @param {{onFile: function(File), icon: ?string, size: ?string, children: *}} p Rappel du fichier choisi, icône, taille et libellé du bouton.
+ */
+function JsonFileButton(p) {
+  var ref = useRef(null);
+  function change(e) {
+    var file = e.target.files && e.target.files[0];
+    // Sélecteur vidé : choisir de nouveau le même fichier doit relancer la lecture.
+    e.target.value = '';
+    if (file) p.onFile(file);
+  }
+  return h(Frag, null,
+    h('input', { ref: ref, type: 'file', accept: '.json,application/json', hidden: true, onChange: change }),
+    h(T.Button, { icon: p.icon, size: p.size, onClick: function () { ref.current.click(); } }, p.children));
 }
 
 var SKELETON_WIDTHS = ['62%', '44%', '70%', '52%', '66%', '40%'];
@@ -232,4 +326,31 @@ function Toasts(p) {
         t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
         h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
     })));
+}
+
+// -- Personnes ----------------------------------------------------------------
+/**
+ * Permet d'afficher le rôle court d'un membre en badge, à côté de son nom.
+ * @param {?string} role Rôle du membre dans le groupe.
+ */
+function roleBadge(role) { return role ? h(T.Badge, { icon: role === 'owner' ? 'crown' : 'shield' }, ROLE_LABEL[role]) : null; }
+/**
+ * Permet de marquer sa propre ligne dans une liste.
+ * @param {boolean} isMe Ligne de l'utilisateur connecté.
+ */
+function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
+/**
+ * Permet de donner la présence d'une ligne de liste aux lecteurs d'écran, le point de l'avatar restant seul à l'œil.
+ * @param {string} status Présence du membre.
+ */
+function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + statusLabel(status)); }
+/**
+ * Avatar et nom d'une personne dans un seul bouton qui ouvre sa fiche de profil.
+ * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Nom du compte, nom affiché s'il diffère, groupe d'où la fiche s'ouvre, taille de l'avatar, présence et contour de son point, avatar sans le nom, simple texte pour qui n'a pas de compte.
+ */
+function Person(p) {
+  var app = useApp(), label = p.label || p.name;
+  var avatar = h(T.Avatar, { name: p.name, size: p.size, status: p.status, ring: p.ring }), text = p.avatarOnly ? null : h('span', { className: 'namebtn' }, label);
+  if (p.inert) return h('span', { className: 'person-tag' }, avatar, text);
+  return h('button', { type: 'button', className: p.avatarOnly ? 'avatar-btn' : 'person-tag', 'aria-label': 'View ' + label + "'s profile", onClick: function () { app.ui.openProfile(p.name, p.gid || null); } }, avatar, text);
 }

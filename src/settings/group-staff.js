@@ -53,11 +53,11 @@ function ManageRoleDialog(p) {
       holders.length ? holders.map(function (n) {
         return h('div', { key: n, style: { display: 'flex', alignItems: 'center', gap: 10 } }, h(T.Avatar, { name: n, size: 28 }), h('span', { className: 'grow' }, n),
           h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { p.edit(function (d) { delete d.staff[n]; }); } }, 'Remove'));
-      }) : h('p', { className: 'muted', style: { margin: 0 } }, 'Nobody has this role yet.'),
+      }) : h('p', { className: 'pal-empty' }, 'Nobody has this role yet.'),
       h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 8 } },
         h('div', { className: 'tc-field', style: { flex: 1 } }, h('label', { className: 'tc-label', htmlFor: 'add-staff' }, 'Add a member'),
           h('select', { id: 'add-staff', className: 'tc-input', value: pickName, onChange: function (e) { setPick(e.target.value); } }, h('option', { value: '' }, 'Choose a member'), candidates.map(function (n) { return h('option', { key: n, value: n }, n); }))),
-        h(T.Button, { disabled: !pickName, style: { height: 38 }, onClick: function () { var n = pickName; p.edit(function (d) { d.staff[n] = role; }); setPick(''); } }, 'Add'))));
+        h(T.Button, { disabled: !pickName, onClick: function () { var n = pickName; p.edit(function (d) { d.staff[n] = role; }); setPick(''); } }, 'Add'))));
 }
 
 function GSMembers(p) {
@@ -65,20 +65,21 @@ function GSMembers(p) {
   var a = useState(''), q = a[0], setQ = a[1];
   var list = g.members.filter(function (n) { return !q || n.indexOf(q.toLowerCase()) >= 0; });
   var canMods = LIVE ? p.perms.manageMods : (p.myRole === 'owner' || p.myRole === 'coowner' || p.myRole === 'admin');
-  return h(Page, { title: 'Members', lede: g.members.length + ' members and ' + g.guests + ' guests right now.' },
+  return h(Page, { title: 'Members', lede: g.members.length + ' members and ' + guestsOf(g).count + ' guests right now.' },
     h(T.TextField, { id: 'mem-q', label: 'Search members', type: 'search', value: q, onChange: function (e) { setQ(e.target.value); } }),
     h(T.SettingsSection, null, list.length ? list.map(function (n, i) {
-      var r = p.draft.staff[n], u = userOf(s, n);
+      var r = p.draft.staff[n], isMe = n === s.me, status = isMe ? s.meStatus : userOf(s, n).status;
       return h('div', { key: n, className: 'lrow', style: i ? null : { borderTop: 0 } },
-        h(T.Avatar, { name: n, size: 32, status: n === s.me ? s.meStatus : u.status, ring: 'var(--panel)' }),
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, n + (n === s.me ? ' (you)' : '')), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(n === s.me ? s.meStatus : u.status))),
-        n === s.me || r === 'owner' ? null : h(MenuButton, {
+        h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
+        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, n), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(status))),
+        youBadge(isMe),
+        isMe || r === 'owner' ? null : h(MenuButton, {
           label: 'Actions for ' + n, items: [
-            { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(n, g.id); } },
+            viewProfileItem(app, n, g.id),
             canMods && !r ? { label: 'Make moderator', icon: 'shield', onSelect: function () { p.edit(function (d) { d.staff[n] = 'mod'; if (LIVE) d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); }); app.ui.toast(n + ' will be a moderator once you save.'); } } : null,
             canMods && (r === 'mod' || (LIVE && r === 'admin')) ? { label: 'Remove from staff', icon: 'user-minus', onSelect: function () { p.edit(function (d) { delete d.staff[n]; if (LIVE) delete d.modFlags[n]; }); app.ui.toast(n + ' leaves staff once you save.'); } } : null,
             { divider: true },
-            { label: 'Ban', icon: 'ban', danger: true, onSelect: function () { app.ui.ban(n, g.id); } }
+            banItem(app, n, g.id)
           ]
         }));
     }) : h('p', { className: 'pal-empty' }, 'No member matches.')));
@@ -89,6 +90,6 @@ function GSInvites(p) {
   return h(Page, { title: 'Invites', lede: 'Anyone with the link can join. Banned members still cannot.' },
     h(T.SettingsSection, { title: 'Invite link', padded: true },
       h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },
-        h('input', { className: 'tc-input mono', style: { flex: '1 1 260px' }, readOnly: true, value: link, 'aria-label': 'Invite link', onFocus: function (e) { e.target.select(); } }),
+        h('input', { className: 'tc-input', style: { flex: '1 1 260px' }, readOnly: true, value: link, 'aria-label': 'Invite link', onFocus: function (e) { e.target.select(); } }),
         h(T.Button, { variant: 'primary', icon: 'link', onClick: function () { copyText(link, function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. Select the link and copy it.'); }); } }, 'Copy link'))));
 }

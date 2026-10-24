@@ -1,20 +1,14 @@
 /* ---------- Messages privés ---------- */
 function DMView(p) {
-  var app = useApp(), s = app.state, me = s.me, id = p.id;
+  var app = useApp(), s = app.state, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
   var a2 = useState(''), q = a2[0], setQ = a2[1];
-  var a3 = useState(true), showProfile = a3[0], setShowProfile = a3[1];
-  var logRef = useRef(null);
+  var column = useRightColumn(function () { app.ui.openProfile(id, null); });
   var convo = id ? s.dms[id] : null;
-  var len = convo ? convo.messages.length : 0;
-  // .log en column-reverse : scrollTop vaut 0 en bas.
-  useLayoutEffect(function () { if (logRef.current) logRef.current.scrollTop = 0; }, [id, len]);
-  useLogAnchor(logRef, [id, !!convo]);
 
   var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
   useProfiles(names);
   var reqCount = names.filter(function (n) { return s.dms[n].request; }).length;
-  var unreadCount = names.filter(function (n) { return !s.dms[n].request && s.dms[n].unread; }).length;
   var shown = names.filter(function (n) {
     var c = s.dms[n];
     if (tab === 'requests' ? !c.request : c.request) return false;
@@ -22,92 +16,244 @@ function DMView(p) {
     return !q || n.indexOf(q.toLowerCase()) >= 0;
   });
 
+  var filters = [['all', 'All'], ['unread', 'Unread']];
+  // Ni Chatango ni Torch ne connaissent de demande de MP
+  if (!LIVE) filters.push(['requests', 'Requests' + (reqCount ? ' · ' + reqCount : '')]);
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
+  var term = section === 'chats' ? q.trim() : '', found = useDmSearch(term);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
-    h('div', { className: 'topbar', style: { padding: '0 12px 0 16px' } }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
+    h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
-      options: [{ value: 'chats', label: h(Frag, null, 'Chats', h(T.CountBadge, { count: unreadCount })) }, { value: 'friends', label: 'Friends' }, { value: 'meet', label: 'Meet people' }]
+      options: [{ value: 'chats', label: h(Frag, null, 'Chats', h(T.CountBadge, { count: unreadDmCount(s) })) }, { value: 'friends', label: 'Friends' }, { value: 'meet', label: 'Meet people' }]
     })),
     section === 'friends' ? h(FriendsList, { current: id }) : section === 'meet' ? h(MeetPeople, null) : h(Frag, null,
     h('div', { style: { padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10 } },
       h('label', { htmlFor: 'pm-search', className: 'tc-sr' }, 'Search conversations'),
-      h('input', { id: 'pm-search', className: 'tc-input', style: { height: 34 }, type: 'search', placeholder: 'Search conversations', value: q, onChange: function (e) { setQ(e.target.value); } }),
+      h('input', { id: 'pm-search', className: 'tc-input', type: 'search', placeholder: 'Search conversations', value: q, onChange: function (e) { setQ(e.target.value); } }),
       h('div', { className: 'tabs', role: 'group', 'aria-label': 'Filter conversations' },
-        [['all', 'All'], ['unread', 'Unread' + (unreadCount ? ' · ' + unreadCount : '')], ['requests', 'Requests' + (reqCount ? ' · ' + reqCount : '')]].map(function (t) {
+        filters.map(function (t) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
-      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading conversations' })
-      : shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'))));
+      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
+        shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'),
+        term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
-  var thread;
-  if (!convo) {
-    thread = h('main', { className: 'thread' }, h('div', { className: 'empty' },
+  var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column, seek: p.seek })
+    : h('main', { className: 'thread' }, h('div', { className: 'empty' },
       h(T.Icon, { name: 'message', size: 28, strokeWidth: 1.6 }), h('h2', null, 'Select a conversation'),
       h('p', { style: { margin: 0 } }, 'Or start a new one with a friend or someone from a group.'),
       h(T.Button, { variant: 'primary', icon: 'edit', onClick: app.ui.openNewDm }, 'New message')));
-  } else {
-    var u = userOf(s, id);
-    var typing = (s.typing['dm:' + id] || []).length > 0;
-    var rows = [], prev = null, lastDay = null;
-    convo.messages.forEach(function (m) {
-      var dk = dayKey(m.ts);
-      if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-      var cont = prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN;
-      var time = fmtTime(m.ts, s.prefs.h24);
-      var ms = memberStyles(userOf(s, m.from).style || {}, s.prefs.styles, app.theme, false);
-      var content = h(MessageContent, { m: m, style: ms.text });
-      rows.push(cont
-        ? h('article', { key: m.id, className: 'tc-msg tc-msg-cont', style: ms.row }, h('span', { className: 'tc-msg-gutter' }, time), h('div', { className: 'tc-msg-body' }, content))
-        : h('article', { key: m.id, className: 'tc-msg', style: Object.assign({ marginTop: 6 }, ms.row) },
-          h(AuthorAvatar, { name: m.from }),
-          h('div', { className: 'tc-msg-body' }, h('div', { className: 'tc-msg-head' }, h('span', { className: 'tc-msg-author', style: ms.name }, m.from), h('time', { className: 'tc-msg-time' }, time)), content)));
-      prev = m;
-    });
-    var lastMsg = convo.messages[convo.messages.length - 1];
-    if (lastMsg && lastMsg.from === me && convo.seenTs && s.prefs.privacy.showIdle) rows.push(h('p', { key: 'seen', className: 'seen' }, 'Seen ' + fmtTime(convo.seenTs, s.prefs.h24)));
-    var bottom;
-    if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'ban', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
-    else if (convo.request) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'info', size: 16 }), h('span', { className: 'grow' }, id + " isn't on your friends list. Accept to reply, or decline to remove the conversation."),
-      h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.actions.declineRequest(id); } }, 'Decline'),
-      h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); } }, 'Accept'));
-    else bottom = h(T.Composer, { key: id, placeholder: 'Message ' + id, onSend: function (text) { app.actions.sendDm(id, text); }, beforeSend: h(MessageStyleButton, null) });
-    thread = h('main', { className: 'thread' },
-      h('header', { className: 'topbar' },
-        h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
-        h(T.Avatar, { name: id, size: 30, status: u.status, ring: 'var(--bg)' }),
-        h('h2', null, id),
-        h('span', { className: 'topic', style: { flex: 1 } }, [u.friend ? 'Friend' : null, lastOnline(u)].filter(Boolean).join(' · ')),
-        h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [lastOnline(u), personMeta(u)].filter(Boolean).join(' · ')),
-        h(T.IconButton, { icon: 'panel', label: showProfile ? 'Hide profile' : 'Show profile', pressed: showProfile, className: 'hide-mobile', onClick: function () { setShowProfile(!showProfile); } }),
-        h(MenuButton, {
-          label: 'Conversation options', items: [
-            { label: 'View profile', icon: 'users', onSelect: function () { app.ui.openProfile(id, null); } },
-            { label: u.friend ? 'Remove friend' : 'Add friend', icon: u.friend ? 'user-minus' : 'user-plus', onSelect: function () { app.actions.toggleUser(id, 'friend'); } },
-            { divider: true }
-          ].concat(convActions(app, id))
-        })),
-      h('div', { className: 'log', role: 'log', 'aria-label': 'Messages with ' + id, ref: logRef }, h('div', { className: 'log-inner' }, rows)),
-      h('div', { className: 'composer-wrap' },
-        h('p', { className: 'typing', 'aria-live': 'polite' }, typing ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, id), ' is typing') : null),
-        bottom));
-  }
   return h('div', { className: 'main', style: { flexDirection: 'row' } },
     h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
-    convo && showProfile ? h(ProfilePanel, { name: id }) : null);
+    convo && column.open ? h(ProfilePanel, { name: id }) : null);
+}
+
+var DM_SEARCH_MIN = 2, DM_SEARCH_MAX = 50, DM_SEARCH_DELAY = 300;
+/**
+ * Permet de chercher un texte dans les messages privés : base d'historique de Torch en live, messages de l'état dans le prototype.
+ * @param {Object} s État de l'application.
+ * @param {string} query Texte cherché, sans casse.
+ * @returns {Promise<{list: Array, more: boolean}>} Résultats du plus récent au plus ancien, et si la limite a coupé la liste.
+ */
+function searchDms(s, query) {
+  if (LIVE) return liveBridge.searchPm(query, DM_SEARCH_MAX);
+  var q = query.toLowerCase(), list = [];
+  Object.keys(s.dms).forEach(function (t) {
+    s.dms[t].messages.forEach(function (m) { if (m.text.toLowerCase().indexOf(q) >= 0) list.push({ target: t, from: m.from, ts: m.ts, id: m.id, text: m.text }); });
+  });
+  list.sort(function (a, b) { return b.ts - a.ts; });
+  return Promise.resolve({ list: list.slice(0, DM_SEARCH_MAX), more: list.length > DM_SEARCH_MAX });
+}
+/**
+ * Permet de chercher dans les messages privés après une pause de saisie.
+ * @param {string} term Texte saisi, sans espaces autour.
+ * @returns {?Object} Résultats du terme ({query, list, more}) ou échec ({query, failed}), null pendant la lecture.
+ */
+function useDmSearch(term) {
+  var app = useApp();
+  var st = useState(null), found = st[0], setFound = st[1];
+  useEffect(function () {
+    if (term.length < DM_SEARCH_MIN) return;
+    var current = true, timer = setTimeout(function () {
+      searchDms(app.state, term).then(function (r) { if (current) setFound({ query: term, list: r.list, more: r.more }); }, function (e) {
+        warn(e);
+        if (current) setFound({ query: term, failed: true });
+      });
+    }, DM_SEARCH_DELAY);
+    return function () { current = false; clearTimeout(timer); };
+  }, [term]);
+  return found && found.query === term ? found : null;
+}
+/**
+ * Permet de découper le passage d'un texte autour d'un terme, terme mis en évidence.
+ * @param {string} text Texte du message.
+ * @param {string} term Terme trouvé dans le texte, sans casse.
+ */
+function hitExcerpt(text, term) {
+  var at = text.toLowerCase().indexOf(term.toLowerCase()), end = at + term.length, start = Math.max(0, at - 30), space = text.indexOf(' ', start);
+  if (start && space >= 0 && space < at) start = space + 1;
+  return h(Frag, null, (start ? '…' : '') + text.slice(start, at), h('mark', null, text.slice(at, end)), text.slice(end));
+}
+/**
+ * Section Messages de la recherche des Chats, sous les conversations. Les onglets ne la filtrent pas.
+ * @param {{found: ?Object}} p Recherche lue par useDmSearch, null pendant la lecture.
+ */
+function DmSearchHits(p) {
+  var app = useApp(), me = app.state.me, found = p.found, body;
+  if (!found) body = h('div', { className: 'list-more' }, h(T.Spinner, { label: 'Searching messages' }));
+  else if (found.failed) body = h('p', { className: 'pal-empty' }, 'Messages could not be searched.');
+  else if (!found.list.length) body = h('p', { className: 'pal-empty' }, 'No message matches.');
+  else body = h(Frag, null, found.list.map(function (hit) {
+    return h(MessageEntry, {
+      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, hit.from === me ? 'You: ' : '', hitExcerpt(hit.text, found.query)),
+      onClick: function () { app.nav({ view: 'dm', id: hit.target, seek: hit }); }
+    });
+  }), found.more ? h('p', { className: 'pal-empty' }, 'Showing the ' + DM_SEARCH_MAX + ' most recent matches. Refine your search to see others.') : null);
+  return h('section', null, h('h2', { className: 'mlabel' }, 'Messages'), body);
+}
+/**
+ * Permet de retrouver dans une conversation le message d'un résultat de recherche.
+ * @param {Object} c Conversation dans l'état.
+ * @param {Object} hit Résultat de searchDms.
+ * @returns {?Object} Message affiché, null s'il n'est pas chargé.
+ */
+function dmHitMessage(c, hit) {
+  if (!LIVE) return c.messages.find(function (m) { return m.id === hit.id; }) || null;
+  // Une modification s'affiche dans son original, et un MP envoyé depuis le dernier OK n'a pas encore de clé d'archive.
+  return pmEditTarget(c, hit) || c.messages[pmShownIndex(c.messages, hit)] || null;
+}
+
+/**
+ * Fil d'une conversation privée, monté à neuf pour chaque correspondant.
+ * @param {{id: string, tab: ?string, column: Object, seek: ?Object}} p Correspondant, onglet de la liste, colonne du profil (useRightColumn) et résultat de recherche à montrer.
+ */
+function DmThread(p) {
+  var app = useApp(), s = app.state, me = s.me, id = p.id, convo = s.dms[id];
+  var logRef = useRef(null), sentinelRef = useRef(null), asked = useRef(false);
+  var len = convo.messages.length;
+  var jump = useMessageJump(logRef), target = jump[0], setTarget = jump[1];
+  var personActions = useProfileActions(id, null);
+  var reading = useReadingPosition(logRef, len ? convo.messages[0].ts : null, [len], function (el) { el.scrollTop = 0; });
+  useInfiniteScroll(logRef, sentinelRef, !!(convo.olderMore && !convo.loadingOlder && !convo.olderFailed && !target), function () { app.actions.loadOlderDm(id); }, '200px 0px 0px 0px');
+  function onScroll() {
+    reading.onScroll();
+    // Après un échec de lecture, la sentinelle ne relance la lecture qu'au défilement suivant.
+    if (convo.olderFailed) app.update(function (d) { d.dms[id].olderFailed = false; });
+  }
+  // Résultat de recherche : les pages plus anciennes se chargent une à une jusqu'à lui.
+  useEffect(function () {
+    var seek = p.seek, failed = asked.current && convo.olderFailed;
+    if (!seek) return;
+    var m = dmHitMessage(convo, seek);
+    if (m) setTarget({ id: m.id });
+    else if (convo.loadingOlder) return;
+    else if (convo.olderMore && !failed) { asked.current = true; app.actions.loadOlderDm(id); return; }
+    // Lecture en échec : loadOlderDm l'a déjà annoncée.
+    else if (!failed) app.ui.toast('This message is no longer saved in this browser.');
+    asked.current = false;
+    app.update(function (d) { delete d.route.seek; });
+  }, [p.seek, len, convo.loadingOlder]);
+
+  var u = userOf(s, id);
+  var typing = (s.typing['dm:' + id] || []).length > 0;
+  var rows = [], prev = null, lastDay = null;
+  convo.messages.forEach(function (m) {
+    var dk = dayKey(m.ts);
+    if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
+    rows.push(h(DmMessageRow, { key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, highlight: !!target && target.id === m.id }));
+    prev = m;
+  });
+  if (LIVE && s.pmLoaded) rows.unshift(convo.olderMore ? olderSentinel(sentinelRef, convo.loadingOlder) : historyStart('This is the start of the messages saved in this browser.'));
+  var lastMsg = convo.messages[convo.messages.length - 1];
+  if (lastMsg && lastMsg.from === me && convo.seenTs && s.prefs.privacy.showIdle) rows.push(h('p', { key: 'seen', className: 'seen' }, 'Seen ' + fmtTime(convo.seenTs, s.prefs.h24)));
+  var bottom;
+  if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
+  else if (convo.request) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'info', size: 16 }), h('span', { className: 'grow' }, id + " isn't on your friends list. Accept to reply, or decline to remove the conversation."),
+    h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.actions.declineRequest(id); } }, 'Decline'),
+    h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); } }, 'Accept'));
+  else bottom = h(DmComposer, { id: id });
+  return h('main', { className: 'thread' },
+    h('header', { className: 'topbar' },
+      h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
+      h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
+      h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
+      h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(s, id)].filter(Boolean).join(' · ')),
+      h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
+      h(MenuButton, {
+        label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
+      })),
+    h('div', { className: 'log', role: 'log', 'aria-label': 'Messages with ' + id, ref: logRef, onScroll: onScroll }, h('div', { className: 'log-inner' }, rows)),
+    h('div', { className: 'composer-wrap' },
+      h('p', { className: 'typing', 'aria-live': 'polite' }, typing ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, id), ' is typing') : null),
+      bottom));
+}
+
+/**
+ * Ligne d'un message privé avec son menu d'actions locales, sans Reply faute de trame sourcée.
+ * @param {{m: Object, peer: string, continued: boolean, highlight: boolean}} p Message, correspondant de la conversation, suite du message précédent du même auteur et mise en évidence.
+ */
+function DmMessageRow(p) {
+  var app = useApp(), s = app.state, m = p.m;
+  var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
+  var ms = memberStyles(userOf(s, m.from), s.prefs.styles, app.theme, false);
+  // Un MP envoyé n'a sa clé d'archive qu'au prochain OK : son entrée de retrait n'apparaît qu'ensuite.
+  var canRemove = !LIVE || !!m.archiveTs;
+  var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
+    canRemove ? { divider: true } : null,
+    canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
+      app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(p.peer, LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
+    } } : null];
+  return h(T.Message, {
+    compact: s.prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, s.prefs.h24),
+    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row,
+    actions: moreActionsButton(items, setMenuOpen), msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open')
+  }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
+}
+
+/**
+ * Composeur d'une conversation privée, avec son brouillon, son sélecteur d'émoticônes et de médias, la complétion :nom et l'envoi de fichier.
+ * @param {{id: string}} p Correspondant de la conversation.
+ */
+function DmComposer(p) {
+  var app = useApp(), id = p.id;
+  var d = useState(''), draft = d[0], setDraft = d[1];
+  var inputRef = useRef(null);
+  var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
+  var attach = useAttachMedia({ kind: 'dm', id: id });
+  return h(Frag, null, media.panel, h(T.Composer, {
+    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status,
+    onSend: function (text) { if (!runCommand(app, text, null)) app.actions.sendDm(id, text); }, beforeSend: h(MessageStyleButton, null)
+  }), emoji.picker, attach.input);
 }
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };
 function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
 /**
- * Permet de dater la dernière connexion d'un ami hors ligne.
+ * Permet d'écrire la présence d'un membre, avec sa dernière connexion quand elle est connue.
  * @param {Object} u Membre dans l'état.
  */
-function lastOnline(u) { return u.friend && u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : null; }
-function personMeta(u) {
-  return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
+function presenceText(u) { return u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : statusLabel(u.status); }
+/**
+ * Permet d'écrire la ligne de statut d'une personne : présence, ami et rôle dans le groupe d'où son profil est ouvert.
+ * @param {Object} s État de l'application.
+ * @param {string} name Nom du membre.
+ * @param {?string} gid Groupe d'où le profil est ouvert.
+ */
+function personStatus(s, name, gid) {
+  var u = userOf(s, name), role = gid ? roleOf(s.groups[gid], name) : null;
+  return [name === s.me ? statusLabel(s.meStatus) : presenceText(u), u.friend ? 'Friend' : null, role ? ROLE_LONG[role] + ' in #' + gid : null].filter(Boolean).join(' · ');
+}
+/**
+ * Permet d'écrire l'ASL d'une personne, sans l'âge de son propre compte quand le profil le masque.
+ * @param {Object} s État de l'application.
+ * @param {string} name Nom du membre.
+ */
+function personAsl(s, name) {
+  var u = userOf(s, name), age = name === s.me && !s.profile.visibility.age ? null : u.age;
+  return [age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
 /**
  * Permet de dater l'inactivité ou la dernière connexion d'un ami.
@@ -134,11 +280,11 @@ function PresenceTime(p) {
 }
 /**
  * Ligne d'informations d'une personne.
+ * @param {Object} s État de l'application.
  * @param {string} n Nom du membre.
- * @param {Object} u Membre dans l'état.
  */
-function personMetaLine(n, u) {
-  return h('span', { className: 'conv-meta' }, personMeta(u), isProfilePending(n, u) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
+function personMetaLine(s, n) {
+  return h('span', { className: 'conv-meta' }, personAsl(s, n), isProfilePending(n, userOf(s, n)) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
 }
 function useProfiles(names) {
   var app = useApp();
@@ -147,13 +293,22 @@ function useProfiles(names) {
 function personRow(s, n, onClick, current) {
   var u = userOf(s, n), c = s.dms[n], last = c && c.messages[c.messages.length - 1];
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': current === n ? 'page' : undefined, onClick: onClick },
-    h(T.Avatar, { name: n, size: 36, status: u.status, ring: 'var(--panel)' }),
+    h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
-      h('span', { className: 'conv-name' }, n),
+      h('span', { className: 'conv-name' }, n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
-      personMetaLine(n, u),
+      personMetaLine(s, n),
       c ? h('span', { className: 'conv-prev' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
+}
+
+/**
+ * Permet de dire qui garde les MP retirés de ce navigateur.
+ * @param {string} name Correspondant.
+ * @param {boolean} torch Vrai pour dire d'abord que seule la copie de Torch part.
+ */
+function keptCopyText(name, torch) {
+  return (torch ? 'Removes the copy Torch keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
 }
 
 /**
@@ -165,7 +320,7 @@ function convActions(app, name) {
   return [
     { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },
     { label: 'Delete conversation…', short: 'Delete', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Delete this conversation?', body: LIVE ? 'Removes the copy Torch keeps in this browser. Chatango does not store private messages, and ' + name + ' keeps their copy.' : 'Messages with ' + name + ' are removed from your account. ' + name + ' keeps their copy.', confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
+      app.ui.confirm({ title: 'Delete this conversation?', body: LIVE ? keptCopyText(name, true) : 'Messages with ' + name + ' are removed from your account. ' + name + ' keeps their copy.', confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
     } }
   ];
 }
@@ -176,22 +331,19 @@ function convActions(app, name) {
  * @param {string} name Ami de la ligne.
  */
 function friendActions(app, name) {
-  var notify = isNotifyingOnline(app.state, name);
   return [
-    { label: notifyOnlineLabel(notify), short: notify ? 'Notifying' : 'Notify', icon: 'bell', onSelect: function () { toggleNotifyOnline(app, name); } },
-    { label: 'Remove friend…', short: 'Remove', icon: 'user-minus', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Remove ' + name + ' from friends?', body: "You'll stop seeing when " + name + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
-    } }
+    notifyOnlineItem(app, name),
+    { label: 'Remove friend…', short: 'Remove', icon: 'user-minus', danger: true, onSelect: function () { confirmRemoveFriend(app, name); } }
   ];
 }
 
 var SWIPE_REVEAL = 144;
 /**
- * Ligne de liste avec ses actions par balayage et son menu.
+ * Ligne de liste avec ses actions par balayage et son menu, qui ouvre aussi le profil.
  * @param {{name: string, actions: Array, children: *}} p Membre de la ligne, actions de la ligne et bouton principal.
  */
 function SwipeRow(p) {
-  var n = p.name, actions = p.actions;
+  var app = useApp(), n = p.name, actions = p.actions;
   var m = useState(null), menu = m[0], setMenu = m[1];
   var w = useState(null), swipe = w[0], setSwipe = w[1];
   var rowRef = useRef(null), drag = useRef(null), swallow = useRef(false);
@@ -247,7 +399,7 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + n, size: 26, iconSize: 16, items: actions, open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + n, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null)].concat(actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
@@ -279,14 +431,16 @@ function FriendsList(p) {
     if (n === s.me) { setErr("You can't add yourself."); return; }
     if (s.users[n] && s.users[n].friend) { setErr(n + ' is already a friend.'); return; }
     setErr(''); setName('');
-    request.toggle(n);
+    request.add(n);
   }
   return h(Frag, null,
-    h('form', { onSubmit: add, noValidate: true, style: { padding: '12px 12px 4px', display: 'flex', alignItems: 'flex-end', gap: 8 } },
-      h('div', { style: { flex: 1 } }, h(T.TextField, { id: 'add-friend', label: 'Add a friend', placeholder: 'Username', value: name, error: err || undefined, autoComplete: 'off', onChange: function (e) { setName(e.target.value); setErr(''); } })),
-      h(T.Button, { type: 'submit', style: { height: 38 }, disabled: !!request.pending }, request.pending ? 'Adding' : 'Add')),
+    h('form', { onSubmit: add, noValidate: true, style: { padding: '12px 12px 4px' } },
+      h(T.TextField, {
+        id: 'add-friend', label: 'Add a friend', placeholder: 'Username', value: name, error: err || undefined, autoComplete: 'off', onChange: function (e) { setName(e.target.value); setErr(''); },
+        action: h(T.Button, { type: 'submit', disabled: !!request.pending }, request.pending ? 'Adding' : 'Add')
+      })),
     LIVE && !s.friendsLoaded ? null : h('p', { className: 'mlabel', style: { margin: '8px 16px 4px' } }, online + ' online · ' + plural(friends.length, 'friend', 'friends')),
-    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 36, twoLines: true, label: 'Loading friends' })
+    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading friends' })
       : friends.length
       ? friends.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(s, n, function () { app.actions.openDm(n, 'friends'); }, p.current)); })
       : h('p', { className: 'pal-empty' }, 'No friends yet. Add someone by username, or from their profile.')));

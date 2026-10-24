@@ -5,10 +5,11 @@ function PrivacyPage() {
     h(T.SettingsSection, { title: 'Private messages' },
       h(T.SettingRow, {
         asLabel: false, title: 'Who can message you', description: 'Messages from anyone else land in Requests, where you accept or decline them.',
-        control: h('select', { className: 'tc-input', style: { width: 'auto', height: 34 }, 'aria-label': 'Who can message you', value: prefs.privacy.pmFrom, onChange: function (e) { pr.set('privacy.pmFrom', e.target.value); } },
+        control: h('select', { className: 'tc-input', style: { width: 'auto' }, 'aria-label': 'Who can message you', value: prefs.privacy.pmFrom, onChange: function (e) { pr.set('privacy.pmFrom', e.target.value); } },
           h('option', { value: 'everyone' }, 'Everyone'), h('option', { value: 'groups' }, 'Members of my groups'), h('option', { value: 'friends' }, 'Friends only'))
       }),
       h(T.SettingRow, { title: 'Show read receipts and idle time', description: 'Others see when you read their message and how long you have been idle.', control: pr.sw('privacy.showIdle') }),
+      h(PmHistoryRows, null),
       h(T.SettingRow, {
         asLabel: false, title: 'Delete all conversations', description: 'Removes every private message from your account. Others keep their copy.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete all conversations?', body: 'Every private message is removed from your account. This cannot be undone.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
@@ -19,6 +20,30 @@ function PrivacyPage() {
       h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
     h(T.SettingsSection, { title: 'Your data' },
       h(T.SettingRow, { asLabel: false, title: 'Request a copy of your data', description: 'Chatango holds your account data. Torch keeps only your encrypted sign-in and these settings.', control: h(T.Button, { size: 'sm', onClick: function () { app.ui.toast('Data requests are not part of this prototype.'); } }, 'Request') })));
+}
+
+/**
+ * Export et import de l'historique privé, au format de fichier de Torch (exportMessages et importMessages).
+ */
+function PmHistoryRows() {
+  var app = useApp(), toast = app.ui.toast;
+  function exportFile() {
+    app.actions.exportDms().then(function (records) {
+      downloadJson(app.state.me + '_history.json', records);
+    }, function (e) { toast(e.message); });
+  }
+  function importFile(file) {
+    readJsonArray(file).then(function (records) {
+      if (!records) { toast('This file is not a Torch message history.'); return; }
+      app.actions.importDms(records).then(function (r) {
+        if (r.foreign) toast("This file holds another account's messages. Nothing was imported.");
+        else toast('Imported ' + plural(r.added, 'message', 'messages') + '. ' + r.saved + ' already saved, ' + r.skipped + ' skipped.', { icon: r.added ? 'check' : 'info' });
+      }, function (e) { toast(e.message); });
+    });
+  }
+  return h(Frag, null,
+    h(T.SettingRow, { asLabel: false, title: 'Export messages', description: 'The file holds your messages in plain text. Keep it private.', control: h(T.Button, { size: 'sm', onClick: exportFile }, 'Export') }),
+    h(T.SettingRow, { asLabel: false, title: 'Import messages', description: 'Adds the messages of a Torch history file. Messages already saved stay as they are.', control: h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import') }));
 }
 
 var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
@@ -34,28 +59,80 @@ function StartupSection(p) {
     }));
 }
 
+/**
+ * Permet de lire un hôte saisi seul, sans schéma, chemin ni identifiant, tel que new URL le rendrait.
+ * @param {string} text Saisie de l'utilisateur.
+ * @returns {?string} Hôte en minuscules, null si la saisie n'est pas un hôte seul.
+ */
+function typedHost(text) {
+  var v = text.trim().toLowerCase();
+  return /^[a-z0-9.-]+(?::\d+)?$/.test(v) && httpsHost('https://' + v) === v ? v : null;
+}
+
+/**
+ * Lignes d'une liste de Safety, chacune avec son bouton, ou le texte de la liste vide.
+ * @param {Array<string>} list Valeurs listées.
+ * @param {Function} content Contenu de la ligne d'une valeur.
+ * @param {string} action Texte du bouton.
+ * @param {Function} run Action du bouton sur une valeur.
+ * @param {string} empty Texte de la liste vide.
+ */
+function safetyRows(list, content, action, run, empty) {
+  return list.length ? list.map(function (x) {
+    return h('div', { key: x, className: 'lrow' }, h('span', { className: 'grow' }, content(x)),
+      h(T.Button, { size: 'sm', 'aria-label': action + ' ' + x, onClick: function () { run(x); } }, action));
+  }) : h('p', { className: 'pal-empty' }, empty);
+}
+
+/**
+ * Hôtes de confiance : ajout d'un hôte saisi et liste avec retrait.
+ * @param {{hosts: Array<string>}} p Hôtes de confiance en minuscules.
+ */
+function TrustedSites(p) {
+  var app = useApp();
+  var a = useState(''), text = a[0], setText = a[1];
+  var b = useState(''), err = b[0], setErr = b[1];
+  function add(e) {
+    e.preventDefault();
+    var host = typedHost(text);
+    if (!host) { setErr('Enter a site like i.imgur.com, without https:// or a path.'); return; }
+    if (p.hosts.indexOf(host) < 0 && !app.actions.setTrustedHost(host, true)) return;
+    setText(''); setErr('');
+  }
+  return h(Frag, null,
+    h(T.SettingRow, {
+      asLabel: false, title: 'Trusted sites', description: 'Links open without a warning. Images, videos and audio load without a click.',
+      control: h('form', { className: 'trust-add', onSubmit: add, noValidate: true },
+        h(T.TextField, {
+          id: 'trust-site', label: 'Add a site', placeholder: 'i.imgur.com', value: text, error: err || undefined, autoComplete: 'off', spellCheck: false,
+          onChange: function (e) { setText(e.target.value); setErr(''); },
+          action: h(T.Button, { type: 'submit' }, 'Add')
+        }))
+    }),
+    safetyRows(p.hosts, function (host) { return h('span', { className: 'trust-host' }, host); }, 'Remove', function (host) { app.actions.setTrustedHost(host, false); }, 'No trusted sites.'));
+}
+
 function SafetyPage() {
   var app = useApp(), s = app.state, pr = usePref(), prefs = s.prefs;
   var blocked = Object.keys(s.users).filter(function (n) { return s.users[n].blocked; });
   var ignored = Object.keys(s.users).filter(function (n) { return s.users[n].ignored; });
   function people(list, key, action, empty) {
-    return list.length ? list.map(function (n) {
-      return h('div', { key: n, className: 'lrow' }, h(T.Avatar, { name: n, size: 28 }), h('span', { className: 'grow lrow-title' }, n),
-        h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(n, key); } }, action));
-    }) : h('p', { className: 'muted', style: { margin: 0, padding: '4px 20px 18px', fontSize: 13 } }, empty);
+    return safetyRows(list, function (n) { return h(Person, { name: n, size: 28 }); }, action, function (n) { app.actions.toggleUser(n, key); }, empty);
   }
   return h(Page, { title: 'Safety', lede: 'Decide what reaches your screen.' },
     h(T.SettingsSection, { title: 'Media and links' },
       h(T.SettingRow, { title: 'Embed images', description: 'Shows images in messages. When off, you see a link.', control: pr.sw('safety.embedImages') }),
-      h(T.SettingRow, { title: 'Embed videos', control: pr.sw('safety.embedVideos') }),
+      h(T.SettingRow, { title: 'Embed videos', description: 'Shows videos and audio in messages. Nothing plays until you click. When off, you see a link.', control: pr.sw('safety.embedVideos') }),
       h(T.SettingRow, { title: 'Block external media until I click', description: 'Images from other sites load only when you ask, so they cannot track you.', control: pr.sw('safety.proxyMedia') }),
-      h(T.SettingRow, { title: 'Warn before opening links', description: 'Shows the full address before you leave Torch.', control: pr.sw('safety.warnLinks') })),
+      h(T.SettingRow, { title: 'Warn before opening links', description: 'Shows the full address before you leave Torch.', control: pr.sw('safety.warnLinks') }),
+      prefs.safety.trustedHosts ? h(TrustedSites, { hosts: prefs.safety.trustedHosts }) : null),
     h(T.SettingsSection, { title: 'People' },
       h(T.SettingRow, {
         asLabel: false, title: 'Messages from ignored users', description: 'Collapse leaves a line you can expand. Hide removes them completely.',
         control: h(T.SegmentedControl, { label: 'Messages from ignored users', value: prefs.safety.ignoreMode, onChange: function (v) { pr.set('safety.ignoreMode', v); }, options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }] })
       }),
       h(T.SettingRow, { title: 'Hide blocked users in groups too', description: 'Blocking someone also hides their messages in every group.', control: pr.sw('safety.syncBlocked') }),
+      h(T.SettingRow, { title: 'Show messages from guests', control: pr.sw('safety.guestMessages') }),
       h(T.SettingRow, { title: 'Show guests in member lists', control: pr.sw('safety.showGuests') })),
     h(T.SettingsSection, { title: 'Blocked · ' + blocked.length }, people(blocked, 'blocked', 'Unblock', 'Nobody is blocked.')),
     h(T.SettingsSection, { title: 'Ignored · ' + ignored.length }, people(ignored, 'ignored', 'Stop ignoring', 'Nobody is ignored. Ignore someone from their profile or a message menu.')));
@@ -90,9 +167,10 @@ function AccountPage() {
         h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },
           h('span', { style: { fontWeight: 500 } }, s.account.email), s.account.verified ? h(T.Badge, { icon: 'check' }, 'Verified') : null,
           s.account.pending ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Waiting for confirmation of ' + s.account.pending) : null),
-        h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10 } },
-          h('div', { style: { flex: '1 1 260px' } }, h(T.TextField, { id: 'acc-email', label: 'New email', type: 'email', value: email, error: err.email, onChange: function (ev) { setEmail(ev.target.value); } })),
-          h(T.Button, { onClick: changeEmail, style: { height: 38 } }, 'Change email')))),
+        h(T.TextField, {
+          id: 'acc-email', label: 'New email', type: 'email', value: email, error: err.email, onChange: function (ev) { setEmail(ev.target.value); },
+          action: h(T.Button, { onClick: changeEmail }, 'Change email')
+        }))),
     h(T.SettingsSection, { title: 'Password', padded: true },
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 } },
         h(T.TextField, { id: 'pw-cur', label: 'Current password', type: 'password', autoComplete: 'current-password', value: pw.cur, error: err.cur, onChange: function (ev) { setPw(Object.assign({}, pw, { cur: ev.target.value })); } }),
