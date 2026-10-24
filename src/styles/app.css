@@ -285,6 +285,9 @@ h1,h2,h3{text-wrap:balance}
 .lrow-title{display:block;font-weight:500;color:var(--text)}
 .lrow-activity{font-weight:400}
 .lrow-sub{display:block;font-size:12.5px;color:var(--text-3)}
+.notes-title{margin:0;font-size:inherit}
+.notes-list{margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--text-body)}
+.notes-list li+li{margin-top:2px}
 .trust-add{flex:1 1 240px}
 .trust-host{overflow-wrap:anywhere}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}

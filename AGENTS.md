@@ -52,8 +52,9 @@ Le lanceur `tests/run.mjs` juge chaque suite sur son code de sortie et sur sa so
 ## Livrer une version
 
 1. Incrémente `@version` dans l'en-tête de `src/loader/skin-loader.js`. Le build l'injecte dans `APP_VERSION`.
-2. Lance `pnpm test` : toutes les suites vertes, build compris.
-3. Livre `dist/torch-skin.min.user.js`, le seul fichier que l'utilisateur installe, par l'un des deux chemins :
+2. Ajoute en tête de `CHANGELOG.md` la section `## [X.Y.Z] - AAAA-MM-JJ` de cette version : ce que l'utilisateur voit changer, en anglais, une ligne par changement, sous `### Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` ou `Security`. Le build la montre dans What's new et échoue si elle manque.
+3. Lance `pnpm test` : toutes les suites vertes, build compris.
+4. Livre `dist/torch-skin.min.user.js`, le seul fichier que l'utilisateur installe, par l'un des deux chemins :
    - envoi direct du fichier à l'utilisateur ;
    - fusion sur `main` : une fois les tests verts, la CI crée le tag `vX.Y.Z` du `@version` et la release GitHub avec les deux userscripts attachés. Un `@version` qui a déjà sa release ne publie rien : sans incrément, pas de livraison. Ne pousse pas de tag à la main.
 
@@ -67,6 +68,7 @@ La CI (`.github/workflows/ci.yml`) lance `pnpm test` sur chaque push et pull req
 - `reference/torch/` : copie en lecture seule du code de Torch (licence MIT), téléchargée le 2026-10-19. Les références `inject.js:NNNN` des docs renvoient à cette copie. Ne la modifie jamais et ne la charge ni dans le build ni dans les tests (voir son `README.md`).
 - `docs/coding-conventions.md` : style ES5, commentaires, textes, état, tests, design system, interdits.
 - `docs/adr/` : décisions et leur motif.
+- `CHANGELOG.md` : notes de version montrées à l'utilisateur dans What's new.
 - `README.md` : présentation pour un humain, installation dans Tampermonkey.
 
 ## Agent skills
