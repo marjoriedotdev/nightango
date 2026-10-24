@@ -1230,7 +1230,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (pmrBanner()) { click($('.convs .tc-banner button[aria-label="Dismiss"]')); await wait(30); }
   pmrBannerSeen.push(pmrBanner());
   step('own private message restriction shown above the private messages until dismissed', JSON.stringify(pmrBannerSeen) === JSON.stringify([
-    'Your private messages are restrictedvissle reports that you can only message people who added you as a friend.', null
+    'Your private messages are restrictedPeople might not receive your messages.', null
   ]) && fetches.filter(x => /api\.vissle\.me/.test(x.url)).length === 1, pmrBannerSeen);
 
   /* Bio : line Chatango brute dans le champ, rendue dans l'aperçu */
