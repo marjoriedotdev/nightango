@@ -60,18 +60,25 @@ function readJsonFile(file) {
  */
 function readJsonArray(file) { return readJsonFile(file).then(function (v) { return Array.isArray(v) ? v : null; }, function () { return null; }); }
 /**
- * Permet de faire télécharger une valeur en fichier JSON, au type text/json des exports de Torch.
+ * Permet de faire télécharger un texte en fichier.
  * @param {string} name Nom du fichier.
- * @param {*} value Valeur écrite par JSON.stringify.
+ * @param {string} text Contenu du fichier.
+ * @param {string} type Type MIME du fichier.
  */
-function downloadJson(name, value) {
+function downloadFile(name, text, type) {
   var link = document.createElement('a');
-  link.href = URL.createObjectURL(new Blob([JSON.stringify(value)], { type: 'text/json' }));
+  link.href = URL.createObjectURL(new Blob([text], { type: type }));
   link.download = name;
   link.click();
   // Adresse gardée une minute : la révoquer dès le clic peut annuler le téléchargement.
   setTimeout(function () { URL.revokeObjectURL(link.href); }, MIN);
 }
+/**
+ * Permet de faire télécharger une valeur en fichier JSON, au type text/json des exports de Torch.
+ * @param {string} name Nom du fichier.
+ * @param {*} value Valeur écrite par JSON.stringify.
+ */
+function downloadJson(name, value) { downloadFile(name, JSON.stringify(value), 'text/json'); }
 function copyText(text, onDone) {
   function fallback() {
     var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';

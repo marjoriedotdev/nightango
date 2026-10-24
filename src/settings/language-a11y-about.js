@@ -42,6 +42,49 @@ function WhatsNewPage() {
     }));
 }
 
+var JOURNAL_SHOWN = 200;
+function journalStamp(ts) {
+  var d = new Date(ts);
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+/**
+ * Permet de mettre le journal de diagnostic en texte, une ligne par événement, l'heure locale et son décalage en tête.
+ * @param {Array<{t: number, k: string, m: string}>} list Événements, du plus ancien au plus récent.
+ * @returns {string} Texte à copier ou télécharger.
+ */
+function journalText(list) {
+  var offset = -new Date().getTimezoneOffset(), abs = Math.abs(offset);
+  var zone = 'UTC' + (offset < 0 ? '-' : '+') + pad(Math.floor(abs / 60)) + ':' + pad(abs % 60);
+  return ['Torch Skin ' + APP_VERSION + ' diagnostics, exported ' + journalStamp(Date.now()) + ' ' + zone]
+    .concat(list.map(function (e) { return journalStamp(e.t) + '  ' + e.k + '  ' + e.m; })).join('\n') + '\n';
+}
+
+function DiagnosticsPage() {
+  var app = useApp();
+  var r = useState(0), setRev = r[1];
+  useEffect(function () { return JOURNAL.subscribe(function () { setRev(function (n) { return n + 1; }); }); }, []);
+  var list = JOURNAL.entries(), shown = list.slice(-JOURNAL_SHOWN).reverse();
+  function copy() { copyText(journalText(list), function (ok) { app.ui.toast(ok ? 'Log copied.' : 'The log could not be copied. Download it instead.'); }); }
+  function download() { var d = new Date(); downloadFile('torch-skin-log-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.txt', journalText(list), 'text/plain'); }
+  function clear() { app.ui.confirm({ title: 'Clear the log?', body: 'Events recorded so far are deleted from this browser.', confirmLabel: 'Clear log', danger: true, onConfirm: JOURNAL.clear }); }
+  return h(Page, { title: 'Diagnostics', lede: 'Connection and page events recorded by Torch Skin, to find out why a group or your private messages disconnect.' },
+    h(T.Banner, { icon: 'lock' }, 'The log stays in this browser and is never sent. It holds no password and no message text. To share it, copy it into an issue.'),
+    h(T.SettingsSection, {
+      title: 'Log', description: plural(list.length, 'event', 'events') + ', newest first. Torch Skin keeps the latest ' + JOURNAL.limit.toLocaleString('en-US') + (list.length > JOURNAL_SHOWN ? ' and shows ' + JOURNAL_SHOWN + '. Copy the log to see them all.' : '.'),
+      headerAside: h('div', { className: 'journal-actions' },
+        h(T.Button, { size: 'sm', variant: 'primary', icon: 'copy', disabled: !list.length, onClick: copy }, 'Copy log'),
+        h(T.Button, { size: 'sm', disabled: !list.length, onClick: download }, 'Download'),
+        h(T.Button, { size: 'sm', variant: 'ghost', icon: 'trash', disabled: !list.length, onClick: clear }, 'Clear log'))
+    },
+      shown.length
+        ? h('ol', { className: 'journal' }, shown.map(function (e, i) {
+          return h('li', { key: list.length - i },
+            h('span', { className: 'journal-meta' }, journalStamp(e.t) + ' · ' + e.k),
+            h('span', { className: 'journal-text' }, e.m));
+        }))
+        : h('p', { className: 'pal-empty' }, 'No events recorded yet.')));
+}
+
 function AboutPage() {
   var app = useApp(), pr = usePref();
   return h(Page, { title: 'About Torch', lede: 'A free, open-source web client for Chatango.' },
