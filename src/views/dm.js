@@ -422,8 +422,13 @@ function FriendsList(p) {
     var a = s.users[x], b = s.users[y], rank = statusRank(a.status);
     return rank - statusRank(b.status) || (rank === STATUS_ORDER.offline ? (b.lastOn || 0) - (a.lastOn || 0) : 0) || x.localeCompare(y);
   });
-  var online = friends.filter(function (n) { return s.users[n].status !== 'offline'; }).length;
+  var on = friends.filter(function (n) { return s.users[n].status !== 'offline'; });
+  var off = friends.filter(function (n) { return s.users[n].status === 'offline'; });
   useProfiles(friends);
+  function section(label, names) {
+    return names.length ? h(Frag, null, h('h3', { className: 'mlabel' }, label + ' · ' + names.length),
+      names.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(s, n, function () { app.actions.openDm(n, 'friends'); }, p.current)); })) : null;
+  }
   function add(e) {
     e.preventDefault();
     var n = name.trim().toLowerCase();
@@ -439,9 +444,8 @@ function FriendsList(p) {
         id: 'add-friend', label: 'Add a friend', placeholder: 'Username', value: name, error: err || undefined, autoComplete: 'off', onChange: function (e) { setName(e.target.value); setErr(''); },
         action: h(T.Button, { type: 'submit', disabled: !!request.pending }, request.pending ? 'Adding' : 'Add')
       })),
-    LIVE && !s.friendsLoaded ? null : h('p', { className: 'mlabel', style: { margin: '8px 16px 4px' } }, online + ' online · ' + plural(friends.length, 'friend', 'friends')),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } }, LIVE && !s.friendsLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading friends' })
       : friends.length
-      ? friends.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(s, n, function () { app.actions.openDm(n, 'friends'); }, p.current)); })
+      ? h(Frag, null, section('Online', on), section('Offline', off))
       : h('p', { className: 'pal-empty' }, 'No friends yet. Add someone by username, or from their profile.')));
 }
