@@ -2,6 +2,17 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.16.0] - 2026-10-24
+
+### Added
+
+- Chats shows a banner when this browser can't save private messages, and still counts unread messages until you reload.
+
+### Changed
+
+- Unread counts for private messages come from the history Torch keeps in this browser, so they stay right after a reload or a reconnection.
+- In the hosted prototype, message requests and the "Who can message you" setting are gone, as on Chatango.
+
 ## [0.15.4] - 2026-10-24
 
 ### Changed
