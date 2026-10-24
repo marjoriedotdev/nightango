@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torch Skin
 // @namespace    torch-skin
-// @version      0.14.1
+// @version      0.14.2
 // @description  Starts the Torch Client on st.chatango.com and shows the redesigned Torch Skin interface on top of it.
 // @match        https://st.chatango.com/*
 // @noframes

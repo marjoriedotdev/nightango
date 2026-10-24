@@ -240,6 +240,7 @@ async function userscript(source, pack) {
     .replaceAll('/*CSS*/', () => jsonString(css))
     .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginCss))
     .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
+    .replaceAll('/*JOURNAL*/', () => source.journalJs)
     .replaceAll('/*BUNDLE*/', () => source.bundleJs)
     .replaceAll('/*APP*/', () => source.appJs));
   // Tampermonkey lit l'en-tête tel quel : il reste hors de la transformation.
@@ -309,6 +310,7 @@ ${appJs}
   const source = {
     loader,
     page: read('src', 'loader', 'skin-page.js'),
+    journalJs: read('src', 'loader', 'skin-journal.js'),
     css: skinCss(css, bundleCss, appCss),
     loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
     fontsCss,

@@ -74,6 +74,7 @@ Trames reçues seulement : rien n'est envoyé.
 - Au retour du réseau (`online`), l'application (`reconnectClosed()` dans `app/root.js`) reconnecte les groupes rejoints dont le socket est fermé, puis la connexion privée si elle est fermée. La connexion privée reste coupée après `kickingoff` ou `DENIED`.
 - `client.connect(gid)` passe par `socketEvent`. Tant que `gid` est dans `client.cache.connect`, la demande est ignorée et la promesse n'est jamais réglée. Torch retire `gid` après chaque tentative. Le pont fait de même autour de chacun de ses appels (`connect()` dans `live-bridge.js`), sinon un second Reconnect reste sans effet.
 - Les textes de la fenêtre « Connection lost » de Torch Skin sont repris du client officiel.
+- Le journal de diagnostic enveloppe le constructeur `WebSocket` pour noter ouverture, nom des trames de session reçues et fermeture avec son code. Il n'observe jamais `send` : `bauth` porte le mot de passe (`inject.js:5618`). Détail : [ADR-0011](adr/0011-diagnostic-journal.md).
 
 ## Appels HTTP autorisés
 

@@ -38,6 +38,13 @@ function fakeTorch(w) {
     connect() { return Promise.resolve(); }, socket() {}, systemMessage() {}, setNotice() {}
   }; window.chatango = { getAnon() { return '!anon'; } };`);
 }
+// Socket factice : jsdom ouvrirait une vraie connexion.
+function fakeSocket(w) {
+  w.eval(`window.WebSocket = function (url) { this.url = url; this.on = {}; };
+    WebSocket.prototype.addEventListener = function (type, fn) { (this.on[type] = this.on[type] || []).push(fn); };
+    WebSocket.prototype.fire = function (type, e) { (this.on[type] || []).forEach(function (fn) { fn(e || {}); }); };
+    WebSocket.OPEN = 1;`);
+}
 // jsdom ne télécharge pas les scripts : on exécute React à la main puis on signale le chargement.
 async function deliverReact(w) {
   for (const s of [...w.document.querySelectorAll('script[src*="cdnjs"]')]) {
@@ -115,6 +122,33 @@ async function suite(userscript) {
   await wait(20);
   step('explains when Torch cannot be reached', /could not be reached/.test(e.d.querySelector('h1').textContent));
   e.w.close();
+
+  /* Journal de diagnostic : cycle de vie des sockets, jamais le contenu des trames */
+  const j = page(userscript, 'https://st.chatango.com/', fakeSocket);
+  const journal = j.w.__TORCH_JOURNAL__;
+  const sock = new j.w.WebSocket('wss://c1.chatango.com:8081/');
+  sock.fire('open');
+  sock.fire('message', { data: 'OK\r\n\0' });
+  sock.fire('message', { data: 'msg:bob:bob:0:0:0:1700000000:0:<n0/>secret text\r\n\0' });
+  sock.fire('close', { code: 1006, reason: '', wasClean: false });
+  j.w.console.log('PRIVATE MESSAGE RECEIVED: secret text');
+  j.w.console.log('conn closed: mygroup');
+  j.w.console.log('[UNKNOWN] (weird): secret text');
+  j.w.console.log(new j.w.TypeError('boom'));
+  const texts = journal ? journal.entries().map(x => x.m) : [];
+  step('journal records the socket lifecycle',
+    sock instanceof j.w.WebSocket && texts.includes('private messages [1] received OK')
+      && texts.some(m => /^private messages \[1\] closed, code 1006, not clean, open for \d+s, 2 frames received/.test(m)), texts);
+  step('journal keeps Torch connection lines and errors only',
+    texts.includes('Torch: conn closed: mygroup') && texts.includes('Torch: unhandled frame weird') && texts.includes('TypeError: boom'), texts);
+  step('journal keeps no frame or message text', journal && !texts.some(m => /secret/.test(m)), texts);
+  j.w.dispatchEvent(new j.w.Event('pagehide'));
+  const stored = JSON.parse(j.w.localStorage.getItem('torch-skin:journal') || '[]');
+  step('journal saved when the page is hidden', !!journal && stored.length === journal.entries().length);
+  for (let i = 0; i < 1100; i++) if (journal) journal.add('test', 'event ' + i);
+  const kept = journal ? journal.entries() : [];
+  step('journal keeps the latest 1000 events', kept.length === 1000 && kept[999].m === 'event 1099', kept.length);
+  j.w.close();
 }
 
 (async () => {

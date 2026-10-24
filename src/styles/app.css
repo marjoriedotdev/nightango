@@ -291,6 +291,11 @@ h1,h2,h3{text-wrap:balance}
 .notes-title{margin:0;font-size:inherit}
 .notes-list{margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--text-body)}
 .notes-list li+li{margin-top:2px}
+.journal-actions{display:flex;flex-wrap:wrap;gap:8px}
+.journal{margin:0;padding:0;list-style:none;font-size:13px}
+.journal li{display:flex;flex-direction:column;gap:2px;padding:8px 20px;border-top:1px solid var(--divider)}
+.journal-meta{color:var(--text-3);font-size:12px;font-variant-numeric:tabular-nums}
+.journal-text{color:var(--text-body);overflow-wrap:anywhere}
 .trust-add{flex:1 1 240px}
 .trust-host{overflow-wrap:anywhere}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}

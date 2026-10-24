@@ -20,6 +20,8 @@ var liveBridge = (function () {
 
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
+  function note(text) { if (JOURNAL) JOURNAL.add('app', text); }
+  function connName(gid) { return gid === 'private_message' ? 'private messages' : '#' + gid; }
   /**
    * Permet de transmettre une page de la liste des bannissements (block) ou des débannissements (unblock).
    * @param {string} room Groupe.
@@ -237,6 +239,7 @@ var liveBridge = (function () {
   function alertOnce(op) {
     if (op.text === lastAlert.text && Date.now() - lastAlert.at < 2500) return;
     lastAlert = { text: op.text, at: Date.now() };
+    note('Torch notice: ' + op.text);
     emit(op);
   }
   var QUIET = [/^Start a conversation/i, /^Private messages$/i, /^You have logged in to private messages elsewhere/i];
@@ -277,14 +280,14 @@ var liveBridge = (function () {
           if (gid === ENV) return;
           seen[gid] = true;
           var st = stateOf(groups[gid] && groups[gid].socket);
-          if (connState[gid] !== st) { connState[gid] = st; if (!left[gid]) emit({ op: 'conn', gid: gid, state: st }); }
+          if (connState[gid] !== st) { connState[gid] = st; if (!left[gid]) { note(connName(gid) + ' is ' + st); emit({ op: 'conn', gid: gid, state: st }); } }
         });
         Object.keys(connState).forEach(function (gid) {
-          if (!seen[gid] && connState[gid] !== 'closed') { connState[gid] = 'closed'; if (!left[gid]) emit({ op: 'conn', gid: gid, state: 'closed' }); }
+          if (!seen[gid] && connState[gid] !== 'closed') { connState[gid] = 'closed'; if (!left[gid]) { note(connName(gid) + ' was removed by Torch'); emit({ op: 'conn', gid: gid, state: 'closed' }); } }
         });
         var pm = C.private && C.private.socket;
         var pst = pm ? stateOf(pm) : 'closed';
-        if (pmState !== pst) { pmState = pst; emit({ op: 'conn', gid: 'private_message', state: pst }); }
+        if (pmState !== pst) { pmState = pst; note(connName('private_message') + ' is ' + pst); emit({ op: 'conn', gid: 'private_message', state: pst }); }
       } catch (e) { warn(e); }
     }, 2000);
   }
@@ -305,8 +308,9 @@ var liveBridge = (function () {
     }
     function attempt() { forget(); return C.connect(gid); }
     // Comme Torch, la base d'historique s'ouvre avant la connexion privée : les msgoff, livrés une seule fois juste après OK, y sont archivés.
+    note('Connecting to ' + connName(gid));
     var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
-    attempts[gid] = sock.then(function (s) { settle(); return s; }, function (e) { settle(); throw e; });
+    attempts[gid] = sock.then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) { settle(); note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e)); throw e; });
     return attempts[gid];
   }
 
@@ -605,6 +609,7 @@ var liveBridge = (function () {
     var onLogin = function (catchUp) {
       if (loggedIn) return;
       loggedIn = true;
+      note('Signed in');
       // Torch lit seul l'oEmbed YouTube et msgbg.xml, hors des réglages de médias de Torch Skin : neutralisés en mémoire, pas dans les réglages de Torch.
       C.renderYouTube = CH.getBackground = function () {};
       emit({ op: 'login', me: lower(C.user.name) });
@@ -727,7 +732,7 @@ var liveBridge = (function () {
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }
       try { connect(gid).then(function () { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } }, warn); } catch (e) { warn(e); }
     },
-    leave: function (gid) { left[gid] = true; try { C.disconnectFrom(gid); } catch (e) { warn(e); } },
+    leave: function (gid) { left[gid] = true; note('Leaving #' + gid); try { C.disconnectFrom(gid); } catch (e) { warn(e); } },
     reconnect: function (gid) {
       try {
         connect(gid).then(function () { if (gid !== 'private_message') { try { C.setFocus({ group: gid, reload: true }); } catch (e) { warn(e); } } }, warn);

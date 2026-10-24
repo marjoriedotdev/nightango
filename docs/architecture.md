@@ -19,7 +19,7 @@ src/
     rich-text.js     MessageText (emphase, citations, mentions, liens), hôtes de confiance (isTrustedUrl), RichText (mini profil assaini), fullProfileDoc
     selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées, message affiché d'une entrée de l'historique privé
   bridge/     le pont vers Torch
-    live-model.js    LIVE, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG),
+    live-model.js    LIVE, JOURNAL, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      table des émoticônes (EMOTICONS), modèles live
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
                      fond Premium (parseMiniCss), fond de message (parseMsgBg), comptes liés (parseWho), présence, horodatages,
@@ -38,7 +38,7 @@ src/
     discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
   settings/   réglages
     shell, profile (Visitors et tracker vissle compris), appearance, notifications, privacy (et Safety, compte),
-    language-a11y-about, premium
+    language-a11y-about (et Diagnostics), premium
     group-view, group-pages, group-staff                                réglages de groupe du prototype
     live-group-view, live-group-pages, live-group-staff, live-account   variantes live
   app/        racine
@@ -51,6 +51,7 @@ src/
                      injection du code page, pont vissle (GM_xmlhttpRequest)
     skin-page.js     code page : anti double démarrage, démarre Torch, charge React (SRI),
                      attend Torch, monte le Shadow DOM
+    skin-journal.js  journal de diagnostic, inséré par le build en tête du code page (ADR-0011)
   styles/
     app.css          styles de l'application
     login.css        habillage de l'écran de login de Torch, posé par skin-page.js
@@ -93,8 +94,13 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - Le loader s'arrête hors de la page d'accueil (`window.top !== window` ou `pathname !== '/'`) : st.chatango.com sert aussi les fenêtres de discussion intégrées aux autres sites.
 - Le code page est injecté par un `<script>` dont le `textContent` est un littéral de chaîne JSON limité à l'ASCII. Il n'est jamais analysé comme HTML.
 - Seul le pont vissle tourne dans le bac à sable. Il lit le profil interrogé dans `unsafeWindow.__torchRefs.client.user.name` et ignore celui que la page demanderait ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
-- `skin-page.js` se protège d'un double démarrage (`window.__TORCH_SKIN__`), ajoute le script de démarrage de Torch, charge React et ReactDOM depuis cdnjs avec SRI, attend les objets globaux de Torch, puis monte l'interface.
+- `skin-page.js` se protège d'un double démarrage (`window.__TORCH_SKIN__`), pose le journal de diagnostic (`skin-journal.js`, à la place de `/*JOURNAL*/`) avant tout socket de Torch, ajoute le script de démarrage de Torch, charge React et ReactDOM depuis cdnjs avec SRI, attend les objets globaux de Torch, puis monte l'interface.
 - Si le démarrage échoue, le client Torch d'origine reste en place.
+
+## Journal de diagnostic
+
+- `skin-journal.js` enveloppe le constructeur `WebSocket` et la console, écoute la vie de la page et les erreurs, et garde les 1 000 derniers événements dans `localStorage` sous `torch-skin:journal`. Ce qu'il garde et ne garde jamais : [ADR-0011](adr/0011-diagnostic-journal.md).
+- L'application le lit par `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` dans le prototype et dans les suites qui ne chargent que le pont. Le pont y note ses connexions et les avertissements de Torch. La page Diagnostics, listée seulement si `JOURNAL` existe, le montre, le copie, le télécharge et l'efface.
 
 ## Montage et affichage
 
@@ -157,7 +163,7 @@ Suites jsdom dans `tests/`, lancées par `tests/run.mjs` après le build :
 
 - `smoke` : prototype hébergé, chargé depuis `dist/torch-client.html`.
 - `live_ui` : mode live avec un faux client Torch, sur `dist/app.js` et le bundle du design system. Il enregistre chaque trame envoyée et vérifie son format exact.
-- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login, pont vissle. Jouée sur `dist/torch-skin.user.js` puis sur `dist/torch-skin.min.user.js`. C'est la seule suite qui exécute les userscripts.
+- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login, pont vissle, journal de diagnostic. Jouée sur `dist/torch-skin.user.js` puis sur `dist/torch-skin.min.user.js`. C'est la seule suite qui exécute les userscripts.
 - `live_login` : détection de connexion, sur la concaténation des sources de `src/bridge/`.
 - `avatar` : avatars, sur le bundle du design system et les sources de `src/bridge/`.
 - `check_ds` : rendu des aperçus du design system, sur `torchds/project/components/bundle.js`.
