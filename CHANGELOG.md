@@ -2,6 +2,12 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.15.0] - 2026-10-24
+
+### Added
+
+- Private messages warns you with a banner when vissle reports that your private messages are restricted.
+
 ## [0.14.2] - 2026-10-24
 
 ### Added
