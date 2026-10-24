@@ -2,6 +2,17 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.16.0] - 2026-10-24
+
+### Added
+
+- Groups and private messages reconnect on their own after Chatango drops the connection, up to three attempts.
+- Private messages shows a banner with a Reconnect button when they disconnect.
+
+### Changed
+
+- Closed connections reconnect when you come back to the page, not only when your network comes back.
+
 ## [0.15.0] - 2026-10-24
 
 ### Added
