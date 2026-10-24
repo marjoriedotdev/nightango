@@ -136,7 +136,7 @@ function DmThread(p) {
   var len = convo.messages.length;
   var jump = useMessageJump(logRef), target = jump[0], setTarget = jump[1];
   var personActions = useProfileActions(id, null);
-  var reading = useReadingPosition(logRef, len ? convo.messages[0].ts : null, [len], function (el) { el.scrollTop = el.scrollHeight; });
+  var reading = useReadingPosition(logRef, len ? convo.messages[0].ts : null, [len], function (el) { el.scrollTop = 0; });
   useInfiniteScroll(logRef, sentinelRef, !!(convo.olderMore && !convo.loadingOlder && !convo.olderFailed && !target), function () { app.actions.loadOlderDm(id); }, '200px 0px 0px 0px');
   function onScroll() {
     reading.onScroll();

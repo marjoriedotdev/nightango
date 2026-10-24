@@ -102,7 +102,7 @@ function GroupView(p) {
     app.actions.sendGroup(g.id, text, { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel });
     setMode(null);
   }
-  function toBottom() { var el = logRef.current; reading.atBottom.current = true; el.scrollTop = el.scrollHeight; setJump(false); }
+  function toBottom() { reading.atBottom.current = true; logRef.current.scrollTop = 0; setJump(false); }
   // Comme dans Torch, un message masqué compte encore dans les non-lus et les mentions.
   function shown(m) { return m.annc ? prefs.announcements : m.kind !== 'msg' || prefs.safety.guestMessages || !isGuest(m.author); }
   // Les messages d'exemple du prototype n'ont pas de canal.

@@ -33,6 +33,10 @@ w.IntersectionObserver = function (cb, opts) {
   return o;
 };
 
+// jsdom n'a ni CSS.supports ni ResizeObserver : le fil prend le chemin sans ancrage natif, sans mesure.
+w.CSS = { supports: () => false };
+w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
+
 /* ---------- Faux client Torch ---------- */
 const sent = [], posts = [], calls = [];
 // Réponse de vissle à un envoi de fichier (chatango/upload).

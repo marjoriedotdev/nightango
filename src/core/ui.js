@@ -117,22 +117,58 @@ function useRightColumn(openFull) {
  * @returns {{atBottom: Object, onScroll: Function}} Lecteur en bas, et relevé de la position à brancher sur le défilement.
  */
 function useReadingPosition(logRef, firstTs, deps, onBelow) {
-  var atBottom = useRef(true), seen = useRef({ firstTs: null, top: 0, height: 0 });
+  var atBottom = useRef(true), seenFirstTs = useRef(null);
   useLayoutEffect(function () {
     var el = logRef.current; if (!el) return;
-    var was = seen.current;
-    if (atBottom.current) el.scrollTop = el.scrollHeight;
-    // Position absolue : le navigateur a pu ancrer le défilement lui-même, l'ajouter au sien doublerait le décalage.
-    else if (firstTs < was.firstTs) el.scrollTop = was.top + el.scrollHeight - was.height;
-    else onBelow(el);
-    seen.current = { firstTs: firstTs, top: el.scrollTop, height: el.scrollHeight };
+    // L'historique ajouté en tête ne déplace pas la vue (.log en column-reverse) : rien à restaurer.
+    var older = firstTs < seenFirstTs.current;
+    seenFirstTs.current = firstTs;
+    if (atBottom.current) el.scrollTop = 0;
+    else if (!older) onBelow(el);
   }, deps);
+  useLogAnchor(logRef);
   function onScroll() {
-    var el = logRef.current;
-    atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
-    seen.current.top = el.scrollTop; seen.current.height = el.scrollHeight;
+    // .log en column-reverse : scrollTop vaut 0 en bas et devient négatif en remontant.
+    atBottom.current = logRef.current.scrollTop > -LOG_BOTTOM_SLACK;
   }
   return { atBottom: atBottom, onScroll: onScroll };
+}
+
+// Distance au bas d'un fil sous laquelle il reste collé en bas.
+var LOG_BOTTOM_SLACK = 48;
+
+/**
+ * Permet de garder la lecture en place dans un fil quand le contenu sous la vue change, là où le navigateur ne le fait pas.
+ * Le fil est en column-reverse : ce qui change au-dessus de la vue ne la déplace déjà pas.
+ * @param {Object} logRef Référence du fil (.log), dont l'élément ne change pas tant que le composant est monté.
+ */
+function useLogAnchor(logRef) {
+  useEffect(function () {
+    var el = logRef.current;
+    // Safari avant 27 n'a pas d'ancrage natif du défilement. Ailleurs, corriger ici doublerait le décalage.
+    if (!el || window.CSS.supports('overflow-anchor', 'auto')) return;
+    var anchor = null, anchorTop = 0;
+    function pick() {
+      var top = el.getBoundingClientRect().top, rows = el.firstChild.children, lo = 0, hi = rows.length - 1;
+      while (lo < hi) { var mid = (lo + hi) >> 1; if (rows[mid].getBoundingClientRect().bottom > top) hi = mid; else lo = mid + 1; }
+      // Comme l'ancrage natif exclut la sentinelle (overflow-anchor: none), l'ancre manuelle l'exclut aussi.
+      if (rows[lo] && rows[lo].classList.contains('history-more')) lo++;
+      anchor = rows[lo] || null;
+      anchorTop = anchor ? anchor.getBoundingClientRect().top : 0;
+    }
+    function hold() {
+      if (anchor && anchor.isConnected && el.scrollTop < -LOG_BOTTOM_SLACK) {
+        var delta = anchor.getBoundingClientRect().top - anchorTop;
+        if (delta) el.scrollTop += delta;
+      }
+      pick();
+    }
+    var ro = new ResizeObserver(hold);
+    ro.observe(el.firstChild);
+    el.addEventListener('scroll', pick, { passive: true });
+    pick();
+    return function () { ro.disconnect(); el.removeEventListener('scroll', pick); };
+  }, []);
 }
 
 /**
@@ -265,7 +301,7 @@ function Dialog(p) {
   }, []);
   return h(Portal, null, h('div', { className: cx('overlay', p.sheet && 'sheet'), onMouseDown: function (e) { if (e.target === e.currentTarget && p.onClose) p.onClose(); } },
     h('div', { className: cx('dialog', p.wide && 'wide', p.sheet && 'sheet', p.className), role: p.role || 'dialog', 'aria-modal': 'true', 'aria-label': p.label || p.title, style: p.style, ref: ref },
-      p.title ? h('div', { className: 'dialog-head' }, h('h2', null, p.title), p.description ? h('p', null, p.description) : null) : null,
+      p.title ? h('div', { className: 'dialog-head' }, h('h2', p.focusTitle ? { tabIndex: -1, 'data-autofocus': true } : null, p.title), p.description ? h('p', null, p.description) : null) : null,
       p.children,
       p.footer ? h('div', { className: 'dialog-foot' }, p.footer) : null)));
 }

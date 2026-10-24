@@ -126,6 +126,7 @@ function profileMeta(s, name) {
  * @param {?Object} p.skin Fond Premium porté par le conteneur, tel que le renvoie miniStyleOf.
  * @param {boolean} [p.guest] Invité sans compte Chatango.
  * @param {Function} p.nav Navigation vers un groupe en commun.
+ * @param {boolean} [p.focusHeading] Le nom reçoit le focus d'ouverture d'une fenêtre.
  */
 function ProfileSummary(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), cover = useMiniCover(p.skin);
@@ -136,7 +137,7 @@ function ProfileSummary(p) {
     h('div', { className: 'profile-card' },
       // Clé sur le nom : le panneau garde son instance d'une conversation à l'autre.
       h(ProfilePhoto, { key: name, name: name, size: p.size, status: name === s.me ? s.meStatus : u.status, ring: p.ring }),
-      h(p.heading, { className: 'profile-name' }, name),
+      h(p.heading, p.focusHeading ? { className: 'profile-name', tabIndex: -1, 'data-autofocus': true } : { className: 'profile-name' }, name),
       h('span', { className: 'muted profile-line' }, personStatus(s, name, p.gid)),
       profileMeta(s, name),
       p.skin ? coverReveal(cover, p.skin) : null),
@@ -181,7 +182,7 @@ function FullProfileDialog(p) {
   var sample = '<h2>' + String(p.name).replace(/[<>&"]/g, '') + '</h2><p>' + String(u.about || 'No full profile yet.').replace(/[<>&"]/g, '') + '</p>';
   var content = LIVE ? html : sample;
   return h(Dialog, {
-    title: p.name + "'s profile", wide: true, onClose: p.onClose,
+    title: p.name + "'s profile", focusTitle: true, wide: true, onClose: p.onClose,
     footer: [
       content ? media.button : null,
       h('a', { key: 'o', className: 'tc-btn', href: 'https://' + p.name + '.chatango.com', target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, 'Open on chatango.com', h(T.Icon, { name: 'external', size: 14 })),

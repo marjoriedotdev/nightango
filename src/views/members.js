@@ -175,7 +175,8 @@ function ProfileDialog(p) {
   var mini = miniStyleOf(s.prefs, u, app.theme);
   function go(route) { p.onClose(); app.nav(route); }
   return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: 'profile-dialog', style: mini ? miniSkin(mini) : null },
-    h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
+    // Focus initial sur le nom : sur le premier bouton, placé sous la bio, la fenêtre s'ouvrirait défilée.
+    h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', focusHeading: true, size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
       : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
