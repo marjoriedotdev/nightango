@@ -1358,7 +1358,7 @@ function Root(props) {
     state.auth.loggedIn && profile ? h(ProfileDialog, { name: profile.name, gid: profile.gid, onClose: function () { setProfile(null); } }) : null,
     state.auth.loggedIn && banCfg ? h(BanDialog, { name: banCfg.name, gid: banCfg.gid, msg: banCfg.msg, onClose: function () { setBan(null); } }) : null,
     state.auth.loggedIn && fullProfile ? h(FullProfileDialog, { name: fullProfile, onClose: function () { setFullProfile(null); } }) : null,
-    state.auth.loggedIn && who ? h(WhoDialog, { name: who, onClose: function () { setWho(null); } }) : null,
+    state.auth.loggedIn && who ? h(WhoDialog, { key: who, name: who, onClose: function () { setWho(null); }, onDone: function () { setWho(null); setProfile(null); } }) : null,
     linkUrl ? h(LinkDialog, { url: linkUrl, onClose: function () { setLinkUrl(null); } }) : null,
     profileLink ? h(ProfileLinkDialog, { link: profileLink, onClose: function () { setProfileLink(null); } }) : null,
     state.auth.loggedIn && palette ? h(Palette, { onClose: function () { setPalette(false); } }) : null,
