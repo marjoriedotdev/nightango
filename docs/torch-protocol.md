@@ -104,6 +104,7 @@ Ce ne sont pas des appels du code applicatif mais des ressources que le navigate
 - Les avatars `ust.chatango.com/profileimg/…/thumb.jpg` ou `thumb_m.jpg`, en `<img>`.
 - La photo de profil complète `ust.chatango.com/profileimg/…/full.jpg`, en `<img>` `referrerPolicy="no-referrer"`, chargée seulement au clic sur l'avatar du mini profil.
 - L'image du fond de message `ust.chatango.com/profileimg/…/msgbg.jpg`, en `<img>` `referrerPolicy="no-referrer"`, seulement si `embedImages` est actif et `proxyMedia` coupé.
+- L'image du fond Premium, URL `https` d'un hôte quelconque tirée de `custom_profile.css` (voir Fond Premium), en `<img>` `referrerPolicy="no-referrer"`, sous `styles.profileBackgrounds` et `embedImages`, au clic sous `proxyMedia` sauf pour un hôte de confiance.
 
 Un appel exclu pour cette raison : le formulaire de style de Torch (`updatemsgstyles`) transmet le mot de passe. Le style de message perso n'est donc jamais enregistré sur le compte ([ADR-0006](adr/0006-local-message-style.md)).
 
