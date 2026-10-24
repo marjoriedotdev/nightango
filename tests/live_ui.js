@@ -450,12 +450,23 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   };
   const guestOffers = await askWho('First guest');
   let releaseWho; whoHold = new Promise(r => { releaseWho = r; });
-  whoBody = JSON.stringify({ target: 'alice', definite: ['alice2', '<img src="x" onerror="alert(5)">'], linked: [], strong: ['bob', 42, { name: 'evil' }], medium: 'carl', weak: ['dave'], extra: ['zed'] });
+  whoBody = JSON.stringify({ target: 'alice', definite: ['alice2', '<img src="x" onerror="alert(5)">'], linked: [], strong: ['Zoe', 42, { name: 'evil' }], medium: 'carl', weak: ['dave'], extra: ['zed'] });
   const accountOffers = await askWho('Hi everyone');
   const pendingWho = { title: whoDialog() && whoDialog().getAttribute('aria-label'), spinner: !!(whoDialog() && whoDialog().querySelector('.tc-spinner')) };
   releaseWho(); whoHold = null;
   await until(() => !!whoDialog() && !whoDialog().querySelector('.tc-spinner'));
-  const whoShown = whoDialog() ? { text: whoDialog().textContent, levels: [...whoDialog().querySelectorAll('h3')].map(x => x.textContent), injected: !!whoDialog().querySelector('img') } : null;
+  await until(() => !!whoDialog() && !whoDialog().querySelector('.tc-skeleton'));
+  const whoCard = n => whoDialog() && [...whoDialog().querySelectorAll('.conv.person')].find(x => x.querySelector('.conv-name').textContent === n);
+  const whoShown = whoDialog() ? {
+    text: whoDialog().textContent, levels: [...whoDialog().querySelectorAll('h3')].map(x => x.textContent), injected: !!whoDialog().querySelector('img[onerror]'),
+    cards: [...whoDialog().querySelectorAll('.conv.person .conv-name')].map(x => x.textContent), texts: [...whoDialog().querySelectorAll('.who-text')].map(x => x.textContent),
+    zoe: whoCard('zoe') && whoCard('zoe').querySelector('.conv-meta').textContent
+  } : null;
+  if (whoCard('zoe')) { click(whoCard('zoe')); await wait(50); }
+  const dialogsOpen = () => $$('#layer .dialog').map(x => x.getAttribute('aria-label'));
+  const onTop = dialogsOpen();
+  key(d, 'Escape'); await wait(30);
+  const backToList = dialogsOpen();
   const firstCall = whoAsked()[0] || {};
   if (whoDialog()) { click(byText('#layer .dialog-foot button', 'Close')); await wait(30); }
   const stored = Array.from({ length: w.localStorage.length }, (_, i) => w.localStorage.getItem(w.localStorage.key(i))).join('\n');
@@ -463,11 +474,15 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     !guestOffers && accountOffers && whoAsked().length === 1 && firstCall.url === 'https://vissle.me/api/v1/who/alice' && (!firstCall.credentials || firstCall.credentials === 'omit'),
     { guestOffers, accountOffers, calls: whoAsked() });
   step('who is this shows the five levels as text and keeps nothing',
-    pendingWho.title === 'Who is alice' && pendingWho.spinner && !!whoShown && JSON.stringify(whoShown.levels) === '["Definite","Strong","Weak"]'
-      && whoShown.text.includes('4 linked accounts for alice.') && whoShown.text.includes('alice2, <img src="x" onerror="alert(5)">') && !whoShown.injected
-      && whoShown.text.includes('bob') && !/42|evil|object|carl|zed/.test(whoShown.text) && /vissle's estimate/.test(whoShown.text)
+    pendingWho.title === 'Who is alice' && pendingWho.spinner && !!whoShown && JSON.stringify(whoShown.levels) === '["Definite · 2","Strong · 1","Weak · 1"]'
+      && whoShown.text.includes('4 linked accounts for alice.') && JSON.stringify(whoShown.cards) === '["alice2","zoe","dave"]'
+      && JSON.stringify(whoShown.texts) === '["<img src=\\"x\\" onerror=\\"alert(5)\\">"]' && !whoShown.injected
+      && !/42|evil|object|carl|zed/.test(whoShown.text) && /vissle's estimate/.test(whoShown.text)
       && !whoDialog() && !/alice2|dave/.test(stored),
     { pendingWho, whoShown, open: !!whoDialog() });
+  step("who is this shows each account's mini profile and opens its profile over the list",
+    !!whoShown && whoShown.zoe === ZOE_ASL && onTop[onTop.length - 1] === 'Profile of zoe' && backToList[backToList.length - 1] === 'Who is alice' && whoAsked().length === 1,
+    { zoe: whoShown && whoShown.zoe, onTop, backToList, calls: whoAsked().length });
   const whoReplies = [await whoAnswer(JSON.stringify({ target: 'alice', definite: [], weak: [7] })), await whoAnswer('{"definite":["x"]}'), await whoAnswer('<html>'), await whoAnswer(null)];
   step('who is this says when vissle has nothing, an unreadable answer or no answer',
     /vissle has no linked accounts for alice\./.test(whoReplies[0]) && /vissle sent an answer Torch Skin can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])

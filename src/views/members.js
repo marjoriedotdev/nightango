@@ -165,15 +165,20 @@ function useProfileActions(name, gid) {
   ].filter(Boolean);
 }
 
+/**
+ * Fenêtre de profil d'un membre.
+ * @param {{name: string, gid: ?string, onClose: Function, onDone: ?Function}} p Membre, groupe d'où le profil est ouvert, fermeture de la fenêtre et fermeture qui suit une action menée ailleurs, la fermeture par défaut.
+ */
 function ProfileDialog(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), isMe = name === s.me;
   var guest = /^[!#]/.test(name);
+  var done = p.onDone || p.onClose;
   var actions = useProfileActions(name, p.gid).map(function (it) {
-    return it.closes ? Object.assign({}, it, { onSelect: function () { p.onClose(); it.onSelect(); } }) : it;
+    return it.closes ? Object.assign({}, it, { onSelect: function () { done(); it.onSelect(); } }) : it;
   });
   var buttons = actions.filter(function (it) { return it.id === 'message' || it.id === 'friend'; });
   var mini = miniStyleOf(s.prefs, u, app.theme);
-  function go(route) { p.onClose(); app.nav(route); }
+  function go(route) { done(); app.nav(route); }
   return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: 'profile-dialog', style: mini ? miniSkin(mini) : null },
     // Focus initial sur le nom : sur le premier bouton, placé sous la bio, la fenêtre s'ouvrirait défilée.
     h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', focusHeading: true, size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
@@ -186,10 +191,13 @@ function ProfileDialog(p) {
 
 /**
  * Comptes que vissle lie à un compte, demandés à l'ouverture et oubliés à la fermeture (ADR-0010).
- * @param {{name: string, onClose: Function}} p Compte visé et fermeture de la fenêtre.
+ * Chaque compte a sa carte de mini profil, et sa fiche s'ouvre par-dessus la liste.
+ * @param {{name: string, onClose: Function, onDone: Function}} p Compte visé, fermeture de la fenêtre et fermeture qui suit une action de la fiche menée ailleurs.
  */
 function WhoDialog(p) {
+  var app = useApp(), s = app.state;
   var st = useState(null), res = st[0], setRes = st[1];
+  var o = useState(null), open = o[0], setOpen = o[1];
   useEffect(function () {
     liveBridge.fetchWho(p.name).then(function (levels) {
       setRes(levels ? { levels: levels } : { error: "vissle sent an answer Torch Skin can't read." });
@@ -197,12 +205,22 @@ function WhoDialog(p) {
   }, [p.name]);
   var levels = res && res.levels || [];
   var total = levels.reduce(function (n, x) { return n + x.names.length; }, 0);
+  var accounts = [];
+  levels.forEach(function (x) { x.names.forEach(function (n) { n = lower(n); if (ACCOUNT_NAME.test(n) && accounts.indexOf(n) < 0) accounts.push(n); }); });
+  useProfiles(accounts);
+  function row(name) {
+    var n = lower(name);
+    // Un nom qui n'est pas un compte n'a ni photo ni fiche : rendu en texte seul.
+    return ACCOUNT_NAME.test(n) ? personCard(s, n, app.theme, function () { setOpen(n); }) : h('p', { key: name, className: 'about who-text' }, name);
+  }
   var lead = !res ? h('p', { className: 'startup' }, h(T.Spinner, null), 'Asking vissle')
     : h('p', { className: 'about' }, res.error || (total ? total + (total > 1 ? ' linked accounts' : ' linked account') + ' for ' + p.name + '.' : 'vissle has no linked accounts for ' + p.name + '.'));
-  return h(Dialog, { title: 'Who is ' + p.name, onClose: p.onClose, footer: h(T.Button, { variant: 'primary', onClick: p.onClose }, 'Close') },
-    h('div', { className: 'dialog-body' }, lead),
-    levels.map(function (x) { return h('div', { key: x.level, className: 'kv' }, h('h3', null, x.level.charAt(0).toUpperCase() + x.level.slice(1)), h('p', { className: 'about' }, x.names.join(', '))); }),
-    total ? h('div', { className: 'dialog-body' }, h('p', { className: 'about muted' }, "This is vissle's estimate. It can be wrong.")) : null);
+  return h(Frag, null,
+    h(Dialog, { title: 'Who is ' + p.name, onClose: p.onClose, footer: h(T.Button, { variant: 'primary', onClick: p.onClose }, 'Close') },
+      h('div', { className: 'dialog-body' }, lead),
+      levels.map(function (x) { return h('div', { key: x.level, className: 'kv who-level' }, h('h3', null, x.level.charAt(0).toUpperCase() + x.level.slice(1) + ' · ' + x.names.length), x.names.map(row)); }),
+      total ? h('div', { className: 'dialog-body' }, h('p', { className: 'about muted' }, "This is vissle's estimate. It can be wrong.")) : null),
+    open ? h(ProfileDialog, { name: open, gid: null, onClose: function () { setOpen(null); }, onDone: p.onDone }) : null);
 }
 
 function BanDialog(p) {
