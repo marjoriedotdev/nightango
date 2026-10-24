@@ -161,7 +161,7 @@ function useProfileActions(name, gid) {
         else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } });
       }
     },
-    g && isStaffRole(roleOf(g, s.me)) && roleOf(g, name) !== 'owner' ? banItem(app, name, gid) : null
+    g && canBanMember(g, s.me, name) ? banItem(app, name, gid) : null
   ].filter(Boolean);
 }
 

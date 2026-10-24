@@ -1,12 +1,23 @@
 function roleOf(group, name) { return group && group.settings && group.settings.staff ? group.settings.staff[name] || null : null; }
-function isStaffRole(r) { return r === 'owner' || r === 'coowner' || r === 'admin' || r === 'mod'; }
-function canManage(group, me) { var r = roleOf(group, me); return r === 'owner' || r === 'coowner' || r === 'admin'; }
+function isStaffRole(r) { return r === 'owner' || r === 'admin' || r === 'mod'; }
 /**
- * Permet de savoir si l'utilisateur voit les IP d'un groupe : propriétaire, ou staff qui a le droit « See IP addresses ».
- * @param {?string} myRole Rôle de l'utilisateur dans le groupe.
- * @param {Object} perms Droits de l'utilisateur dans le groupe.
+ * Permet de lire les droits d'un membre dans un groupe, en live comme en prototype : le propriétaire a tous les droits, un modérateur ceux de ses bits Chatango.
+ * @param {Object} group Groupe.
+ * @param {string} name Membre.
+ * @returns {Object} Droit par clé de PERMS.
  */
-function canSeeIps(myRole, perms) { return myRole === 'owner' || !!perms.seeIps; }
+function groupRights(group, name) {
+  var r = roleOf(group, name);
+  if (r === 'owner') return allPerms(true);
+  return r ? flagsToPerms(group.settings.modFlags[name] || 0) : allPerms(false);
+}
+/**
+ * Permet de savoir si un membre peut en bannir un autre : un modérateur bannit tout le monde sauf lui-même et le propriétaire.
+ * @param {Object} group Groupe.
+ * @param {string} me Membre qui bannit.
+ * @param {string} name Membre visé.
+ */
+function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) && name !== me && roleOf(group, name) !== 'owner'; }
 function userOf(state, name) { return state.users[name] || { status: 'offline', about: '', style: {} }; }
 /**
  * Permet de savoir si les messages d'un membre sont masqués : membre ignoré, ou bloqué quand le blocage vaut aussi en groupe.

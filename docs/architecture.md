@@ -10,16 +10,16 @@ src/
     globals.js       alias React, wrapper T (avatars live), hooks
     util.js          temps, stockage local, copie, lecture d'un fichier JSON, téléchargement d'un fichier JSON
     colors.js        couleurs et contraste, polices, canaux
-    roles.js         permissions, rôles, réglages de groupe par défaut
+    roles.js         permissions, rôles (owner, admin, mod), bits de droits Chatango (PERM_FLAG), droits par défaut d'un rôle, réglages de groupe par défaut
     sample-data.js   données d'exemple du prototype, visites simulées, médiathèque d'exemple en mémoire
     prefs.js         préférences par défaut
     ui.js            contexte React, Portal (calque #layer), useFloating (calque ancré à son déclencheur), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
                      Person (avatar et nom qui ouvrent le profil), badges de rôle et « You », présence des listes,
                      useRightColumn (seul seuil de 1180 px : colonne de droite au-dessus, plein écran en dessous)
     rich-text.js     MessageText (emphase, citations, mentions, liens), hôtes de confiance (isTrustedUrl), RichText (mini profil assaini), fullProfileDoc
-    selectors.js     lecture de l'état : rôles, utilisateur, thème, compteurs, conversations listées, message affiché d'une entrée de l'historique privé
+    selectors.js     lecture de l'état : rôles, droits d'un membre dans un groupe (groupRights, canBanMember), utilisateur, thème, compteurs, conversations listées, message affiché d'une entrée de l'historique privé
   bridge/     le pont vers Torch
-    live-model.js    LIVE, JOURNAL, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, PERM_FLAG, CHANNEL_FLAG, MSG_FLAG),
+    live-model.js    LIVE, JOURNAL, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      table des émoticônes (EMOTICONS), modèles live
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
                      fond Premium (parseMiniCss), fond de message (parseMsgBg), comptes liés (parseWho), présence, horodatages,
@@ -40,7 +40,8 @@ src/
   settings/   réglages
     shell, profile (Visitors et tracker vissle compris), appearance, notifications, privacy (et Safety, compte),
     language-a11y-about (et Diagnostics), premium
-    group-view, group-pages, group-staff                                réglages de groupe du prototype
+    group-view, group-pages                                             réglages de groupe du prototype
+    group-staff                                                         pages Staff and roles, Members et Invites, communes au live et au prototype
     live-group-view, live-group-pages, live-group-staff, live-account   variantes live
   app/        racine
     sound.js
@@ -116,6 +117,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 
 - `LIVE = !!window.__TORCH_LIVE__` (`bridge/live-model.js`). `skin-page.js` pose le drapeau, le prototype hébergé ne le pose pas.
 - Les écarts entre les deux modes sont gardés par `if (LIVE)`.
+- Les droits dans un groupe suivent le modèle de Chatango dans les deux modes : un propriétaire et des modérateurs avec leurs bits de droits (`settings.staff`, `settings.modFlags`), lus par `groupRights`. Le prototype n'a aucun rôle que Chatango n'a pas.
 - En live, les actions de `app/root.js` sont surchargées par celles du bloc « Mode live ». Le pont (`liveBridge`) traduit les trames de Torch en opérations, que `handleLiveOp` applique à l'état.
 - Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens. Torch Skin lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
 

@@ -2,6 +2,13 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.15.3] - 2026-10-24
+
+### Changed
+
+- Staff and roles describes admins as moderators allowed to change group settings, as Chatango does.
+- In the hosted prototype, group staff work as on Chatango: an owner and moderators with their own permissions. Co-owners are gone, and only staff can delete messages.
+
 ## [0.15.2] - 2026-10-24
 
 ### Changed

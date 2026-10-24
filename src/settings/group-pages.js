@@ -88,7 +88,7 @@ function GSBans(p) {
   var app = useApp(), g = p.g;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
-  var showIp = canSeeIps(p.myRole, p.perms);
+  var showIp = p.perms.seeIps;
   function ban() {
     var n = name.trim().toLowerCase();
     if (!n) { setErr('Enter a username.'); return; }

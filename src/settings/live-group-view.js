@@ -41,7 +41,7 @@ function GroupSettingsViewLive(p) {
   }, [pending]);
   if (!g || !draft) return h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: app.actions.backToChat }, 'Back to chat'));
 
-  var myRole = roleOf(g, me), perms = livePerms(g, me), owner = myRole === 'owner';
+  var myRole = roleOf(g, me), perms = groupRights(g, me), owner = myRole === 'owner';
   var sections = [
     { title: 'General', items: [['overview', 'Overview']].concat(owner || perms.editAnnouncement ? [['announcement', 'Announcement']] : []) },
     { title: 'Moderation', items: [['automod', 'AutoMod'], ['media', 'Media and links'], ['bans', 'Bans']].concat(owner || perms.modLog ? [['audit', 'Audit log']] : []) },
@@ -55,7 +55,7 @@ function GroupSettingsViewLive(p) {
     else app.nav({ view: 'group', id: g.id });
   }
   var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: owner || perms.manageMods, scrollRef: scrollRef };
-  var map = { overview: GSOverviewLive, announcement: GSAnnouncementLive, automod: GSAutoModLive, media: GSMediaLive, bans: GSBansLive, audit: GSAuditLive, roles: GSStaffLive, members: GSMembers, invites: GSInvites };
+  var map = { overview: GSOverviewLive, announcement: GSAnnouncementLive, automod: GSAutoModLive, media: GSMediaLive, bans: GSBansLive, audit: GSAuditLive, roles: GSStaff, members: GSMembers, invites: GSInvites };
   return h(SettingsShell, {
     navLabel: 'Group settings', sections: sections, page: page, onBack: leave, scrollRef: scrollRef,
     onPage: function (pg) { app.nav({ view: 'gsettings', id: g.id, page: pg }); },

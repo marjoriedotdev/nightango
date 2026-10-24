@@ -451,12 +451,14 @@ function Root(props) {
     },
     saveGroupSettings: function (gid, draft) {
       var me = stateRef.current.me, old = stateRef.current.groups[gid].settings, now = Date.now();
-      var labels = { overview: 'Updated group info', announcement: 'Updated the announcement', automod: 'Changed AutoMod settings', media: 'Changed media and link rules', roles: 'Changed role permissions' };
+      var labels = { overview: 'Updated group info', announcement: 'Updated the announcement', automod: 'Changed AutoMod settings', media: 'Changed media and link rules' };
       update(function (d) {
         var g = d.groups[gid];
         Object.keys(labels).forEach(function (k) { if (JSON.stringify(old[k]) !== JSON.stringify(draft[k])) g.audit.push({ id: uid(), at: now, actor: me, text: labels[k] }); });
         Object.keys(Object.assign({}, old.staff, draft.staff)).forEach(function (n) {
           if (old.staff[n] !== draft.staff[n]) g.audit.push({ id: uid(), at: now, actor: me, text: draft.staff[n] ? 'Made ' + n + ' ' + ROLE_LONG[draft.staff[n]].toLowerCase() : 'Removed ' + n + ' from staff' });
+          // Comme le journal Chatango (emod) : droits changés sans changement de rôle.
+          else if (draft.staff[n] && old.modFlags[n] !== draft.modFlags[n]) g.audit.push({ id: uid(), at: now, actor: me, text: "Changed " + n + "'s permissions" });
         });
         if (old.announcement.text !== draft.announcement.text || (!old.announcement.enabled && draft.announcement.enabled)) g.dismissedAnnouncement = false;
         if (old.overview.title !== draft.overview.title) g.title = draft.overview.title;
@@ -933,7 +935,7 @@ function Root(props) {
   function deriveLive(g) {
     var L = g.live, F = GROUP_FLAG, f = L.flags, s = g.settings, staff = {};
     if (L.owner) staff[L.owner] = 'owner';
-    Object.keys(L.mods).forEach(function (n) { if (n !== L.owner) staff[n] = liveRole(L.mods[n]); });
+    Object.keys(L.mods).forEach(function (n) { if (n !== L.owner) staff[n] = roleOfFlags(L.mods[n]); });
     s.staff = staff;
     s.modFlags = Object.assign({}, L.mods);
     if (L.owner) delete s.modFlags[L.owner];
