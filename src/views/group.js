@@ -206,10 +206,7 @@ function GroupView(p) {
       h('div', { className: 'log', role: 'log', 'aria-label': 'Messages in ' + g.id, ref: logRef, onScroll: onScroll },
         h('div', { className: 'log-inner' }, items)),
       jump ? h('button', { type: 'button', className: 'jump', onClick: toBottom }, h(T.Icon, { name: 'chevron-down', size: 14 }), 'New messages') : null,
-      LIVE && g.conn && g.conn !== 'open' ? h('div', { className: 'banner-wrap' }, h(T.Banner, {
-        tone: 'warning', icon: 'info', title: g.conn === 'connecting' ? 'Connecting to #' + g.id : 'Disconnected from #' + g.id,
-        action: g.conn === 'closed' ? h(T.Button, { size: 'sm', onClick: function () { app.actions.reconnect(g.id); } }, 'Reconnect') : null
-      }, g.conn === 'connecting' ? 'Messages you send now may not arrive.' : 'New messages will not arrive until you reconnect.')) : null,
+      LIVE && g.conn && g.conn !== 'open' ? h(ConnectionBanner, { name: '#' + g.id, conn: g.conn, onReconnect: function () { app.actions.reconnect(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onMouseDown: endCompletion, onBlur: endCompletion },
         h('p', { className: 'typing', 'aria-live': 'polite' }, typing.length ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, typing.join(', ')), typing.length > 1 ? ' are typing' : ' is typing') : null),
         composer,
