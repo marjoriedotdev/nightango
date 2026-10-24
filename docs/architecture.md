@@ -8,7 +8,7 @@ Torch Skin est une seule application React 18 écrite en JavaScript ES5, sans JS
 src/
   core/       socle partagé, évalué en premier
     globals.js       alias React, wrapper T (avatars live), hooks
-    util.js          APP_VERSION, temps, stockage local, copie, lecture d'un fichier JSON, téléchargement d'un fichier JSON
+    util.js          temps, stockage local, copie, lecture d'un fichier JSON, téléchargement d'un fichier JSON
     colors.js        couleurs et contraste, polices, canaux
     roles.js         permissions, rôles, réglages de groupe par défaut
     sample-data.js   données d'exemple du prototype, visites simulées, médiathèque d'exemple en mémoire
@@ -68,6 +68,8 @@ dist/                sorties du build, non versionnées
 ## Concaténation
 
 `scripts/build.mjs` concatène les fichiers de `src/` dans une IIFE unique, dans l'ordre de `APP_SOURCES`. C'est le seul endroit qui déclare cette liste. Tous les fichiers partagent donc une portée : un nouveau fichier s'ajoute à `APP_SOURCES`, à sa place dans l'ordre.
+
+Le build ouvre l'IIFE sur deux noms : `APP_VERSION`, le `@version` de `src/loader/skin-loader.js`, et `RELEASE_NOTES`, les sections de `CHANGELOG.md` lues au format Keep a Changelog (`{ version, date, groups: [{ title, items }] }`, la plus récente d'abord). Le prototype et le userscript reçoivent donc la même version et les mêmes notes. Le build refuse un `CHANGELOG.md` mal formé ou dont la première section n'est pas celle du `@version`.
 
 `bridge/live-parse.js` se place juste avant `bridge/live-bridge.js`, après `bridge/live-model.js` dont il lit `FONT_FACES`. Ses fonctions deviennent des noms de la portée unique, partagés avec tous les fichiers : un nom qui en double un autre remplace le premier sans erreur.
 

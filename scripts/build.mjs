@@ -77,6 +77,42 @@ export function concatSources(root, files) {
   return files.map((file) => readFileSync(join(root, 'src', file), 'utf8')).join('\n');
 }
 
+// -- Notes de version ---------------------------------------------------------
+
+const CHANGE_TYPES = new Set(['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security']);
+
+/**
+ * Permet de lire les notes de version de CHANGELOG.md, la plus récente d'abord.
+ * @param {string} text Contenu de CHANGELOG.md.
+ */
+function parseChangelog(text) {
+  const releases = [];
+  let release = null, group = null;
+  text.split(/\r?\n/).forEach((line, i) => {
+    const fail = (why) => { throw new Error(`CHANGELOG.md:${i + 1}: ${why}`); };
+    let m;
+    if ((m = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$/.exec(line))) {
+      release = { version: m[1], date: m[2], groups: [] };
+      group = null;
+      releases.push(release);
+    } else if ((m = /^### (\w+)$/.exec(line))) {
+      if (!release) fail('change type outside a release.');
+      if (!CHANGE_TYPES.has(m[1])) fail(`unknown change type ${m[1]}.`);
+      group = { title: m[1], items: [] };
+      release.groups.push(group);
+    } else if ((m = /^- (\S.*)$/.exec(line))) {
+      if (group) group.items.push(m[1]);
+      else if (release) fail('item outside a change type.');
+    } else if (release && line.trim()) {
+      fail('expected a "## [x.y.z] - YYYY-MM-DD" heading, a "### Type" heading or a "- " item.');
+    }
+  });
+  for (const r of releases) {
+    if (!r.groups.length || r.groups.some((g) => !g.items.length)) throw new Error(`CHANGELOG.md: release ${r.version} has an empty section.`);
+  }
+  return releases;
+}
+
 // -- Jetons du design system --------------------------------------------------
 
 const OVERRIDE = new Set(['accent-text', 'accent-soft', 'focus-ring']);
@@ -201,7 +237,6 @@ async function userscript(source, pack) {
   const [css, loginCss, fontsCss] = await Promise.all([pack.css(source.css), pack.css(source.loginCss), pack.css(source.fontsCss)]);
   // Le code page devient un littéral de chaîne, exécuté par un <script> en textContent : jamais analysé comme HTML.
   const page = await pack.js(source.page
-    .replaceAll('/*VERSION*/', () => source.version)
     .replaceAll('/*CSS*/', () => jsonString(css))
     .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginCss))
     .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
@@ -239,7 +274,13 @@ async function build() {
   const bundleJs = read('torchds', 'project', 'components', 'bundle.js');
   const bundleCss = read('torchds', 'project', 'components', 'bundle.css');
   const appCss = read('src', 'styles', 'app.css');
-  const appJs = "(function () {\n'use strict';\n" + concatSources(ROOT, APP_SOURCES) + '\n})();\n';
+  const loader = read('src', 'loader', 'skin-loader.js');
+  const version = /@version\s+(\S+)/.exec(loader)[1];
+  const releaseNotes = parseChangelog(read('CHANGELOG.md'));
+  if (releaseNotes[0]?.version !== version) throw new Error(`CHANGELOG.md must start with the notes of @version ${version}.`);
+  const appJs = "(function () {\n'use strict';\n" +
+    `var APP_VERSION = ${JSON.stringify(version)}, RELEASE_NOTES = ${JSON.stringify(releaseNotes)};\n` +
+    concatSources(ROOT, APP_SOURCES) + '\n})();\n';
   for (const [name, src] of [['bundle', bundleJs], ['app', appJs]]) {
     if (src.toLowerCase().includes('</script')) throw new Error(`${name} contains </script`);
   }
@@ -265,11 +306,9 @@ ${appJs}
 </script>
 `;
 
-  const loader = read('src', 'loader', 'skin-loader.js');
   const source = {
     loader,
     page: read('src', 'loader', 'skin-page.js'),
-    version: /@version\s+(\S+)/.exec(loader)[1],
     css: skinCss(css, bundleCss, appCss),
     loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
     fontsCss,

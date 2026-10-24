@@ -43,7 +43,6 @@ const sent = [], posts = [], calls = [];
 let uploadReply = () => Promise.resolve('data:abc/f.png');
 let shown = 0;
 w.__TORCH_LIVE__ = true;
-w.__TORCH_SKIN_VERSION__ = '0.2.0-test';
 w.__TORCH_SHOW__ = () => { shown++; };
 w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}

@@ -1,5 +1,4 @@
 /* ---------- Utilitaires ---------- */
-var APP_VERSION = window.__TORCH_SKIN_VERSION__ || '0.1.0-b';
 var MIN = 60000;
 var CONFIRM_TIMEOUT = 8000;
 function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
