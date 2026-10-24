@@ -15,34 +15,44 @@ var PERMS = [
   { key: 'manageMods', group: 'Administration', title: 'Manage moderators', desc: 'Add and remove moderators and their permissions.' },
   { key: 'closeGroup', group: 'Administration', title: 'Close the group', desc: 'Stop everyone from posting until it reopens.' }
 ];
-var ROLE_LOCKS = {
-  mod: ['editGroup', 'editAnnouncement', 'editRestrictions', 'manageMods', 'closeGroup'],
-  admin: ['closeGroup'],
-  coowner: []
-};
-var ROLE_LABEL = { owner: 'Owner', coowner: 'Co-owner', admin: 'Admin', mod: 'Mod' };
-var ROLE_LONG = { owner: 'Owner', coowner: 'Co-owner', admin: 'Admin', mod: 'Moderator' };
+var ROLE_LABEL = { owner: 'Owner', admin: 'Admin', mod: 'Mod' };
+var ROLE_LONG = { owner: 'Owner', admin: 'Admin', mod: 'Moderator' };
 var ROLE_DESC = {
   owner: 'Created the group. Always has every permission and cannot be removed.',
-  coowner: 'Runs the group with the owner. Can manage admins and close the group.',
-  admin: 'Manages settings and moderators. Cannot close the group.',
-  mod: "Keeps conversations on track. Can't change group settings."
+  admin: 'A moderator allowed to change group settings.',
+  mod: "A moderator who can't change group settings."
 };
+/* Bits de droits d'un modérateur Chatango, relevés dans le client Torch (chatango.flags) et recoupés avec chadango et chatango-lib. */
+var PERM_FLAG = { seeCounter: 64, seeIps: 16384, staffChannel: 128, modLog: 256, broadcast: 65536, bypass: 8192, bannedWords: 8, automod: 512, unbanAll: 1048576, editGroup: 32, editAnnouncement: 1024, editRestrictions: 16, manageMods: 2, closeGroup: 32768 };
+var PERM_MASK = Object.keys(PERM_FLAG).reduce(function (n, k) { return n | PERM_FLAG[k]; }, 0);
+// Droits qui font d'un modérateur un administrateur dans le vocabulaire Chatango.
+var ADMIN_MASK = 2 | 4 | 16 | 32 | 1024 | 32768;
 function allPerms(v) { var o = {}; PERMS.forEach(function (p) { o[p.key] = v; }); return o; }
 function defaultRoles() {
   var mod = allPerms(false); mod.seeCounter = mod.seeIps = mod.staffChannel = mod.modLog = mod.broadcast = true;
   var admin = allPerms(true); admin.closeGroup = false;
-  return { coowner: allPerms(true), admin: admin, mod: mod };
+  return { admin: admin, mod: mod };
 }
+function flagsToPerms(flags) { var o = {}; Object.keys(PERM_FLAG).forEach(function (k) { o[k] = !!(flags & PERM_FLAG[k]); }); return o; }
+/** Applique des permissions à un masque existant sans toucher aux bits que l'interface ne gère pas. */
+function permsToFlags(perms, base) {
+  var f = (base || 0) & ~PERM_MASK;
+  Object.keys(PERM_FLAG).forEach(function (k) { if (perms[k]) f |= PERM_FLAG[k]; });
+  return f;
+}
+function roleOfFlags(flags) { return flags & ADMIN_MASK ? 'admin' : 'mod'; }
 function mkSettings(over) {
-  return Object.assign({
+  var s = Object.assign({
     overview: { title: '', description: '', showInDiscovery: true, membersPublic: true, nsfw: false },
     announcement: { enabled: false, text: '', broadcast: false, interval: 0 },
     automod: { level: 'standard', filters: { nonsense: true, nonsenseMode: 'Basic', repeat: true, flood: true, caps: false, links: true, emoji: false, mentions: true }, proxies: true, advancedProxy: false, verifiedEmail: false },
     media: { links: true, images: true, videos: true },
-    roles: defaultRoles(),
     staff: {}
   }, over || {});
+  // Comme un modérateur ajouté sur Chatango, chacun part des droits par défaut de son rôle.
+  s.modFlags = {};
+  Object.keys(s.staff).forEach(function (n) { if (s.staff[n] !== 'owner') s.modFlags[n] = permsToFlags(defaultRoles()[s.staff[n]], 0); });
+  return s;
 }
 var AUTOMOD_PRESETS = {
   off: { nonsense: false, nonsenseMode: 'Basic', repeat: false, flood: false, caps: false, links: false, emoji: false, mentions: false },

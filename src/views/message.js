@@ -42,12 +42,12 @@ function MessageRow(p) {
   var bgImage = ms.image && prefs.safety.embedImages && !prefs.safety.proxyMedia ? h(MessageBgImage, ms.image) : null;
   var role = roleOf(g, m.author), myRole = roleOf(g, me);
   // Chatango ne laisse supprimer et bannir qu'au staff, à partir d'un message reçu du serveur.
-  var canDelete = LIVE ? isStaffRole(myRole) : (m.author === me || isStaffRole(myRole));
-  var canBan = isStaffRole(myRole) && m.author !== me && role !== 'owner' && (!LIVE || !!m.unid);
+  var canDelete = isStaffRole(myRole);
+  var canBan = canBanMember(g, me, m.author) && (!LIVE || !!m.unid);
   // Comme la réponse, la modification attend l'identifiant définitif du message.
   var canEdit = m.author === me && (!LIVE || liveBridge.canReply(m.id));
   var handle = m.author !== me ? mentionHandle(m.author) : null;
-  var showIp = LIVE && m.ip && canSeeIps(myRole, livePerms(g, me));
+  var showIp = LIVE && m.ip && groupRights(g, me).seeIps;
   var canQuote = !!m.text && !!mentionHandle(m.author);
   var deleteMessage = function () { app.actions.deleteMessage(g.id, m.id); };
   var menuItems = [

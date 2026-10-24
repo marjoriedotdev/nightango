@@ -56,10 +56,6 @@ function visitorPage(items, get) {
 
 /* Bits Chatango, relevés dans le client Torch (chatango.flags) et recoupés avec chadango et chatango-lib. */
 var GROUP_FLAG = { NOANONS: 4, NOCOUNTER: 16, NOIMAGES: 32, NOLINKS: 64, NOVIDEOS: 128, CHANNELSDISABLED: 8192, NLP_SINGLEMSG: 16384, NLP_MSGQUEUE: 32768, BROADCAST_MODE: 65536, IS_CLOSED: 262144, NLP_NGRAM: 2097152, NO_PROXIES: 4194304 };
-var PERM_FLAG = { seeCounter: 64, seeIps: 16384, staffChannel: 128, modLog: 256, broadcast: 65536, bypass: 8192, bannedWords: 8, automod: 512, unbanAll: 1048576, editGroup: 32, editAnnouncement: 1024, editRestrictions: 16, manageMods: 2, closeGroup: 32768 };
-var PERM_MASK = Object.keys(PERM_FLAG).reduce(function (n, k) { return n | PERM_FLAG[k]; }, 0);
-// Droits qui font d'un modérateur un administrateur dans le vocabulaire Chatango.
-var ADMIN_MASK = 2 | 4 | 16 | 32 | 1024 | 32768;
 var CHANNEL_FLAG = { red: 256, blue: 2048, mod: 32768 };
 var MSG_FLAG = { PREMIUM: 4, BG_ON: 8 };
 // Polices Chatango dans l'ordre de leur numéro (0 à 8), celui des balises <f x…="n"> et <g x…="n">.
@@ -138,20 +134,6 @@ var EMOTICONS = [
 // Sans prototype : le nom vient du membre, constructor ou __proto__ ne doivent rien trouver.
 var EMOTICON_BY_NAME = EMOTICONS.reduce(function (o, e) { o[e.name] = e; return o; }, Object.create(null));
 
-function flagsToPerms(flags) { var o = {}; Object.keys(PERM_FLAG).forEach(function (k) { o[k] = !!(flags & PERM_FLAG[k]); }); return o; }
-/** Applique des permissions à un masque existant sans toucher aux bits que l'interface ne gère pas. */
-function permsToFlags(perms, base) {
-  var f = (base || 0) & ~PERM_MASK;
-  Object.keys(PERM_FLAG).forEach(function (k) { if (perms[k]) f |= PERM_FLAG[k]; });
-  return f;
-}
-function liveRole(flags) { return flags & ADMIN_MASK ? 'admin' : 'mod'; }
-/** Permissions effectives d'un membre dans un groupe live : le propriétaire a tous les droits. */
-function livePerms(g, name) {
-  if (!g || !g.settings) return allPerms(false);
-  if (g.settings.staff[name] === 'owner') return allPerms(true);
-  return flagsToPerms((g.settings.modFlags || {})[name] || 0);
-}
 function channelOf(flags) { return flags & CHANNEL_FLAG.mod ? 'mod' : flags & CHANNEL_FLAG.blue ? 'blue' : flags & CHANNEL_FLAG.red ? 'red' : 'none'; }
 
 // Une session coupée ne cède la place qu'à une raison de rang égal ou supérieur.

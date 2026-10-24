@@ -390,7 +390,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 
 ### Drapeaux
 
-Les bits de drapeaux de groupe, de droits de modérateur, de canaux et de message sont dans `src/bridge/live-model.js` (`GROUP_FLAG`, `PERM_FLAG`, `CHANNEL_FLAG`, `MSG_FLAG`). Ils ont été relevés dans `chatango.flags` de Torch.
+Les bits de drapeaux de groupe, de droits de modérateur, de canaux et de message sont dans `src/bridge/live-model.js` (`GROUP_FLAG`, `CHANNEL_FLAG`, `MSG_FLAG`), sauf ceux des droits de modérateur, dans `src/core/roles.js` (`PERM_FLAG`) parce que le prototype les utilise aussi. Ils ont été relevés dans `chatango.flags` de Torch.
 
 ## Réglages de démarrage de Torch
 

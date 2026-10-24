@@ -36,8 +36,8 @@ function GroupView(p) {
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
-  var lp = LIVE ? livePerms(g, me) : null;
-  var canClose = LIVE ? lp.closeGroup : canManage(g, me), canBroadcast = LIVE ? lp.broadcast : staff;
+  var rights = groupRights(g, me);
+  var canClose = rights.closeGroup, canBroadcast = rights.broadcast;
   var online = LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length;
   var typing = (s.typing[g.id] || []).filter(function (n) { return n !== me; });
   var ann = g.settings.announcement;
@@ -179,7 +179,7 @@ function GroupView(p) {
         h(T.IconButton, { icon: g.muted ? 'volume-x' : 'bell', label: g.muted ? 'Unmute group' : 'Mute group', pressed: g.muted, onClick: function () { app.actions.toggleMute(g.id); } }),
         h(MenuButton, {
           label: 'Group options', items: [
-            canManage(g, me) || staff ? { label: 'Group settings', icon: 'sliders', onSelect: function () { app.nav({ view: 'gsettings', id: g.id, page: canManage(g, me) ? 'overview' : 'automod' }); } } : null,
+            staff ? { label: 'Group settings', icon: 'sliders', onSelect: function () { app.nav({ view: 'gsettings', id: g.id, page: myRole === 'owner' || rights.manageMods ? 'overview' : 'automod' }); } } : null,
             { label: g.favorite ? 'Remove from favorites' : 'Add to favorites', icon: 'star', onSelect: function () { app.actions.toggleFavorite(g.id); } },
             { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com'); }); } },
             { divider: true },

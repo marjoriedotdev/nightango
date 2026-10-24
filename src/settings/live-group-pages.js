@@ -120,7 +120,7 @@ function GSBansLive(p) {
   var searchError = !search ? '' : search.status === 'refused' ? BAN_SEARCH_ERRORS[search.code] || 'Chatango refused this search.' : search.status === 'timeout' ? "Chatango didn't answer the search. Try again." : '';
   useEffect(function () { app.actions.requestBans(g.id); }, [g.id]);
   useEffect(function () { if (tab === 'unblock' && !unbansLoaded) app.actions.requestUnbans(g.id); }, [g.id, tab, unbansLoaded]);
-  var showIp = canSeeIps(p.myRole, p.perms);
+  var showIp = p.perms.seeIps;
   function ban() {
     var n = name.trim().toLowerCase();
     if (!n) { setErr('Enter a username.'); return; }
