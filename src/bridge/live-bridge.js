@@ -650,6 +650,8 @@ var liveBridge = (function () {
   return {
     ok: !!(C && C.event && typeof C.on === 'function'),
     onOp: onOp,
+    note: note,
+    connName: connName,
     canReply: function (id) { return !!id && String(id).indexOf('k:') !== 0; },
     /**
      * Permet d'envoyer un message de groupe, ou la modification d'un message.
@@ -733,9 +735,14 @@ var liveBridge = (function () {
       try { connect(gid).then(function () { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } }, warn); } catch (e) { warn(e); }
     },
     leave: function (gid) { left[gid] = true; note('Leaving #' + gid); try { C.disconnectFrom(gid); } catch (e) { warn(e); } },
-    reconnect: function (gid) {
+    /**
+     * Permet de relancer une connexion fermée.
+     * @param {string} gid Groupe ou private_message.
+     * @param {boolean=} background Vrai pour un groupe qui n'est pas affiché : le focus de Torch reste sur le groupe affiché.
+     */
+    reconnect: function (gid, background) {
       try {
-        connect(gid).then(function () { if (gid !== 'private_message') { try { C.setFocus({ group: gid, reload: true }); } catch (e) { warn(e); } } }, warn);
+        connect(gid).then(function () { if (gid !== 'private_message' && !background) { try { C.setFocus({ group: gid, reload: true }); } catch (e) { warn(e); } } }, warn);
       } catch (e) { warn(e); }
     },
     loadMore: function (gid) {

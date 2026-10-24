@@ -1503,6 +1503,19 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && !editOnly.original && !editOnly.edit && !editOnly.shown,
     { removed, refused, edited, editOnly });
 
+  /* Reconnexion automatique : coupure par le serveur, page visible, réseau présent, groupe non affiché */
+  const connectsOf = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
+  const focusesOf = gid => calls.filter(c => c[0] === 'focus' && c[1] === gid).length;
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  const auto0 = { test: connectsOf('test'), pm: connectsOf('private_message'), focus: focusesOf('test') };
+  C.groups.test.socket.readyState = 3; C.private.socket.readyState = 3; await wait(5500);
+  const auto1 = { test: connectsOf('test') - auto0.test, pm: connectsOf('private_message') - auto0.pm, focus: focusesOf('test') - auto0.focus };
+  C.private.socket.readyState = 1; await wait(13500);
+  const auto2 = { test: connectsOf('test') - auto0.test, pm: connectsOf('private_message') - auto0.pm };
+  C.groups.test.socket.readyState = 1; await wait(2300);
+  step('automatic reconnect after a server drop, then after a failed attempt',
+    auto1.test === 1 && auto1.pm === 1 && auto1.focus === 0 && auto2.test === 2 && auto2.pm === 1, { auto1, auto2 });
+
   /* Session coupée : connecté ailleurs, hors ligne, connexion perdue, session expirée */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;

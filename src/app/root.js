@@ -2,6 +2,8 @@
 var THREAD_MAX = 500;
 var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
+// Délais des tentatives qui suivent une coupure : un redémarrage de Chatango fait échouer une relance immédiate.
+var RECONNECT_DELAYS = [3000, 10000, 30000];
 
 function Root(props) {
   var st = useState(function () { return props.boot && props.boot.auth ? props.boot : initialState(); }), state = st[0], setState = st[1];
@@ -525,6 +527,8 @@ function Root(props) {
   // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
   var pmAsked = useRef(null);
   var offlineCount = useRef(0);
+  // Reconnexions automatiques en cours, par connexion : tentatives faites et minuteur de la suivante.
+  var retries = useRef({});
   function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
@@ -663,8 +667,8 @@ function Root(props) {
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
     };
-    actions.reconnect = function (gid) {
-      liveBridge.reconnect(gid);
+    actions.reconnect = function (gid, background) {
+      liveBridge.reconnect(gid, background);
       update(function (d) { var g = d.groups[gid]; if (g) g.conn = 'connecting'; if (gid === 'private_message') d.pmConn = 'connecting'; });
     };
     actions.reconnectSession = function () {
@@ -1048,12 +1052,63 @@ function Root(props) {
   }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
   /**
-   * Permet de relancer les connexions fermées.
+   * Permet de relancer les connexions fermées, chacune suivie de ses tentatives automatiques si elle échoue.
    */
   function reconnectClosed() {
     var s0 = stateRef.current, held = s0.session && SESSION_RANK[s0.session.reason] >= SESSION_RANK.kicked;
-    Object.keys(s0.groups).forEach(function (gid) { var g = s0.groups[gid]; if (g.joined && g.conn === 'closed') actions.reconnect(gid); });
-    if (s0.pmConn === 'closed' && !held) actions.reconnect('private_message');
+    var gids = Object.keys(s0.groups).filter(function (gid) { var g = s0.groups[gid]; return g.joined && g.conn === 'closed'; });
+    if (s0.pmConn === 'closed' && !held) gids.push('private_message');
+    gids.forEach(function (gid) { stopRetry(gid); retries.current[gid] = { tries: 0, timer: null }; reconnectAuto(gid); });
+  }
+
+  // -- Reconnexion automatique --------------------------------------------------
+  /**
+   * Permet de lire l'état d'une connexion suivie : la connexion privée, ou un groupe rejoint.
+   * @param {Object} s État de l'application.
+   * @param {string} gid Groupe ou private_message.
+   * @returns {?string} open, connecting ou closed, null pour un groupe quitté ou inconnu.
+   */
+  function connOf(s, gid) {
+    if (gid === 'private_message') return s.pmConn || null;
+    var g = s.groups[gid];
+    return g && g.joined ? g.conn : null;
+  }
+  /**
+   * Permet de savoir si une relance automatique a un sens : page visible, réseau présent, session ni coupée ailleurs, ni expirée, ni hors ligne.
+   * @param {Object} s État de l'application.
+   */
+  function canRetry(s) { return (!s.session || s.session.reason === 'lost') && document.visibilityState === 'visible' && navigator.onLine; }
+  /**
+   * Permet de relancer une connexion sans déplacer le focus de Torch quand son groupe n'est pas affiché.
+   * @param {string} gid Groupe ou private_message.
+   */
+  function reconnectAuto(gid) {
+    var r = stateRef.current.route;
+    actions.reconnect(gid, gid !== 'private_message' && !(r.view === 'group' && r.id === gid));
+  }
+  function stopRetry(gid) {
+    var r = retries.current[gid];
+    if (r) { clearTimeout(r.timer); delete retries.current[gid]; }
+  }
+  /**
+   * Permet de programmer la tentative suivante d'une connexion coupée, jusqu'à épuiser RECONNECT_DELAYS.
+   * @param {string} gid Groupe ou private_message.
+   * @param {boolean} fresh Vrai pour une coupure, faux après une tentative en échec.
+   */
+  function scheduleRetry(gid, fresh) {
+    var prev = retries.current[gid], tries = fresh ? 0 : prev.tries;
+    stopRetry(gid);
+    if (!canRetry(stateRef.current)) return;
+    if (tries >= RECONNECT_DELAYS.length) { liveBridge.note('Stopped reconnecting to ' + liveBridge.connName(gid) + ' after ' + tries + ' attempts'); return; }
+    var delay = RECONNECT_DELAYS[tries];
+    liveBridge.note('Reconnecting to ' + liveBridge.connName(gid) + ' in ' + delay / 1000 + ' s, attempt ' + (tries + 1) + ' of ' + RECONNECT_DELAYS.length);
+    retries.current[gid] = { tries: tries + 1, timer: setTimeout(function () {
+      var s0 = stateRef.current, conn = connOf(s0, gid);
+      // Tentative déjà lancée par ailleurs (Reconnect, retour du réseau) : son échec reprend la suite.
+      if (conn === 'connecting') return;
+      if (conn !== 'closed' || !canRetry(s0)) { stopRetry(gid); return; }
+      reconnectAuto(gid);
+    }, delay) };
   }
 
   function handleLiveOp(op) {
@@ -1218,14 +1273,19 @@ function Root(props) {
         list.sort(function (a, b) { return b.at - a.at; });
         g.live.modlog = list;
       }); break;
-      case 'conn': update(function (d) {
-        if (op.gid === 'private_message') d.pmConn = op.state;
-        if (!d.auth.loggedIn) return;
-        var g = d.groups[op.gid];
-        // Une demande d'historique en cours ne reçoit plus de réponse sur un socket fermé.
-        if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; } }
-        d.session = sessionAfterConn(d, op);
-      }); break;
+      case 'conn':
+        // Seule une connexion ouverte qui se ferme lance la chaîne : un échec au démarrage ou un groupe quitté n'en lancent pas.
+        var was = connOf(stateRef.current, op.gid);
+        if (op.state === 'open') stopRetry(op.gid);
+        else if (op.state === 'closed' && (was === 'open' || was === 'connecting' && retries.current[op.gid])) scheduleRetry(op.gid, was === 'open');
+        update(function (d) {
+          if (op.gid === 'private_message') d.pmConn = op.state;
+          if (!d.auth.loggedIn) return;
+          var g = d.groups[op.gid];
+          // Une demande d'historique en cours ne reçoit plus de réponse sur un socket fermé.
+          if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; } }
+          d.session = sessionAfterConn(d, op);
+        }); break;
       case 'session': update(function (d) {
         if (!d.session || SESSION_RANK[op.reason] >= SESSION_RANK[d.session.reason]) d.session = { reason: op.reason, attempts: 0 };
       }); break;
