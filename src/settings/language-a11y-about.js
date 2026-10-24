@@ -29,19 +29,17 @@ function AccessibilityPage() {
 }
 
 function WhatsNewPage() {
-  var items = [
-    ['0.1.0-b', 'Redesigned interface', 'A calmer layout with one accent color, light and dark themes, and compact density.'],
-    ['0.1.0-b', 'Notification matrix', LIVE ? 'Choose in-app and desktop alerts per event on one screen.' : 'Choose in-app, sound, desktop and email alerts per event on one screen.'],
-    ['0.1.0-b', 'Roles and permissions', LIVE ? 'Every moderator permission is named and explained.' : 'Every staff permission is named and explained. Admin-only rights are visible but locked.'],
-    LIVE ? null : ['0.1.0-b', 'Message requests', 'Private messages from people outside your friends list wait in Requests.'],
-    ['0.1.0-b', 'Readable Chatango styles', "Members' colors and fonts can be turned off in Appearance. Torch fixes colors that would be hard to read."]
-  ].filter(Boolean);
-  return h(Page, { title: "What's new", lede: 'Changes in the redesigned client.' },
-    h(T.SettingsSection, null, items.map(function (i, k) {
-      return h('div', { key: k, className: 'lrow', style: k ? null : { borderTop: 0 } },
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, i[1]), h('span', { className: 'lrow-sub', style: { fontSize: 13 } }, i[2])),
-        h('span', { className: 'muted', style: { fontSize: 12 } }, i[0]));
-    })));
+  return h(Page, { title: "What's new", lede: 'Changes in each version of Torch Skin, newest first.' },
+    RELEASE_NOTES.map(function (r) {
+      // Date du changelog lue en heure locale : new Date('YYYY-MM-DD') la lirait en UTC et reculerait d'un jour à l'ouest.
+      var d = r.date.split('-');
+      return h(T.SettingsSection, { key: r.version, title: r.version, description: new Date(+d[0], d[1] - 1, +d[2]).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) },
+        r.groups.map(function (g) {
+          return h('div', { key: g.title, className: 'lrow' },
+            h('div', { className: 'grow' }, h('h3', { className: 'lrow-title notes-title' }, g.title),
+              h('ul', { className: 'notes-list' }, g.items.map(function (item, i) { return h('li', { key: i }, item); }))));
+        }));
+    }));
 }
 
 function AboutPage() {
