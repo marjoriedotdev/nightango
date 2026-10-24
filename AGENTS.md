@@ -18,7 +18,8 @@ Les règles 1, 2, 4 et 6 ont leur ADR sous `docs/adr/`, lié en fin de règle. L
 Décisions qui en découlent et qu'il ne faut pas « corriger » :
 - le style de message perso reste local au navigateur ([ADR-0006](docs/adr/0006-local-message-style.md)) ;
 - les comptes liés (`/api/v1/who`) ne sont demandés qu'au clic et montrés à l'utilisateur seul, sans être stockés ni journalisés ([ADR-0010](docs/adr/0010-linked-accounts-on-request.md)) ;
-- le loader tourne en deux contextes, bac à sable et page ([ADR-0003](docs/adr/0003-two-context-loader.md)).
+- le loader tourne en deux contextes, bac à sable et page ([ADR-0003](docs/adr/0003-two-context-loader.md)) ;
+- le journal de diagnostic reste dans le navigateur et n'observe ni les envois des sockets ni le contenu des trames ([ADR-0011](docs/adr/0011-diagnostic-journal.md)).
 
 ## Préférences du projet
 
