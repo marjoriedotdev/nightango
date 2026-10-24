@@ -2,6 +2,12 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.14.2] - 2026-10-24
+
+### Added
+
+- Settings, Diagnostics records connection and page events in this browser, to find out why a group or your private messages disconnect. Copy or download the log to share it.
+
 ## [0.14.1] - 2026-10-24
 
 ### Fixed
