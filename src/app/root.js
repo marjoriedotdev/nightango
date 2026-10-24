@@ -793,6 +793,10 @@ function Root(props) {
       Object.keys(stateRef.current.dms).forEach(function (n) { liveBridge.clearPmHistory(n); actions.closeDm(n); });
       update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; d.dms[n].olderMore = false; }); });
     };
+    actions.checkPmr = function () {
+      liveBridge.pmrStatus().then(function (st) { update(function (d) { if (d.auth.loggedIn) d.pmrStatus = st; }); });
+    };
+    actions.dismissPmr = function () { update(function (d) { d.pmrDismissed = true; }); };
     actions.exportDms = function () { return liveBridge.exportPm(); };
     actions.importDms = function (records) { return liveBridge.importPm(records).then(function (r) { loadPmHistory(true); return r; }); };
     actions.createGroup = function (name, title, desc, listed) {
@@ -1270,7 +1274,7 @@ function Root(props) {
         }, 1500);
         break;
       }
-      case 'pmReady': loadPmHistory(); break;
+      case 'pmReady': loadPmHistory(); actions.checkPmr(); break;
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;

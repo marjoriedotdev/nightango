@@ -183,7 +183,7 @@ function liveWorld(me) {
     account: { email: '', verified: false },
     route: { view: 'discover' }, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
-    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null
+    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false
   };
 }
 /** Clé d'une entrée de la liste des bannissements : unid et IP, comme removeblock. */
