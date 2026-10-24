@@ -15,6 +15,13 @@ function httpsHost(url) {
  * @param {?Array<string>} hosts Hôtes de confiance en minuscules, null si la liste de Torch est illisible.
  */
 function isTrustedUrl(url, hosts) { var host = httpsHost(url); return !!host && !!hosts && hosts.indexOf(host) >= 0; }
+/**
+ * Permet de savoir si un média attend un clic avant tout chargement : jamais pour un hôte de confiance.
+ * @param {Object} safety Réglages Safety.
+ * @param {string} kind Type du média lu par parseContent.
+ * @param {string} url Adresse que le média chargerait.
+ */
+function waitsForClick(safety, kind, url) { return !isTrustedUrl(url, safety.trustedHosts) && (kind === 'video' || kind === 'audio' || safety.proxyMedia); }
 function warnOnLink(app, url) {
   return function (e) {
     var safety = app.state.prefs.safety;

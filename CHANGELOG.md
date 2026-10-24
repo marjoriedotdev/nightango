@@ -2,6 +2,12 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.15.4] - 2026-10-24
+
+### Changed
+
+- Premium profile backgrounds from a trusted site load without a click, like images in messages.
+
 ## [0.15.3] - 2026-10-24
 
 ### Changed

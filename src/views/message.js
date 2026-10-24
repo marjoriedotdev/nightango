@@ -164,14 +164,6 @@ function MessageEmbeds(p) {
 }
 
 /**
- * Permet de savoir si un média attend un clic avant tout chargement : jamais pour un hôte de confiance.
- * @param {Object} safety Réglages Safety.
- * @param {string} kind Type du média lu par parseContent.
- * @param {string} url Adresse que le média chargerait.
- */
-function waitsForClick(safety, kind, url) { return !isTrustedUrl(url, safety.trustedHosts) && (!!FILE_MEDIA[kind] || safety.proxyMedia); }
-
-/**
  * Permet de construire un lien de média qui passe par l'avertissement de lien.
  * @param {Object} app Contexte de l'application.
  * @param {string} url Adresse ouverte.

@@ -12,14 +12,14 @@ function profileAbout(u, skinned) {
 }
 
 /**
- * Permet de suivre l'affichage de l'image de fond Premium selon les réglages de médias.
+ * Permet de suivre l'affichage de l'image de fond Premium selon les réglages de médias et les hôtes de confiance.
  * @param {?Object} mini Fond du membre tel que le renvoie miniStyleOf.
  */
 function useMiniCover(mini) {
   var safety = useApp().state.prefs.safety;
   var r = useState(null), revealed = r[0], setRevealed = r[1];
   var image = mini && mini.image && safety.embedImages ? mini.image : null;
-  return { image: image, shown: !!image && (!safety.proxyMedia || revealed === image), reveal: function () { setRevealed(image); } };
+  return { image: image, shown: !!image && (revealed === image || !waitsForClick(safety, 'image', image)), reveal: function () { setRevealed(image); } };
 }
 
 /**
