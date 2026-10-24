@@ -46,6 +46,7 @@ src/
   app/        racine
     sound.js
     state.js         préférences persistées
+    pm.js            MP : réception, fusion de l'historique privé, non-lus lus dans l'archive (base de Torch, ou mémoire dans le prototype et sans base)
     root.js          Root : état, actions, actions live, handleLiveOp
     start.js         montage
   loader/
@@ -126,6 +127,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - `Root` (`app/root.js`) tient tout l'état de l'application. `update(fn)` clone l'état par `JSON.parse(JSON.stringify(prev))`, applique `fn` au clone, puis le remplace. L'état doit donc rester sérialisable en JSON.
 - Les préférences sont persistées dans `localStorage` sous `torch-prototype-prefs` (`app/state.js`). En live, celles de `TORCH_PREFS` (`core/prefs.js` : messages d'invités, annonces) sont des réglages de Torch : relues dans ses réglages à la connexion, et `usePref().sw` ne les bascule qu'une fois écrites chez lui. Les hôtes de confiance (`safety.trustedHosts`) suivent la même règle : en live, c'est la liste de Torch, relue à la connexion (`null` si illisible) et changée par `actions.setTrustedHost` une fois écrite chez lui.
 - Les données propres au compte sont persistées sous `torch-skin:<pseudo>` : conversations fermées (`hidden`), canaux masqués de chaque groupe (`channels`), membres au style coupé (`unstyled`) et style perso (`style`). Le pont y pose aussi le drapeau de migration des non-lus (`pmReadMigrated`, `docs/torch-protocol.md`, Historique privé) : `Root` fusionne ses écritures avec le contenu stocké pour le garder. En live, les favoris, les sourdines de groupe et les membres ignorés sont ceux de Torch (`docs/torch-protocol.md`, Réglages de démarrage de Torch). Le prototype garde les siens dans son état.
+- Les non-lus des MP viennent de l'archive (`app/pm.js`) : la base d'historique de Torch en live, une archive en mémoire dans le prototype ou quand cette base manque. `unread` d'une conversation n'en est qu'une copie, que seul `app/pm.js` écrit ([ADR-0012](adr/0012-pm-unread-from-history.md)).
 - Les profils lus (mini profil, fond Premium dans `u.miniStyle`) et les fonds de message (`u.msgBg`) sont mis en cache avec l'utilisateur.
 - La médiathèque de Torch reste hors de l'état : l'onglet Media, les étoiles et la complétion la lisent par les actions de `Root`, en live dans la base `favorite_media` de Torch (pont), en prototype dans la médiathèque d'exemple (`sampleMedia`). Chaque écriture augmente `mediaRev`, qui les fait relire (`docs/torch-protocol.md`, Médiathèque).
 - La page Mentions lit `mentionLog` : les 100 derniers messages de groupe, en direct ou d'historique, qui mentionnent l'utilisateur, le plus récent en tête. La liste vit dans l'état seulement et repart vide à chaque chargement de la page.
@@ -167,6 +169,7 @@ Suites jsdom dans `tests/`, lancées par `tests/run.mjs` après le build :
 - `smoke` : prototype hébergé, chargé depuis `dist/torch-client.html`.
 - `live_ui` : mode live avec un faux client Torch, sur `dist/app.js` et le bundle du design system. Il enregistre chaque trame envoyée et vérifie son format exact.
 - `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login, pont vissle, journal de diagnostic. Jouée sur `dist/torch-skin.user.js` puis sur `dist/torch-skin.min.user.js`. C'est la seule suite qui exécute les userscripts.
+- `pm` : non-lus des MP et fusion de l'historique privé, sur les sources de `src/core/`, `src/bridge/` et `src/app/pm.js`, avec la fausse base d'historique de `tests/fake-pm-db.js`, partagée avec `live_ui`.
 - `live_login` : détection de connexion, sur la concaténation des sources de `src/bridge/`.
 - `avatar` : avatars, sur le bundle du design system et les sources de `src/bridge/`.
 - `check_ds` : rendu des aperçus du design system, sur `torchds/project/components/bundle.js`.

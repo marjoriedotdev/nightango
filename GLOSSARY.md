@@ -118,6 +118,10 @@ _Avoid_: conversation masquée, archivée
 **Conversation supprimée**:
 MP fermé dont l'historique privé a aussi été effacé de ce navigateur.
 
+**Non-lu**:
+MP reçu que l'utilisateur n'a pas encore lu, tel que l'historique privé le marque. Une modification de MP n'en est pas un.
+_Avoid_: unread (en prose française)
+
 **Ami**:
 Compte que l'utilisateur suit dans sa liste d'amis pour voir sa présence.
 _Avoid_: contact, watch list

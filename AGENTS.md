@@ -19,7 +19,8 @@ Décisions qui en découlent et qu'il ne faut pas « corriger » :
 - le style de message perso reste local au navigateur ([ADR-0006](docs/adr/0006-local-message-style.md)) ;
 - les comptes liés (`/api/v1/who`) ne sont demandés qu'au clic et montrés à l'utilisateur seul, sans être stockés ni journalisés ([ADR-0010](docs/adr/0010-linked-accounts-on-request.md)) ;
 - le loader tourne en deux contextes, bac à sable et page ([ADR-0003](docs/adr/0003-two-context-loader.md)) ;
-- le journal de diagnostic reste dans le navigateur et n'observe ni les envois des sockets ni le contenu des trames ([ADR-0011](docs/adr/0011-diagnostic-journal.md)).
+- le journal de diagnostic reste dans le navigateur et n'observe ni les envois des sockets ni le contenu des trames ([ADR-0011](docs/adr/0011-diagnostic-journal.md)) ;
+- les non-lus des MP ne viennent que de l'historique privé de Torch, l'état n'en garde qu'une copie relue ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
 
 ## Préférences du projet
 
@@ -46,7 +47,7 @@ Sorties de `pnpm build` (non versionnées) :
 - `dist/torch-skin.user.js` : même assemblage, lisible, pour le débogage et l'audit ;
 - `dist/torch-client.html` et `dist/app.js` : prototype hébergé.
 
-Seule la suite `loader` exécute les userscripts, les deux. Les autres lisent `dist/torch-client.html`, `dist/app.js`, les sources de `src/bridge/` ou le bundle du design system (détail dans `docs/architecture.md`, section Tests).
+Seule la suite `loader` exécute les userscripts, les deux. Les autres lisent `dist/torch-client.html`, `dist/app.js`, des sources de `src/` ou le bundle du design system (détail dans `docs/architecture.md`, section Tests).
 
 Le lanceur `tests/run.mjs` juge chaque suite sur son code de sortie et sur sa sortie (lignes `FAIL`, `CRASH`, `ERRORS:` non vide) : certaines suites sortent en 0 malgré un échec. Lis la sortie, pas seulement le code retour.
 
