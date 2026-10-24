@@ -2,6 +2,17 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.14.0] - 2026-10-24
+
+### Added
+
+- What's new lists the changes of each version.
+
+### Changed
+
+- Who is this shows each linked account as a mini profile card that opens its profile.
+- The friends list is split into Online and Offline sections.
+
 ## [0.13.0] - 2026-10-24
 
 ### Fixed
