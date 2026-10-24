@@ -1313,7 +1313,17 @@ function Root(props) {
         }, 1500);
         break;
       }
-      case 'pmReady': loadPmHistory(); actions.checkPmr(); break;
+      case 'pmReady':
+        liveBridge.pmArchived().then(function (saved) {
+          if (!saved && !stateRef.current.pmUnsaved) {
+            pmArchive.current = memoryPmArchive();
+            update(function (d) { d.pmUnsaved = true; });
+            if (JOURNAL) JOURNAL.add('app', 'Private message history is not available in this browser');
+          }
+          loadPmHistory();
+        });
+        actions.checkPmr();
+        break;
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;

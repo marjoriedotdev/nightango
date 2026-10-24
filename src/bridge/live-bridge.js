@@ -1036,6 +1036,8 @@ var liveBridge = (function () {
         tx.onabort = function () { reject(tx.error); };
       }); });
     },
+    /** Permet de savoir si ce navigateur garde l'historique privé de Torch. */
+    pmArchived: function () { return openPmDb().then(function (db) { return !!db; }); },
     /** Supprime l'historique que Torch garde dans ce navigateur ; Chatango n'en conserve pas. */
     clearPmHistory: function (target) { try { C.private.clearHistory(target); return true; } catch (e) { warn(e); return false; } },
     /**
