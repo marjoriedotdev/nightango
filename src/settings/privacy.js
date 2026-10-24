@@ -3,11 +3,6 @@ function PrivacyPage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
   return h(Page, { title: 'Privacy', lede: 'Control who can reach you and what others see.' },
     h(T.SettingsSection, { title: 'Private messages' },
-      h(T.SettingRow, {
-        asLabel: false, title: 'Who can message you', description: 'Messages from anyone else land in Requests, where you accept or decline them.',
-        control: h('select', { className: 'tc-input', style: { width: 'auto' }, 'aria-label': 'Who can message you', value: prefs.privacy.pmFrom, onChange: function (e) { pr.set('privacy.pmFrom', e.target.value); } },
-          h('option', { value: 'everyone' }, 'Everyone'), h('option', { value: 'groups' }, 'Members of my groups'), h('option', { value: 'friends' }, 'Friends only'))
-      }),
       h(T.SettingRow, { title: 'Show read receipts and idle time', description: 'Others see when you read their message and how long you have been idle.', control: pr.sw('privacy.showIdle') }),
       h(PmHistoryRows, null),
       h(T.SettingRow, {

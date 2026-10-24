@@ -188,11 +188,8 @@ function Root(props) {
   function receiveDm(from, text) {
     var s0 = stateRef.current;
     var focused = isDmInView(s0, from);
-    var isNew = !s0.dms[from];
-    var friend = userOf(s0, from).friend, pmFrom = s0.prefs.privacy.pmFrom;
-    var request = isNew && !friend && pmFrom !== 'everyone';
     update(function (d) {
-      if (!d.dms[from]) d.dms[from] = { messages: [], unread: 0, lastReadTs: 0, request: request };
+      if (!d.dms[from]) d.dms[from] = { messages: [], unread: 0, lastReadTs: 0 };
       var c = d.dms[from];
       c.closed = false;
       c.messages.push({ id: uid(), from: from, text: text, ts: Date.now() });
@@ -354,7 +351,6 @@ function Root(props) {
     },
     exportMedia: function () { return mediaLib.exportMedia(); },
     importMedia: function (entries) { return mediaLib.importMedia(entries).then(function (r) { mediaChanged(); return r; }); },
-    declineRequest: function (name) { actions.closeDm(name); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
       update(function (d) { if (!d.users[name]) d.users[name] = { status: 'offline', about: '', style: {} }; d.users[name][key] = !was; });
