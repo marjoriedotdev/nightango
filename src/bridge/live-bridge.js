@@ -605,6 +605,9 @@ var liveBridge = (function () {
     // Torch occupe window.onoffline et window.ononline : on écoute à côté sans les remplacer.
     window.addEventListener('offline', function () { emit({ op: 'session', reason: 'offline' }); });
     window.addEventListener('online', function () { emit({ op: 'online' }); });
+    // iOS coupe les sockets d'une page cachée sans prévenir : retour au premier plan, page restaurée du cache compris.
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') emit({ op: 'visible' }); });
+    window.addEventListener('pageshow', function (e) { if (e.persisted) emit({ op: 'visible' }); });
     var loggedIn = false;
     var onLogin = function (catchUp) {
       if (loggedIn) return;
