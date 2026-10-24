@@ -28,7 +28,8 @@ src/
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
                      profils, recherche, historique privé, médiathèque, vissle, création de groupe
   views/      écrans principaux
-    login, shell (barre latérale), group, message (ligne, médias, saut vers un message du fil),
+    login, shell (barre latérale), group, message (ligne, médias),
+    message-log (fil de groupe et de MP : suivi du bas, lecture gardée en place, pages plus anciennes, saut vers un message),
     members (liste, fiche profil, comptes liés, bannissement, lien externe, lien de profil), dm (Chats et recherche dans les MP, Friends),
     meet (Meet people), mentions (mentions récentes de tous les groupes, ligne d'un message hors de son fil),
     profile (résumé commun à la fiche et au panneau, profil complet, panneau), new-dm, message-style (style perso),

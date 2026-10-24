@@ -88,28 +88,6 @@ function MessageRow(p) {
 }
 
 /**
- * Permet de faire défiler un fil, de groupe ou de MP, jusqu'à un message chargé, puis de le mettre en évidence un instant.
- * @param {Object} logRef Référence du fil.
- * @returns {Array} Message visé ({id}) et fonction qui le pose.
- */
-function useMessageJump(logRef) {
-  var reduceMotion = useApp().state.prefs.a11y.reduceMotion;
-  var st = useState(null), target = st[0], setTarget = st[1];
-  // Après le rendu qui pose la cible : la ligne visée n'existe qu'à ce moment, par exemple une fois la recherche du groupe fermée.
-  useEffect(function () {
-    if (!target) return;
-    var row = logRef.current.querySelector('[data-msg-id=' + JSON.stringify(target.id) + ']');
-    var still = reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    row.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
-    row.tabIndex = -1;
-    row.focus({ preventScroll: true });
-    var timer = setTimeout(function () { setTarget(null); }, 1500);
-    return function () { clearTimeout(timer); };
-  }, [target]);
-  return st;
-}
-
-/**
  * Permet de proposer la copie du texte d'un message, en groupe comme en MP.
  * @param {Object} app Contexte de l'application.
  * @param {Object} m Message.

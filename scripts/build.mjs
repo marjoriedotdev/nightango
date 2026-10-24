@@ -25,6 +25,7 @@ export const APP_SOURCES = [
   'views/shell.js',
   'views/group.js',
   'views/message.js',
+  'views/message-log.js',
   'views/members.js',
   'views/dm.js',
   'views/meet.js',

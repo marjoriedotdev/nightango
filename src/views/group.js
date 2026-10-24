@@ -15,7 +15,6 @@ function GroupView(p) {
   var a3 = useState(null), mode = a3[0], setMode = a3[1];
   var a4 = useState('none'), channel = a4[0], setChannel = a4[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
-  var a7 = useState(false), jump = a7[0], setJump = a7[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
@@ -23,13 +22,9 @@ function GroupView(p) {
   var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid, channel: channel });
-  var logRef = useRef(null), sentinelRef = useRef(null);
-  var a10 = useMessageJump(logRef), target = a10[0], setTarget = a10[1];
-  var count = g ? g.messages.length : 0, firstTs = count ? g.messages[0].ts : null;
+  var log = useMessageLog();
+  var count = g ? g.messages.length : 0;
   var q = search ? search.trim().toLowerCase() : '';
-  var reading = useReadingPosition(logRef, firstTs, [count, !!search], function () { setJump(true); });
-  var canLoadMore = !!(LIVE && g && !q && g.inited && !g.historyDone && !g.historyCapped && !g.loadingMore && g.conn === 'open' && !target);
-  useInfiniteScroll(logRef, sentinelRef, canLoadMore, function () { app.actions.loadMore(g.id); }, '200px 0px 0px 0px');
   // Saut demandé par la page Mentions : jumpTo, déclarée plus bas, refuse un message que le fil masque.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m) : null;
@@ -50,10 +45,6 @@ function GroupView(p) {
   // Le canal d'envoi n'est jamais masqué, même s'il reste dans la liste gardée.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
 
-  function onScroll() {
-    reading.onScroll();
-    if (reading.atBottom.current && jump) setJump(false);
-  }
   // Comme Torch : la mention s'ajoute en fin de brouillon.
   function mention(handle) {
     setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
@@ -98,11 +89,10 @@ function GroupView(p) {
   function send(text) {
     if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
     if (runCommand(app, text, g.id)) return;
-    reading.atBottom.current = true;
+    log.follow();
     app.actions.sendGroup(g.id, text, { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel });
     setMode(null);
   }
-  function toBottom() { reading.atBottom.current = true; logRef.current.scrollTop = 0; setJump(false); }
   // Comme dans Torch, un message masqué compte encore dans les non-lus et les mentions.
   function shown(m) { return m.annc ? prefs.announcements : m.kind !== 'msg' || prefs.safety.guestMessages || !isGuest(m.author); }
   // Les messages d'exemple du prototype n'ont pas de canal.
@@ -112,7 +102,7 @@ function GroupView(p) {
     if (!shown(o)) { app.ui.toast('The original message is hidden because messages from guests are off in Safety settings.'); return; }
     if (isHiddenAuthor(s, o.author) && (prefs.safety.ignoreMode === 'hide' || !revealed[o.id])) { app.ui.toast('The original message is hidden because you ignore its author.'); return; }
     setSearch(null);
-    setTarget({ id: o.id });
+    log.jumpTo(o.id);
   }
 
   var items = [], prev = null, lastDay = null, marker = false;
@@ -134,14 +124,14 @@ function GroupView(p) {
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted);
-    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: !!target && target.id === m.id, onReply: reply, onQuote: quote, onEdit: edit, onMention: mention, onJump: jumpTo }));
+    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: log.targetId === m.id, onReply: reply, onQuote: quote, onEdit: edit, onMention: mention, onJump: jumpTo }));
     prev = m;
   }
-  if (LIVE && !q) items.unshift(!g.inited && !g.messages.length
-    ? h(SkeletonRows, { key: 'top', count: 6, avatar: 36, twoLines: true, label: 'Loading messages' })
-    : g.historyDone ? historyStart('This is the beginning of the history Chatango keeps for #' + g.id + '.')
-      : g.historyCapped ? null
-      : olderSentinel(sentinelRef, g.loadingMore));
+  var older = !LIVE || q ? null
+    : !g.inited && !g.messages.length ? { status: 'pending' }
+    : g.historyDone ? { status: 'start', text: 'This is the beginning of the history Chatango keeps for #' + g.id + '.' }
+    : g.historyCapped ? null
+    : { status: 'more', loading: g.loadingMore, ready: g.inited && !g.loadingMore && g.conn === 'open', load: function () { app.actions.loadMore(g.id); } };
   if (q && !items.length) items.push(h('div', { key: 'none', className: 'empty' }, h('h2', null, 'No messages match'), h('p', null, 'Search looks at loaded messages in #' + g.id + '.')));
 
   var composer;
@@ -203,9 +193,7 @@ function GroupView(p) {
         h('label', { htmlFor: 'gsearch', className: 'tc-sr' }, 'Search messages'),
         h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
         h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
-      h('div', { className: 'log', role: 'log', 'aria-label': 'Messages in ' + g.id, ref: logRef, onScroll: onScroll },
-        h('div', { className: 'log-inner' }, items)),
-      jump ? h('button', { type: 'button', className: 'jump', onClick: toBottom }, h(T.Icon, { name: 'chevron-down', size: 14 }), 'New messages') : null,
+      h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: count + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn && g.conn !== 'open' ? h(ConnectionBanner, { name: '#' + g.id, conn: g.conn, onReconnect: function () { app.actions.reconnect(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onMouseDown: endCompletion, onBlur: endCompletion },
         h('p', { className: 'typing', 'aria-live': 'polite' }, typing.length ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, typing.join(', ')), typing.length > 1 ? ' are typing' : ' is typing') : null),
