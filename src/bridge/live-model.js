@@ -1,5 +1,7 @@
 /* ---------- Pont vers le client Torch réel (mode injecté uniquement) ---------- */
 var LIVE = !!window.__TORCH_LIVE__;
+// Posé par le code page avant Torch (loader/skin-journal.js) : absent du prototype et des suites qui ne lisent que le pont.
+var JOURNAL = window.__TORCH_JOURNAL__ || null;
 
 /**
  * Permet de construire l'URL d'une photo de profil Chatango.
