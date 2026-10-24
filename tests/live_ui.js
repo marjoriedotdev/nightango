@@ -858,7 +858,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(shownBg) === JSON.stringify([[ROSA, bgImg('rosa', '0.4', 'right bottom')], [ROSA, bgImg('rosa', '0.4', 'right bottom')], ['', bgImg('trap', '1', 'left top')], ['', bgImg('pale', '0', 'left top')], ['', null], ['', null], ['', null]])
     && JSON.stringify(askedBg) === '[1,1,1,1,0,0]' && !leaked, { askedOff, blockedBg, shownBg, askedBg, leaked });
 
-  /* Médias tapés en texte : YouTube sans doublon avec sa balise, vidéo et audio https créés au seul clic, http et autres extensions en lien, lecteur en échec redevenu lien */
+  /* Médias tapés en texte : YouTube sans doublon avec sa balise, vidéo et audio créés au seul clic, http chargé en https, autres extensions en lien, lecteur en échec redevenu lien */
   const MEDIA_LINKS = ['https://youtu.be/dQw4w9WgXcQ', 'https://x.test/clip.MP4?t=3', 'https://x.test/song.mp3#end', 'http://x.test/old.webm', 'https://x.test/old.wmv', 'https://www.youtube.com/watch?v=jNQXAC9IVRw'];
   g('b', 'test', ['1700000300.1', 'Eve', '', 'u7', 'UNID7', 'tmpmedia', '9.9.9.9', '0', '', '<n000/><f x11000="0">Media ' + MEDIA_LINKS.join(' ') + ' <i s="vid://yt:dQw4w9WgXcQ" w="126" h="93"/>']);
   const mediaRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Media ') === 0); return p && p.closest('article'); };
@@ -869,17 +869,17 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const mediaOpen = mediaLook();
   await toggle('Safety', 'Block external media until I click');
   [...mediaRow().querySelectorAll('.embed-video, .embed-reveal')].forEach(click);
-  await until(() => mediaRow().querySelectorAll('video, audio, iframe').length === 4);
+  await until(() => mediaRow().querySelectorAll('video, audio, iframe').length === 5);
   const player = el => [el.getAttribute('src'), el.hasAttribute('controls'), el.hasAttribute('autoplay')];
   const played = { frames: [...mediaRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), files: [...mediaRow().querySelectorAll('video, audio')].map(x => [x.tagName].concat(player(x))) };
   if (mediaRow().querySelector('audio')) mediaRow().querySelector('audio').dispatchEvent(new w.Event('error'));
   await until(() => !mediaRow().querySelector('audio'));
   const failed = { audio: !!mediaRow().querySelector('audio'), link: !!mediaRow().querySelector('.embeds a.msg-link[href="https://x.test/song.mp3#end"]') };
-  const MEDIA_EMBEDS = ['embed-video:', 'embed-reveal:Play videox.test', 'embed-reveal:Play audiox.test', 'embed-video:'];
+  const MEDIA_EMBEDS = ['embed-video:', 'embed-reveal:Play videox.test', 'embed-reveal:Play audiox.test', 'embed-reveal:Play videox.test', 'embed-video:'];
   step('media links in text embed and load only on click', !!mediaBlocked && JSON.stringify(mediaBlocked) === JSON.stringify({ links: MEDIA_LINKS, embeds: MEDIA_EMBEDS, players: 0 })
     && !!mediaOpen && JSON.stringify(mediaOpen) === JSON.stringify({ links: MEDIA_LINKS, embeds: MEDIA_EMBEDS, players: 0 })
     && JSON.stringify(played.frames) === JSON.stringify(['dQw4w9WgXcQ', 'jNQXAC9IVRw'].map(id => 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1'))
-    && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true]])
+    && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true], ['VIDEO', 'https://x.test/old.webm', true, true]])
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
 
   /* Hôte de confiance (liste de Torch) : sous proxyMedia, seule son image s'affiche sans clic, l'hôte lu comme le navigateur */

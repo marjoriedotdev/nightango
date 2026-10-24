@@ -23,11 +23,14 @@ var IMAGE_URL = fileUrlPattern('png|apng|jpe?g|gif|bmp|webp'), VIDEO_URL = fileU
 var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|\/\w+\/|\/)([\w-]{11})/;
 // Comme renderMessage de Torch : seule une paire ▓…▒ devient un barré, un marqueur isolé reste du texte.
 var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
+// Comme crawl de Torch (inject.js:1112) : un média en http se charge en https, celui de fp.chatango.com sur ust.chatango.com.
+function secureMediaUrl(url) { return url.replace(/^http:\/\//i, 'https://').replace(/^https:\/\/fp\.chatango\.com\//i, 'https://ust.chatango.com/'); }
 function embedOf(src) {
   var yt = /^vid:\/\/yt:([\w-]{11})/.exec(src), img = /^img:\/\/(?:cam|lib):([^"&?\/\s]+)/.exec(src);
   if (yt) return { kind: 'youtube', id: yt[1] };
   if (img) return { kind: 'photo', url: 'https://chatango.com/pmmessageimg?i=' + encodeURIComponent(img[1]) };
-  return IMAGE_URL.test(src) ? { kind: 'image', url: src } : null;
+  var url = secureMediaUrl(src);
+  return IMAGE_URL.test(url) ? { kind: 'image', url: url } : null;
 }
 /**
  * Permet de reconnaître le média d'un lien tapé dans le texte : vidéo YouTube, image, fichier vidéo ou audio.
@@ -36,7 +39,8 @@ function embedOf(src) {
 function linkEmbedOf(url) {
   var yt = YOUTUBE_LINK.exec(url);
   if (yt) return { kind: 'youtube', id: yt[1] };
-  return VIDEO_URL.test(url) ? { kind: 'video', url: url } : AUDIO_URL.test(url) ? { kind: 'audio', url: url } : embedOf(url);
+  var file = secureMediaUrl(url);
+  return VIDEO_URL.test(file) ? { kind: 'video', url: file } : AUDIO_URL.test(file) ? { kind: 'audio', url: file } : embedOf(url);
 }
 /**
  * Permet de rendre une émoticône sm:// en texte : son emoji, son premier raccourci si elle est Premium sans le drapeau, son nom seul si la table l'ignore.
