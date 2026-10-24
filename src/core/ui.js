@@ -328,6 +328,17 @@ function Toasts(p) {
     })));
 }
 
+/**
+ * Bannière d'une connexion live coupée ou en cours, avec Reconnect une fois fermée.
+ * @param {{name: string, conn: string, onReconnect: Function, style: Object=}} p Connexion nommée (#groupe ou private messages), son état, sa relance et la marge du conteneur.
+ */
+function ConnectionBanner(p) {
+  return h('div', { className: 'banner-wrap', style: p.style }, h(T.Banner, {
+    tone: 'warning', icon: 'info', title: p.conn === 'connecting' ? 'Connecting to ' + p.name : 'Disconnected from ' + p.name,
+    action: p.conn === 'closed' ? h(T.Button, { size: 'sm', onClick: p.onReconnect }, 'Reconnect') : null
+  }, p.conn === 'connecting' ? 'Messages you send now may not arrive.' : 'New messages will not arrive until you reconnect.'));
+}
+
 // -- Personnes ----------------------------------------------------------------
 /**
  * Permet d'afficher le rôle court d'un membre en badge, à côté de son nom.

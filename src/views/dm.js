@@ -26,6 +26,7 @@ function DMView(p) {
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
     LIVE && s.pmrStatus === 'restricted' && !s.pmrDismissed ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: 'Your private messages are restricted', onDismiss: app.actions.dismissPmr },
       'People might not receive your messages.')) : null,
+    convo ? null : pmConnBanner(app, { margin: '12px 12px 0' }),
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
       options: [{ value: 'chats', label: h(Frag, null, 'Chats', h(T.CountBadge, { count: unreadDmCount(s) })) }, { value: 'friends', label: 'Friends' }, { value: 'meet', label: 'Meet people' }]
@@ -51,6 +52,17 @@ function DMView(p) {
   return h('div', { className: 'main', style: { flexDirection: 'row' } },
     h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
     convo && column.open ? h(ProfilePanel, { name: id }) : null);
+}
+
+/**
+ * Permet d'afficher la coupure de la connexion privée, une fois les MP chargés et hors session coupée, qui a sa propre fenêtre.
+ * @param {Object} app Contexte de l'application.
+ * @param {Object=} style Marge du conteneur.
+ */
+function pmConnBanner(app, style) {
+  var s = app.state;
+  if (!LIVE || !s.pmLoaded || !s.pmConn || s.pmConn === 'open' || s.session) return null;
+  return h(ConnectionBanner, { name: 'private messages', conn: s.pmConn, style: style, onReconnect: function () { app.actions.reconnect('private_message'); } });
 }
 
 var DM_SEARCH_MIN = 2, DM_SEARCH_MAX = 50, DM_SEARCH_DELAY = 300;
@@ -188,6 +200,7 @@ function DmThread(p) {
         label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
       })),
     h('div', { className: 'log', role: 'log', 'aria-label': 'Messages with ' + id, ref: logRef, onScroll: onScroll }, h('div', { className: 'log-inner' }, rows)),
+    pmConnBanner(app),
     h('div', { className: 'composer-wrap' },
       h('p', { className: 'typing', 'aria-live': 'polite' }, typing ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, id), ' is typing') : null),
       bottom));
