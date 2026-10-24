@@ -2,6 +2,12 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.15.2] - 2026-10-24
+
+### Changed
+
+- Group and private message threads now share one scrolling behaviour: staying at the bottom, keeping your place, loading earlier messages and jumping to a message.
+
 ## [0.15.1] - 2026-10-24
 
 ### Added

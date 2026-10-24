@@ -146,23 +146,16 @@ function dmHitMessage(c, hit) {
  */
 function DmThread(p) {
   var app = useApp(), s = app.state, me = s.me, id = p.id, convo = s.dms[id];
-  var logRef = useRef(null), sentinelRef = useRef(null), asked = useRef(false);
+  var asked = useRef(false);
   var len = convo.messages.length;
-  var jump = useMessageJump(logRef), target = jump[0], setTarget = jump[1];
+  var log = useMessageLog();
   var personActions = useProfileActions(id, null);
-  var reading = useReadingPosition(logRef, len ? convo.messages[0].ts : null, [len], function (el) { el.scrollTop = 0; });
-  useInfiniteScroll(logRef, sentinelRef, !!(convo.olderMore && !convo.loadingOlder && !convo.olderFailed && !target), function () { app.actions.loadOlderDm(id); }, '200px 0px 0px 0px');
-  function onScroll() {
-    reading.onScroll();
-    // Après un échec de lecture, la sentinelle ne relance la lecture qu'au défilement suivant.
-    if (convo.olderFailed) app.update(function (d) { d.dms[id].olderFailed = false; });
-  }
   // Résultat de recherche : les pages plus anciennes se chargent une à une jusqu'à lui.
   useEffect(function () {
     var seek = p.seek, failed = asked.current && convo.olderFailed;
     if (!seek) return;
     var m = dmHitMessage(convo, seek);
-    if (m) setTarget({ id: m.id });
+    if (m) log.jumpTo(m.id);
     else if (convo.loadingOlder) return;
     else if (convo.olderMore && !failed) { asked.current = true; app.actions.loadOlderDm(id); return; }
     // Lecture en échec : loadOlderDm l'a déjà annoncée.
@@ -177,10 +170,16 @@ function DmThread(p) {
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    rows.push(h(DmMessageRow, { key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, highlight: !!target && target.id === m.id }));
+    rows.push(h(DmMessageRow, { key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id }));
     prev = m;
   });
-  if (LIVE && s.pmLoaded) rows.unshift(convo.olderMore ? olderSentinel(sentinelRef, convo.loadingOlder) : historyStart('This is the start of the messages saved in this browser.'));
+  var older = !LIVE || !s.pmLoaded ? null
+    : !convo.olderMore ? { status: 'start', text: 'This is the start of the messages saved in this browser.' }
+    : {
+      status: 'more', loading: convo.loadingOlder, ready: !convo.loadingOlder && !convo.olderFailed, load: function () { app.actions.loadOlderDm(id); },
+      // Après un échec de lecture, la sentinelle ne relance la lecture qu'au défilement suivant.
+      retry: convo.olderFailed ? function () { app.update(function (d) { d.dms[id].olderFailed = false; }); } : null
+    };
   var lastMsg = convo.messages[convo.messages.length - 1];
   if (lastMsg && lastMsg.from === me && convo.seenTs && s.prefs.privacy.showIdle) rows.push(h('p', { key: 'seen', className: 'seen' }, 'Seen ' + fmtTime(convo.seenTs, s.prefs.h24)));
   var bottom;
@@ -199,7 +198,7 @@ function DmThread(p) {
       h(MenuButton, {
         label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
       })),
-    h('div', { className: 'log', role: 'log', 'aria-label': 'Messages with ' + id, ref: logRef, onScroll: onScroll }, h('div', { className: 'log-inner' }, rows)),
+    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: len, newBelow: 'follow', older: older }),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' },
       h('p', { className: 'typing', 'aria-live': 'polite' }, typing ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, id), ' is typing') : null),
