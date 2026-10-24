@@ -100,13 +100,13 @@ function PrivacyPageLive() {
   var app = useApp(), pr = usePref();
   var st = useTorchSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
   var pc = useTorchSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
-  var ps = useState(null), pmrStatus = ps[0], setPmrStatus = ps[1];
   var checking = !!(pmr && pmr.pmrCheck);
-  useEffect(function () { if (checking) liveBridge.pmrStatus().then(setPmrStatus); }, [checking]);
+  // Aussi réglage coupé : pmrStatus répond alors null, ce qui retire l'état et le bandeau des MP.
+  useEffect(function () { app.actions.checkPmr(); }, [checking]);
   return h(Page, { title: 'Privacy', lede: 'What Torch Skin keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
       pmr ? h(T.SettingRow, {
-        title: 'Check my private message status', description: checking ? PMR_STATUS[pmrStatus] : null,
+        title: 'Check my private message status', description: checking ? PMR_STATUS[app.state.pmrStatus] : null,
         control: h(T.Switch, { checked: checking, onChange: function (e) { setPmrSetting('pmrCheck', e.target.checked); } })
       }) : null,
       h(PmHistoryRows, null),

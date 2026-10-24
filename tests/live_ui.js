@@ -1224,6 +1224,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { on: false, status: null, asked: PMR_URL, torch: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
   ]), pmrSeen);
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  const pmrBanner = () => { const b = $('.convs .tc-banner'); return b && b.textContent; };
+  const pmrBannerSeen = [pmrBanner()];
+  if (pmrBanner()) { click($('.convs .tc-banner button[aria-label="Dismiss"]')); await wait(30); }
+  pmrBannerSeen.push(pmrBanner());
+  step('own private message restriction shown above the private messages until dismissed', JSON.stringify(pmrBannerSeen) === JSON.stringify([
+    'Your private messages are restrictedPeople might not receive your messages.', null
+  ]) && fetches.filter(x => /api\.vissle\.me/.test(x.url)).length === 1, pmrBannerSeen);
 
   /* Bio : line Chatango brute dans le champ, rendue dans l'aperçu */
   const ownCard = async () => {

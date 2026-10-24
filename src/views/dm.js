@@ -24,6 +24,8 @@ function DMView(p) {
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
     h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
+    LIVE && s.pmrStatus === 'restricted' && !s.pmrDismissed ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: 'Your private messages are restricted', onDismiss: app.actions.dismissPmr },
+      'People might not receive your messages.')) : null,
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
       options: [{ value: 'chats', label: h(Frag, null, 'Chats', h(T.CountBadge, { count: unreadDmCount(s) })) }, { value: 'friends', label: 'Friends' }, { value: 'meet', label: 'Meet people' }]
