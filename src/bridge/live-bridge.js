@@ -1012,9 +1012,29 @@ var liveBridge = (function () {
      */
     markPmRead: function (name) {
       // Transaction créée après la pile en cours : Torch n'archive un MP reçu qu'après l'émission de pm.
-      openPmDb().then(function (db) {
+      return openPmDb().then(function (db) {
         if (db) return markRead(db, targetRange(name));
       }).catch(warn);
+    },
+    /**
+     * Permet de compter les MP non lus d'un correspondant dans l'historique privé, sans ses modifications, que Torch archive à part.
+     * @param {string} name Correspondant.
+     * @returns {Promise<number>} Entrées non lues.
+     */
+    pmUnread: function (name) {
+      return openPmDb().then(function (db) { return new Promise(function (resolve, reject) {
+        if (!db) { resolve(0); return; }
+        var n = 0, tx = db.transaction(['messages'], 'readonly');
+        tx.objectStore('messages').index('target_ts_idx').openCursor(targetRange(name)).onsuccess = function (e) {
+          var cur = e.target.result;
+          if (!cur) return;
+          var x = cur.value.unread && pmRecordEntry(cur.value);
+          if (x && !x.editId) n++;
+          cur.continue();
+        };
+        tx.oncomplete = function () { resolve(n); };
+        tx.onabort = function () { reject(tx.error); };
+      }); });
     },
     /** Supprime l'historique que Torch garde dans ce navigateur ; Chatango n'en conserve pas. */
     clearPmHistory: function (target) { try { C.private.clearHistory(target); return true; } catch (e) { warn(e); return false; } },
