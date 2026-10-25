@@ -30,7 +30,7 @@ function page(userscript, url, before) {
   vm.runInContext(userscript, sandbox);
   return { w, d: w.document, errors, injected, gm };
 }
-function fakeTorch(w) {
+function fakeBetterChatango(w) {
   w.eval(`window.client = {
     event: { group: {}, private: {} }, user: { name: '' }, groups: {},
     on(ev, cb) { document.addEventListener('chatango_' + ev, cb); },
@@ -70,7 +70,7 @@ async function suite(userscript) {
   // Torch remplace tout le document par son client, écran de connexion compris.
   a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div></body>';
   await wait(20);
-  fakeTorch(a.w);
+  fakeBetterChatango(a.w);
   await wait(700);
   const host = a.d.getElementById('torch-skin');
   step('overlay mounted once Torch is ready, still hidden', !!host && host.style.display === 'none');
@@ -108,7 +108,7 @@ async function suite(userscript) {
   b.w.close();
 
   /* Torch déjà lancé (ancien favori) : pas de second démarrage */
-  const c = page(userscript, 'https://st.chatango.com/', fakeTorch);
+  const c = page(userscript, 'https://st.chatango.com/', fakeBetterChatango);
   step('does not start Torch twice', !c.d.querySelector('script[src="' + START + '"]'));
   c.w.close();
 

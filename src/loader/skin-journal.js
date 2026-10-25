@@ -4,7 +4,7 @@
     // Trames de session et de refus du serveur : seul leur nom est gardé, jamais leurs arguments.
     var LIFECYCLE = ['ok', 'inited', 'denied', 'reload', 'mustlogin', 'proxybanned', 'verificationrequired', 'climited', 'OK', 'DENIED', 'kickingoff', 'lowversion', 'toofast', 'show_fw'];
     // Lignes de connexion de Torch (inject.js:5588, 5652, 5662, 5669, 5701). Le reste de sa console contient des trames et des MP.
-    var TORCH_LINES = [/^conn closed: /, /^CONNECTION TIMED OUT: /, /^environment server error$/, /^client version out of date$/];
+    var BETTER_CHATANGO_LINES = [/^conn closed: /, /^CONNECTION TIMED OUT: /, /^environment server error$/, /^client version out of date$/];
     var UNKNOWN_FRAME = /^\[UNKNOWN\] \(([^)]*)\)/;
     var entries = [], listeners = [], saveTimer = null, sockets = 0;
     try { entries = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { /* journal illisible : il repart vide */ }
@@ -74,7 +74,7 @@
       var first = args[0];
       if (typeof first === 'string') {
         if (first.indexOf('[torch-skin]') === 0) return [].map.call(args, describe).join(' ');
-        if (TORCH_LINES.some(function (re) { return re.test(first); })) return 'Torch: ' + first;
+        if (BETTER_CHATANGO_LINES.some(function (re) { return re.test(first); })) return 'Torch: ' + first;
         var frame = UNKNOWN_FRAME.exec(first);
         if (frame) return 'Torch: unhandled frame ' + frame[1];
       }
@@ -93,7 +93,7 @@
     /* Sockets : ouverture, trames de session, fermeture avec son code. Les envois ne sont jamais observés, l'authentification porte le mot de passe (ADR-0001). */
     function target(url) {
       if (/^wss:\/\/c1\.chatango\.com\b/.test(url)) return 'private messages';
-      var c = window.__torchRefs && window.__torchRefs.client;
+      var c = window.__betterChatangoRefs && window.__betterChatangoRefs.client;
       // Torch note le groupe dans cache.connecting juste avant de créer son socket (inject.js:5613).
       return c && c.cache && c.cache.connecting ? '#' + c.cache.connecting : url.replace(/^wss?:\/\/([^/:]+).*$/, '$1');
     }

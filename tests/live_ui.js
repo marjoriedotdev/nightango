@@ -101,7 +101,7 @@ const C = {
   // DENIED : Torch affiche un alert() bloquant.
   // msg et msgoff : Torch archive le message dans sa base d'historique (saveMessage), une seule fois.
   // connect : Torch ouvre son propre écran de MP.
-  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['torchPmScreen']); } }) },
+  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['betterChatangoPmScreen']); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
   settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
@@ -142,7 +142,7 @@ const CH = {
   subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css', msgbg: (n, ext) => 'https://ust.chatango.com/' + n + '/msgbg.' + ext }, error: { creategroup: { groupexists: 'The group name is taken.' } }
 };
 const SB = { renderGroup(dt) { calls.push(['renderGroup', dt.group]); } };
-w.__torchRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'torchenv' } };
+w.__betterChatangoRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'betterchatangoenv' } };
 const fetches = [];
 let searchHold = null;
 const SEARCH_BODY = 'h=zoe;1;2:yann;3:marjorie;9';
@@ -368,10 +368,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(menuItem('Ban from #test')); await wait(50);
   click(byText('.dialog-foot button', 'Ban')); await wait(30);
   step('ban targets the clicked message, not the latest same name', frame('block:').pop() === 'block:GUEST1:7.7.7.7:', frame('block:'));
-  g('ok', 'torchenv', ['torchbot', '', '', '', '1700000000', '', '', '0']);
-  g('b', 'torchenv', ['1700000260.1', 'Bot', '', 'u6', 'X', 'tmp12', '1.1.1.1', '0', '', 'env']);
+  g('ok', 'betterchatangoenv', ['betterchatangobot', '', '', '', '1700000000', '', '', '0']);
+  g('b', 'betterchatangoenv', ['1700000260.1', 'Bot', '', 'u6', 'X', 'tmp12', '1.1.1.1', '0', '', 'env']);
   await wait(60);
-  step("Torch's environment room stays hidden", !byText('.tc-nav', 'torchenv'));
+  step("Torch's environment room stays hidden", !byText('.tc-nav', 'betterchatangoenv'));
 
   /* Comptes liés : un appel par clic, sans credential, noms en texte, cinq niveaux seulement, rien de gardé */
   const whoAsked = () => fetches.filter(x => /vissle\.me\/api\/v1\/who\//.test(x.url));
@@ -675,8 +675,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Favori écrit dans les réglages de Torch */
   click($('button[aria-label="Group options"]')); await wait(30);
   click(menuItem('Add to favorites')); await wait(50);
-  const torchSettings = JSON.parse(w.localStorage.getItem('settings') || '{}');
-  step('favorite persisted in Torch settings', C.settings.privacy.groups.favorite.indexOf('test') >= 0 && torchSettings.privacy.groups.favorite.indexOf('test') >= 0, torchSettings);
+  const betterChatangoSettings = JSON.parse(w.localStorage.getItem('settings') || '{}');
+  step('favorite persisted in Torch settings', C.settings.privacy.groups.favorite.indexOf('test') >= 0 && betterChatangoSettings.privacy.groups.favorite.indexOf('test') >= 0, betterChatangoSettings);
 
   /* Migration des non-lus : la base ouverte au démarrage passe lue avant la connexion privée, le drapeau suit la fin de la transaction */
   const pmConnectAt = calls.findIndex(c => c[0] === 'connect' && c[1] === 'private_message'), migratedAt = calls.findIndex(c => c[0] === 'written');
@@ -749,7 +749,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fayHead = { topic: ($('.thread .topbar .topic') || {}).textContent || '', offline: !!$('.thread .topbar .tc-presence-offline') };
   const fayDays = +((/^Last online (\d+) days ago$/.exec(fayHead.topic) || [])[1]);
   step('opening a pm asks Chatango for the presence', JSON.stringify(fayFrames) === JSON.stringify([['private_message', 'connect:fay']]) && fayHead.offline
-    && Math.abs(fayDays - (Date.now() - 1700000000000) / 86400000) <= 1 && !calls.some(c => c[0] === 'torchPmScreen'), { fayFrames, fayHead, torch: calls.filter(c => c[0] === 'torchPmScreen').length });
+    && Math.abs(fayDays - (Date.now() - 1700000000000) / 86400000) <= 1 && !calls.some(c => c[0] === 'betterChatangoPmScreen'), { fayFrames, fayHead, betterChatango: calls.filter(c => c[0] === 'betterChatangoPmScreen').length });
   const old = styled('Old styled');
   step('pm history keeps style', styleOk(old), old.p && [old.p.style.cssText, old.name && old.name.style.cssText]);
   type($('.thread .tc-composer textarea'), 'Mine'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
@@ -1107,8 +1107,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(visitors().querySelector('button[aria-label="Refresh"]')); await until(() => visitors().textContent.includes('This profile has tracking turned off.'));
   step('own visitors list: vissle error shown as sent', vissleReqs[3].page === 1 && vissleReqs[3].get === 'like' && visitors().textContent.includes('This profile has tracking turned off.'), visitors().textContent);
   /* Profil complet illisible (erreur serveur) : enregistrer un autre champ n'envoie rien, jamais un profil complet vide */
-  const torchFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
-  torchFull.value = ''; ownMod2Status = 500;
+  const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
+  betterChatangoFull.value = ''; ownMod2Status = 500;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
   click(byText('.tc-nav', 'Profile')); await until(() => !!byText('.tc-hint', 'did not return your full profile'));
   const fullDown = { failed: !!byText('.tc-hint', 'did not return your full profile') };
@@ -1116,7 +1116,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await until(() => !!byText('.toast', 'Nothing was saved') || profileUpdates().length > 0);
   fullDown.toast = !!byText('.toast', 'could not be read. Nothing was saved'); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
   step('full profile server error: saving another field sends nothing', fullDown.failed && fullDown.toast && fullDown.sent.length === 0, fullDown);
-  torchFull.value = 'FULL PAGE'; ownMod2Status = 200;
+  betterChatangoFull.value = 'FULL PAGE'; ownMod2Status = 200;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
   click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc') && $('#pf-loc').value === 'Rouen');
   step('profile read from Torch fields', $('#pf-age').value === '34' && $('#pf-gender').value === 'Male' && $('#pf-loc').value === 'Rouen');
@@ -1154,14 +1154,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pmrSeen.push(pmrView());
   if (pmrRow()) {
     click(pmrRow().querySelector('[role=switch]')); await until(() => !pmrView().on);
-    pmrSeen.push(Object.assign(pmrView(), { torch: C.settings.privacy.private_messages.check_pmr, saved: JSON.parse(w.localStorage.getItem('settings')).privacy.private_messages.check_pmr }));
+    pmrSeen.push(Object.assign(pmrView(), { betterChatango: C.settings.privacy.private_messages.check_pmr, saved: JSON.parse(w.localStorage.getItem('settings')).privacy.private_messages.check_pmr }));
     click(pmrRow().querySelector('[role=switch]')); await until(() => !!pmrView().status);
     pmrSeen.push(pmrView());
   }
   const PMR_URL = ['https://api.vissle.me/v1/pmr/marjorie'], PMR_TEXT = 'vissle reports that your private messages appear to be restricted.';
   step('own private message restriction read once from vissle after the private connection', JSON.stringify(pmrSeen) === JSON.stringify([
     { on: true, status: null, asked: [] }, { on: true, status: PMR_TEXT, asked: PMR_URL },
-    { on: false, status: null, asked: PMR_URL, torch: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
+    { on: false, status: null, asked: PMR_URL, betterChatango: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
   ]), pmrSeen);
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   click(byText('.tc-nav', 'Private messages')); await wait(50);
@@ -1277,20 +1277,20 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fontsEl = d.querySelector('[data-preload="fonts"]'), emph = cls => fontsEl.querySelector(cls).previousElementSibling;
   let submits = 0;
   fontsEl.querySelector('form').addEventListener('submit', e => { submits++; e.preventDefault(); });
-  const torchStyle = () => JSON.stringify({
+  const betterChatangoStyle = () => JSON.stringify({
     face: d.querySelector('.font-face').firstElementChild.value, size: d.querySelector('.font-size .text-input').value,
     text: fontsEl.querySelector('[data-color="fontColor"]').value, name: fontsEl.querySelector('[data-color="nameColor"]').value,
     bold: emph('.fa-bold').checked, italic: emph('.fa-italic').checked, underline: emph('.fa-underline').checked, strike: emph('.fa-strikethrough').checked, on: fontsEl.querySelector('[name="stylesOn"]').checked, user: C.user.style
   });
   const WANT = JSON.stringify({ face: '4', size: '14', text: '#9900cc', name: '#3366ff', bold: true, italic: false, underline: false, strike: true, on: true, user: true });
   // Torch recharge le style du compte à la reconnexion : ses champs reviennent aux valeurs de Chatango.
-  const resetTorchStyle = () => {
+  const resetBetterChatangoStyle = () => {
     d.querySelector('.font-face').firstElementChild.value = '0'; d.querySelector('.font-size .text-input').value = '11';
     fontsEl.querySelector('[data-color="fontColor"]').value = '#000000'; fontsEl.querySelector('[data-color="nameColor"]').value = '#000000';
     emph('.fa-bold').checked = false; emph('.fa-strikethrough').checked = false; fontsEl.querySelector('[name="stylesOn"]').checked = false; C.user.style = false;
   };
   const postsBeforeStyle = posts.length;
-  styleProbe = torchStyle;
+  styleProbe = betterChatangoStyle;
   click(byText('.tc-nav', 'test')); await wait(50);
   const styleBtn = $('.tc-composer button[aria-label="Message style"]');
   if (styleBtn) {
@@ -1301,11 +1301,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     if (strikeBox) click(strikeBox.querySelector('input'));
     await wait(20);
     click(byText('.dialog-foot button', 'Save')); await wait(50);
-    resetTorchStyle();
+    resetBetterChatangoStyle();
     type($('.tc-composer textarea'), 'Styled'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
   }
   const storedStyle = JSON.stringify(JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}'));
-  resetTorchStyle();
+  resetBetterChatangoStyle();
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   click(byText('.conv', 'fay')); await wait(50);
   type($('.thread .tc-composer textarea'), 'Styled pm'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(30);

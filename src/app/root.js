@@ -10,7 +10,7 @@ function Root(props) {
   var stateRef = useRef(state); stateRef.current = state;
   // Seule source des non-lus MP : la base de Torch en live, une archive en mémoire dans le prototype ou quand cette base manque.
   var pmArchive = useRef(null);
-  if (!pmArchive.current) pmArchive.current = LIVE ? torchPmArchive() : memoryPmArchive();
+  if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
   var update = useCallback(function (fn) { setState(function (prev) { var d = JSON.parse(JSON.stringify(prev)); fn(d); return d; }); }, []);
   var u1 = useState([]), toasts = u1[0], setToasts = u1[1];
   var u2 = useState(null), confirmCfg = u2[0], setConfirm = u2[1];
@@ -587,7 +587,7 @@ function Root(props) {
    * @param {function(string, boolean): boolean} save Écriture du pont.
    * @param {string} failure Toast affiché si Torch n'enregistre pas.
    */
-  function toggleTorchList(gid, key, save, failure) {
+  function toggleBetterChatangoList(gid, key, save, failure) {
     var on = !stateRef.current.groups[gid][key];
     if (!save(gid, on)) { toast(failure); return; }
     update(function (d) { d.groups[gid][key] = on; });
@@ -658,10 +658,10 @@ function Root(props) {
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
-    actions.toggleFavorite = function (gid) { toggleTorchList(gid, 'favorite', liveBridge.setFavorite, 'Torch could not save this favorite. Reload the page and try again.'); };
-    actions.toggleMute = function (gid) { toggleTorchList(gid, 'muted', liveBridge.setMuted, 'Torch could not save the mute for #' + gid + '. Reload the page and try again.'); };
+    actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', liveBridge.setFavorite, 'Torch could not save this favorite. Reload the page and try again.'); };
+    actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', liveBridge.setMuted, 'Torch could not save the mute for #' + gid + '. Reload the page and try again.'); };
     actions.setTrustedHost = function (host, on) {
-      if (!liveBridge.setTrustedHost(host, on)) { toast(TORCH_SAVE_FAILED); return false; }
+      if (!liveBridge.setTrustedHost(host, on)) { toast(BETTER_CHATANGO_SAVE_FAILED); return false; }
       update(function (d) { d.prefs.safety.trustedHosts = liveBridge.trustedHosts(); });
       return true;
     };
@@ -1085,7 +1085,7 @@ function Root(props) {
         update(function (d) {
           Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.auth = { loggedIn: true };
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n); });
-          Object.keys(TORCH_PREFS).forEach(function (path) { var v = liveBridge.setting(TORCH_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
+          Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
           d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
         });
         // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.

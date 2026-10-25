@@ -27,7 +27,7 @@
   document.addEventListener('torch-skin:vissle-request', function (e) {
     var q = JSON.parse(e.detail);
     // Le profil interrogé est toujours celui de la session Torch, jamais celui que la page demanderait.
-    var me = String(unsafeWindow.__torchRefs.client.user.name).toLowerCase();
+    var me = String(unsafeWindow.__betterChatangoRefs.client.user.name).toLowerCase();
     GM_xmlhttpRequest({
       method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, timeout: 15000,
       // Même en-tête que le client vissle, qui envoie le JSON comme texte brut.

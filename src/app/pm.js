@@ -4,7 +4,7 @@
  * Archive des MP de Torch, en live : Torch y écrit lui-même chaque MP, le pont la marque lue et y compte les non-lus.
  * @returns {{record: Function, markRead: function(string): Promise, unread: function(string): Promise<number>}} Archive.
  */
-function torchPmArchive() {
+function betterChatangoPmArchive() {
   return {
     record: function () {},
     markRead: function (target) { return liveBridge.markPmRead(target); },

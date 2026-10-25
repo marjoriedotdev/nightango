@@ -313,10 +313,10 @@ function personRow(s, n, onClick, current) {
 /**
  * Permet de dire qui garde les MP retirés de ce navigateur.
  * @param {string} name Correspondant.
- * @param {boolean} torch Vrai pour dire d'abord que seule la copie de Torch part.
+ * @param {boolean} betterChatango Vrai pour dire d'abord que seule la copie de Torch part.
  */
-function keptCopyText(name, torch) {
-  return (torch ? 'Removes the copy Torch keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
+function keptCopyText(name, betterChatango) {
+  return (betterChatango ? 'Removes the copy Torch keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
 }
 
 /**

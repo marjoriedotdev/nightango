@@ -175,11 +175,11 @@ function MiniBackgroundSection(p) {
 }
 
 // L'interface ne change que si Torch a enregistré la valeur, sinon un toast le dit.
-function useTorchSettings(read, write) {
+function useBetterChatangoSettings(read, write) {
   var app = useApp();
   var st = useState(read), value = st[0], setValue = st[1];
   function set(key, v) {
-    if (!saveTorchSetting(app, write, key, v)) return;
+    if (!saveBetterChatangoSetting(app, write, key, v)) return;
     setValue(function (x) { var n = Object.assign({}, x); n[key] = v; return n; });
   }
   return [value, set];
@@ -194,8 +194,8 @@ function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === n
 
 function PrivacyPageLive() {
   var app = useApp(), pr = usePref();
-  var st = useTorchSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
-  var pc = useTorchSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
+  var st = useBetterChatangoSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
+  var pc = useBetterChatangoSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
   var checking = !!(pmr && pmr.pmrCheck);
   // Aussi réglage coupé : pmrStatus répond alors null, ce qui retire l'état et le bandeau des MP.
   useEffect(function () { app.actions.checkPmr(); }, [checking]);

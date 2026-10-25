@@ -5,7 +5,7 @@
 /*JOURNAL*/
   var CSS = /*CSS*/;
   var FONTS_CSS = /*FONTS_CSS*/;
-  var TORCH_START = 'https://vissle.me/client/start';
+  var BETTER_CHATANGO_START = 'https://vissle.me/client/start';
 
   // Bibliothèques vérifiées par empreinte : un fichier modifié sur le CDN n'est pas exécuté.
   function load(src, integrity) {
@@ -16,11 +16,11 @@
       document.head.appendChild(s);
     });
   }
-  function probeTorch() {
+  function probeBetterChatango() {
     var probe = document.createElement('script');
-    probe.textContent = 'window.__torchRefs = (typeof client !== "undefined" && client && client.event) ? { client: client, chatango: typeof chatango !== "undefined" ? chatango : null, sidebar: typeof sidebar !== "undefined" ? sidebar : null, torch: typeof torch !== "undefined" ? torch : null } : null;';
+    probe.textContent = 'window.__betterChatangoRefs = (typeof client !== "undefined" && client && client.event) ? { client: client, chatango: typeof chatango !== "undefined" ? chatango : null, sidebar: typeof sidebar !== "undefined" ? sidebar : null, torch: typeof torch !== "undefined" ? torch : null } : null;';
     document.head.appendChild(probe); probe.remove();
-    return !!window.__torchRefs;
+    return !!window.__betterChatangoRefs;
   }
   function headline(text) { var h1 = document.querySelector('h1'); if (h1) h1.textContent = text; }
   // Polices déclarées dans le document : Chrome ignore un @font-face posé seulement dans le shadow root.
@@ -33,33 +33,33 @@
   }
 
   /* Démarrage de Torch, comme son favori : même script, sans rechargement en boucle en cas d'échec. */
-  function startTorch() {
-    if (probeTorch() || document.querySelector('script[src^="' + TORCH_START + '"]')) return;
+  function startBetterChatango() {
+    if (probeBetterChatango() || document.querySelector('script[src^="' + BETTER_CHATANGO_START + '"]')) return;
     headline('Loading...');
     var s = document.createElement('script');
-    s.src = TORCH_START;
+    s.src = BETTER_CHATANGO_START;
     s.onerror = function () {
       headline('Torch could not be reached. Reload the page to try again.');
-      console.error('[torch-skin] could not load ' + TORCH_START);
+      console.error('[torch-skin] could not load ' + BETTER_CHATANGO_START);
     };
     document.body.appendChild(s);
   }
-  function torchReady() {
+  function betterChatangoReady() {
     return new Promise(function (resolve, reject) {
       var started = Date.now();
       (function poll() {
-        if (probeTorch()) return resolve();
+        if (probeBetterChatango()) return resolve();
         if (Date.now() - started > 120000) return reject(new Error('Torch did not start within two minutes.'));
         setTimeout(poll, 500);
       })();
     });
   }
 
-  startTorch();
+  startBetterChatango();
   var react = load('https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js', 'sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z')
     .then(function () { return load('https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js', 'sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1'); });
 
-  Promise.all([react, torchReady()])
+  Promise.all([react, betterChatangoReady()])
     .then(function () {
       // Créée après le démarrage de Torch, qui construit sa page : l'interface ne risque pas d'être effacée.
       var host = document.createElement('div');

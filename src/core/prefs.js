@@ -20,5 +20,5 @@ function defaultPrefs() {
   };
 }
 // En live, ces préférences sont des réglages de Torch, qui font foi : relues à la connexion, écrites chez lui avant de basculer.
-var TORCH_PREFS = { 'safety.guestMessages': 'guestMessages', announcements: 'announcements' };
-var TORCH_SAVE_FAILED = 'Torch could not save this setting. Reload the page and try again.';
+var BETTER_CHATANGO_PREFS = { 'safety.guestMessages': 'guestMessages', announcements: 'announcements' };
+var BETTER_CHATANGO_SAVE_FAILED = 'Torch could not save this setting. Reload the page and try again.';

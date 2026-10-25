@@ -18,8 +18,8 @@ function usePref() {
     get: function (path) { return getIn(app.state.prefs, path); },
     set: function (path, v) { app.update(function (d) { setIn(d.prefs, path, v); }); },
     sw: function (path) {
-      var v = getIn(app.state.prefs, path), key = LIVE && TORCH_PREFS[path];
-      return h(T.Switch, { checked: !!v, onChange: function (e) { var nv = e.target.checked; if (!key || saveTorchSetting(app, liveBridge.setSetting, key, nv)) app.update(function (d) { setIn(d.prefs, path, nv); }); } });
+      var v = getIn(app.state.prefs, path), key = LIVE && BETTER_CHATANGO_PREFS[path];
+      return h(T.Switch, { checked: !!v, onChange: function (e) { var nv = e.target.checked; if (!key || saveBetterChatangoSetting(app, liveBridge.setSetting, key, nv)) app.update(function (d) { setIn(d.prefs, path, nv); }); } });
     }
   };
 }
@@ -32,9 +32,9 @@ function usePref() {
  * @param {boolean|number} value Nouvelle valeur.
  * @returns {boolean} Vrai si Torch l'a enregistré.
  */
-function saveTorchSetting(app, write, key, value) {
+function saveBetterChatangoSetting(app, write, key, value) {
   if (write(key, value)) return true;
-  app.ui.toast(TORCH_SAVE_FAILED);
+  app.ui.toast(BETTER_CHATANGO_SAVE_FAILED);
   return false;
 }
 

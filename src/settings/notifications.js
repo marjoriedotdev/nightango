@@ -40,7 +40,7 @@ function NotificationsPage() {
                   : h(T.Checkbox, { ariaLabel: r[1] + ', ' + c[1], checked: !!v, onChange: function (e) { pr.set('notify.' + r[0] + '.' + c[0], e.target.checked); } }));
               }));
           }))))),
-    LIVE ? h(TorchSoundsSection) : h(T.SettingsSection, { title: 'Sound' },
+    LIVE ? h(BetterChatangoSoundsSection) : h(T.SettingsSection, { title: 'Sound' },
       h(T.SettingRow, {
         asLabel: false, title: 'Volume', description: 'Applies to every alert sound.',
         control: h(VolumeControl, { label: 'Volume', value: prefs.volume, onChange: function (v) { pr.set('volume', v); }, onPlay: function () { beep(prefs.volume, true); } })
@@ -60,19 +60,19 @@ function VolumeControl(p) {
     h(T.IconButton, { icon: 'volume', label: 'Play test sound', disabled: p.disabled, onClick: p.onPlay }));
 }
 
-var TORCH_SOUND_ROWS = [
+var BETTER_CHATANGO_SOUND_ROWS = [
   ['mention', 'Mention sound', 'When someone mentions you or sends you a private message.', 'Mention volume'],
   ['online', 'Friend online sound', 'When a friend connects, at most once every 5 minutes per friend.', 'Friend online volume']
 ];
 
-function TorchSoundsSection() {
+function BetterChatangoSoundsSection() {
   var app = useApp();
-  var st = useTorchSettings(liveBridge.torchSounds, liveBridge.setTorchSound), sounds = st[0], set = st[1];
+  var st = useBetterChatangoSettings(liveBridge.betterChatangoSounds, liveBridge.setBetterChatangoSound), sounds = st[0], set = st[1];
   function play(kind) {
-    liveBridge.playTorchSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.'); });
+    liveBridge.playBetterChatangoSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.'); });
   }
   return h(T.SettingsSection, { title: 'Sounds', description: "Torch plays these sounds. Nightango stays silent so you don't hear every alert twice." },
-    sounds ? TORCH_SOUND_ROWS.map(function (r) {
+    sounds ? BETTER_CHATANGO_SOUND_ROWS.map(function (r) {
       var on = sounds['play_' + r[0]];
       return h(T.SettingRow, {
         key: r[0], asLabel: false, title: r[1], description: r[2],

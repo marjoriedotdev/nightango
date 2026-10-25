@@ -1,6 +1,6 @@
 var liveBridge = (function () {
   if (!LIVE) return null;
-  var refs = window.__torchRefs || {};
+  var refs = window.__betterChatangoRefs || {};
   var C = refs.client, CH = refs.chatango, SB = refs.sidebar;
   var ENV = refs.torch && refs.torch.environment;
   var listeners = [], queue = [];
@@ -1244,13 +1244,13 @@ var liveBridge = (function () {
      * Permet de lire les réglages de son que Torch applique.
      * @returns {?Object} Interrupteurs et volumes de 0 à 100, null si les réglages de Torch sont illisibles.
      */
-    torchSounds: readSounds,
+    betterChatangoSounds: readSounds,
     /**
      * Permet d'enregistrer un réglage de son dans les réglages de Torch, relus à chaque son.
      * @param {string} key Clé de SOUND_KEYS.
      * @param {boolean|number} value Interrupteur, ou volume de 0 à 100.
      */
-    setTorchSound: function (key, value) {
+    setBetterChatangoSound: function (key, value) {
       if (SOUND_KEYS.indexOf(key) < 0) return false;
       try {
         C.settings.notifications.sound[key] = key.indexOf('volume_') === 0 ? Math.max(0, Math.min(100, Math.round(value))) : !!value;
@@ -1263,7 +1263,7 @@ var liveBridge = (function () {
      * @param {string} kind mention ou online.
      * @returns {Promise} Rejetée si le navigateur refuse la lecture.
      */
-    playTorchSound: playSound,
+    playBetterChatangoSound: playSound,
     /**
      * Permet de lire les groupes favoris de Torch.
      * @returns {?Array<string>} Noms des groupes, null si les réglages de Torch sont illisibles.
