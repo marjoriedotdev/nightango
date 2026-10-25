@@ -145,19 +145,13 @@ function Root(props) {
     d.mentionLog.splice(MENTION_MAX);
   }
   /**
-   * Permet de savoir si un message figure parmi des identifiants reçus de Chatango, sous son identifiant provisoire ou définitif.
-   * @param {string[]} ids Identifiants reçus.
-   * @param {string} id Identifiant du message dans l'état.
-   */
-  function idIn(ids, id) { return ids.indexOf(id) >= 0 || ids.indexOf(String(id).replace(/^k:/, '')) >= 0; }
-  /**
    * Permet de retirer de la page Mentions les messages d'un groupe.
    * @param {Object} d État en cours de modification.
    * @param {string} gid Groupe visé.
    * @param {?string[]} ids Messages retirés, null pour tout le groupe.
    */
   function dropMentions(d, gid, ids) {
-    d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && !idIn(ids, x.id)); });
+    d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && ids.indexOf(x.id) < 0); });
   }
   /**
    * Permet de poser le monde d'exemple du prototype, ses mentions relevées comme celles de l'historique en live.
@@ -535,7 +529,6 @@ function Root(props) {
   var localRef = useRef(blankLocal());
   var profilePending = useRef({}), msgBgPending = useRef({});
   // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
-  var pmAsked = useRef(null);
   var offlineCount = useRef(0);
   // Reconnexions automatiques en cours, par connexion : tentatives faites et minuteur de la suivante.
   var retries = useRef({});
@@ -625,7 +618,7 @@ function Root(props) {
     actions.sendGroup = function (gid, text, opts) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
-      if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
+      if (replyId && !liveBridge.delivered(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
       return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. Torch rejected it.');
     };
     // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
@@ -732,11 +725,7 @@ function Root(props) {
      * @param {string} name Correspondant visé.
      * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
      */
-    actions.checkPm = function (name) {
-      if (!liveBridge.connectPm(name)) return false;
-      pmAsked.current = name;
-      return true;
-    };
+    actions.checkPm = function (name) { return liveBridge.checkPm(name); };
     actions.searchPeople = function (f, more) {
       var cur = stateRef.current.meet, from = more && cur ? cur.next : 0, token = (cur && cur.token || 0) + 1;
       update(function (d) { d.meet = Object.assign({ results: [] }, more ? d.meet : null, { loading: true, error: null, filters: f, token: token }); });
@@ -777,14 +766,7 @@ function Root(props) {
     actions.toggleUser = function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
       if (key === 'friend' && !was) {
-        if (!liveBridge.addFriend(name)) return;
-        var asked = Date.now();
-        update(function (d) { d.friendAdds[name] = asked; });
-        setTimeout(function () {
-          if (stateRef.current.friendAdds[name] !== asked) return;
-          update(function (d) { delete d.friendAdds[name]; });
-          toast("Chatango didn't confirm adding " + name + ' to friends.');
-        }, CONFIRM_TIMEOUT);
+        if (liveBridge.addFriend(name)) update(function (d) { d.friendAdds[name] = true; });
         return;
       }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
@@ -822,10 +804,10 @@ function Root(props) {
       }, function (e) { toast(e && e.message ? e.message : 'Chatango refused to create the group.'); return false; });
     };
     actions.deleteMessage = function (gid, mid) {
-      if (String(mid).indexOf('k:') === 0) { toast('This message is still being delivered. Try again in a moment.'); return; }
+      if (!liveBridge.delivered(mid)) { toast('This message is still being delivered. Try again in a moment.'); return; }
       var m = findMsg(stateRef.current.groups[gid], mid);
       // Comme Torch : l'original, puis chacune de ses modifications dont Chatango a donné l'identifiant définitif.
-      [mid].concat((m && m.editIds) || []).filter(liveBridge.canReply).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
+      [mid].concat((m && m.editIds) || []).filter(liveBridge.delivered).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
     };
     actions.deleteAllFrom = function (gid, name, msg) {
       var g = stateRef.current.groups[gid], m = msg && msg.unid ? msg : g && lastMessageOf(g, name);
@@ -864,12 +846,7 @@ function Root(props) {
       if (liveBridge.banList(gid, kind, last && last.ts || '0')) groupUpdate(gid, function (g) { banListOf(g, kind).page.loading = true; });
     };
     actions.searchBans = function (gid, query) {
-      var at = Date.now();
-      if (!liveBridge.searchBans(gid, query)) return;
-      groupUpdate(gid, function (g) { g.live.banSearch = { query: query, at: at, status: 'pending', ban: null, code: '' }; });
-      setTimeout(function () {
-        groupUpdate(gid, function (g) { var s = g.live.banSearch; if (s && s.at === at && s.status === 'pending') s.status = 'timeout'; });
-      }, CONFIRM_TIMEOUT);
+      if (liveBridge.searchBans(gid, query)) groupUpdate(gid, function (g) { g.live.banSearch = { query: query, status: 'pending', ban: null, code: '' }; });
     };
     actions.clearBanSearch = function (gid) { groupUpdate(gid, function (g) { g.live.banSearch = null; }); };
     actions.saveGroupSettings = function (gid, draft, base) { return saveLiveSettings(stateRef.current.groups[gid], draft, base || stateRef.current.groups[gid].settings); };
@@ -1175,8 +1152,8 @@ function Root(props) {
       }); break;
       case 'del': groupUpdate(op.gid, function (g, d) {
         // Une modification affichée à part disparaît avec son original, même quand celui-ci n'est pas chargé.
-        g.messages = g.messages.filter(function (x) { return !(x.editId && idIn(op.ids, x.editId)); });
-        g.messages.forEach(function (x) { if (idIn(op.ids, x.id)) x.deleted = { by: 'staff' }; });
+        g.messages = g.messages.filter(function (x) { return !(x.editId && op.ids.indexOf(x.editId) >= 0); });
+        g.messages.forEach(function (x) { if (op.ids.indexOf(x.id) >= 0) x.deleted = { by: 'staff' }; });
         dropMentions(d, op.gid, op.ids);
       }); break;
       case 'cleared': groupUpdate(op.gid, function (g, d) {
@@ -1207,12 +1184,6 @@ function Root(props) {
       case 'flags': groupUpdate(op.gid, function (g) { g.live.flags = op.flags; deriveLive(g); }); break;
       case 'inited':
         groupUpdate(op.gid, function (g) { g.inited = true; });
-        liveBridge.requestAnnouncement(op.gid);
-        // Torch charge le titre et la description du groupe juste après la connexion.
-        setTimeout(function () {
-          var info = liveBridge.roomInfo(op.gid);
-          if (info) handleLiveOp({ op: 'info', gid: op.gid, title: info.title, description: info.description });
-        }, 3000);
         break;
       case 'info': groupUpdate(op.gid, function (g) {
         if (op.title) { g.title = op.title; g.topic = op.description && op.description !== 'No description' ? op.description : op.title; }
@@ -1246,6 +1217,7 @@ function Root(props) {
       // Une réponse arrivée après le délai d'attente reste valable, mais pas après Clear search.
       case 'banSearch': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
       case 'banSearchRefused': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
+      case 'banSearchTimeout': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s && s.status === 'pending') s.status = 'timeout'; }); break;
       // Torch ne fait que journaliser allunblocked : la liste des débannissements est redemandée à son prochain affichage.
       case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
@@ -1299,12 +1271,6 @@ function Root(props) {
         if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
         if (edit) break;
         if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
-        // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : la route ne suffit pas.
-        if (!op.offline && !ignored && op.from !== s0.me && op.from !== liveBridge.focusedPm()) {
-          var sounds = liveBridge.torchSounds();
-          // Lecture refusée par le navigateur : silence voulu, sans toast.
-          if (sounds && sounds.play_mention) liveBridge.playTorchSound('mention').then(null, function () {});
-        }
         // Les msgoff arrivent en rafale juste après la connexion : une seule notification pour toute la rafale.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
@@ -1330,15 +1296,18 @@ function Root(props) {
           op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
         });
         break;
+      case 'friendTimeout':
+        if (!stateRef.current.friendAdds[op.name]) break;
+        update(function (d) { delete d.friendAdds[op.name]; });
+        toast("Chatango didn't confirm adding " + op.name + ' to friends.');
+        break;
       case 'friendRefused':
         update(function (d) { delete d.friendAdds[op.name]; });
         toast(unknownUserText(op.name), { icon: 'info' });
         break;
       case 'pmChecked': {
-        var asked = pmAsked.current === op.name;
-        if (asked) pmAsked.current = null;
-        update(function (d) { d.pmChecked = { name: op.name, found: op.found, ts: Date.now() }; });
-        if (!op.found && !asked && stateRef.current.dms[op.name]) toast(unknownUserText(op.name), { icon: 'info' });
+        update(function (d) { d.pmChecked = { name: op.name, found: !!op.found, timeout: !!op.timeout, ts: Date.now() }; });
+        if (!op.found && !op.timeout && !op.asked && stateRef.current.dms[op.name]) toast(unknownUserText(op.name), { icon: 'info' });
         break;
       }
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;

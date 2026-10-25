@@ -20,7 +20,7 @@ src/
     selectors.js     lecture de l'état : rôles, droits d'un membre dans un groupe (groupRights, canBanMember), utilisateur, thème, compteurs, conversations listées, message affiché d'une entrée de l'historique privé
   bridge/     le pont vers Torch
     live-model.js    LIVE, JOURNAL, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
-                     table des émoticônes (EMOTICONS), modèles live
+                     table des émoticônes (EMOTICONS)
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
                      fond Premium (parseMiniCss), fond de message (parseMsgBg), comptes liés (parseWho), présence, horodatages,
                      références de message, enregistrements de l'historique privé (lecture, tri d'un import),
@@ -46,6 +46,7 @@ src/
   app/        racine
     sound.js
     state.js         préférences persistées
+    live-state.js    état live construit pour Root : monde au login, groupe, listes de bannissements, session coupée
     pm.js            MP : réception, fusion de l'historique privé, non-lus lus dans l'archive (base de Torch, ou mémoire dans le prototype et sans base)
     root.js          Root : état, actions, actions live, handleLiveOp
     start.js         montage
@@ -67,7 +68,7 @@ torch/project/       canevas de maquettes (11 écrans)
 dist/                sorties du build, non versionnées
 ```
 
-`bridge/live-parse.js` ne contient que des fonctions qui ne lisent ni le client Torch, ni `emit`, ni aucune variable de la closure du pont. Une fonction qui dépend de cette closure reste dans `bridge/live-bridge.js`. Le reste du pont (une IIFE) et `app/root.js` (le composant `Root`) restent d'un seul tenant : leurs parties partagent une closure, les découper demande une vraie refonte.
+`bridge/live-parse.js` ne contient que des fonctions qui ne lisent ni le client Torch, ni `emit`, ni aucune variable de la closure du pont. Une fonction qui dépend de cette closure reste dans `bridge/live-bridge.js`. Le pont garde les étapes propres à Torch : l'attente des réponses de Chatango et leurs délais, la demande d'annonce et la lecture des infos d'un groupe après `inited`, le son de mention d'un MP, les identifiants provisoires `k:` des messages. Il n'émet vers `Root` que des faits. `Root` (`app/root.js`) les applique à l'état, avec `app/pm.js` pour les MP et `app/live-state.js` pour l'état live qu'il construit.
 
 ## Concaténation
 
@@ -120,7 +121,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - Les écarts entre les deux modes sont gardés par `if (LIVE)`.
 - Les droits dans un groupe suivent le modèle de Chatango dans les deux modes : un propriétaire et des modérateurs avec leurs bits de droits (`settings.staff`, `settings.modFlags`), lus par `groupRights`. Le prototype n'a aucun rôle que Chatango n'a pas.
 - En live, les actions de `app/root.js` sont surchargées par celles du bloc « Mode live ». Le pont (`liveBridge`) traduit les trames de Torch en opérations, que `handleLiveOp` applique à l'état.
-- Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens. Torch Skin lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
+- Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens. Le pont lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
 
 ## État React
 

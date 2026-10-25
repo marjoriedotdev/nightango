@@ -16,7 +16,6 @@ function run(label, setup) {
     }
     window.client = new FakeClient();
     window.__torchRefs = { client: window.client, chatango: {} };
-    function mkSettings(x) { return x; }
   `);
   w.eval(live + '; window.__bridge = liveBridge;');
   return setup(w).then(() => { console.log((shown === 1 ? 'ok  ' : 'FAIL') + ' ' + label + ' (show called ' + shown + 'x)'); w.close(); });

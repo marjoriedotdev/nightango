@@ -18,6 +18,8 @@ var liveBridge = (function () {
   // Taille des pages de bannissements et de débannissements demandées par Torch.
   var BAN_PAGE = 50;
 
+  // Un message affiché avant son identifiant définitif garde l'identifiant provisoire k:{clé}, que Chatango désigne par la clé seule.
+  function withTempIds(ids) { return ids.concat(ids.map(function (id) { return 'k:' + id; })); }
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
   function note(text) { if (JOURNAL) JOURNAL.add('app', text); }
@@ -110,8 +112,8 @@ var liveBridge = (function () {
         if (waitingIds[ku]) { delete waitingIds[ku]; emit({ op: 'msgid', gid: room, tmp: 'k:' + data[0], id: data[1] }); } else earlyIds[ku] = data[1];
         break;
       }
-      case 'delete': emit({ op: 'del', gid: room, ids: [data[0]] }); break;
-      case 'deleteall': emit({ op: 'del', gid: room, ids: data.slice() }); break;
+      case 'delete': emit({ op: 'del', gid: room, ids: withTempIds([data[0]]) }); break;
+      case 'deleteall': emit({ op: 'del', gid: room, ids: withTempIds(data.slice()) }); break;
       case 'clearall': if (data[0] === 'ok') emit({ op: 'cleared', gid: room }); else emit({ op: 'notice', gid: room, text: 'Chatango refused to clear the messages.' }); break;
       case 'g_participants': participants(room, data.join(':').split(';')); break;
       case 'gparticipants': participants(room, data.slice(1).join(':').split(';')); break;
@@ -120,7 +122,12 @@ var liveBridge = (function () {
       case 'ok': emit({ op: 'room', gid: room, owner: lower(data[0]), mods: parseMods(String(data[6] || '').split(';')), flags: parseInt(data[7], 10) || 0 }); break;
       case 'mods': emit({ op: 'mods', gid: room, mods: parseMods(data) }); break;
       case 'groupflagsupdate': emit({ op: 'flags', gid: room, flags: parseInt(data[0], 10) || 0 }); break;
-      case 'inited': emit({ op: 'inited', gid: room }); break;
+      case 'inited':
+        emit({ op: 'inited', gid: room });
+        send(room, 'getannouncement', '');
+        // Torch charge le titre et la description du groupe juste après la connexion.
+        setTimeout(function () { var info = roomInfo(room); if (info) emit({ op: 'info', gid: room, title: info.title, description: info.description }); }, 3000);
+        break;
       case 'nomore': emit({ op: 'histEnd', gid: room }); break;
       case 'gotmore': emit({ op: 'moreLoaded', gid: room }); break;
       case 'getannc':
@@ -143,8 +150,8 @@ var liveBridge = (function () {
       case 'unblocklist': banPage(room, 'unblock', data); break;
       case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', guest: !data[2], by: lower(data[3]), at: Date.now() } }); break;
       case 'unblocked': emit({ op: 'unbanned', gid: room, list: parseUnbanned(data) }); break;
-      case 'bansearchresult': emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
-      case 'badbansearchstring': emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
+      case 'bansearchresult': gotReply('searchban:' + room); emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
+      case 'badbansearchstring': gotReply('searchban:' + room); emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
       case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
       case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
@@ -166,6 +173,13 @@ var liveBridge = (function () {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
         emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
+        // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : le pont sonne pour les autres, comme Torch, hors modification et membre ignoré.
+        var from = lower(data[0]);
+        if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
+          var sounds = readSounds();
+          // Lecture refusée par le navigateur : silence voulu, sans toast.
+          if (sounds && sounds.play_mention) playSound('mention').then(null, function () {});
+        }
         break;
       }
       case 'wl': {
@@ -175,6 +189,7 @@ var liveBridge = (function () {
         break;
       }
       case 'wladd':
+        gotReply('wladd:' + lower(data[0]));
         if (data[1] === 'invalid') emit({ op: 'friendRefused', name: lower(data[0]) });
         // Triplet : la valeur vaut des minutes d'inactivité si on, un horodatage si off ou app.
         else emit({ op: 'friends', added: true, list: [friendPresence(data[0], data[1], data[2], data[2])] });
@@ -190,7 +205,7 @@ var liveBridge = (function () {
         var target = lower(data[0]) || connectTarget, state = data[0] && CONNECT_STATE[data[2]];
         if (state) emit({ op: 'people', list: [friendPresence(target, state, data[1], data[1])] });
         // Comme Torch, un état inconnu est ignoré.
-        if (state || !data[0] || data[2] === 'invalid' || data[2] === 'nouser') emit({ op: 'pmChecked', name: target, found: !!state });
+        if (state || !data[0] || data[2] === 'invalid' || data[2] === 'nouser') emit({ op: 'pmChecked', name: target, found: !!state, asked: gotReply('connect:' + target) });
         break;
       }
       case 'presence': {
@@ -320,6 +335,30 @@ var liveBridge = (function () {
   function pmOpen() { return !!(C.private && C.private.socket && C.private.socket.readyState === 1); }
   // Dernier correspondant demandé par connect, auquel se rattache une réponse à nom vide.
   var connectTarget = '';
+  // Chatango ne renvoie aucun identifiant de demande : une réponse se reconnaît à sa clé, et une demande plus récente remplace l'attente de la précédente.
+  var replyWaits = {};
+  var PM_CHECK_TIMEOUT = 5000;
+  /**
+   * Permet d'attendre la réponse de Chatango à une demande, et d'émettre un fait si elle ne vient pas à temps.
+   * @param {string} key Clé de la réponse attendue.
+   * @param {number} ms Délai d'attente.
+   * @param {Object} timeoutOp Op émise à l'expiration.
+   */
+  function awaitReply(key, ms, timeoutOp) {
+    clearTimeout(replyWaits[key]);
+    replyWaits[key] = setTimeout(function () { delete replyWaits[key]; emit(timeoutOp); }, ms);
+  }
+  /**
+   * Permet de clore l'attente d'une réponse arrivée.
+   * @param {string} key Clé de la réponse.
+   * @returns {boolean} Vrai si une demande l'attendait encore.
+   */
+  function gotReply(key) {
+    var waited = key in replyWaits;
+    clearTimeout(replyWaits[key]);
+    delete replyWaits[key];
+    return waited;
+  }
   /**
    * Permet de demander à Chatango la présence d'un correspondant, comme Torch à l'ouverture d'un MP.
    * @param {string} name Correspondant visé.
@@ -505,6 +544,25 @@ var liveBridge = (function () {
    * @param {string} kind Clé de LISTS.
    * @returns {?Array<string>} Copie de la liste, null si les réglages de Torch sont illisibles.
    */
+  function roomInfo(gid) {
+    var info = C.groups && C.groups[gid] && C.groups[gid].room && C.groups[gid].room.information;
+    return info ? { title: String(info.title || ''), description: String(info.description || '') } : null;
+  }
+  function readSounds() {
+    try {
+      var sound = C.settings.notifications.sound, out = {};
+      // Le curseur de Torch enregistre le volume en texte.
+      SOUND_KEYS.forEach(function (k) { out[k] = k.indexOf('volume_') === 0 ? parseInt(sound[k], 10) : !!sound[k]; });
+      return out;
+    } catch (e) { warn(e); return null; }
+  }
+  function playSound(kind) {
+    try {
+      var audio = C.sound[SOUND_AUDIO[kind]];
+      audio.volume = parseInt(C.settings.notifications.sound['volume_' + kind], 10) / 100;
+      return audio.play();
+    } catch (e) { warn(e); return Promise.reject(e); }
+  }
   function readList(kind) {
     var p = LISTS[kind];
     try { return C.settings[p[0]][p[1]][p[2]].slice(); } catch (e) { warn(e); return null; }
@@ -655,7 +713,11 @@ var liveBridge = (function () {
     onOp: onOp,
     note: note,
     connName: connName,
-    canReply: function (id) { return !!id && String(id).indexOf('k:') !== 0; },
+    /**
+     * Permet de savoir si un message a déjà son identifiant définitif, que la réponse, la modification et la suppression attendent.
+     * @param {string} id Identifiant du message dans l'état.
+     */
+    delivered: function (id) { return !!id && String(id).indexOf('k:') !== 0; },
     /**
      * Permet d'envoyer un message de groupe, ou la modification d'un message.
      * @param {string} gid Groupe visé.
@@ -725,13 +787,22 @@ var liveBridge = (function () {
      * Permet de lire le MP que Torch considère ouvert, dont il joue lui-même le son.
      * @returns {string|boolean|undefined} Membre de client.private.focus, false ou undefined sans MP ouvert pour Torch.
      */
-    focusedPm: function () { return C.private.focus; },
     /**
      * Permet de savoir si le compte est Premium, comme Torch avant d'écrire une émoticône Premium.
      * @returns {boolean} Statut 200 ou 210 de la trame premium, faux tant que la connexion privée n'est pas ouverte.
      */
     premium: function () { return !!C.private && [200, 210].indexOf(C.private.premium.status) >= 0; },
-    connectPm: connectPm,
+    /**
+     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme Torch avant de l'ouvrir : la réponse arrive en op pmChecked, avec asked.
+     * @param {string} name Correspondant visé.
+     * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
+     */
+    checkPm: function (name) {
+      var n = lower(name);
+      if (!connectPm(n)) return false;
+      awaitReply('connect:' + n, PM_CHECK_TIMEOUT, { op: 'pmChecked', name: n, timeout: true });
+      return true;
+    },
     join: function (gid) {
       delete left[gid];
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }
@@ -768,7 +839,11 @@ var liveBridge = (function () {
      * @param {string} ts Horodatage de la dernière ligne chargée, 0 pour la première page.
      */
     banList: function (gid, kind, ts) { return send(gid, 'blocklist:' + kind + ':' + ts + ':next:' + BAN_PAGE + ':anons:1', 'The ban list could not be loaded.'); },
-    searchBans: function (gid, query) { return send(gid, 'searchban:' + query, 'The search could not be sent.'); },
+    searchBans: function (gid, query) {
+      if (!send(gid, 'searchban:' + query, 'The search could not be sent.')) return false;
+      awaitReply('searchban:' + gid, CONFIRM_TIMEOUT, { op: 'banSearchTimeout', gid: gid });
+      return true;
+    },
     clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
     /* Réglages de groupe : trames relevées dans chadango et chatango-lib */
     requestSettings: function (gid) {
@@ -786,7 +861,6 @@ var liveBridge = (function () {
       setTimeout(function () { send(gid, 'getannouncement', ''); }, 1000);
       return ok;
     },
-    requestAnnouncement: function (gid) { return send(gid, 'getannouncement', ''); },
     setBannedWords: function (gid, part, whole) {
       var ok = send(gid, 'setbannedwords:' + encodeURIComponent(part) + ':' + encodeURIComponent(whole), 'Banned words could not be saved.');
       setTimeout(function () { send(gid, 'getbannedwords', ''); }, 1000);
@@ -795,13 +869,13 @@ var liveBridge = (function () {
     setRateLimit: function (gid, seconds) { return send(gid, 'setratelimit:' + seconds, 'Slow mode could not be saved.'); },
     setMod: function (gid, name, flags) { return send(gid, 'addmod:' + name + ':' + flags, 'The moderator could not be saved.'); },
     removeMod: function (gid, name) { return send(gid, 'removemod:' + name, 'The moderator could not be removed.'); },
-    roomInfo: function (gid) {
-      var info = C.groups && C.groups[gid] && C.groups[gid].room && C.groups[gid].room.information;
-      return info ? { title: String(info.title || ''), description: String(info.description || '') } : null;
-    },
     /* Messages privés */
     setStatus: function (status) { return send('private_message', 'idle:' + (status === 'idle' ? 0 : 1), 'Your status could not be changed.'); },
-    addFriend: function (name) { return send('private_message', 'wladd:' + name, 'The friend could not be added.'); },
+    addFriend: function (name) {
+      if (!send('private_message', 'wladd:' + name, 'The friend could not be added.')) return false;
+      awaitReply('wladd:' + lower(name), CONFIRM_TIMEOUT, { op: 'friendTimeout', name: lower(name) });
+      return true;
+    },
     removeFriend: function (name) { return send('private_message', 'wldelete:' + name, 'The friend could not be removed.'); },
     block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', 'The block could not be sent.'); },
     unblock: function (name) { return send('private_message', 'unblock:' + name, 'The unblock could not be sent.'); },
@@ -1122,14 +1196,7 @@ var liveBridge = (function () {
      * Permet de lire les réglages de son que Torch applique.
      * @returns {?Object} Interrupteurs et volumes de 0 à 100, null si les réglages de Torch sont illisibles.
      */
-    torchSounds: function () {
-      try {
-        var sound = C.settings.notifications.sound, out = {};
-        // Le curseur de Torch enregistre le volume en texte.
-        SOUND_KEYS.forEach(function (k) { out[k] = k.indexOf('volume_') === 0 ? parseInt(sound[k], 10) : !!sound[k]; });
-        return out;
-      } catch (e) { warn(e); return null; }
-    },
+    torchSounds: readSounds,
     /**
      * Permet d'enregistrer un réglage de son dans les réglages de Torch, relus à chaque son.
      * @param {string} key Clé de SOUND_KEYS.
@@ -1148,13 +1215,7 @@ var liveBridge = (function () {
      * @param {string} kind mention ou online.
      * @returns {Promise} Rejetée si le navigateur refuse la lecture.
      */
-    playTorchSound: function (kind) {
-      try {
-        var audio = C.sound[SOUND_AUDIO[kind]];
-        audio.volume = parseInt(C.settings.notifications.sound['volume_' + kind], 10) / 100;
-        return audio.play();
-      } catch (e) { warn(e); return Promise.reject(e); }
-    },
+    playTorchSound: playSound,
     /**
      * Permet de lire les groupes favoris de Torch.
      * @returns {?Array<string>} Noms des groupes, null si les réglages de Torch sont illisibles.

@@ -45,7 +45,7 @@ function MessageRow(p) {
   var canDelete = isStaffRole(myRole);
   var canBan = canBanMember(g, me, m.author) && (!LIVE || !!m.unid);
   // Comme la réponse, la modification attend l'identifiant définitif du message.
-  var canEdit = m.author === me && (!LIVE || liveBridge.canReply(m.id));
+  var canEdit = m.author === me && (!LIVE || liveBridge.delivered(m.id));
   var handle = m.author !== me ? mentionHandle(m.author) : null;
   var showIp = LIVE && m.ip && groupRights(g, me).seeIps;
   var canQuote = !!m.text && !!mentionHandle(m.author);

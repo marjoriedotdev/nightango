@@ -35,7 +35,6 @@ function load(records) {
     window.client = { user: { name: '${ME}' }, groups: {}, event: { group: {}, private: {} }, database: { pm: ${records ? 'true' : 'false'} },
       on: function () {}, emit: function () {}, connect: function () {} };
     window.__torchRefs = { client: window.client, chatango: {} };
-    function mkSettings(x) { return x; }
   `);
   if (records) w.client.database.pm = { transaction };
   w.eval(code + '; window.mod = { liveBridge: liveBridge, torchPmArchive: torchPmArchive, memoryPmArchive: memoryPmArchive, syncPmUnread: syncPmUnread, readPm: readPm, mergePmHistory: mergePmHistory, pmRecordEntry: pmRecordEntry };');
