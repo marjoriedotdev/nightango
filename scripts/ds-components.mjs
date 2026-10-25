@@ -207,7 +207,7 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
     `  return h('div', { className: 'row', style: { color: 'var(--text-2)' } }, h(T.Spinner, { label: 'Loading' }), h(T.Spinner, { size: 24 }), h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 8 } }, h(T.Spinner, null), 'Signing in'));`],
   ['Moon', 'Foundations', 80,
     'The moon at its real phase for a given moment, computed on the device.',
-    `\`date\` defaults to now. The phase is the same everywhere on Earth; a \`moon-south\` class on the root turns every moon half a turn, as seen from the southern hemisphere. \`Torch.moonPhase(date)\` returns \`{ phase, lit, name }\` for text: phase from 0 (new) to 1, lit from 0 to 1, name such as Waxing gibbous.
+    `\`date\` defaults to now; \`phase\` (0 for new moon to 1) draws a fixed phase instead, such as \`index / 8\` for an entry of \`Torch.moonNames\`. The phase is the same everywhere on Earth; a \`moon-south\` class on the root turns every moon half a turn, as seen from the southern hemisphere. \`Torch.moonPhase(date)\` returns \`{ phase, lit, name }\` for text: phase from 0 (new) to 1, lit from 0 to 1, name such as Waxing gibbous.
 
 - Decorative by default. Pass \`label: true\` to name the phase and its lit part (Waxing gibbous, 82% lit), or a text of your own.
 - The lit side runs from \`moon-lit-top\` to \`moon-lit-bottom\` (flat moonlight at night, sunrise gold to coral at dawn), the dark side is \`moon-shade\`.\n- At night the lit side shows the seas of the near side (\`moon-maria\`), Tycho and Copernicus (\`moon-crater\`) and a darker edge (\`moon-limb\`). These tokens are transparent at dawn.

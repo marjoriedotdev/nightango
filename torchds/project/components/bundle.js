@@ -251,7 +251,9 @@
     var t = date == null ? Date.now() : +date;
     var age = ((t - NEW_MOON_REF) / 864e5) % SYNODIC_DAYS;
     if (age < 0) age += SYNODIC_DAYS;
-    var phase = age / SYNODIC_DAYS;
+    return moonInfo(age / SYNODIC_DAYS);
+  }
+  function moonInfo(phase) {
     return { phase: phase, lit: (1 - Math.cos(2 * Math.PI * phase)) / 2, name: MOON_NAMES[Math.round(phase * 8) % 8] };
   }
   function moonPath(phase, r) {
@@ -267,7 +269,7 @@
   // Cratères clairs : Tycho et Copernic.
   var CRATERS = [[9.2, 16.8, 0.55], [8.2, 9.6, 0.45]];
   function Moon(props) {
-    var size = props.size || 16, m = moonPhase(props.date), lit = moonPath(m.phase, 10);
+    var size = props.size || 16, m = props.phase == null ? moonPhase(props.date) : moonInfo(props.phase), lit = moonPath(m.phase, 10);
     var label = props.label === true ? m.name + ', ' + Math.round(m.lit * 100) + '% lit' : props.label;
     // Les deux-points de useId ne passent pas dans url(#…).
     var id = 'tc-moon-' + React.useId().replace(/[^\w-]/g, '');
@@ -413,7 +415,7 @@
     SegmentedControl: SegmentedControl, Badge: Badge, CountBadge: CountBadge, Avatar: Avatar, NavItem: NavItem,
     Message: Message, DayDivider: DayDivider, Banner: Banner, SettingsSection: SettingsSection, SettingRow: SettingRow,
     SaveBar: SaveBar, Composer: Composer, Skeleton: Skeleton, Spinner: Spinner, Moon: Moon,
-    avatarColor: avatarColor, moonPhase: moonPhase, iconNames: Object.keys(ICONS)
+    avatarColor: avatarColor, moonPhase: moonPhase, moonNames: MOON_NAMES.slice(), iconNames: Object.keys(ICONS)
   };
   window.Torch = Object.assign(window.Torch || {}, api);
 })();
