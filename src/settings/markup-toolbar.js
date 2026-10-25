@@ -23,6 +23,36 @@ function wrapMarkup(value, start, end, open, close) {
   return { from: start, to: end, text: open + sel + close, selStart: start + open.length, selEnd: end + open.length };
 }
 
+var FONT_ATTRS = ['color', 'face', 'size'];
+// Balise <font> qui se termine au début de la sélection et ne porte que des attributs que la barre sait réécrire.
+var FONT_OPEN_BEFORE = /<font((?:\s+(?:color|face|size)="[^"<>]*")+)\s*>$/i;
+var FONT_CLOSE = '</font>';
+
+/**
+ * Permet de poser un attribut de <font> sur la sélection, dans la balise qui l'entoure déjà quand c'est possible.
+ * Même valeur : l'attribut est retiré, et la balise avec son dernier attribut.
+ * @param {string} value Texte du champ.
+ * @param {number} start Début de la sélection.
+ * @param {number} end Fin de la sélection.
+ * @param {string} name color, face ou size.
+ * @param {string} val Valeur de l'attribut.
+ * @returns {{from: number, to: number, text: string, selStart: number, selEnd: number}} Plage remplacée, texte inséré et sélection qui suit.
+ */
+function fontMarkup(value, start, end, name, val) {
+  var sel = value.slice(start, end), m = FONT_OPEN_BEFORE.exec(value.slice(0, start));
+  // Une balise font dans la sélection pourrait être celle que ferme le </font> qui suit.
+  if (!m || value.slice(end, end + FONT_CLOSE.length).toLowerCase() !== FONT_CLOSE || /<\/?font\b/i.test(sel))
+    return wrapMarkup(value, start, end, '<font ' + name + '="' + val + '">', FONT_CLOSE);
+  var attrs = {}, re = /(color|face|size)="([^"<>]*)"/gi, a;
+  // Le navigateur garde le premier attribut en double.
+  while ((a = re.exec(m[1]))) if (!(a[1].toLowerCase() in attrs)) attrs[a[1].toLowerCase()] = a[2];
+  if (attrs[name] === val) delete attrs[name]; else attrs[name] = val;
+  var kept = FONT_ATTRS.filter(function (k) { return k in attrs; });
+  var open = kept.length ? '<font' + kept.map(function (k) { return ' ' + k + '="' + attrs[k] + '"'; }).join('') + '>' : '';
+  var from = start - m[0].length;
+  return { from: from, to: end + FONT_CLOSE.length, text: open + sel + (kept.length ? FONT_CLOSE : ''), selStart: from + open.length, selEnd: from + open.length + sel.length };
+}
+
 /**
  * Permet d'appliquer une édition au champ en gardant l'annulation du navigateur.
  * @param {HTMLTextAreaElement} el Champ modifié.
@@ -85,8 +115,9 @@ function useMarkupToolbar(inputRef, fieldId, disabled) {
     applyMarkupEdit(el, build(el.value, el.selectionStart, el.selectionEnd), app.ui.toast);
   }
   function wrap(open, close) { edit(function (value, start, end) { return wrapMarkup(value, start, end, open, close); }); }
+  function font(name, val) { edit(function (value, start, end) { return fontMarkup(value, start, end, name, val); }); }
   function insert(kind, value) {
-    if (kind === 'color') { setLastColor(value); wrap('<font color="' + value + '">', '</font>'); return; }
+    if (kind === 'color') { setLastColor(value); font('color', value); return; }
     if (kind === 'image') {
       edit(function (v, start, end) { var img = '<img src="' + value + '">'; return { from: end, to: end, text: img, selStart: end + img.length, selEnd: end + img.length }; });
       return;
@@ -119,7 +150,8 @@ function useMarkupToolbar(inputRef, fieldId, disabled) {
     button('strikethrough', 'Strikethrough', function () { tag('s'); }),
     sep,
     button('palette', 'Text color', function () { setDialog('color'); }),
-    menu('type', 'Text size', TEXT_SIZES.map(function (s) { return { label: s[0], onSelect: function () { wrap('<font size="' + s[1] + '">', '</font>'); } }; })),
+    menu('type', 'Font', FONT_FACES.map(function (f) { return { label: h('span', { style: { fontFamily: FONT_STACKS[f] } }, f), onSelect: function () { font('face', f); } }; })),
+    menu('text-size', 'Text size', TEXT_SIZES.map(function (s) { return { label: s[0], onSelect: function () { font('size', String(s[1])); } }; })),
     menu('align-left', 'Alignment', TEXT_ALIGNMENTS.map(function (a) { return { label: a[0], icon: 'align-' + a[1], onSelect: function () { wrap('<div align="' + a[1] + '">', '</div>'); } }; })),
     sep,
     button('link', 'Add a link', function () { setDialog('link'); }),

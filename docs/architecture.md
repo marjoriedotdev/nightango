@@ -42,6 +42,7 @@ src/
     language-a11y-about (et Diagnostics), premium
     group-view, group-pages                                             réglages de groupe du prototype
     group-staff                                                         pages Staff and roles, Members et Invites, communes au live et au prototype
+    markup-toolbar                                                      barre de mise en forme de la bio et du profil complet
     avatar-crop                                                         recadrage de sa photo de profil (live)
     live-group-view, live-group-pages, live-group-staff, live-account   variantes live
   app/        racine
@@ -172,6 +173,7 @@ Suites jsdom dans `tests/`, lancées par `tests/run.mjs` après le build :
 - `live_ui` : mode live avec un faux client Torch, sur `dist/app.js` et le bundle du design system. Il enregistre chaque trame envoyée et vérifie son format exact.
 - `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, pont vissle, journal de diagnostic. Jouée sur `dist/torch-skin.user.js` puis sur `dist/torch-skin.min.user.js`. C'est la seule suite qui exécute les userscripts.
 - `pm` : non-lus des MP et fusion de l'historique privé, sur les sources de `src/core/`, `src/bridge/` et `src/app/pm.js`, avec la fausse base d'historique de `tests/fake-pm-db.js`, partagée avec `live_ui`.
+- `markup` : barre de mise en forme du profil, balises autour de la sélection et fusion des attributs de `<font>`, sur `src/settings/markup-toolbar.js`.
 - `live_login` : détection de connexion, sur la concaténation des sources de `src/bridge/`.
 - `avatar` : avatars, sur le bundle du design system et les sources de `src/bridge/`.
 - `moon` : phase de la lune comparée à des dates publiées et sens du tracé, sur le bundle du design system.
