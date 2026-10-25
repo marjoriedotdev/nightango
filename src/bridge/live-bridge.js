@@ -120,7 +120,12 @@ var liveBridge = (function () {
       case 'ok': emit({ op: 'room', gid: room, owner: lower(data[0]), mods: parseMods(String(data[6] || '').split(';')), flags: parseInt(data[7], 10) || 0 }); break;
       case 'mods': emit({ op: 'mods', gid: room, mods: parseMods(data) }); break;
       case 'groupflagsupdate': emit({ op: 'flags', gid: room, flags: parseInt(data[0], 10) || 0 }); break;
-      case 'inited': emit({ op: 'inited', gid: room }); break;
+      case 'inited':
+        emit({ op: 'inited', gid: room });
+        send(room, 'getannouncement', '');
+        // Torch charge le titre et la description du groupe juste après la connexion.
+        setTimeout(function () { var info = roomInfo(room); if (info) emit({ op: 'info', gid: room, title: info.title, description: info.description }); }, 3000);
+        break;
       case 'nomore': emit({ op: 'histEnd', gid: room }); break;
       case 'gotmore': emit({ op: 'moreLoaded', gid: room }); break;
       case 'getannc':
@@ -166,6 +171,13 @@ var liveBridge = (function () {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
         emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
+        // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : le pont sonne pour les autres, comme Torch, hors modification et membre ignoré.
+        var from = lower(data[0]);
+        if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
+          var sounds = readSounds();
+          // Lecture refusée par le navigateur : silence voulu, sans toast.
+          if (sounds && sounds.play_mention) playSound('mention').then(null, function () {});
+        }
         break;
       }
       case 'wl': {
@@ -530,6 +542,25 @@ var liveBridge = (function () {
    * @param {string} kind Clé de LISTS.
    * @returns {?Array<string>} Copie de la liste, null si les réglages de Torch sont illisibles.
    */
+  function roomInfo(gid) {
+    var info = C.groups && C.groups[gid] && C.groups[gid].room && C.groups[gid].room.information;
+    return info ? { title: String(info.title || ''), description: String(info.description || '') } : null;
+  }
+  function readSounds() {
+    try {
+      var sound = C.settings.notifications.sound, out = {};
+      // Le curseur de Torch enregistre le volume en texte.
+      SOUND_KEYS.forEach(function (k) { out[k] = k.indexOf('volume_') === 0 ? parseInt(sound[k], 10) : !!sound[k]; });
+      return out;
+    } catch (e) { warn(e); return null; }
+  }
+  function playSound(kind) {
+    try {
+      var audio = C.sound[SOUND_AUDIO[kind]];
+      audio.volume = parseInt(C.settings.notifications.sound['volume_' + kind], 10) / 100;
+      return audio.play();
+    } catch (e) { warn(e); return Promise.reject(e); }
+  }
   function readList(kind) {
     var p = LISTS[kind];
     try { return C.settings[p[0]][p[1]][p[2]].slice(); } catch (e) { warn(e); return null; }
@@ -750,7 +781,6 @@ var liveBridge = (function () {
      * Permet de lire le MP que Torch considère ouvert, dont il joue lui-même le son.
      * @returns {string|boolean|undefined} Membre de client.private.focus, false ou undefined sans MP ouvert pour Torch.
      */
-    focusedPm: function () { return C.private.focus; },
     /**
      * Permet de savoir si le compte est Premium, comme Torch avant d'écrire une émoticône Premium.
      * @returns {boolean} Statut 200 ou 210 de la trame premium, faux tant que la connexion privée n'est pas ouverte.
@@ -825,7 +855,6 @@ var liveBridge = (function () {
       setTimeout(function () { send(gid, 'getannouncement', ''); }, 1000);
       return ok;
     },
-    requestAnnouncement: function (gid) { return send(gid, 'getannouncement', ''); },
     setBannedWords: function (gid, part, whole) {
       var ok = send(gid, 'setbannedwords:' + encodeURIComponent(part) + ':' + encodeURIComponent(whole), 'Banned words could not be saved.');
       setTimeout(function () { send(gid, 'getbannedwords', ''); }, 1000);
@@ -834,10 +863,6 @@ var liveBridge = (function () {
     setRateLimit: function (gid, seconds) { return send(gid, 'setratelimit:' + seconds, 'Slow mode could not be saved.'); },
     setMod: function (gid, name, flags) { return send(gid, 'addmod:' + name + ':' + flags, 'The moderator could not be saved.'); },
     removeMod: function (gid, name) { return send(gid, 'removemod:' + name, 'The moderator could not be removed.'); },
-    roomInfo: function (gid) {
-      var info = C.groups && C.groups[gid] && C.groups[gid].room && C.groups[gid].room.information;
-      return info ? { title: String(info.title || ''), description: String(info.description || '') } : null;
-    },
     /* Messages privés */
     setStatus: function (status) { return send('private_message', 'idle:' + (status === 'idle' ? 0 : 1), 'Your status could not be changed.'); },
     addFriend: function (name) {
@@ -1165,14 +1190,7 @@ var liveBridge = (function () {
      * Permet de lire les réglages de son que Torch applique.
      * @returns {?Object} Interrupteurs et volumes de 0 à 100, null si les réglages de Torch sont illisibles.
      */
-    torchSounds: function () {
-      try {
-        var sound = C.settings.notifications.sound, out = {};
-        // Le curseur de Torch enregistre le volume en texte.
-        SOUND_KEYS.forEach(function (k) { out[k] = k.indexOf('volume_') === 0 ? parseInt(sound[k], 10) : !!sound[k]; });
-        return out;
-      } catch (e) { warn(e); return null; }
-    },
+    torchSounds: readSounds,
     /**
      * Permet d'enregistrer un réglage de son dans les réglages de Torch, relus à chaque son.
      * @param {string} key Clé de SOUND_KEYS.
@@ -1191,13 +1209,7 @@ var liveBridge = (function () {
      * @param {string} kind mention ou online.
      * @returns {Promise} Rejetée si le navigateur refuse la lecture.
      */
-    playTorchSound: function (kind) {
-      try {
-        var audio = C.sound[SOUND_AUDIO[kind]];
-        audio.volume = parseInt(C.settings.notifications.sound['volume_' + kind], 10) / 100;
-        return audio.play();
-      } catch (e) { warn(e); return Promise.reject(e); }
-    },
+    playTorchSound: playSound,
     /**
      * Permet de lire les groupes favoris de Torch.
      * @returns {?Array<string>} Noms des groupes, null si les réglages de Torch sont illisibles.

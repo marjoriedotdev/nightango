@@ -1190,12 +1190,6 @@ function Root(props) {
       case 'flags': groupUpdate(op.gid, function (g) { g.live.flags = op.flags; deriveLive(g); }); break;
       case 'inited':
         groupUpdate(op.gid, function (g) { g.inited = true; });
-        liveBridge.requestAnnouncement(op.gid);
-        // Torch charge le titre et la description du groupe juste après la connexion.
-        setTimeout(function () {
-          var info = liveBridge.roomInfo(op.gid);
-          if (info) handleLiveOp({ op: 'info', gid: op.gid, title: info.title, description: info.description });
-        }, 3000);
         break;
       case 'info': groupUpdate(op.gid, function (g) {
         if (op.title) { g.title = op.title; g.topic = op.description && op.description !== 'No description' ? op.description : op.title; }
@@ -1283,12 +1277,6 @@ function Root(props) {
         if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
         if (edit) break;
         if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
-        // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : la route ne suffit pas.
-        if (!op.offline && !ignored && op.from !== s0.me && op.from !== liveBridge.focusedPm()) {
-          var sounds = liveBridge.torchSounds();
-          // Lecture refusée par le navigateur : silence voulu, sans toast.
-          if (sounds && sounds.play_mention) liveBridge.playTorchSound('mention').then(null, function () {});
-        }
         // Les msgoff arrivent en rafale juste après la connexion : une seule notification pour toute la rafale.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
