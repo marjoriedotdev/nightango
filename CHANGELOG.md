@@ -7,7 +7,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 ### Changed
 
 - The Nightango mark is the moon alone. The small spark at its edge, which took the accent color, is gone.
-- In the light theme, the moon and the presence moons are orange instead of brown.
+- In the light theme, the moon takes the colors of a sunrise, gold to coral, and the presence moons are orange instead of brown.
 
 ## [0.18.0] - 2026-10-25
 
