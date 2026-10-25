@@ -1,6 +1,6 @@
-# Torch Skin
+# Nightango
 
-Userscript Tampermonkey pour https://st.chatango.com/ : il démarre Torch (client Chatango tiers de vissle.me), laisse l'utilisateur se connecter sur l'écran de Torch, puis affiche une interface refaite (React 18 dans un Shadow DOM) branchée sur le client Torch vivant.
+Nightango (anciennement Torch Skin) est un skin pour Torch. Userscript Tampermonkey pour https://st.chatango.com/ : il démarre Torch (client Chatango tiers de vissle.me), laisse l'utilisateur se connecter sur l'écran de Torch, puis affiche une interface refaite (React 18 dans un Shadow DOM) branchée sur le client Torch vivant.
 Le même code sert aussi un prototype hébergé à données simulées.
 La version installée chez l'utilisateur est en usage réel : chaque livraison touche son compte Chatango.
 

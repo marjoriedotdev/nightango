@@ -1,6 +1,6 @@
 # Savoir si un membre nous a bloqués
 
-Torch Skin ne cherche pas à savoir si un correspondant a bloqué l'utilisateur. La conversation privée affiche la présence que Chatango renvoie, sans autre déduction.
+Nightango ne cherche pas à savoir si un correspondant a bloqué l'utilisateur. La conversation privée affiche la présence que Chatango renvoie, sans autre déduction.
 
 ## Pourquoi c'est hors périmètre
 

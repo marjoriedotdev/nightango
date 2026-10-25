@@ -1,11 +1,11 @@
-Torch is a calm, readable client for Chatango. The interface stays quiet so that conversations carry the color: neutral graphite surfaces, one ember accent, a single sans-serif family. Build every screen from these tokens and the `Torch` components; never paste raw values.
+Nightango is a calm, readable skin for Torch, a web client for Chatango. The interface stays quiet so that conversations carry the color: neutral graphite surfaces, one ember accent, a single sans-serif family. Build every screen from these tokens and the `Torch` components; never paste raw values.
 
 ## Content fundamentals
 
 - Write interface copy in English, sentence case: "Save changes", "Private messages", "Discover groups". Capitals only for `label-caps` section labels (FAVORITES, STAFF · 3).
 - Buttons start with a verb and say what happens: "Join", "Send reset link", "Create account". Never "OK" or "Submit".
 - A menu entry that opens a dialog to confirm or complete the action ends with an ellipsis (…, not three dots): "Block…", "Leave group…", "Create a group…". Entries that act at once or only show something ("Copy text", "View profile") have none, and neither do buttons, even one that asks for confirmation ("Clear all").
-- Address the reader as "you", the product as "Torch". Chatango is named when an action goes to Chatango: "This is your Chatango profile. Everyone on Chatango sees it."
+- Address the reader as "you", the product as "Nightango". Torch is named when Torch does the work: sign-in, the private message history, the media library, its own settings. Chatango is named when an action goes to Chatango: "This is your Chatango profile. Everyone on Chatango sees it."
 - Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read."
 - Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input".
 - No emoji in the interface, no exclamation marks, no filler ("Oops", "Awesome").
@@ -56,7 +56,7 @@ Torch is a calm, readable client for Chatango. The interface stays quiet so that
 
 ## Members' Chatango styles
 
-Chatango lets members choose name colors, fonts, text colors and message backgrounds. Torch does not render them by default. Appearance settings expose three switches (Name colors, Fonts and text colors, Message backgrounds); when one is on, Torch still corrects colors that fall under 4.5:1 on the current theme.
+Chatango lets members choose name colors, fonts, text colors and message backgrounds. Nightango does not render them by default. Appearance settings expose three switches (Name colors, Fonts and text colors, Message backgrounds); when one is on, Nightango still corrects colors that fall under 4.5:1 on the current theme.
 
 ## Iconography
 
@@ -66,4 +66,4 @@ Chatango lets members choose name colors, fonts, text colors and message backgro
 
 ## Logo
 
-There is no drawn logo yet. The mark is the flame icon in `on-accent` on an `accent` square with `radius-lg`, followed by the word Torch in `title-sm` weight. Do not redraw or stylize it further until a real mark exists.
+There is no drawn logo yet. The mark is the flame icon in `on-accent` on an `accent` square with `radius-lg`, followed by the word Nightango in `title-sm` weight. Do not redraw or stylize it further until a real mark exists.

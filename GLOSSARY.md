@@ -1,6 +1,6 @@
-# Torch Skin
+# Nightango
 
-Torch Skin habille le client Chatango Torch d'une interface refaite, sans changer ce que Torch envoie à Chatango. Ce glossaire fixe le vocabulaire du code, des docs et des issues.
+Nightango habille le client Chatango Torch d'une interface refaite, sans changer ce que Torch envoie à Chatango. Ce glossaire fixe le vocabulaire du code, des docs et des issues.
 
 ## Produits et acteurs
 
@@ -8,15 +8,15 @@ Torch Skin habille le client Chatango Torch d'une interface refaite, sans change
 Service de discussion en ligne (groupes, messages privés, profils) sur lequel tout repose.
 
 **Torch**:
-Client web tiers pour Chatango, édité par vissle, qui tient la session et les connexions. Dans les textes d'interface, la charte du design system nomme aussi le produit « Torch ».
+Client web tiers pour Chatango, édité par vissle, qui tient la session et les connexions. Dans les textes d'interface, « Torch » ne désigne que ce que fait Torch : la connexion, l'historique des MP, la médiathèque, les réglages de Torch.
 _Avoid_: Torch Client (sauf pour le client d'origine affiché sans habillage)
 
 **vissle**:
 Éditeur de Torch (vissle.me), qui héberge aussi le tracker de profil.
 
-**Torch Skin**:
-Ce projet : un userscript Tampermonkey qui démarre Torch puis affiche par-dessus une interface refaite, branchée sur Torch.
-_Avoid_: thème, skin Torch
+**Nightango**:
+Ce projet : un skin pour Torch, sous forme de userscript Tampermonkey qui démarre Torch puis affiche par-dessus une interface refaite, branchée sur Torch. Nom affiché depuis la 0.18.0. Les identifiants techniques gardent `torch-skin` : namespace du userscript, hôte `#torch-skin`, événements du pont, clés de stockage, préfixe des logs, livrable.
+_Avoid_: Torch Skin (ancien nom), thème
 
 **Client officiel**:
 Le client web de Chatango lui-même, utilisé comme source pour les formats et les textes.
@@ -70,7 +70,7 @@ Partie du userscript injectée dans la page, qui démarre Torch et monte l'inter
 Le userscript minifié que l'utilisateur installe dans Tampermonkey, au nom fixe d'une version à l'autre.
 
 **Design system**:
-Jetons, composants et charte de Torch Skin (torchds), dont l'interface est construite.
+Jetons, composants et charte de Nightango (torchds), dont l'interface est construite.
 
 ## Groupes
 
@@ -174,7 +174,7 @@ Couleurs et image de fond qu'un membre Premium attache à son mini profil.
 _Avoid_: fond de mini, thème de profil
 
 **Fond de message**:
-Couleur et image de fond qu'un membre Premium attache à ses messages de groupe. Torch Skin affiche la couleur et l'image sous « Message backgrounds ».
+Couleur et image de fond qu'un membre Premium attache à ses messages de groupe. Nightango affiche la couleur et l'image sous « Message backgrounds ».
 
 **Tracker vissle**:
 Service de vissle que l'utilisateur installe sur son profil pour journaliser l'activité qu'il reçoit.
@@ -200,7 +200,7 @@ Police, taille, couleurs du texte et du nom, gras, italique et souligné d'un me
 Style de message enregistré chez Chatango pour le compte.
 
 **Style perso**:
-Style de message choisi dans Torch Skin, gardé dans ce navigateur seulement et appliqué à chaque envoi. Il peut aussi barrer le texte, en MP seulement.
+Style de message choisi dans Nightango, gardé dans ce navigateur seulement et appliqué à chaque envoi. Il peut aussi barrer le texte, en MP seulement.
 _Avoid_: style local, thème de message
 
 **Style coupé**:

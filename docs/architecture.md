@@ -1,6 +1,6 @@
 # Architecture
 
-Torch Skin est une seule application React 18 écrite en JavaScript ES5, sans JSX ni bundler. Le même code sert deux cibles : le userscript branché sur le client Torch vivant, et un prototype hébergé à données simulées.
+Nightango est une seule application React 18 écrite en JavaScript ES5, sans JSX ni bundler. Le même code sert deux cibles : le userscript branché sur le client Torch vivant, et un prototype hébergé à données simulées.
 
 ## Arborescence
 
@@ -121,7 +121,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - Les écarts entre les deux modes sont gardés par `if (LIVE)`.
 - Les droits dans un groupe suivent le modèle de Chatango dans les deux modes : un propriétaire et des modérateurs avec leurs bits de droits (`settings.staff`, `settings.modFlags`), lus par `groupRights`. Le prototype n'a aucun rôle que Chatango n'a pas.
 - En live, les actions de `app/root.js` sont surchargées par celles du bloc « Mode live ». Le pont (`liveBridge`) traduit les trames de Torch en opérations, que `handleLiveOp` applique à l'état.
-- Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens. Le pont lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
+- Les sons de Nightango sont coupés en live : Torch joue déjà les siens. Le pont lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
 
 ## État React
 
