@@ -169,6 +169,8 @@ function RichText(p) {
 }
 var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
 var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+// Sans < ni parenthèse : l'URL finit dans un fond CSS, celui du profil complet comme celui de custom_profile.css.
+var SAFE_IMAGE_URL = /^https:\/\/[^<>"'\\()\s]+$/;
 /**
  * Permet de construire le document isolé d'un profil complet.
  * @param {string} html HTML écrit par le membre.
@@ -181,7 +183,7 @@ function fullProfileDoc(html, allowMedia, style) {
     : "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:";
   var s = style || {}, bg = HEX_COLOR.test(s.bg) ? s.bg : '#fff', text = HEX_COLOR.test(s.text) ? s.text : '#1f2024';
   // Valeurs interpolées dans le <style> : une URL avec < ou une parenthèse pourrait fermer le bloc ou la règle.
-  var image = allowMedia && /^https:\/\/[^<>"'\\()\s]+$/.test(s.image || '') ? ' url("' + s.image + '") ' + (BACKGROUND_REPEAT.test(s.repeat) ? s.repeat : '') + ' left 0 / contain' : '';
+  var image = allowMedia && SAFE_IMAGE_URL.test(s.image || '') ? ' url("' + s.image + '") ' + (BACKGROUND_REPEAT.test(s.repeat) ? s.repeat : '') + ' left 0 / contain' : '';
   return '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><meta name="referrer" content="no-referrer"><base target="_blank">' +
     '<style>body{margin:16px;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:' + text + ';background:' + bg + image + ';overflow-wrap:anywhere}img,video{max-width:100%;height:auto}' +
     (HEX_COLOR.test(s.link) ? 'a{color:' + s.link + '}' : '') + '</style>' +

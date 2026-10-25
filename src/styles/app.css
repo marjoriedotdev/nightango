@@ -417,6 +417,14 @@ button.tc-mention{border:0;font-family:inherit;font-size:inherit;line-height:inh
 .photo-full{display:block;min-height:0;max-width:100%;max-height:calc(100% - 64px);object-fit:contain;border-radius:8px}
 .photo-wait{display:none}
 .photo-loading{display:inline-flex;color:var(--text-2)}
+.crop-body{align-items:center}
+.crop-stage{position:relative;display:inline-block;max-width:100%;overflow:hidden;border-radius:8px;touch-action:none;user-select:none;-webkit-user-select:none}
+.crop-stage img{display:block;max-width:100%;max-height:min(55vh,360px)}
+.crop-box{position:absolute;box-sizing:border-box;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move}
+.crop-box:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.crop-handle{position:absolute;right:-2px;bottom:-2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:nwse-resize}
+.crop-preview{position:relative;display:inline-block;flex:none;overflow:hidden;border-radius:50%;background:var(--subtle)}
+.crop-preview img{position:absolute;max-width:none}
 .list-more{display:flex;justify-content:center;padding:12px;color:var(--text-3)}
 .pull-scroll{overscroll-behavior-y:contain}
 .pull{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;color:var(--text-3);transition:height .2s ease}

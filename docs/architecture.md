@@ -19,10 +19,10 @@ src/
     rich-text.js     MessageText (emphase, citations, mentions, liens), hôtes de confiance (isTrustedUrl), RichText (mini profil assaini), fullProfileDoc
     selectors.js     lecture de l'état : rôles, droits d'un membre dans un groupe (groupRights, canBanMember), utilisateur, thème, compteurs, conversations listées, message affiché d'une entrée de l'historique privé
   bridge/     le pont vers Torch
-    live-model.js    LIVE, JOURNAL, avatarSrc, pagination vissle, bits Chatango (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
+    live-model.js    LIVE, JOURNAL, avatarSrc (et version des photos de son compte), pagination vissle, bits Chatango (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      table des émoticônes (EMOTICONS)
     live-parse.js    fonctions pures du pont : contenu des messages (parseContent, médias), trames de groupe,
-                     fond Premium (parseMiniCss), fond de message (parseMsgBg), comptes liés (parseWho), présence, horodatages,
+                     fond Premium (parseMiniCss, formulaire de fond), réponse de updateprofile, fond de message (parseMsgBg), comptes liés (parseWho), présence, horodatages,
                      références de message, enregistrements de l'historique privé (lecture, tri d'un import),
                      entrées de la médiathèque (validation, ordre des pages, tri d'un import)
     live-bridge.js   liveBridge : trames entrantes et sortantes, avertissements, connexions,
@@ -42,6 +42,7 @@ src/
     language-a11y-about (et Diagnostics), premium
     group-view, group-pages                                             réglages de groupe du prototype
     group-staff                                                         pages Staff and roles, Members et Invites, communes au live et au prototype
+    avatar-crop                                                         recadrage de sa photo de profil (live)
     live-group-view, live-group-pages, live-group-staff, live-account   variantes live
   app/        racine
     sound.js

@@ -126,7 +126,11 @@ const C = {
   renderYouTube(link) { w.fetch('https://www.youtube.com/oembed?url=' + link + '&format=json'); },
   post(url, form, item) {
     const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f, item });
-    return /chatango\/upload$/.test(url) ? uploadReply() : Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
+    if (/chatango\/upload$/.test(url)) return uploadReply();
+    // Formulaires avatar et recadrage de Torch : pix pour la photo, profil complet avec le carré pour le recadrage.
+    if (f.action === 'fullpic') return Promise.resolve('pix:1');
+    if (f.action === 'thumb') return Promise.resolve('x0=' + f.x0 + '&y0=' + f.y0 + '&ts=' + f.ts + '&age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
+    return Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
   },
   private: { focus: false, socket: { readyState: 0 }, premium: {}, clearHistory(t) { calls.push(['clearHistory', t]); } },
   database: { pm: { transaction: pmTransaction } }
@@ -168,9 +172,9 @@ w.fetch = (url, opts) => {
   else if (/zoe\/mod1\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + ABOUT + '</body><s>F</s><b>' + ZOE_BIRTH + '</b><l c="FR">Lyon</l></mod>';
   else if (/zoe\/mod2\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + FULL + '</body></mod>';
   else if (/marjorie\/mod1\.xml/.test(url)) {
-    // Chatango sert la bio du dernier enregistrement.
-    const saved = posts.filter(p => /updateprofile/.test(p.url)).pop();
-    body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent(saved ? saved.f.line : 'Old bio') + '</body><s>M</s><b>1990-01-01</b><l>Rouen</l></mod>';
+    // Chatango sert la bio du dernier enregistrement. Premium sans custom_profile.css : la réponse n'est pas du CSS.
+    const saved = posts.filter(p => /updateprofile/.test(p.url) && 'line' in p.f).pop();
+    body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent(saved ? saved.f.line : 'Old bio') + '</body><s>M</s><b>1990-01-01</b><l>Rouen</l><d>' + PREMIUM_END + '</d></mod>';
   }
   else if (/marjorie\/mod2\.xml/.test(url)) status = ownMod2Status;
   else if (/\/(goddess|expired|sith|lost)\/mod1\.xml/.test(url)) {
@@ -1195,6 +1199,76 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   const cardAfter = await ownCard();
   step('own bio raw in field', cardBefore.text === 'Hello there' && bioPage.field === 'a<br/>b' && bioPage.br && !bioPage.literal && bioPost === 'a<br/>b' && cardAfter.br && cardAfter.text === 'ab', { cardBefore, bioPage, bioPost, cardAfter });
+
+  /* Photo de profil : formulaire avatar de Torch puis recadrage sur full.jpg, carré borné à l'image */
+  click($('button[aria-label="Settings"]')); await wait(50);
+  click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-mini-bg'));
+  const avatarInput = $('input[type="file"][accept="image/jpeg,image/png,image/gif"]'), avatarFrom = posts.length;
+  Object.defineProperty(avatarInput, 'files', { configurable: true, value: [new w.File(['x'], 'me.png', { type: 'image/png' })] });
+  avatarInput.dispatchEvent(new w.Event('change', { bubbles: true })); await until(() => !!$('.crop-stage img'));
+  // jsdom ne charge pas les images : taille naturelle posée à la main, puis load.
+  const loadCrop = (w0, h0) => { const img = $('.crop-stage img'); Object.defineProperty(img, 'naturalWidth', { configurable: true, value: w0 }); Object.defineProperty(img, 'naturalHeight', { configurable: true, value: h0 }); img.dispatchEvent(new w.Event('load')); };
+  const cropBox = () => { const b = $('.crop-box'); return b && [b.style.left, b.style.top, b.style.width, b.style.height].join(' '); };
+  const avatarPost = posts[avatarFrom] || { f: {} };
+  const fresh = { src: $('.crop-stage img').getAttribute('src') };
+  loadCrop(400, 300); await until(() => !!$('.crop-box'));
+  fresh.box = cropBox();
+  click(byText('.dialog-foot button', 'Cancel')); await until(() => !$('.crop-stage'));
+  step('profile picture: avatar form sent, then a centered crop on the new full.jpg',
+    JSON.stringify(Object.keys(avatarPost.f)) === JSON.stringify(['auth', 'arch', 'src', 'action', 'Filedata']) && avatarPost.f.action === 'fullpic' && avatarPost.f.Filedata.name === 'me.png'
+    && JSON.stringify(avatarPost.item) === '{}' && posts.length === avatarFrom + 1
+    && /\/m\/a\/marjorie\/full\.jpg\?v=\d+$/.test(fresh.src) && fresh.box === '12.5% 0% 75% 100%', { f: Object.keys(avatarPost.f), item: avatarPost.item, fresh });
+  const ownAvatar = $('section[aria-label="Profile picture"] .tc-avatar-img');
+  if (ownAvatar) ownAvatar.dispatchEvent(new w.Event('load'));
+  await until(() => !!byText('button', 'Adjust crop'));
+  click(byText('button', 'Adjust crop')); await until(() => !!$('.crop-stage img'));
+  // Recadrage connu de Torch (client.user.avatar) : 50, 50, 50 sur une image de 400 sur 300.
+  loadCrop(400, 300); await until(() => !!$('.crop-box'));
+  const cropSteps = [cropBox()];
+  key($('.crop-box'), 'ArrowRight'); await wait(10); cropSteps.push(cropBox());
+  key($('.crop-box'), '+'); await wait(10); cropSteps.push(cropBox());
+  for (let i = 0; i < 8; i++) { $('.crop-box').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true, bubbles: true })); await wait(5); }
+  cropSteps.push(cropBox());
+  const thumbFrom = posts.length;
+  click(byText('.dialog-foot button', 'Save crop')); await until(() => !$('.crop-stage'));
+  const thumbPost = posts[thumbFrom] || { f: {} };
+  step('profile picture: crop moved and resized with the keyboard, kept inside the image, sent as thumb',
+    JSON.stringify(cropSteps) === JSON.stringify(['12.5% 16.666666666666664% 12.5% 16.666666666666664%', '13.25% 16.666666666666664% 12.5% 16.666666666666664%', '11.5% 14.333333333333334% 16.25% 21.666666666666668%', '11.5% 78.33333333333333% 16.25% 21.666666666666668%'])
+    && JSON.stringify(thumbPost.f) === JSON.stringify({ auth: 'token', arch: 'h5', src: 'group', action: 'thumb', x0: '46', y0: '235', ts: '65' })
+    && calls.some(c => c[0] === 'setProfile' && c[1].x0 === '46') && !!byText('.toast', 'Picture crop saved to Chatango.'), { cropSteps, f: thumbPost.f });
+
+  /* Fond Premium : formulaire de fond de Torch, envoyé après le profil, image collée ou envoyée chez vissle */
+  const miniForm = () => ({ bg: $('#pf-mini-bg').value, text: $('#pf-mini-text').value, link: $('#pf-mini-link').value, image: $('#pf-mini-img').value });
+  const miniStart = miniForm();
+  type($('#pf-mini-bg'), '#112233');
+  type($('#pf-mini-img'), 'https://img.example/a b.png'); await wait(20);
+  const badLink = { error: !!byText('.tc-error', 'starts with https://'), from: posts.length };
+  click($('.tc-savebar .tc-btn-primary')); await wait(50);
+  badLink.toast = !!byText('.toast', 'Fix the background image link'); badLink.sent = posts.length - badLink.from;
+  uploadReply = () => Promise.resolve('data:abc/banner.png');
+  const bannerInput = $('input[type="file"][accept=".png, .apng, .jpg, .jpeg, .gif, .bmp, .webp"]');
+  click(byText('button', 'Upload to vissle'));
+  Object.defineProperty(bannerInput, 'files', { configurable: true, value: [new w.File(['x'], 'banner.png', { type: 'image/png' })] });
+  bannerInput.dispatchEvent(new w.Event('change', { bubbles: true })); await until(() => !!byText('.dialog-foot button', 'Upload'));
+  const bannerAsk = $('#layer .dialog').textContent;
+  click(byText('.dialog-foot button', 'Upload')); await until(() => $('#pf-mini-img').value === 'https://vissle.me/abc/banner.png');
+  const bannerPost = posts[posts.length - 1];
+  click(byText('.tc-checkline', 'Tile down').querySelector('input'));
+  type($('#pf-loc'), 'Brest'); await wait(20);
+  const previewBg = $('aside.side > div').style.background;
+  const styleFrom = posts.length;
+  click($('.tc-savebar .tc-btn-primary')); await until(() => !$('.tc-savebar'));
+  const [profilePost, cssPost] = posts.slice(styleFrom);
+  step('premium background: Torch defaults without custom_profile.css, bad link refused, vissle upload fills the link',
+    JSON.stringify(miniStart) === JSON.stringify({ bg: '#ffffff', text: '#222222', link: '#0084ef', image: '' }) && badLink.error && badLink.toast && badLink.sent === 0
+    && bannerAsk.includes('Upload banner.png?') && bannerPost.url === 'https://vissle.me/chatango/upload' && JSON.stringify(bannerPost.item) === '{"key":true}' && previewBg === 'rgb(17, 34, 51)', { miniStart, badLink, bannerAsk, bannerPost: bannerPost && bannerPost.url, previewBg });
+  step('premium background: sent after the profile with the fields of the Torch form',
+    posts.length === styleFrom + 2 && profilePost.f.location === 'Brest' && !/\?css$/.test(profilePost.url)
+    && cssPost.url === 'https://chatango.com/updateprofile?css' && JSON.stringify(cssPost.item) === '{}'
+    && JSON.stringify(cssPost.f) === JSON.stringify({ auth: 'token', arch: 'h5', src: 'group', action: 'update', body_bg_col: '112233', body_col: '222222', body_a_col: '0084ef', body_bg_img: 'https://vissle.me/abc/banner.png', body_tile_d: '1', body_tile_a: '0', dir: 'checked' })
+    && !!byText('.toast', 'Profile saved to Chatango.'), { urls: posts.slice(styleFrom).map(p => p.url), f: cssPost && cssPost.f });
+  step('no password field in profile picture and background requests', posts.slice(avatarFrom).every(p => !('p' in p.f) && !('pwd' in p.f) && !('password' in p.f)));
+  click(byText('.tc-nav', 'Back to chat')); await wait(50);
 
   /* Création de groupe */
   click(byText('.tc-nav', 'Discover groups')); await wait(50);
