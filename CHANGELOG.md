@@ -2,6 +2,13 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.20.0] - 2026-10-25
+
+### Added
+
+- Settings, Profile: a formatting toolbar above your bio and your full profile, for bold, italic, underline, strikethrough, text color, font, text size, alignment, links and images. Ctrl+B, Ctrl+I and Ctrl+U work in both fields, and Ctrl+Z undoes each format.
+- Color, font and size applied to the same text share one tag, so they use fewer of your characters.
+
 ## [0.19.0] - 2026-10-25
 
 ### Added
