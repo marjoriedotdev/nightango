@@ -62,12 +62,28 @@ const COMPONENTS = [
 
 - \`multiline\` renders a textarea (bio, group description). \`labelAside\` holds a counter like \`96 / 2000\` in \`meta-sm\`.
 - \`action\` puts a default size button on the input's line, \`space-2\` apart, for forms of one field: Join, Add, Ban. The hint or error goes under both, so the button stays level with the input.
+- \`toolbar\` takes a \`Toolbar\` placed between the label and the field. \`inputRef\` receives the input or textarea, for a toolbar that edits it.
 - Inputs are \`size-control-md\` tall, like default buttons.
 - Focus shows a \`focus-ring\` border and an \`accent-soft\` halo.`,
     `  return h('div', { className: 'col', style: { maxWidth: 360 } },
     h(T.TextField, { label: 'Username', defaultValue: 'orrin', hint: "It can't be changed later." }),
     h(T.TextField, { label: 'Group name', defaultValue: 'my group!', error: 'Use letters, numbers and dashes only.' }),
     h(T.TextField, { label: 'Ban someone', placeholder: 'Username', hint: 'They need a recent message in the group.', action: h(T.Button, { variant: 'danger', icon: 'ban' }, 'Ban') }));`],
+  ['Toolbar', 'Forms', 140,
+    'A row of icon buttons that act on one field, reached with a single Tab stop.',
+    `Pass \`label\` for the toolbar's accessible name and \`controls\` with the id of the field it edits. Put it in a \`TextField\` through \`toolbar\`.
+
+- Children are \`IconButton\`s at size 30 with 16px icons, like the composer bar. Disabled buttons are skipped.
+- Tab enters on the last button used. Left and Right arrows move between buttons and wrap, Home and End jump to the ends.
+- Separate groups with a \`span.tc-toolbar-sep\`.
+- Every button has a label that names the format, verb free: "Bold", "Text color", "Add a link".`,
+    `  return h('div', { className: 'col', style: { maxWidth: 420 } },
+    h(T.TextField, { id: 'tb-demo', label: 'Bio', multiline: true, rows: 3, defaultValue: '<b>Night owl</b> and moon watcher.', toolbar: h(T.Toolbar, { label: 'Formatting', controls: 'tb-demo' },
+      h(T.IconButton, { icon: 'bold', label: 'Bold', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'italic', label: 'Italic', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'underline', label: 'Underline', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'strikethrough', label: 'Strikethrough', size: 30, iconSize: 16 }),
+      h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' }),
+      h(T.IconButton, { icon: 'palette', label: 'Text color', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'type', label: 'Font', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'text-size', label: 'Text size', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'align-left', label: 'Alignment', size: 30, iconSize: 16 }),
+      h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' }),
+      h(T.IconButton, { icon: 'link', label: 'Add a link', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'image', label: 'Add an image', size: 30, iconSize: 16 })) }));`],
   ['Switch', 'Forms', 72,
     'An on or off setting that applies immediately.',
     `Use a Switch for preferences that take effect at once. Put it in a \`SettingRow\` so the whole row is the click target and the row title is its label. Alone, pass \`label\` for \`aria-label\`.

@@ -26,7 +26,7 @@ function ProfilePageLive() {
   var ph = useState(false), hasPhoto = ph[0], setHasPhoto = ph[1];
   var cr = useState(null), crop = cr[0], setCrop = cr[1];
   var up = useState(null), uploading = up[0], setUploading = up[1];
-  var avatarInput = useRef(null), bannerInput = useRef(null);
+  var avatarInput = useRef(null), bannerInput = useRef(null), bioInput = useRef(null), fullInput = useRef(null);
   var media = useFullProfileMedia();
   var dirty = JSON.stringify(draft) !== JSON.stringify(editable(base));
   var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
@@ -102,6 +102,7 @@ function ProfilePageLive() {
   var meta = [draft.age, genderShort(draft.gender), draft.location].filter(Boolean).join(' · ');
   var preview = draft.style ? miniStyleOf(s.prefs, { miniStyle: miniStyleOfForm(draft.style) }, app.theme) : miniStyleOf(s.prefs, me, app.theme);
   var locked = !base.loaded || saving;
+  var bioMarkup = useMarkupToolbar(bioInput, 'pf-bio'), fullMarkup = useMarkupToolbar(fullInput, 'pf-full', locked || draft.full === null);
   return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only Torch users.', wide: true },
     base.loaded ? null : h(T.Banner, { tone: 'warning', icon: 'info', action: h(T.Button, { size: 'sm', onClick: reload }, 'Try again') }, "Torch hasn't loaded your profile yet. Saving stays off so nothing gets erased."),
     h('div', { className: 'split' },
@@ -122,7 +123,7 @@ function ProfilePageLive() {
               h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'pf-gender' }, 'Gender'),
                 h('select', { id: 'pf-gender', className: 'tc-input', value: draft.gender, onChange: function (e) { set('gender', e.target.value); } }, ['Not specified', 'Male', 'Female'].map(function (g) { return h('option', { key: g }, g); }))),
               h(T.TextField, { id: 'pf-loc', label: 'Location', value: draft.location, onChange: function (e) { set('location', e.target.value); } })),
-            h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }))),
+            h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, inputRef: bioInput, toolbar: bioMarkup.toolbar, onKeyDown: bioMarkup.onKeyDown, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }))),
         h(MiniBackgroundSection, { style: draft.style, failed: me.profileFailed, locked: locked, uploading: uploading, imageErr: imageErr, onChange: setStyle, onUpload: function () { bannerInput.current.click(); } }),
         h('input', { ref: bannerInput, type: 'file', accept: BANNER_TYPES, hidden: true, onChange: pickBanner }),
         h(T.SettingsSection, { title: 'Full profile', description: 'Your page on chatango.com, written in HTML. Members open it from your mini profile.', padded: true },
@@ -131,7 +132,7 @@ function ProfilePageLive() {
             draft.full === null ? h('div', { className: 'btnrow', style: { alignItems: 'center' } },
               h('span', { className: 'tc-hint' }, fullFailed ? 'Chatango did not return your full profile.' : 'Loading your full profile from Chatango.'),
               fullFailed ? h(T.Button, { size: 'sm', onClick: fetchFull }, 'Try again') : null) : null,
-            fullView === 'edit' ? h(T.TextField, { id: 'pf-full', label: 'HTML', multiline: true, rows: 10, maxLength: 20000, value: draft.full || '', disabled: locked || draft.full === null, labelAside: draft.full === null ? null : h('span', { className: 'tc-msg-time' }, draft.full.length + ' / 20000'), onChange: function (e) { set('full', e.target.value); } })
+            fullView === 'edit' ? h(T.TextField, { id: 'pf-full', label: 'HTML', multiline: true, rows: 10, maxLength: 20000, value: draft.full || '', inputRef: fullInput, toolbar: fullMarkup.toolbar, onKeyDown: fullMarkup.onKeyDown, disabled: locked || draft.full === null, labelAside: draft.full === null ? null : h('span', { className: 'tc-msg-time' }, draft.full.length + ' / 20000'), onChange: function (e) { set('full', e.target.value); } })
               : draft.full === null ? null
                 : draft.full ? h(Frag, null, h(FullProfileFrame, { name: s.me, html: draft.full, media: media.on }), media.button ? h('div', null, media.button) : null)
                   : h('p', { className: 'muted', style: { margin: 0 } }, "You haven't written a full profile."))),
