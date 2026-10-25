@@ -2,6 +2,14 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.20.1] - 2026-10-25
+
+### Fixed
+
+- Visitors works with the Userscripts app on iPhone and iPad.
+- Coming back to the page before signing in no longer logs an error.
+- A dropped connection shows only the connection banner, without a second notice whose Reconnect could open a duplicate connection.
+
 ## [0.20.0] - 2026-10-25
 
 ### Added
