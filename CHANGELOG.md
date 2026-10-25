@@ -13,6 +13,7 @@ Changes in Torch Skin that you can see, newest first. The format follows [Keep a
 ### Fixed
 
 - The profile preview shows your Premium background colors and image.
+- Opening Profile in the hosted prototype no longer raises an error while the visitors list loads.
 
 ## [0.16.1] - 2026-10-25
 
