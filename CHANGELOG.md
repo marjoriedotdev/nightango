@@ -8,6 +8,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 - The Nightango mark is the moon alone. The small spark at its edge, which took the accent color, is gone.
 - In the light theme, the moon takes the colors of a sunrise, gold to coral, and the presence moons are orange instead of brown.
+- In the dark theme, the moon looks like the real one: its seas, the bright craters Tycho and Copernicus, and a darker edge. In the southern hemisphere it is turned half a turn, as seen from there.
 
 ## [0.18.0] - 2026-10-25
 
