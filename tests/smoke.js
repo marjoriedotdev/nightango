@@ -57,8 +57,6 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   const ta2 = $('.thread .tc-composer textarea'); if (ta2) { type(ta2, 'ping'); key(ta2, 'Enter'); }
   await wait(50);
   step('dm send', d.body.textContent.includes('ping'));
-  click(byText('.tab', 'Requests')); await wait(50); click($$('.conv')[0]); await wait(50);
-  step('request notice', !!byText('button', 'Accept'));
   click(byText('.tc-nav', 'Discover groups')); await wait(80);
   step('discover', !!byText('h2', 'Popular right now'));
   type($('#join'), 'https://nihongo.chatango.com/'); click(byText('button[type=submit]', 'Join')); await wait(100);

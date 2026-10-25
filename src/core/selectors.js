@@ -72,15 +72,15 @@ function commonGroups(state, name) {
 }
 function lastTs(c) { return c.messages.length ? c.messages[c.messages.length - 1].ts : 0; }
 /**
- * Permet de lister les conversations affichées, hors demandes et conversations fermées, de la plus récente à la plus ancienne.
+ * Permet de lister les conversations affichées, hors conversations fermées, de la plus récente à la plus ancienne.
  * @param {Object} state État de l'application.
  */
 function listedDms(state) {
-  return Object.keys(state.dms).filter(function (n) { return !state.dms[n].request && !state.dms[n].closed; })
+  return Object.keys(state.dms).filter(function (n) { return !state.dms[n].closed; })
     .sort(function (a, b) { return lastTs(state.dms[b]) - lastTs(state.dms[a]); });
 }
 /**
- * Permet de compter les conversations non lues, hors demandes et conversations fermées.
+ * Permet de compter les conversations non lues, hors conversations fermées.
  * @param {Object} state État de l'application.
  */
 function unreadDmCount(state) { return listedDms(state).filter(function (n) { return state.dms[n].unread; }).length; }

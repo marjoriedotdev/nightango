@@ -138,7 +138,7 @@ function seedWorld(me) {
     kestrel: { messages: [dm('kestrel', 'Did you get my trade offer?', 65)], unread: 1, lastReadTs: t(120) },
     quill: { messages: [dm('quill', 'Can you send the invite link for #retrogaming?', 60 * 3), dm(me, 'Here: retrogaming.chatango.com', 60 * 3 - 2), dm(me, 'Thanks for the invite link', 60 * 2)], unread: 0, lastReadTs: now },
     halcyon: { messages: [dm('halcyon', 'See you Friday for game night.', 60 * 26)], unread: 0, lastReadTs: now },
-    pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60), request: true }
+    pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60) }
   };
   return {
     me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, typing: {}, mentionLog: [], mediaRev: 0,

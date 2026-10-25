@@ -57,6 +57,7 @@ export const APP_SOURCES = [
   'settings/live-account.js',
   'app/sound.js',
   'app/state.js',
+  'app/pm.js',
   'app/root.js',
   'app/start.js'
 ];

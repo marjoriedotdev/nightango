@@ -8,6 +8,9 @@ var RECONNECT_DELAYS = [3000, 10000, 30000];
 function Root(props) {
   var st = useState(function () { return props.boot && props.boot.auth ? props.boot : initialState(); }), state = st[0], setState = st[1];
   var stateRef = useRef(state); stateRef.current = state;
+  // Seule source des non-lus MP : la base de Torch en live, une archive en mémoire dans le prototype ou quand cette base manque.
+  var pmArchive = useRef(null);
+  if (!pmArchive.current) pmArchive.current = LIVE ? torchPmArchive() : memoryPmArchive();
   var update = useCallback(function (fn) { setState(function (prev) { var d = JSON.parse(JSON.stringify(prev)); fn(d); return d; }); }, []);
   var u1 = useState([]), toasts = u1[0], setToasts = u1[1];
   var u2 = useState(null), confirmCfg = u2[0], setConfirm = u2[1];
@@ -98,13 +101,13 @@ function Root(props) {
       if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; delete cur.seek; }
       var r = Object.assign({}, route);
       if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = Date.now(); g.unread = 0; g.mentions = 0; }
-      if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].unread = 0; d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
+      if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
       d.route = r;
     });
     setNavOpen(false);
+    if (route.view === 'dm' && route.id) readPm(pmArchive.current, update, route.id);
     if (LIVE) {
       if (route.view === 'group' && route.id) liveBridge.focus(route.id);
-      if (route.view === 'dm' && route.id) liveBridge.markPmRead(route.id);
       liveBridge.focusPm(route.view === 'dm' && route.id ? route.id : false);
     }
   }
@@ -161,8 +164,17 @@ function Root(props) {
    * @param {Object} d État en cours de modification.
    * @param {string} me Nom de l'utilisateur.
    */
-  function seedState(d, me) {
-    Object.assign(d, seedWorld(me));
+  /**
+   * Permet de créer le monde d'exemple du prototype, avec l'archive des MP qui porte ses non-lus.
+   * @param {string} me Compte connecté.
+   */
+  function sampleWorld(me) {
+    var world = seedWorld(me);
+    pmArchive.current = memoryPmArchive(Object.keys(world.dms).reduce(function (o, n) { o[n] = world.dms[n].unread; return o; }, {}));
+    return world;
+  }
+  function seedState(d, world) {
+    Object.assign(d, world);
     Object.keys(d.groups).forEach(function (gid) { d.groups[gid].messages.forEach(function (m) { logMention(d, gid, m); }); });
   }
   function receiveGroup(gid, msg) {
@@ -186,19 +198,16 @@ function Root(props) {
     }
   }
   function receiveDm(from, text) {
-    var s0 = stateRef.current;
+    var s0 = stateRef.current, m = { from: from, text: text, ts: Date.now() };
     var focused = isDmInView(s0, from);
-    var isNew = !s0.dms[from];
-    var friend = userOf(s0, from).friend, pmFrom = s0.prefs.privacy.pmFrom;
-    var request = isNew && !friend && pmFrom !== 'everyone';
     update(function (d) {
-      if (!d.dms[from]) d.dms[from] = { messages: [], unread: 0, lastReadTs: 0, request: request };
+      receivePm(d, m);
       var c = d.dms[from];
-      c.closed = false;
-      c.messages.push({ id: uid(), from: from, text: text, ts: Date.now() });
-      if (!focused) c.unread += 1; else c.lastReadTs = Date.now();
+      if (focused) c.lastReadTs = Date.now();
       c.seenTs = Date.now();
     });
+    pmArchive.current.record(from, m, !focused);
+    syncPmUnread(pmArchive.current, update, [from]);
     if (!focused && !userOf(s0, from).ignored) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
   }
   /**
@@ -237,9 +246,9 @@ function Root(props) {
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
   var actions = {
-    login: function (name) { update(function (d) { seedState(d, name); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
+    login: function (name) { var world = sampleWorld(name); update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
-    resetDemo: function () { update(function (d) { seedState(d, d.me); }); toast('Sample data restored.'); },
+    resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
@@ -270,7 +279,7 @@ function Root(props) {
       setTimeout(function () { update(function (d) { if (d.dms[name]) d.dms[name].seenTs = Date.now(); }); setTyping('dm:' + name, name, true); }, 900);
       setTimeout(function () { setTyping('dm:' + name, name, false); receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 900 + delay);
     },
-    openDm: function (name, tab) { update(function (d) { if (!d.dms[name]) d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }; }); nav({ view: 'dm', id: name, tab: tab }); },
+    openDm: function (name, tab) { update(function (d) { pmConversation(d, name); }); nav({ view: 'dm', id: name, tab: tab }); },
     loadProfile: function () { /* prototype : profils déjà présents dans les données d'exemple */ },
     loadProfiles: function () { /* idem */ },
     searchPeople: function (f) {
@@ -296,8 +305,8 @@ function Root(props) {
       });
     },
     closeDm: function (name) {
-      update(function (d) { d.dms[name].closed = true; d.dms[name].unread = 0; });
-      if (LIVE) liveBridge.markPmRead(name);
+      update(function (d) { d.dms[name].closed = true; });
+      readPm(pmArchive.current, update, name);
       var r = stateRef.current.route;
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
     },
@@ -354,7 +363,6 @@ function Root(props) {
     },
     exportMedia: function () { return mediaLib.exportMedia(); },
     importMedia: function (entries) { return mediaLib.importMedia(entries).then(function (r) { mediaChanged(); return r; }); },
-    declineRequest: function (name) { actions.closeDm(name); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
       update(function (d) { if (!d.users[name]) d.users[name] = { status: 'offline', about: '', style: {} }; d.users[name][key] = !was; });
@@ -626,7 +634,7 @@ function Root(props) {
       var me = stateRef.current.me;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
       if (!sent) { if (!(opts && opts.quiet)) toast('Private message not sent.'); return false; }
-      update(function (d) { var c = d.dms[name] || (d.dms[name] = { messages: [], unread: 0, lastReadTs: Date.now() }); c.messages.push({ id: uid(), from: me, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
+      update(function (d) { var c = pmConversation(d, name); c.messages.push({ id: uid(), from: me, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
       return true;
     };
@@ -753,7 +761,7 @@ function Root(props) {
       update(function (d) { Object.assign(d.dms[name], { loadingOlder: true, olderFailed: false }); });
       liveBridge.pmOlder(name, Math.min.apply(null, keys), 50).then(function (page) {
         // Une page plus ancienne ne change aucun compteur de non-lus.
-        update(function (d) { var c = d.dms[name]; mergePmHistory(d, c, page.list); c.olderMore = page.more; c.loadingOlder = false; });
+        update(function (d) { var c = d.dms[name]; mergePmHistory(c, page.list, pmAuthor(d)); c.olderMore = page.more; c.loadingOlder = false; });
       }, function (e) {
         warn(e);
         update(function (d) { Object.assign(d.dms[name], { loadingOlder: false, olderFailed: true }); });
@@ -792,7 +800,9 @@ function Root(props) {
     };
     actions.removeDmMessage = function (name, m) {
       liveBridge.removePm(name, m).then(function (ok) {
-        if (ok) dropDmMessage(name, m.id); else toast('This message could not be removed. Reload the page and try again.');
+        if (!ok) { toast('This message could not be removed. Reload the page and try again.'); return; }
+        dropDmMessage(name, m.id);
+        syncPmUnread(pmArchive.current, update, [name]);
       });
     };
     actions.deleteAllDms = function () {
@@ -956,7 +966,6 @@ function Root(props) {
     return m;
   }
   function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
-  function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
   /**
    * Permet d'appliquer une modification de groupe à l'original en gardant son compte et ses identifiants.
    * @param {Object} o Message original.
@@ -995,61 +1004,32 @@ function Root(props) {
     list.page.loaded = true;
     list.page.loading = false;
   }
-  function pmMessage(x) {
-    // Modification sans original chargé : elle prend la clé de l'original, que visent l'archive et les modifications suivantes.
-    var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
-    if (x.editId) m.edited = true;
-    return m;
-  }
   /**
-   * Permet de fusionner des entrées de l'historique privé dans une conversation, sans doublon avec les messages affichés.
+   * Permet de garder le style de l'auteur de chaque entrée fusionnée de l'historique privé.
    * @param {Object} d État en cours de modification.
-   * @param {Object} c Conversation dans cet état.
-   * @param {Array} list Entrées lues par le pont, de la plus ancienne à la plus récente.
-   * @returns {number} Entrées non lues que ne couvre aucun message affiché.
    */
-  function mergePmHistory(d, c, list) {
-    // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
-    var shown = c.messages.slice(), fresh = 0;
-    function claim(x) {
-      var i = pmShownIndex(shown, x);
-      if (i < 0) return false;
-      shown[i].archiveTs = x.archiveTs;
-      shown.splice(i, 1);
-      return true;
-    }
-    list.forEach(function (x) {
-      mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts);
-      var o = pmEditTarget(c, x);
-      if (o) { applyEdit(o, x); return; }
-      var m = pmMessage(x);
-      if (claim(m)) return;
-      c.messages.push(m);
-      if (x.unread) fresh += 1;
-    });
-    c.messages.sort(function (a, b) { return a.ts - b.ts; });
-    return fresh;
-  }
+  function pmAuthor(d) { return function (x) { mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts); }; }
   /**
    * Permet de fusionner l'historique privé de Torch aux conversations, à chaque OK et après un import, sans doublon.
    * @param {boolean=} imported Vrai après un import, qui peut avoir ajouté des entrées plus anciennes que celles chargées.
    */
   function loadPmHistory(imported) {
     liveBridge.pmHistory(100).then(function (hist) {
+      var names = Object.keys(hist).filter(function (t) { return t !== stateRef.current.me; });
       update(function (d) {
         if (!d.auth.loggedIn) return;
         d.pmLoaded = true;
-        Object.keys(hist).forEach(function (t) {
-          if (t === d.me) return;
+        names.forEach(function (t) {
           ensureLiveUser(d, t);
-          var c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now(), closed: localRef.current.hidden.indexOf(t) >= 0 });
+          var c = pmConversation(d, t, { closed: localRef.current.hidden.indexOf(t) >= 0 });
           // Fixé au premier OK : à une reconnexion, les 100 dernières entrées ne disent rien des pages plus anciennes déjà chargées. Un import, lui, peut en ajouter.
           if (c.olderMore == null || (imported && hist[t].more)) c.olderMore = hist[t].more;
-          var fresh = mergePmHistory(d, c, hist[t].list);
-          // Une entrée couverte par un message affiché ne compte plus : le compteur a déjà vu ce message.
-          if (!c.closed && !isDmInView(d, t)) c.unread += fresh;
+          mergePmHistory(c, hist[t].list, pmAuthor(d));
         });
       });
+      // La conversation ouverte sous les yeux de l'utilisateur passe lue, les autres reprennent les non-lus de l'archive.
+      names.forEach(function (t) { if (isDmInView(stateRef.current, t)) readPm(pmArchive.current, update, t); });
+      syncPmUnread(pmArchive.current, update, names.filter(function (t) { return !isDmInView(stateRef.current, t); }));
     });
   }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
@@ -1312,15 +1292,11 @@ function Root(props) {
         update(function (d) {
           if (!d.auth.loggedIn) return;
           mergeStyle(ensureLiveUser(d, op.from), op.style, op.ts);
-          var c = d.dms[op.from] || (d.dms[op.from] = { messages: [], unread: 0, lastReadTs: 0 });
-          var o = pmEditTarget(c, op);
-          if (o) { applyEdit(o, op); return; }
-          c.closed = false;
-          c.messages.push(pmMessage(op));
-          c.messages.sort(function (a, b) { return a.ts - b.ts; });
-          if (!focused) c.unread += 1;
+          receivePm(d, op);
         });
-        if (focused) liveBridge.markPmRead(op.from);
+        pmArchive.current.record(op.from, op, true);
+        // Lecture créée après la pile en cours : Torch n'archive un MP reçu qu'après l'émission de pm.
+        if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
         if (edit) break;
         if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
         // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : la route ne suffit pas.
@@ -1337,7 +1313,17 @@ function Root(props) {
         }, 1500);
         break;
       }
-      case 'pmReady': loadPmHistory(); actions.checkPmr(); break;
+      case 'pmReady':
+        liveBridge.pmArchived().then(function (saved) {
+          if (!saved && !stateRef.current.pmUnsaved) {
+            pmArchive.current = memoryPmArchive();
+            update(function (d) { d.pmUnsaved = true; });
+            if (JOURNAL) JOURNAL.add('app', 'Private message history is not available in this browser');
+          }
+          loadPmHistory();
+        });
+        actions.checkPmr();
+        break;
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;

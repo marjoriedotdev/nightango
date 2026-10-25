@@ -12,7 +12,7 @@ function defaultPrefs() {
       updates: { app: true, sound: null, desktop: null, email: null }
     },
     volume: 70, soundFocusOnly: true, tabTitle: true, markNew: true, pmPreview: true, featureHints: true,
-    privacy: { pmFrom: 'everyone', showIdle: true, joinOwned: true, joinRecent: true, joinFavorites: true, meet: false, usernameInTitle: false },
+    privacy: { showIdle: true, joinOwned: true, joinRecent: true, joinFavorites: true, meet: false, usernameInTitle: false },
     safety: { embedImages: true, embedVideos: true, proxyMedia: true, warnLinks: true, trustedHosts: [], showGuests: true, guestMessages: true, syncBlocked: true, ignoreMode: 'collapse' },
     a11y: { reduceMotion: false, underlineLinks: false },
     language: 'en-US', simulate: true

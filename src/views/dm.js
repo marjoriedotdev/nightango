@@ -6,19 +6,15 @@ function DMView(p) {
   var column = useRightColumn(function () { app.ui.openProfile(id, null); });
   var convo = id ? s.dms[id] : null;
 
-  var names = Object.keys(s.dms).filter(function (n) { return !s.dms[n].closed; }).sort(function (a, b) { return lastTs(s.dms[b]) - lastTs(s.dms[a]); });
+  var names = listedDms(s);
   useProfiles(names);
-  var reqCount = names.filter(function (n) { return s.dms[n].request; }).length;
   var shown = names.filter(function (n) {
     var c = s.dms[n];
-    if (tab === 'requests' ? !c.request : c.request) return false;
     if (tab === 'unread' && !c.unread) return false;
     return !q || n.indexOf(q.toLowerCase()) >= 0;
   });
 
   var filters = [['all', 'All'], ['unread', 'Unread']];
-  // Ni Chatango ni Torch ne connaissent de demande de MP
-  if (!LIVE) filters.push(['requests', 'Requests' + (reqCount ? ' · ' + reqCount : '')]);
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
   var term = section === 'chats' ? q.trim() : '', found = useDmSearch(term);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
@@ -26,6 +22,7 @@ function DMView(p) {
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
     LIVE && s.pmrStatus === 'restricted' && !s.pmrDismissed ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: 'Your private messages are restricted', onDismiss: app.actions.dismissPmr },
       'People might not receive your messages.')) : null,
+    LIVE && s.pmUnsaved ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: "Private messages aren't saved in this browser" }, "They'll be gone after a reload.")) : null,
     convo ? null : pmConnBanner(app, { margin: '12px 12px 0' }),
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
@@ -184,9 +181,6 @@ function DmThread(p) {
   if (lastMsg && lastMsg.from === me && convo.seenTs && s.prefs.privacy.showIdle) rows.push(h('p', { key: 'seen', className: 'seen' }, 'Seen ' + fmtTime(convo.seenTs, s.prefs.h24)));
   var bottom;
   if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
-  else if (convo.request) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'info', size: 16 }), h('span', { className: 'grow' }, id + " isn't on your friends list. Accept to reply, or decline to remove the conversation."),
-    h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.actions.declineRequest(id); } }, 'Decline'),
-    h(T.Button, { size: 'sm', variant: 'primary', onClick: function () { app.update(function (d) { d.dms[id].request = false; }); } }, 'Accept'));
   else bottom = h(DmComposer, { id: id });
   return h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
