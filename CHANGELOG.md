@@ -2,6 +2,17 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.18.0] - 2026-10-25
+
+### Changed
+
+- Torch Skin is now called Nightango. It is still a skin for Torch: About Nightango in Settings says what Torch does for you.
+- The tab title and desktop notifications show Nightango.
+
+### Removed
+
+- The Torch sign-in screen is no longer restyled. You sign in on Torch's original screen.
+
 ## [0.17.0] - 2026-10-25
 
 ### Added
