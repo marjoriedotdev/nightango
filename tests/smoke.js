@@ -1,7 +1,7 @@
 const fs = require('fs'), path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
-let html = fs.readFileSync(S + '/dist/torch-client.html', 'utf8');
+let html = fs.readFileSync(S + '/dist/nightango.html', 'utf8');
 const react = fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8');
 const rdom = fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8');
 html = html.replace(/<script src="[^"]*react\.production\.min\.js"[^>]*><\/script>/, () => '<script>' + react + '</script>')

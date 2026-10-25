@@ -45,9 +45,9 @@ pnpm build:ds         # régénère README.md et preview.html des composants du 
 Sorties de `pnpm build` (non versionnées) :
 - `dist/torch-skin.min.user.js` : le livrable, minifié par esbuild ;
 - `dist/torch-skin.user.js` : même assemblage, lisible, pour le débogage et l'audit ;
-- `dist/torch-client.html` et `dist/app.js` : prototype hébergé.
+- `dist/nightango.html` et `dist/app.js` : prototype hébergé.
 
-Seule la suite `loader` exécute les userscripts, les deux. Les autres lisent `dist/torch-client.html`, `dist/app.js`, des sources de `src/` ou le bundle du design system (détail dans `docs/architecture.md`, section Tests).
+Seule la suite `loader` exécute les userscripts, les deux. Les autres lisent `dist/nightango.html`, `dist/app.js`, des sources de `src/` ou le bundle du design system (détail dans `docs/architecture.md`, section Tests).
 
 Le lanceur `tests/run.mjs` juge chaque suite sur son code de sortie et sur sa sortie (lignes `FAIL`, `CRASH`, `ERRORS:` non vide) : certaines suites sortent en 0 malgré un échec. Lis la sortie, pas seulement le code retour.
 

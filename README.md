@@ -93,7 +93,7 @@ pnpm test live_ui     # build, then one suite
 `pnpm build` writes:
 - `dist/torch-skin.min.user.js`: the userscript to install.
 - `dist/torch-skin.user.js`: the same script, readable, for review.
-- `dist/torch-client.html` and `dist/app.js`: a prototype with simulated data.
+- `dist/nightango.html` and `dist/app.js`: a prototype with simulated data.
 
 ## Fonts
 

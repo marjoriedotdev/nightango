@@ -160,7 +160,7 @@ Voir [ADR-0004](adr/0004-member-html-never-injected.md).
 
 - `dist/torch-skin.min.user.js` : le livrable. Même assemblage que la version lisible, avec la transformation esbuild (`transform`, cible ES5, `minify`) appliquée au code page, au code du loader et aux deux feuilles. L'en-tête `==UserScript==` est recopié tel quel, sans source map ([ADR-0008](adr/0008-separate-minified-output.md)).
 - `dist/torch-skin.user.js` : version lisible, pour le débogage et l'audit.
-- `dist/torch-client.html` et `dist/app.js` : prototype hébergé.
+- `dist/nightango.html` et `dist/app.js` : prototype hébergé.
 
 Les deux userscripts sortent de la même fonction `userscript()`, qui décrit les étapes d'assemblage une seule fois. esbuild ne sert qu'à la minification : la concaténation reste celle de `build.mjs`.
 
@@ -168,7 +168,7 @@ Les deux userscripts sortent de la même fonction `userscript()`, qui décrit le
 
 Suites jsdom dans `tests/`, lancées par `tests/run.mjs` après le build :
 
-- `smoke` : prototype hébergé, chargé depuis `dist/torch-client.html`.
+- `smoke` : prototype hébergé, chargé depuis `dist/nightango.html`.
 - `live_ui` : mode live avec un faux client Torch, sur `dist/app.js` et le bundle du design system. Il enregistre chaque trame envoyée et vérifie son format exact.
 - `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, pont vissle, journal de diagnostic. Jouée sur `dist/torch-skin.user.js` puis sur `dist/torch-skin.min.user.js`. C'est la seule suite qui exécute les userscripts.
 - `pm` : non-lus des MP et fusion de l'historique privé, sur les sources de `src/core/`, `src/bridge/` et `src/app/pm.js`, avec la fausse base d'historique de `tests/fake-pm-db.js`, partagée avec `live_ui`.
