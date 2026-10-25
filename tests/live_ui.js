@@ -1020,7 +1020,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const frameEl = $('iframe.fullprofile');
   const sd = frameEl ? frameEl.getAttribute('srcdoc') : '';
   step('full profile in an isolated frame', !!frameEl && !/allow-scripts|allow-same-origin/.test(frameEl.getAttribute('sandbox')) && sd.includes("default-src 'none'") && sd.includes('Zoe page'));
-  step('full profile blocks external media until asked', sd.includes("img-src data:") || !!byText('.dialog-foot button', 'Load images'));
+  const loadImages = byText('.dialog-foot button', 'Load images');
+  if (loadImages) { click(loadImages); await wait(30); }
+  const sdLoaded = $('iframe.fullprofile') ? $('iframe.fullprofile').getAttribute('srcdoc') : '';
+  step('full profile blocks external media until asked', sd.includes('img-src data:;') && !!loadImages && sdLoaded.includes('img-src https:'),
+    { blocked: sd.includes('img-src data:;'), button: !!loadImages, loaded: sdLoaded.includes('img-src https:') });
   click(byText('.dialog-foot button', 'Close')); await wait(30);
   key(d, 'Escape'); await wait(30);
 
