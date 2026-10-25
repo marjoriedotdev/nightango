@@ -122,13 +122,13 @@ function MessageBgImage(p) {
  * @param {string} name Nom affiché du membre.
  */
 function mentionHandle(name) {
-  // Comme Torch : un nom temporaire « #nom » se mentionne sans son #.
+  // Comme BetterChatango : un nom temporaire « #nom » se mentionne sans son #.
   if (name.charAt(0) === '#') return name.slice(1);
   return name.charAt(0) === '!' ? null : name;
 }
 
 /**
- * Permet d'écrire la citation d'un message au format de Torch, en texte brut, à placer avant le texte saisi.
+ * Permet d'écrire la citation d'un message au format de BetterChatango, en texte brut, à placer avant le texte saisi.
  * @param {Object} m Message cité, avec du texte et un auteur mentionnable.
  */
 function quoteOf(m) {

@@ -51,8 +51,8 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   click($$('.mrow')[0]); await wait(50);
   step('profile dialog', !!$('.profile-card'));
   key(d, 'Escape'); await wait(30);
-  click(byText('.tc-nav', 'torchdev')); await wait(80);
-  step('switch group + new marker', !!byText('h1', 'torchdev') && !!$('.newmark'));
+  click(byText('.tc-nav', 'betterchatangodev')); await wait(80);
+  step('switch group + new marker', !!byText('h1', 'betterchatangodev') && !!$('.newmark'));
   click(byText('.tc-nav', 'Private messages')); await wait(80);
   step('dm list', $$('.conv').length >= 3);
   click($$('.conv')[0]); await wait(80);

@@ -1,4 +1,4 @@
-// Test des userscripts complets, lisible et minifié : démarrage de Torch, attente, montage de l'interface, pages à ignorer.
+// Test des userscripts complets, lisible et minifié : démarrage de BetterChatango, attente, montage de l'interface, pages à ignorer.
 const fs = require('fs');
 const vm = require('vm');
 const { JSDOM, VirtualConsole } = require('jsdom');
@@ -59,27 +59,27 @@ async function deliverReact(w) {
 }
 
 async function suite(userscript) {
-  /* Page d'accueil, Torch absent : le script le démarre */
+  /* Page d'accueil, BetterChatango absent : le script le démarre */
   const a = page(userscript, 'https://st.chatango.com/');
   const starts = a.d.querySelectorAll('script[src="' + START + '"]');
-  step('starts Torch once on the home page', starts.length === 1);
-  step('shows the Torch loading text', a.d.querySelector('h1').textContent === 'Loading...');
-  step('no overlay before Torch is ready', !a.d.getElementById('torch-skin'));
+  step('starts BetterChatango once on the home page', starts.length === 1);
+  step('shows the BetterChatango loading text', a.d.querySelector('h1').textContent === 'Loading...');
+  step('no overlay before BetterChatango is ready', !a.d.getElementById('torch-skin'));
   step('React loaded with integrity check', [...a.d.querySelectorAll('script[src*="cdnjs"]')].every(s => s.integrity.indexOf('sha384-') === 0 && s.crossOrigin === 'anonymous'));
   await deliverReact(a.w);
-  // Torch remplace tout le document par son client, écran de connexion compris.
+  // BetterChatango remplace tout le document par son client, écran de connexion compris.
   a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div></body>';
   await wait(20);
   fakeBetterChatango(a.w);
   await wait(700);
   const host = a.d.getElementById('torch-skin');
-  step('overlay mounted once Torch is ready, still hidden', !!host && host.style.display === 'none');
+  step('overlay mounted once BetterChatango is ready, still hidden', !!host && host.style.display === 'none');
   a.d.body.removeChild(host);
   a.w.client.user.name = 'Marjorie';
   a.w.client.emit('clientLogin', a.w.client);
   await wait(150);
   const host2 = a.d.getElementById('torch-skin');
-  step('overlay shown after sign-in, re-attached if Torch removed it', !!host2 && host2.style.display === 'block' && !!host2.shadowRoot.querySelector('#app').children.length);
+  step('overlay shown after sign-in, re-attached if BetterChatango removed it', !!host2 && host2.style.display === 'block' && !!host2.shadowRoot.querySelector('#app').children.length);
   step('app runs in the page world',
     a.injected.some(t => t.indexOf('__TORCH_SKIN__') >= 0) && a.w.__TORCH_SKIN__ === true && a.w.__TORCH_LIVE__ === true
       && typeof a.w.client.event.group.getratelimit === 'function' && !!host2 && !!host2.shadowRoot.querySelector('#app').children.length,
@@ -107,17 +107,17 @@ async function suite(userscript) {
   step('ignores Chatango embeds', !b.d.querySelector('script[src="' + START + '"]') && !b.d.querySelector('script[src*="cdnjs"]') && !b.w.__TORCH_SKIN__);
   b.w.close();
 
-  /* Torch déjà lancé (ancien favori) : pas de second démarrage */
+  /* BetterChatango déjà lancé (ancien favori) : pas de second démarrage */
   const c = page(userscript, 'https://st.chatango.com/', fakeBetterChatango);
-  step('does not start Torch twice', !c.d.querySelector('script[src="' + START + '"]'));
+  step('does not start BetterChatango twice', !c.d.querySelector('script[src="' + START + '"]'));
   c.w.close();
 
-  /* Torch injoignable : message, pas de rechargement en boucle */
+  /* BetterChatango injoignable : message, pas de rechargement en boucle */
   const e = page(userscript, 'https://st.chatango.com/');
   const s = e.d.querySelector('script[src="' + START + '"]');
   s.dispatchEvent(new e.w.Event('error'));
   await wait(20);
-  step('explains when Torch cannot be reached', /could not be reached/.test(e.d.querySelector('h1').textContent));
+  step('explains when BetterChatango cannot be reached', /could not be reached/.test(e.d.querySelector('h1').textContent));
   e.w.close();
 
   /* Journal de diagnostic : cycle de vie des sockets, jamais le contenu des trames */
@@ -136,8 +136,8 @@ async function suite(userscript) {
   step('journal records the socket lifecycle',
     sock instanceof j.w.WebSocket && texts.includes('private messages [1] received OK')
       && texts.some(m => /^private messages \[1\] closed, code 1006, not clean, open for \d+s, 2 frames received/.test(m)), texts);
-  step('journal keeps Torch connection lines and errors only',
-    texts.includes('Torch: conn closed: mygroup') && texts.includes('Torch: unhandled frame weird') && texts.includes('TypeError: boom'), texts);
+  step('journal keeps BetterChatango connection lines and errors only',
+    texts.includes('BetterChatango: conn closed: mygroup') && texts.includes('BetterChatango: unhandled frame weird') && texts.includes('TypeError: boom'), texts);
   step('journal keeps no frame or message text', journal && !texts.some(m => /secret/.test(m)), texts);
   j.w.dispatchEvent(new j.w.Event('pagehide'));
   const stored = JSON.parse(j.w.localStorage.getItem('torch-skin:journal') || '[]');

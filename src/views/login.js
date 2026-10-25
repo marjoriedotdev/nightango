@@ -51,7 +51,7 @@ function Login() {
     form = h(Frag, null,
       h('div', null,
         h('h2', null, mode === 'login' ? 'Welcome back' : 'Create a Chatango account'),
-        h('p', { className: 'muted' }, mode === 'login' ? 'Log in with your Chatango account.' : 'It works on chatango.com and in Torch.')),
+        h('p', { className: 'muted' }, mode === 'login' ? 'Log in with your Chatango account.' : 'It works on chatango.com and in BetterChatango.')),
       mode === 'signup' ? h(T.TextField, { id: 'su-email', label: 'Email', type: 'email', autoComplete: 'email', value: email, error: errors.email, onChange: function (e) { setEmail(e.target.value); } }) : null,
       h(T.TextField, { id: 'lg-user', label: 'Username', autoComplete: 'username', value: user, error: errors.user, hint: mode === 'signup' ? "Letters and numbers, up to 20 characters. It can't be changed later." : undefined, onChange: function (e) { setUser(e.target.value); } }),
       h(T.TextField, {
@@ -67,8 +67,8 @@ function Login() {
       h(T.Button, { type: 'submit', variant: 'primary', size: 'lg', block: true, disabled: busy }, busy ? 'Signing in' : mode === 'login' ? 'Log in' : 'Create account'));
   }
   return h('div', { className: 'login' },
-    h('section', { className: 'login-aside', 'aria-label': 'About Torch' },
-      h('div', { className: 'login-brand' }, h('span', { className: 'login-mark' }, h(T.Icon, { name: 'flame', size: 18, strokeWidth: 2.2 })), h('span', { className: 'login-brand-name' }, 'Torch')),
+    h('section', { className: 'login-aside', 'aria-label': 'About BetterChatango' },
+      h('div', { className: 'login-brand' }, h('span', { className: 'login-mark' }, h(T.Icon, { name: 'flame', size: 18, strokeWidth: 2.2 })), h('span', { className: 'login-brand-name' }, 'BetterChatango')),
       h('div', null,
         h('h1', null, 'A cleaner client for Chatango.'),
         h('p', { className: 'muted', style: { margin: '0 0 32px', fontSize: 15, color: 'var(--text-2)' } }, 'Same account, same groups. Fewer bugs and the tools Chatango never shipped.'),
@@ -79,7 +79,7 @@ function Login() {
       h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, 'Free and open source under the MIT license. ', h('a', { href: 'https://github.com/Vissle-Drissle/Torch-Client', target: '_blank', rel: 'noopener noreferrer' }, 'View the source'))),
     h('section', { className: 'login-main', 'aria-label': 'Account' },
       h('form', { className: 'login-form', onSubmit: submit, noValidate: true }, tabs, form,
-        h(T.Banner, { icon: 'lock' }, 'Torch signs in to Chatango on your behalf. To keep you signed in, your credentials are stored encrypted on Torch servers.')),
+        h(T.Banner, { icon: 'lock' }, 'BetterChatango signs in to Chatango on your behalf. To keep you signed in, your credentials are stored encrypted on BetterChatango servers.')),
       h('div', { className: 'login-foot' },
         h('span', { className: 'mono' }, 'v' + APP_VERSION), h('span', null, 'Prototype with simulated data'),
         h('label', { htmlFor: 'lg-lang', style: { display: 'inline-flex', alignItems: 'center', gap: 6 } }, h(T.Icon, { name: 'globe', size: 14 }), h('span', { className: 'tc-sr' }, 'Language'),

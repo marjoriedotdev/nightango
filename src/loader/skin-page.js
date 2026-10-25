@@ -32,14 +32,14 @@
     document.head.appendChild(font);
   }
 
-  /* Démarrage de Torch, comme son favori : même script, sans rechargement en boucle en cas d'échec. */
+  /* Démarrage de BetterChatango, comme son favori : même script, sans rechargement en boucle en cas d'échec. */
   function startBetterChatango() {
     if (probeBetterChatango() || document.querySelector('script[src^="' + BETTER_CHATANGO_START + '"]')) return;
     headline('Loading...');
     var s = document.createElement('script');
     s.src = BETTER_CHATANGO_START;
     s.onerror = function () {
-      headline('Torch could not be reached. Reload the page to try again.');
+      headline('BetterChatango could not be reached. Reload the page to try again.');
       console.error('[torch-skin] could not load ' + BETTER_CHATANGO_START);
     };
     document.body.appendChild(s);
@@ -49,7 +49,7 @@
       var started = Date.now();
       (function poll() {
         if (probeBetterChatango()) return resolve();
-        if (Date.now() - started > 120000) return reject(new Error('Torch did not start within two minutes.'));
+        if (Date.now() - started > 120000) return reject(new Error('BetterChatango did not start within two minutes.'));
         setTimeout(poll, 500);
       })();
     });
@@ -61,17 +61,17 @@
 
   Promise.all([react, betterChatangoReady()])
     .then(function () {
-      // Créée après le démarrage de Torch, qui construit sa page : l'interface ne risque pas d'être effacée.
+      // Créée après le démarrage de BetterChatango, qui construit sa page : l'interface ne risque pas d'être effacée.
       var host = document.createElement('div');
       host.id = 'torch-skin';
-      // Masquage en style inline : la feuille de Torch peut annuler l'attribut hidden.
+      // Masquage en style inline : la feuille de BetterChatango peut annuler l'attribut hidden.
       host.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:none !important;';
       document.body.appendChild(host);
       var shadow = host.attachShadow({ mode: 'open' });
       var style = document.createElement('style'); style.textContent = CSS; shadow.appendChild(style);
       var mount = document.createElement('div'); mount.id = 'app'; shadow.appendChild(mount);
       addFont();
-      // L'interface reste masquée tant que la session Torch n'est pas ouverte : la connexion se fait sur l'écran de Torch.
+      // L'interface reste masquée tant que la session BetterChatango n'est pas ouverte : la connexion se fait sur l'écran de BetterChatango.
       window.__TORCH_SHOW__ = function () {
         if (!host.isConnected) document.body.appendChild(host);
         if (!document.getElementById('torch-skin-hide')) {
@@ -86,9 +86,9 @@
       window.__TORCH_ROOT__ = host;
       window.__TORCH_MOUNT__ = mount;
       boot();
-      console.info('[torch-skin] attached to Torch. Sign in with the Torch login screen.');
+      console.info('[torch-skin] attached to BetterChatango. Sign in with the BetterChatango login screen.');
     })
-    .catch(function (e) { console.error('[torch-skin] could not start, the original Torch Client stays in place.', e); });
+    .catch(function (e) { console.error('[torch-skin] could not start, the original BetterChatango interface stays in place.', e); });
 
   function boot() {
 /*BUNDLE*/

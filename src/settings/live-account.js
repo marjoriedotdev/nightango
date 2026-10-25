@@ -14,7 +14,7 @@ function ownMiniStyle(u) { return !u.profileLoaded ? null : u.premium ? miniStyl
 
 function ProfilePageLive() {
   var app = useApp(), s = app.state, me = userOf(s, s.me);
-  // Champ vide : profil complet vide ou pas encore relu par Torch, null jusqu'à la lecture de mod2.xml.
+  // Champ vide : profil complet vide ou pas encore relu par BetterChatango, null jusqu'à la lecture de mod2.xml.
   function load() { var r = liveBridge.readProfile(); return { loaded: r.loaded, age: r.age, gender: GENDER_LABEL[r.gender] || 'Not specified', location: r.location, about: r.about, dir: r.dir, full: r.full || null, style: ownMiniStyle(me) }; }
   function fields(x) { return { age: x.age, gender: x.gender, location: x.location, about: x.about, dir: x.dir, full: x.full }; }
   function editable(x) { return Object.assign(fields(x), { style: x.style }); }
@@ -56,7 +56,7 @@ function ProfilePageLive() {
     var sent = draft, profileDirty = JSON.stringify(fields(sent)) !== JSON.stringify(fields(base));
     var styleDirty = !!sent.style && JSON.stringify(sent.style) !== JSON.stringify(base.style);
     setSaving(true);
-    // Torch n'accepte qu'une requête à la fois : le fond part après le profil.
+    // BetterChatango n'accepte qu'une requête à la fois : le fond part après le profil.
     (profileDirty ? liveBridge.saveProfile({ age: sent.age, gender: GENDER_CODE[sent.gender] || '?', location: sent.location, about: sent.about, dir: sent.dir, full: sent.full }).then(function () {
       setBase(function (x) { return Object.assign({}, x, fields(sent)); });
       app.update(function (d) { var u = d.users[d.me]; if (u) { u.age = sent.age === '' ? '' : +sent.age; u.location = sent.location; u.about = sent.about; u.aboutHtml = sent.about; u.gender = sent.gender; } });
@@ -102,8 +102,8 @@ function ProfilePageLive() {
   var meta = [draft.age, genderShort(draft.gender), draft.location].filter(Boolean).join(' · ');
   var preview = draft.style ? miniStyleOf(s.prefs, { miniStyle: miniStyleOfForm(draft.style) }, app.theme) : miniStyleOf(s.prefs, me, app.theme);
   var locked = !base.loaded || saving;
-  return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only Torch users.', wide: true },
-    base.loaded ? null : h(T.Banner, { tone: 'warning', icon: 'info', action: h(T.Button, { size: 'sm', onClick: reload }, 'Try again') }, "Torch hasn't loaded your profile yet. Saving stays off so nothing gets erased."),
+  return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only BetterChatango users.', wide: true },
+    base.loaded ? null : h(T.Banner, { tone: 'warning', icon: 'info', action: h(T.Button, { size: 'sm', onClick: reload }, 'Try again') }, "BetterChatango hasn't loaded your profile yet. Saving stays off so nothing gets erased."),
     h('div', { className: 'split' },
       h('div', { className: 'grow' },
         h(T.SettingsSection, { title: 'Profile picture', padded: true },
@@ -147,7 +147,7 @@ function ProfilePageLive() {
 }
 
 /**
- * Fond Premium de son mini profil : couleurs, image et répétition, comme le formulaire de fond de Torch.
+ * Fond Premium de son mini profil : couleurs, image et répétition, comme le formulaire de fond de BetterChatango.
  * @param {?Object|boolean} p.style Formulaire du brouillon, false sans Premium, null tant que mod1.xml n'est pas lu.
  * @param {boolean} p.failed Lecture de mod1.xml échouée.
  * @param {boolean} p.locked Champs désactivés.
@@ -174,7 +174,7 @@ function MiniBackgroundSection(p) {
             h(T.Checkbox, { label: 'Tile across', checked: st.tileAcross, onChange: function (e) { p.onChange('tileAcross', e.target.checked); } }))));
 }
 
-// L'interface ne change que si Torch a enregistré la valeur, sinon un toast le dit.
+// L'interface ne change que si BetterChatango a enregistré la valeur, sinon un toast le dit.
 function useBetterChatangoSettings(read, write) {
   var app = useApp();
   var st = useState(read), value = st[0], setValue = st[1];
@@ -207,8 +207,8 @@ function PrivacyPageLive() {
       }) : null,
       h(PmHistoryRows, null),
       h(T.SettingRow, {
-        asLabel: false, title: 'Delete saved conversations', description: 'Torch keeps a copy of your private messages in this browser. Chatango does not store them.',
-        control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message Torch saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
+        asLabel: false, title: 'Delete saved conversations', description: 'BetterChatango keeps a copy of your private messages in this browser. Chatango does not store them.',
+        control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message BetterChatango saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
     h(T.SettingsSection, { title: 'Browser tab' },
       h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),

@@ -1,7 +1,7 @@
 /* ---------- MP : conversations, non-lus et historique privé ---------- */
 
 /**
- * Archive des MP de Torch, en live : Torch y écrit lui-même chaque MP, le pont la marque lue et y compte les non-lus.
+ * Archive des MP de BetterChatango, en live : BetterChatango y écrit lui-même chaque MP, le pont la marque lue et y compte les non-lus.
  * @returns {{record: Function, markRead: function(string): Promise, unread: function(string): Promise<number>}} Archive.
  */
 function betterChatangoPmArchive() {
@@ -12,7 +12,7 @@ function betterChatangoPmArchive() {
   };
 }
 /**
- * Archive des MP en mémoire, avec le drapeau non lu de chaque entrée : celle du prototype, et celle du live quand la base de Torch manque.
+ * Archive des MP en mémoire, avec le drapeau non lu de chaque entrée : celle du prototype, et celle du live quand la base de BetterChatango manque.
  * @param {Object=} seed Non-lus de départ par correspondant.
  * @returns {{record: Function, markRead: function(string): Promise, unread: function(string): Promise<number>}} Archive.
  */
@@ -90,7 +90,7 @@ function receivePm(d, x) {
  * @param {function(Object)} onEntry Reçoit chaque entrée, pour en garder le style de l'auteur.
  */
 function mergePmHistory(c, list, onEntry) {
-  // L'horodatage archivé par Torch diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
+  // L'horodatage archivé par BetterChatango diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
   var shown = c.messages.slice();
   list.forEach(function (x) {
     onEntry(x);

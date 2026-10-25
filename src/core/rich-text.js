@@ -12,7 +12,7 @@ function httpsHost(url) {
 /**
  * Permet de savoir si une URL https vient d'un hôte de confiance, à l'égalité stricte, sans joker ni sous-domaine.
  * @param {string} url Adresse lue.
- * @param {?Array<string>} hosts Hôtes de confiance en minuscules, null si la liste de Torch est illisible.
+ * @param {?Array<string>} hosts Hôtes de confiance en minuscules, null si la liste de BetterChatango est illisible.
  */
 function isTrustedUrl(url, hosts) { var host = httpsHost(url); return !!host && !!hosts && hosts.indexOf(host) >= 0; }
 /**
@@ -54,13 +54,13 @@ function onProfileLink(app, url, name, gid) {
 
 var EMPHASIS = ['b', 'i', 'u', 's'];
 
-// Comme le rendu de Torch : « @nom: `texte` » est une citation, qui ne traverse pas un saut de ligne.
+// Comme le rendu de BetterChatango : « @nom: `texte` » est une citation, qui ne traverse pas un saut de ligne.
 var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
 
 /* Texte de message : emphase (segments de parseContent, absents sans emphase), citations, mentions et liens */
 function MessageText(p) {
   var app = useApp();
-  // Style coupé (plain) : comme Torch, gras, italique et souligné retombent mais le barré reste.
+  // Style coupé (plain) : comme BetterChatango, gras, italique et souligné retombent mais le barré reste.
   var marks = p.plain ? ['s'] : EMPHASIS;
   function mention(s, key) {
     var name = s.slice(1).toLowerCase();

@@ -12,7 +12,7 @@
 <script>
 var T = window.Torch, h = React.createElement;
 function Demo() {
-  var s = React.useState('Thanks @sa'), long = React.useState('A message past the length Torch allows');
+  var s = React.useState('Thanks @sa'), long = React.useState('A message past the length BetterChatango allows');
   return h('div', { className: 'col' },
     h(T.Composer, { placeholder: 'Message #community', value: s[0], onChange: s[1], onKeyDown: function (e) { if (e.key === 'Tab' && !e.shiftKey && /@sa$/.test(s[0])) { e.preventDefault(); s[1](s[0] + 'ble '); } }, context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) }),
     h(T.Composer, { placeholder: 'Message #community', value: long[0], onChange: long[1], onSend: function () {}, hint: 'Shorten your message by 12 characters to send it.', hintTone: 'warning', canSend: false }));

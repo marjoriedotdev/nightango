@@ -38,7 +38,7 @@ function useEmojiPicker(inputRef, setValue) {
 }
 
 /**
- * Sélecteur des composeurs : émoticônes de Torch par leur emoji, rangées en Classic et Premium comme dans son sélecteur, et médiathèque de Torch.
+ * Sélecteur des composeurs : émoticônes de BetterChatango par leur emoji, rangées en Classic et Premium comme dans son sélecteur, et médiathèque de BetterChatango.
  * @param {{anchorRef: Object, premium: boolean, tab: string, onTab: function(string), onPick: function(string), onClose: function(Event)}} p Bouton Emoji, section Premium affichée, onglet ouvert et son changement, choix d'un raccourci ou d'une adresse et fermeture.
  */
 function EmojiPicker(p) {

@@ -12,10 +12,10 @@ var liveBridge = (function () {
   };
   var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'], trusted: ['safety', 'whitelist', 'domain'] };
   var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
-  // Seuls réglages de son que Torch lit, avec l'objet Audio que chacun règle.
+  // Seuls réglages de son que BetterChatango lit, avec l'objet Audio que chacun règle.
   var SOUND_KEYS = ['play_mention', 'volume_mention', 'play_online', 'volume_online'];
   var SOUND_AUDIO = { mention: 'message', online: 'play_online' };
-  // Taille des pages de bannissements et de débannissements demandées par Torch.
+  // Taille des pages de bannissements et de débannissements demandées par BetterChatango.
   var BAN_PAGE = 50;
 
   // Un message affiché avant son identifiant définitif garde l'identifiant provisoire k:{clé}, que Chatango désigne par la clé seule.
@@ -32,7 +32,7 @@ var liveBridge = (function () {
    */
   function banPage(room, kind, data) {
     var list = parseBans(data);
-    // Comme Torch, une page incomplète est la dernière.
+    // Comme BetterChatango, une page incomplète est la dernière.
     emit({ op: 'bans', gid: room, kind: kind, list: list, more: list.length >= BAN_PAGE });
   }
   function author(data) {
@@ -42,7 +42,7 @@ var liveBridge = (function () {
   }
   function toMsg(room, data, temp) {
     var flags = parseInt(data[7], 10) || 0, name = author(data);
-    // Comme Torch, les messages du propriétaire du groupe comptent comme Premium.
+    // Comme BetterChatango, les messages du propriétaire du groupe comptent comme Premium.
     var premium = !!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner);
     var parsed = parseContent(data.slice(9).join(':'), false, premium);
     return {
@@ -61,12 +61,12 @@ var liveBridge = (function () {
     if (hit) return Promise.resolve(hit.data);
     return load().then(function (data) { store[n] = { at: Date.now(), data: data }; return data; });
   }
-  // Comme Torch, seule une réponse du type attendu compte : sans fichier de style, Chatango renvoie une petite image JPEG.
+  // Comme BetterChatango, seule une réponse du type attendu compte : sans fichier de style, Chatango renvoie une petite image JPEG.
   function memberFile(url, type, parse) {
     return fetch(url).then(function (r) { return r.ok && type.test(r.headers.get('content-type')) ? r.text().then(parse) : null; })
       .catch(function (e) { warn(e); return null; });
   }
-  // Sessions de chaque groupe, par horodatage de session comme Torch : { account }, { guest } ou { anon: true }.
+  // Sessions de chaque groupe, par horodatage de session comme BetterChatango : { account }, { guest } ou { anon: true }.
   var sessions = {};
   function emitGuests(room) {
     var t = sessions[room], names = [], anons = 0;
@@ -88,7 +88,7 @@ var liveBridge = (function () {
     // Départ d'une session inconnue (trame reçue avant g_participants) : seul data[3] dit quel compte part.
     var before = t[ts] || (action === 0 ? sessionOf(data[3]) : {});
     if (action === 0) delete t[ts];
-    // Action 2 : Torch teste le nom d'invité avant le compte.
+    // Action 2 : BetterChatango teste le nom d'invité avant le compte.
     else if (action === 2 && notNone(data[4])) t[ts] = sessionOf('None', data[4]);
     else t[ts] = sessionOf(data[3], data[4]);
     var after = t[ts] || {};
@@ -125,7 +125,7 @@ var liveBridge = (function () {
       case 'inited':
         emit({ op: 'inited', gid: room });
         send(room, 'getannouncement', '');
-        // Torch charge le titre et la description du groupe juste après la connexion.
+        // BetterChatango charge le titre et la description du groupe juste après la connexion.
         setTimeout(function () { var info = roomInfo(room); if (info) emit({ op: 'info', gid: room, title: info.title, description: info.description }); }, 3000);
         break;
       case 'nomore': emit({ op: 'histEnd', gid: room }); break;
@@ -133,9 +133,9 @@ var liveBridge = (function () {
       case 'getannc':
         if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, mode: 0, enabled: false, interval: 0, text: '', displayText: '', embeds: [] });
         else {
-          // Comme Torch, une annonce a d'office le drapeau Premium.
+          // Comme BetterChatango, une annonce a d'office le drapeau Premium.
           var raw = data.slice(4).join(':'), shown = parseContent(raw, false, true);
-          // Le style d'origine (couleurs, police, emphase posée par Torch après <f>) est conservé pour le prochain enregistrement, et les médias restent dans le texte renvoyé.
+          // Le style d'origine (couleurs, police, emphase posée par BetterChatango après <f>) est conservé pour le prochain enregistrement, et les médias restent dans le texte renvoyé.
           emit({ op: 'annc', gid: room, mode: parseInt(data[0], 10) || 0, enabled: data[0] !== '0', interval: parseInt(data[3], 10) || 0, text: parseContent(raw, true).text, displayText: shown.text, embeds: shown.embeds, prefix: (/^(<n[^>]*\/>)?(<f [^>]*>(<b>)?(<i>)?(<u>)?)?/.exec(raw) || [''])[0] });
         }
         break;
@@ -173,7 +173,7 @@ var liveBridge = (function () {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
         emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
-        // Torch sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : le pont sonne pour les autres, comme Torch, hors modification et membre ignoré.
+        // BetterChatango sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : le pont sonne pour les autres, comme BetterChatango, hors modification et membre ignoré.
         var from = lower(data[0]);
         if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
           var sounds = readSounds();
@@ -204,7 +204,7 @@ var liveBridge = (function () {
         // Une réponse à nom vide refuse le dernier nom envoyé.
         var target = lower(data[0]) || connectTarget, state = data[0] && CONNECT_STATE[data[2]];
         if (state) emit({ op: 'people', list: [friendPresence(target, state, data[1], data[1])] });
-        // Comme Torch, un état inconnu est ignoré.
+        // Comme BetterChatango, un état inconnu est ignoré.
         if (state || !data[0] || data[2] === 'invalid' || data[2] === 'nouser') emit({ op: 'pmChecked', name: target, found: !!state, asked: gotReply('connect:' + target) });
         break;
       }
@@ -229,7 +229,7 @@ var liveBridge = (function () {
       default: break;
     }
   }
-  // Trames que Torch n'écoute pas : on ajoute un gestionnaire, que son dispatcher appelle comme les siens.
+  // Trames que BetterChatango n'écoute pas : on ajoute un gestionnaire, que son dispatcher appelle comme les siens.
   var EXTRA = { group: ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb'], private: [] };
   function wrapTable(table, kind) {
     if (!table) return;
@@ -239,7 +239,7 @@ var liveBridge = (function () {
       if (typeof orig !== 'function' || orig.__skin) return;
       var w = function (c, socket, room, data) {
         try { if (kind === 'group') tapGroup(name, room, data || []); else tapPrivate(name, data || []); } catch (e) { warn(e); }
-        // Torch répond à DENIED par un alert() bloquant : la fenêtre de session expirée le remplace.
+        // BetterChatango répond à DENIED par un alert() bloquant : la fenêtre de session expirée le remplace.
         // Son gestionnaire connect ouvre son écran de MP et peut appeler api.vissle.me, hors de la liste fermée.
         if (kind === 'private' && (name === 'DENIED' || name === 'connect')) return;
         return orig.apply(this, arguments);
@@ -249,12 +249,12 @@ var liveBridge = (function () {
     });
   }
 
-  /* Avertissements de Torch : refus du serveur, connexion perdue, limites */
+  /* Avertissements de BetterChatango : refus du serveur, connexion perdue, limites */
   var lastAlert = { text: '', at: 0 };
   function alertOnce(op) {
     if (op.text === lastAlert.text && Date.now() - lastAlert.at < 2500) return;
     lastAlert = { text: op.text, at: Date.now() };
-    note('Torch notice: ' + op.text);
+    note('BetterChatango notice: ' + op.text);
     emit(op);
   }
   var QUIET = [/^Start a conversation/i, /^Private messages$/i, /^You have logged in to private messages elsewhere/i];
@@ -264,7 +264,7 @@ var liveBridge = (function () {
       C.systemMessage = function (data) {
         try {
           var text = String(data && data.content || '').replace(/\r/g, ' ').trim();
-          // Présence d'un ami (unique status) : Torch la destine au MP ouvert, sans groupe. La liste d'amis la montre déjà.
+          // Présence d'un ami (unique status) : BetterChatango la destine au MP ouvert, sans groupe. La liste d'amis la montre déjà.
           var presence = data && data.unique === 'status';
           if (text && !presence && !QUIET.some(function (re) { return re.test(text); })) alertOnce({ op: 'notice', gid: (data && data.group) || C.focus, text: text });
         } catch (e) { warn(e); }
@@ -284,7 +284,7 @@ var liveBridge = (function () {
     }
   }
 
-  /* État des connexions : Torch ne publie pas d'événement, on observe ses sockets. */
+  /* État des connexions : BetterChatango ne publie pas d'événement, on observe ses sockets. */
   var connState = {}, pmState = null, left = {}, attempts = {};
   function watchConnections() {
     setInterval(function () {
@@ -298,7 +298,7 @@ var liveBridge = (function () {
           if (connState[gid] !== st) { connState[gid] = st; if (!left[gid]) { note(connName(gid) + ' is ' + st); emit({ op: 'conn', gid: gid, state: st }); } }
         });
         Object.keys(connState).forEach(function (gid) {
-          if (!seen[gid] && connState[gid] !== 'closed') { connState[gid] = 'closed'; if (!left[gid]) { note(connName(gid) + ' was removed by Torch'); emit({ op: 'conn', gid: gid, state: 'closed' }); } }
+          if (!seen[gid] && connState[gid] !== 'closed') { connState[gid] = 'closed'; if (!left[gid]) { note(connName(gid) + ' was removed by BetterChatango'); emit({ op: 'conn', gid: gid, state: 'closed' }); } }
         });
         var pm = C.private && C.private.socket;
         var pst = pm ? stateOf(pm) : 'closed';
@@ -307,22 +307,22 @@ var liveBridge = (function () {
     }, 2000);
   }
   /**
-   * Permet de lancer une connexion de Torch.
+   * Permet de lancer une connexion de BetterChatango.
    * @param {string} gid Groupe ou private_message.
    */
   function connect(gid) {
     // Une seconde session MP ouverte pendant la première ferait renvoyer kickingoff à la nôtre : une seule tentative à la fois.
     if (attempts[gid]) return attempts[gid];
-    // Torch ignore client.connect tant que gid reste dans cache.connect : comme lui, on l'en retire autour de chaque tentative.
+    // BetterChatango ignore client.connect tant que gid reste dans cache.connect : comme lui, on l'en retire autour de chaque tentative.
     function forget() { C.cache.connect = C.cache.connect.filter(function (x) { return x !== gid; }); }
     function settle() {
       delete attempts[gid];
       forget();
-      // Sans nouveau socket, l'état observé ne change pas : on force sa réémission pour sortir de « connecting », y compris pour un groupe que Torch a retiré.
+      // Sans nouveau socket, l'état observé ne change pas : on force sa réémission pour sortir de « connecting », y compris pour un groupe que BetterChatango a retiré.
       if (gid === 'private_message') pmState = null; else connState[gid] = 'connecting';
     }
     function attempt() { forget(); return C.connect(gid); }
-    // Comme Torch, la base d'historique s'ouvre avant la connexion privée : les msgoff, livrés une seule fois juste après OK, y sont archivés.
+    // Comme BetterChatango, la base d'historique s'ouvre avant la connexion privée : les msgoff, livrés une seule fois juste après OK, y sont archivés.
     note('Connecting to ' + connName(gid));
     var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
     attempts[gid] = sock.then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) { settle(); note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e)); throw e; });
@@ -360,7 +360,7 @@ var liveBridge = (function () {
     return waited;
   }
   /**
-   * Permet de demander à Chatango la présence d'un correspondant, comme Torch à l'ouverture d'un MP.
+   * Permet de demander à Chatango la présence d'un correspondant, comme BetterChatango à l'ouverture d'un MP.
    * @param {string} name Correspondant visé.
    * @returns {boolean} Vrai si la trame est partie.
    */
@@ -371,14 +371,14 @@ var liveBridge = (function () {
     return true;
   }
   function post(url, fields, item) {
-    if (typeof C.post !== 'function') return Promise.reject(new Error('Torch is not signed in yet.'));
+    if (typeof C.post !== 'function') return Promise.reject(new Error('BetterChatango is not signed in yet.'));
     var form = new FormData();
     Object.keys(fields).forEach(function (k) { if (fields[k] !== undefined && fields[k] !== null) form.set(k, fields[k]); });
     return C.post(url, form, item || {}).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
   }
   var pmrCheck = null, pmrConnected = null;
   /**
-   * Permet de lire chez vissle la restriction des MP de son propre compte, comme Torch (inject.js:10631-10643).
+   * Permet de lire chez vissle la restriction des MP de son propre compte, comme BetterChatango (inject.js:10631-10643).
    * @returns {Promise<string>} restricted, ok, ou unknown si la réponse ne l'établit pas.
    */
   function fetchPmr() {
@@ -388,7 +388,7 @@ var liveBridge = (function () {
     }).catch(function (e) { warn(e); return 'unknown'; });
   }
   /**
-   * Base d'historique privé de Torch (« <pseudo>_history »). Torch ne l'ouvre que depuis son propre écran
+   * Base d'historique privé de BetterChatango (« <pseudo>_history »). BetterChatango ne l'ouvre que depuis son propre écran
    * de messages privés : on l'ouvre ici avec le même schéma, puis on la lui confie pour qu'il y archive.
    */
   function openPmDb() {
@@ -415,12 +415,12 @@ var liveBridge = (function () {
    */
   function pmDbOrFail() {
     return openPmDb().then(function (db) {
-      if (!db) throw new Error('Torch could not open your message history. Reload the page and try again.');
+      if (!db) throw new Error('BetterChatango could not open your message history. Reload the page and try again.');
       return db;
     });
   }
   /**
-   * Permet de marquer lus des messages de l'historique privé, par l'index de Torch (markRead).
+   * Permet de marquer lus des messages de l'historique privé, par l'index de BetterChatango (markRead).
    * @param {IDBDatabase} db Base d'historique privé.
    * @param {?IDBKeyRange} range Plage de target_ts_idx, null pour toute la base.
    */
@@ -438,7 +438,7 @@ var liveBridge = (function () {
     });
   }
   /**
-   * Permet de marquer lus, une fois par compte, les messages archivés avant Nightango, que Torch a tous archivés
+   * Permet de marquer lus, une fois par compte, les messages archivés avant Nightango, que BetterChatango a tous archivés
    * non lus faute de focus privé. Appelée par openPmDb avant la connexion privée, elle laisse non lus les msgoff de celle-ci.
    * @param {?IDBDatabase} db Base d'historique privé.
    */
@@ -447,7 +447,7 @@ var liveBridge = (function () {
     if (!db || (storageGet(key) || {}).pmReadMigrated) return db;
     return markRead(db, null).then(function () { storageMerge(key, { pmReadMigrated: true }); }, warn).then(function () { return db; });
   }
-  // Borne haute en chaîne comme Torch : dans l'ordre IndexedDB, une chaîne passe après tout horodatage.
+  // Borne haute en chaîne comme BetterChatango : dans l'ordre IndexedDB, une chaîne passe après tout horodatage.
   function targetRange(target) { return IDBKeyRange.bound([target, 1], [target, '']); }
   /**
    * Permet de savoir si une entrée de l'historique privé est un message affiché.
@@ -479,13 +479,13 @@ var liveBridge = (function () {
     });
   }
   /**
-   * Permet d'atteindre le magasin de la médiathèque que Torch ouvre à la connexion (favorite_media), sans lequel chaque appel échoue.
+   * Permet d'atteindre le magasin de la médiathèque que BetterChatango ouvre à la connexion (favorite_media), sans lequel chaque appel échoue.
    * @param {string} mode readonly ou readwrite.
    * @returns {Promise<IDBObjectStore>} Magasin media d'une nouvelle transaction, rejetée sans base.
    */
   function mediaStore(mode) {
     return new Promise(function (resolve) {
-      if (!C.database.media) throw new Error('Torch could not open your media library. Reload the page and try again.');
+      if (!C.database.media) throw new Error('BetterChatango could not open your media library. Reload the page and try again.');
       resolve(C.database.media.transaction(['media'], mode).objectStore('media'));
     });
   }
@@ -513,7 +513,7 @@ var liveBridge = (function () {
     }); });
   }
   /**
-   * Permet de lire la médiathèque dans l'ordre d'un index de Torch, après une entrée et filtrée par nom, en écartant les entrées invalides.
+   * Permet de lire la médiathèque dans l'ordre d'un index de BetterChatango, après une entrée et filtrée par nom, en écartant les entrées invalides.
    * @param {string} index url ou name.
    * @param {?{url: string, name: string}} after Dernière entrée déjà lue, null pour commencer.
    * @param {string} text Recherche dans le nom, vide pour tout lire.
@@ -528,21 +528,21 @@ var liveBridge = (function () {
     });
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
-  // Persistance identique à Torch : l'objet entier est réécrit sous la seule clé settings.
+  // Persistance identique à BetterChatango : l'objet entier est réécrit sous la seule clé settings.
   function saveSettings() { localStorage.setItem('settings', JSON.stringify(C.settings)); }
   /**
-   * Permet de lire un interrupteur des réglages de Torch.
+   * Permet de lire un interrupteur des réglages de BetterChatango.
    * @param {string} key Clé de SETTINGS.
-   * @returns {?boolean} Valeur lue, null si les réglages de Torch sont illisibles.
+   * @returns {?boolean} Valeur lue, null si les réglages de BetterChatango sont illisibles.
    */
   function readSetting(key) {
     var p = SETTINGS[key];
     try { return !!C.settings[p[0]][p[1]][p[2]]; } catch (e) { warn(e); return null; }
   }
   /**
-   * Permet de lire une liste des réglages de Torch.
+   * Permet de lire une liste des réglages de BetterChatango.
    * @param {string} kind Clé de LISTS.
-   * @returns {?Array<string>} Copie de la liste, null si les réglages de Torch sont illisibles.
+   * @returns {?Array<string>} Copie de la liste, null si les réglages de BetterChatango sont illisibles.
    */
   function roomInfo(gid) {
     var info = C.groups && C.groups[gid] && C.groups[gid].room && C.groups[gid].room.information;
@@ -551,7 +551,7 @@ var liveBridge = (function () {
   function readSounds() {
     try {
       var sound = C.settings.notifications.sound, out = {};
-      // Le curseur de Torch enregistre le volume en texte.
+      // Le curseur de BetterChatango enregistre le volume en texte.
       SOUND_KEYS.forEach(function (k) { out[k] = k.indexOf('volume_') === 0 ? parseInt(sound[k], 10) : !!sound[k]; });
       return out;
     } catch (e) { warn(e); return null; }
@@ -568,7 +568,7 @@ var liveBridge = (function () {
     try { return C.settings[p[0]][p[1]][p[2]].slice(); } catch (e) { warn(e); return null; }
   }
   /**
-   * Permet d'ajouter ou de retirer une valeur d'une liste des réglages de Torch, comme lui : filter ou push sans doublon.
+   * Permet d'ajouter ou de retirer une valeur d'une liste des réglages de BetterChatango, comme lui : filter ou push sans doublon.
    * @param {string} kind Clé de LISTS.
    * @param {string} value Valeur visée.
    * @param {boolean} on Vrai pour l'ajouter.
@@ -585,7 +585,7 @@ var liveBridge = (function () {
   }
 
   /*
-   * Style perso : écrit dans le formulaire de style de Torch, relu par client.sendMessage à chaque envoi.
+   * Style perso : écrit dans le formulaire de style de BetterChatango, relu par client.sendMessage à chaque envoi.
    * Ce formulaire n'est jamais soumis : son enregistrement (updatemsgstyles) transmet le mot de passe.
    */
   var accountStyle = null;
@@ -610,7 +610,7 @@ var liveBridge = (function () {
     C.user.style = v.active;
   }
   /**
-   * Permet d'appliquer le style perso aux champs que Torch lit à l'envoi.
+   * Permet d'appliquer le style perso aux champs que BetterChatango lit à l'envoi.
    * @param {?Object} style Style perso, null pour revenir au style du compte.
    */
   function applyStyle(style) {
@@ -621,23 +621,23 @@ var liveBridge = (function () {
     writeStyle(f, Object.assign({}, style, { on: true, active: true }));
   }
   /**
-   * Permet de faire construire par Torch le corps d'un message de groupe, sans l'envoyer, avec la référence et la citation que l'envoi insère.
+   * Permet de faire construire par BetterChatango le corps d'un message de groupe, sans l'envoyer, avec la référence et la citation que l'envoi insère.
    * @param {string} gid Groupe visé.
    * @param {string} text Texte saisi.
    * @param {{replyId: ?string, editId: ?string, quote: ?string, style: ?Object}} opts Réponse, original modifié ou citation en texte brut, et style perso.
-   * @returns {?{body: string, style: Object}} Corps, et style propre lu dans celui de Torch, null si Torch ne construit rien.
+   * @returns {?{body: string, style: Object}} Corps, et style propre lu dans celui de BetterChatango, null si BetterChatango ne construit rien.
    */
   function groupBody(gid, text, opts) {
     applyStyle(opts.style);
     var body = C.sendMessage(esc(text), true, gid);
     if (typeof body !== 'string' || !body) return null;
     var style = parseContent(body).style;
-    // Comme Torch, une modification ne porte jamais de réponse.
+    // Comme BetterChatango, une modification ne porte jamais de réponse.
     var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
     var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
     body = head + ref + body.slice(head.length);
     if (opts.quote) {
-      // Torch place la citation juste avant le texte saisi : après l'emphase de son style, lue dans ses cases, et avant celle du Markdown.
+      // BetterChatango place la citation juste avant le texte saisi : après l'emphase de son style, lue dans ses cases, et avant celle du Markdown.
       var f = C.user.style ? styleFields() : null;
       var at = head.length + (f ? (f.bold.checked ? '<b>' : '') + (f.italic.checked ? '<i>' : '') + (f.underline.checked ? '<u>' : '') : '').length;
       body = body.slice(0, at) + esc(opts.quote) + body.slice(at);
@@ -660,7 +660,7 @@ var liveBridge = (function () {
     wrapTable(C.event.private, 'private');
     hookNotices();
     watchConnections();
-    // Torch occupe window.onoffline et window.ononline : on écoute à côté sans les remplacer.
+    // BetterChatango occupe window.onoffline et window.ononline : on écoute à côté sans les remplacer.
     window.addEventListener('offline', function () { emit({ op: 'session', reason: 'offline' }); });
     window.addEventListener('online', function () { emit({ op: 'online' }); });
     // iOS coupe les sockets d'une page cachée sans prévenir : retour au premier plan, page restaurée du cache compris.
@@ -671,7 +671,7 @@ var liveBridge = (function () {
       if (loggedIn) return;
       loggedIn = true;
       note('Signed in');
-      // Torch lit seul l'oEmbed YouTube et msgbg.xml, hors des réglages de médias de Nightango : neutralisés en mémoire, pas dans les réglages de Torch.
+      // BetterChatango lit seul l'oEmbed YouTube et msgbg.xml, hors des réglages de médias de Nightango : neutralisés en mémoire, pas dans les réglages de BetterChatango.
       C.renderYouTube = CH.getBackground = function () {};
       emit({ op: 'login', me: lower(C.user.name) });
       // Groupes déjà connectés avant nous : leurs trames inited et participants sont passées.
@@ -698,7 +698,7 @@ var liveBridge = (function () {
       }, 1000);
     }
   } else {
-    warn('Torch client not found: the overlay cannot connect.');
+    warn('BetterChatango not found: the overlay cannot connect.');
   }
   if (SB && typeof SB.renderGroup === 'function') {
     var renderGroup = SB.renderGroup.bind(SB);
@@ -723,7 +723,7 @@ var liveBridge = (function () {
      * @param {string} gid Groupe visé.
      * @param {string} text Texte saisi.
      * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string, style: ?Object}} opts Réponse, original modifié ou citation en texte brut, canal et style perso.
-     * @returns {?Object} Style propre lu dans le corps construit par Torch, null si rien n'est parti.
+     * @returns {?Object} Style propre lu dans le corps construit par BetterChatango, null si rien n'est parti.
      */
     send: function (gid, text, opts) {
       opts = opts || {};
@@ -736,7 +736,7 @@ var liveBridge = (function () {
       return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure) ? built.style : null;
     },
     /**
-     * Permet de mesurer, comme le compteur de Torch, le corps qu'enverrait send, sans le préfixe bm.
+     * Permet de mesurer, comme le compteur de BetterChatango, le corps qu'enverrait send, sans le préfixe bm.
      * @param {string} gid Groupe visé.
      * @param {string} text Texte saisi.
      * @param {{replyId: ?string, editId: ?string, quote: ?string, style: ?Object}} opts Mêmes options que send.
@@ -751,7 +751,7 @@ var liveBridge = (function () {
      * @param {string} user Destinataire.
      * @param {string} text Texte saisi.
      * @param {?Object} style Style perso.
-     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array}} Corps construit par Torch analysé comme un MP reçu, null si rien n'est parti.
+     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array}} Corps construit par BetterChatango analysé comme un MP reçu, null si rien n'est parti.
      */
     sendPm: function (user, text, style) {
       try {
@@ -760,13 +760,13 @@ var liveBridge = (function () {
         var body = C.sendMessage(esc(text), true, 'private_message', user);
         if (typeof body !== 'string' || !body) return null;
         C.sendMessage(esc(text), false, 'private_message', user);
-        // Torch n'écrit une balise Premium que pour un compte Premium : chaque balise de ce corps s'affiche.
+        // BetterChatango n'écrit une balise Premium que pour un compte Premium : chaque balise de ce corps s'affiche.
         var parsed = parseContent(body, false, true);
         return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds };
       } catch (e) { warn(e); return null; }
     },
     /**
-     * Permet de lire le style que Torch enverrait sans style perso.
+     * Permet de lire le style que BetterChatango enverrait sans style perso.
      */
     accountStyle: function () {
       var v = accountStyle || readStyle(styleFields());
@@ -779,21 +779,21 @@ var liveBridge = (function () {
      * @param {string|boolean} user Correspondant affiché, false hors des MP.
      */
     focusPm: function (user) {
-      // Torch n'archive un message privé envoyé que pour la conversation qu'il considère ouverte.
+      // BetterChatango n'archive un message privé envoyé que pour la conversation qu'il considère ouverte.
       try { if (C.private) C.private.focus = user || false; } catch (e) { warn(e); }
       if (user && user !== connectTarget) connectPm(user);
     },
     /**
-     * Permet de lire le MP que Torch considère ouvert, dont il joue lui-même le son.
-     * @returns {string|boolean|undefined} Membre de client.private.focus, false ou undefined sans MP ouvert pour Torch.
+     * Permet de lire le MP que BetterChatango considère ouvert, dont il joue lui-même le son.
+     * @returns {string|boolean|undefined} Membre de client.private.focus, false ou undefined sans MP ouvert pour BetterChatango.
      */
     /**
-     * Permet de savoir si le compte est Premium, comme Torch avant d'écrire une émoticône Premium.
+     * Permet de savoir si le compte est Premium, comme BetterChatango avant d'écrire une émoticône Premium.
      * @returns {boolean} Statut 200 ou 210 de la trame premium, faux tant que la connexion privée n'est pas ouverte.
      */
     premium: function () { return !!C.private && [200, 210].indexOf(C.private.premium.status) >= 0; },
     /**
-     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme Torch avant de l'ouvrir : la réponse arrive en op pmChecked, avec asked.
+     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme BetterChatango avant de l'ouvrir : la réponse arrive en op pmChecked, avec asked.
      * @param {string} name Correspondant visé.
      * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
      */
@@ -812,7 +812,7 @@ var liveBridge = (function () {
     /**
      * Permet de relancer une connexion fermée.
      * @param {string} gid Groupe ou private_message.
-     * @param {boolean=} background Vrai pour un groupe qui n'est pas affiché : le focus de Torch reste sur le groupe affiché.
+     * @param {boolean=} background Vrai pour un groupe qui n'est pas affiché : le focus de BetterChatango reste sur le groupe affiché.
      */
     reconnect: function (gid, background) {
       try {
@@ -826,14 +826,14 @@ var liveBridge = (function () {
       emit({ op: 'notice', gid: gid, text: failure });
       return 'failed';
     },
-    /* Modération : trames identiques à celles de Torch */
+    /* Modération : trames identiques à celles de BetterChatango */
     deleteMessage: function (gid, id) { return send(gid, 'delmsg:' + id, 'The message could not be deleted.'); },
     deleteAllFrom: function (gid, m) { return send(gid, 'delallmsg:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), 'The messages could not be deleted.'); },
     ban: function (gid, m) { return send(gid, 'block:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), 'The ban could not be sent.'); },
     unban: function (gid, b) { return send(gid, 'removeblock:' + b.unid + ':' + b.ip, 'The unban could not be sent.'); },
     unbanAll: function (gid) { return send(gid, 'unbanall', 'The unban could not be sent.'); },
     /**
-     * Permet de demander une page de bannissements ou de débannissements, comme Torch.
+     * Permet de demander une page de bannissements ou de débannissements, comme BetterChatango.
      * @param {string} gid Groupe visé.
      * @param {string} kind block ou unblock.
      * @param {string} ts Horodatage de la dernière ligne chargée, 0 pour la première page.
@@ -855,7 +855,7 @@ var liveBridge = (function () {
       var close = (prefix.match(/<[biu]>/g) || []).reverse().join('').replace(/</g, '</');
       // Mode 3 : annonce activée avec le fond de message du propriétaire, gardé tant que l'interface ne le règle pas.
       var mode = !enabled ? 0 : read.mode === 3 ? 3 : 1;
-      // Sauts de ligne en \r comme Torch, dont l'éditeur retire les <br/> à la relecture.
+      // Sauts de ligne en \r comme BetterChatango, dont l'éditeur retire les <br/> à la relecture.
       var body = prefix + esc(text).replace(/\r?\n/g, '\r') + close;
       var ok = send(gid, 'updateannouncement:' + mode + ':' + seconds + ':' + body, 'The announcement could not be saved.');
       setTimeout(function () { send(gid, 'getannouncement', ''); }, 1000);
@@ -880,7 +880,7 @@ var liveBridge = (function () {
     block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', 'The block could not be sent.'); },
     unblock: function (name) { return send('private_message', 'unblock:' + name, 'The unblock could not be sent.'); },
     /**
-     * Historique archivé par Torch dans IndexedDB, regroupé par interlocuteur, avec l'état lu de chaque message.
+     * Historique archivé par BetterChatango dans IndexedDB, regroupé par interlocuteur, avec l'état lu de chaque message.
      * @param {number} perTarget Nombre d'entrées gardées par interlocuteur, les plus récentes.
      * @returns {Promise<Object>} Par interlocuteur, ses entrées de la plus ancienne à la plus récente (list) et s'il en reste de plus anciennes (more).
      */
@@ -906,16 +906,16 @@ var liveBridge = (function () {
         } catch (e) { warn(e); resolve({}); }
       }); });
     },
-    /** Enregistrements bruts de l'historique privé, tels que les exporte Torch (exportMessages). */
+    /** Enregistrements bruts de l'historique privé, tels que les exporte BetterChatango (exportMessages). */
     exportPm: function () {
       return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
         var req = db.transaction(['messages'], 'readonly').objectStore('messages').getAll();
         req.onsuccess = function () { resolve(req.result); };
-        req.onerror = function () { warn(req.error); reject(new Error('Torch could not read your message history. Reload the page and try again.')); };
+        req.onerror = function () { warn(req.error); reject(new Error('BetterChatango could not read your message history. Reload the page and try again.')); };
       }); });
     },
     /**
-     * Permet d'ajouter à l'historique privé les enregistrements valides d'un fichier de Torch, lus, sans écraser une clé présente.
+     * Permet d'ajouter à l'historique privé les enregistrements valides d'un fichier de BetterChatango, lus, sans écraser une clé présente.
      * @param {Array} records Contenu du fichier, non fiable.
      * @returns {Promise} Compte {added, saved, skipped, foreign}, rendu une fois la transaction terminée.
      */
@@ -930,11 +930,11 @@ var liveBridge = (function () {
           req.onerror = function (e) { if (req.error.name === 'ConstraintError') { e.preventDefault(); out.saved++; } };
         });
         tx.oncomplete = function () { resolve(out); };
-        tx.onabort = function () { warn(tx.error); reject(new Error('Torch could not save these messages. Nothing was imported. Reload the page and try again.')); };
+        tx.onabort = function () { warn(tx.error); reject(new Error('BetterChatango could not save these messages. Nothing was imported. Reload the page and try again.')); };
       }); });
     },
     /**
-     * Permet de lire les entrées archivées d'un membre avant une clé, comme Torch au défilement (loadMessage).
+     * Permet de lire les entrées archivées d'un membre avant une clé, comme BetterChatango au défilement (loadMessage).
      * @param {string} target Membre de la conversation.
      * @param {number} before Clé archiveTs de l'entrée la plus ancienne déjà chargée, exclue.
      * @param {number} count Nombre d'entrées au plus.
@@ -947,7 +947,7 @@ var liveBridge = (function () {
       }).then(function (page) { return { list: page.list.reverse(), more: page.more }; });
     },
     /**
-     * Permet de chercher un texte dans tout l'historique privé, par la clé primaire de Torch, du plus récent au plus ancien.
+     * Permet de chercher un texte dans tout l'historique privé, par la clé primaire de BetterChatango, du plus récent au plus ancien.
      * @param {string} query Texte cherché, sans casse.
      * @param {number} limit Nombre de résultats au plus.
      * @returns {Promise<{list: Array, more: boolean}>} Résultats et si la limite a coupé la liste. Rejetée sans base.
@@ -963,7 +963,7 @@ var liveBridge = (function () {
       });
     },
     /**
-     * Permet de lire une page de la médiathèque de Torch, comme viewMedia et loadMedia.
+     * Permet de lire une page de la médiathèque de BetterChatango, comme viewMedia et loadMedia.
      * @param {string} index Ordre de l'index url ou name.
      * @param {?{url: string, name: string}} after Dernière entrée de la page précédente, null pour la première.
      * @param {string} text Recherche dans le nom, vide pour tout lire.
@@ -971,7 +971,7 @@ var liveBridge = (function () {
      */
     mediaPage: function (index, after, text) { return readMedia(index, after, text, MEDIA_PAGE); },
     /**
-     * Permet de chercher des médias par nom, comme la complétion de Torch (searchMedia).
+     * Permet de chercher des médias par nom, comme la complétion de BetterChatango (searchMedia).
      * @param {string} text Texte que le nom contient.
      * @param {number} count Nombre de médias au plus.
      * @returns {Promise<Array>} Entrées {url, name} dans l'ordre des noms. Rejetée sans base.
@@ -984,30 +984,30 @@ var liveBridge = (function () {
      * @param {{url: string, name: string}} e Entrée écrite.
      */
     addMedia: function (e) {
-      return mediaWrite(function (store) { store.put({ url: e.url, name: e.name }); }, 'Torch could not add this image to your media. Reload the page and try again.');
+      return mediaWrite(function (store) { store.put({ url: e.url, name: e.name }); }, 'BetterChatango could not add this image to your media. Reload the page and try again.');
     },
     /** Permet de retirer un média par son adresse, comme unfavoriteMedia. */
     removeMedia: function (url) {
-      return mediaWrite(function (store) { store.delete(url); }, 'Torch could not remove this image from your media. Reload the page and try again.');
+      return mediaWrite(function (store) { store.delete(url); }, 'BetterChatango could not remove this image from your media. Reload the page and try again.');
     },
-    /** Entrées brutes de la médiathèque, telles que les exporte Torch (exportMedia). */
+    /** Entrées brutes de la médiathèque, telles que les exporte BetterChatango (exportMedia). */
     exportMedia: function () {
       return mediaStore('readonly').then(function (store) {
-        return requestResult(store.getAll()).catch(function (e) { warn(e); throw new Error('Torch could not read your media library. Reload the page and try again.'); });
+        return requestResult(store.getAll()).catch(function (e) { warn(e); throw new Error('BetterChatango could not read your media library. Reload the page and try again.'); });
       });
     },
     /**
-     * Permet d'écrire les entrées valides d'un fichier de médiathèque de Torch, par put comme importMedia.
+     * Permet d'écrire les entrées valides d'un fichier de médiathèque de BetterChatango, par put comme importMedia.
      * @param {Array} entries Contenu du fichier, non fiable.
      * @returns {Promise<{added: number, skipped: number}>} Compte rendu une fois la transaction terminée.
      */
     importMedia: function (entries) {
       var screened = screenMediaEntries(entries);
-      return mediaWrite(function (store) { screened.valid.forEach(function (e) { store.put(e); }); }, 'Torch could not save these images. Nothing was imported. Reload the page and try again.')
+      return mediaWrite(function (store) { screened.valid.forEach(function (e) { store.put(e); }); }, 'BetterChatango could not save these images. Nothing was imported. Reload the page and try again.')
         .then(function () { return { added: screened.valid.length, skipped: screened.skipped }; });
     },
     /**
-     * Recherche de membres comme le fait Torch, puis demande de leur présence sur la connexion privée.
+     * Recherche de membres comme le fait BetterChatango, puis demande de leur présence sur la connexion privée.
      * Filtres : sexe M, F ou les deux ; photo réelle (1), personnage (2) ou les deux (0).
      */
     searchPeople: function (o) {
@@ -1034,7 +1034,7 @@ var liveBridge = (function () {
         throw new Error('Chatango sent an unexpected reply to the search.');
       });
     },
-    /** Mini profil public (mod1.xml), lu comme Torch : âge depuis la date de naissance, genre, lieu, texte. */
+    /** Mini profil public (mod1.xml), lu comme BetterChatango : âge depuis la date de naissance, genre, lieu, texte. */
     fetchProfile: function (name) {
       var n = lower(name);
       if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.reject(new Error('Guests have no profile.'));
@@ -1067,7 +1067,7 @@ var liveBridge = (function () {
       });
     },
     /**
-     * Permet de demander à vissle les comptes liés d'un compte, comme l'action who de Torch (inject.js:7452-7477).
+     * Permet de demander à vissle les comptes liés d'un compte, comme l'action who de BetterChatango (inject.js:7452-7477).
      * @param {string} name Compte visé, jamais un invité.
      * @returns {Promise<?Array>} Niveaux lus par parseWho, null pour une réponse illisible, rejetée si vissle est injoignable.
      */
@@ -1081,17 +1081,17 @@ var liveBridge = (function () {
     },
     fetchFullProfile: fetchFullProfile,
     /**
-     * Permet de marquer lus les messages archivés d'un membre, comme Torch à l'ouverture d'une conversation.
+     * Permet de marquer lus les messages archivés d'un membre, comme BetterChatango à l'ouverture d'une conversation.
      * @param {string} name Membre de la conversation.
      */
     markPmRead: function (name) {
-      // Transaction créée après la pile en cours : Torch n'archive un MP reçu qu'après l'émission de pm.
+      // Transaction créée après la pile en cours : BetterChatango n'archive un MP reçu qu'après l'émission de pm.
       return openPmDb().then(function (db) {
         if (db) return markRead(db, targetRange(name));
       }).catch(warn);
     },
     /**
-     * Permet de compter les MP non lus d'un correspondant dans l'historique privé, sans ses modifications, que Torch archive à part.
+     * Permet de compter les MP non lus d'un correspondant dans l'historique privé, sans ses modifications, que BetterChatango archive à part.
      * @param {string} name Correspondant.
      * @returns {Promise<number>} Entrées non lues.
      */
@@ -1110,12 +1110,12 @@ var liveBridge = (function () {
         tx.onabort = function () { reject(tx.error); };
       }); });
     },
-    /** Permet de savoir si ce navigateur garde l'historique privé de Torch. */
+    /** Permet de savoir si ce navigateur garde l'historique privé de BetterChatango. */
     pmArchived: function () { return openPmDb().then(function (db) { return !!db; }); },
-    /** Supprime l'historique que Torch garde dans ce navigateur ; Chatango n'en conserve pas. */
+    /** Supprime l'historique que BetterChatango garde dans ce navigateur ; Chatango n'en conserve pas. */
     clearPmHistory: function (target) { try { C.private.clearHistory(target); return true; } catch (e) { warn(e); return false; } },
     /**
-     * Permet de retirer un MP de l'historique privé, comme l'entrée remove de Torch, après avoir relu son enregistrement.
+     * Permet de retirer un MP de l'historique privé, comme l'entrée remove de BetterChatango, après avoir relu son enregistrement.
      * @param {string} target Membre de la conversation.
      * @param {{from: string, archiveTs: number, text: string, key: ?string}} entry Message affiché.
      * @returns {Promise<boolean>} Vrai à la fin de la transaction qui l'a supprimé, faux si l'enregistrement n'est pas ce message ou sans base.
@@ -1142,16 +1142,16 @@ var liveBridge = (function () {
         tx.onabort = function () { resolve(false); };
       }); }).catch(function (e) { warn(e); return false; });
     },
-    /* Profil : lu dans les champs que Torch remplit à la connexion, enregistré par client.post */
+    /* Profil : lu dans les champs que BetterChatango remplit à la connexion, enregistré par client.post */
     readProfile: function () {
       var dir = document.querySelector('[data-setting="show_profile"] input');
-      // Torch remplit ce champ en relisant mod2.xml après l'enregistrement, parfois depuis le cache HTTP.
+      // BetterChatango remplit ce champ en relisant mod2.xml après l'enregistrement, parfois depuis le cache HTTP.
       var sent = fresh(fullProfileCache, lower(C.user && C.user.name));
       return {
         loaded: !!(C.user && C.user.avatar && typeof C.user.avatar === 'object' && document.querySelector('[data-text-field="age"]') && dir),
         age: readField('[data-text-field="age"]'), gender: readField('[data-text-field="gender"]'), location: readField('[data-text-field="location"]'),
         about: readField('[data-text-field="about"]'), full: sent ? sent.data : readField('[data-text-field="full"]'), dir: !!(dir && dir.checked),
-        // x0, y0 et ts de la dernière réponse de updateprofile, rangés par Torch (setProfile, inject.js:4875-4878).
+        // x0, y0 et ts de la dernière réponse de updateprofile, rangés par BetterChatango (setProfile, inject.js:4875-4878).
         crop: C.user && C.user.avatar && typeof C.user.avatar === 'object' ? { x0: +C.user.avatar.x0, y0: +C.user.avatar.y0, ts: +C.user.avatar.ts } : null
       };
     },
@@ -1159,14 +1159,14 @@ var liveBridge = (function () {
       return Promise.resolve().then(function () { return saveProfileNow(p); });
     },
     /**
-     * Permet d'envoyer sa photo de profil comme le formulaire avatar de Torch (client.html:1283-1289), sans progress.
+     * Permet d'envoyer sa photo de profil comme le formulaire avatar de BetterChatango (client.html:1283-1289), sans progress.
      * @param {File} file Image choisie.
      * @returns {Promise} Rejetée avec le texte à afficher sur toute autre réponse que pix.
      */
     uploadAvatar: function (file) {
       return post(CH.path('updateprofile'), profileForm('fullpic', { Filedata: file }), {}).then(function (resp) {
         var kind = String(resp).split(':')[0];
-        // Seule réponse de succès connue : la branche progress de Torch la traite sous ce nom (inject.js:4788).
+        // Seule réponse de succès connue : la branche progress de BetterChatango la traite sous ce nom (inject.js:4788).
         if (kind === 'pix') { bumpAvatar(); return; }
         throw new Error(kind === 'unauthed' ? 'Your Chatango session expired. Reload the page and sign in again.'
           : kind === 'error' ? 'Chatango did not accept this picture. Try a smaller JPG or PNG.'
@@ -1174,7 +1174,7 @@ var liveBridge = (function () {
       }, busyOr('Your picture could not be uploaded. Try again.'));
     },
     /**
-     * Permet d'enregistrer la partie de la photo que montre la miniature, comme le recadrage de Torch (inject.js:1390-1406).
+     * Permet d'enregistrer la partie de la photo que montre la miniature, comme le recadrage de BetterChatango (inject.js:1390-1406).
      * @param {{x0: number, y0: number, ts: number}} box Carré en pixels de full.jpg.
      */
     saveAvatarCrop: function (box) {
@@ -1185,9 +1185,9 @@ var liveBridge = (function () {
       }, busyOr('Your crop could not be saved. Try again.'));
     },
     /**
-     * Permet d'enregistrer son fond Premium par le formulaire de fond de Torch (inject.js:4900-4916, client.html:2279-2345).
+     * Permet d'enregistrer son fond Premium par le formulaire de fond de BetterChatango (inject.js:4900-4916, client.html:2279-2345).
      * @param {Object} form Formulaire tel que le renvoie miniStyleForm.
-     * @param {boolean} dir Case « Appear in Meet people », que Torch renvoie avec ce formulaire.
+     * @param {boolean} dir Case « Appear in Meet people », que BetterChatango renvoie avec ce formulaire.
      */
     saveProfileStyle: function (form, dir) {
       var me = lower(C.user && C.user.name);
@@ -1220,15 +1220,15 @@ var liveBridge = (function () {
       return pmrCheck;
     },
     /**
-     * Permet de lire les réglages de démarrage de Torch.
-     * @returns {?Object} Les trois interrupteurs, null si les réglages de Torch sont illisibles.
+     * Permet de lire les réglages de démarrage de BetterChatango.
+     * @returns {?Object} Les trois interrupteurs, null si les réglages de BetterChatango sont illisibles.
      */
     startupSettings: function () {
       var out = {};
       return ['joinOwned', 'joinRecent', 'joinFavorites'].every(function (k) { out[k] = readSetting(k); return out[k] !== null; }) ? out : null;
     },
     /**
-     * Permet d'enregistrer un interrupteur dans les réglages de Torch, en place puis sous la clé settings.
+     * Permet d'enregistrer un interrupteur dans les réglages de BetterChatango, en place puis sous la clé settings.
      * @param {string} key Clé de SETTINGS.
      * @param {boolean} value Nouvelle valeur.
      */
@@ -1241,12 +1241,12 @@ var liveBridge = (function () {
       } catch (e) { warn(e); return false; }
     },
     /**
-     * Permet de lire les réglages de son que Torch applique.
-     * @returns {?Object} Interrupteurs et volumes de 0 à 100, null si les réglages de Torch sont illisibles.
+     * Permet de lire les réglages de son que BetterChatango applique.
+     * @returns {?Object} Interrupteurs et volumes de 0 à 100, null si les réglages de BetterChatango sont illisibles.
      */
     betterChatangoSounds: readSounds,
     /**
-     * Permet d'enregistrer un réglage de son dans les réglages de Torch, relus à chaque son.
+     * Permet d'enregistrer un réglage de son dans les réglages de BetterChatango, relus à chaque son.
      * @param {string} key Clé de SOUND_KEYS.
      * @param {boolean|number} value Interrupteur, ou volume de 0 à 100.
      */
@@ -1259,51 +1259,51 @@ var liveBridge = (function () {
       } catch (e) { warn(e); return false; }
     },
     /**
-     * Permet de jouer un son de Torch à son volume réglé, comme Torch.
+     * Permet de jouer un son de BetterChatango à son volume réglé, comme BetterChatango.
      * @param {string} kind mention ou online.
      * @returns {Promise} Rejetée si le navigateur refuse la lecture.
      */
     playBetterChatangoSound: playSound,
     /**
-     * Permet de lire les groupes favoris de Torch.
-     * @returns {?Array<string>} Noms des groupes, null si les réglages de Torch sont illisibles.
+     * Permet de lire les groupes favoris de BetterChatango.
+     * @returns {?Array<string>} Noms des groupes, null si les réglages de BetterChatango sont illisibles.
      */
     favoriteGroups: function () { return readList('favorite'); },
     /**
-     * Permet d'ajouter ou de retirer un groupe des favoris de Torch.
+     * Permet d'ajouter ou de retirer un groupe des favoris de BetterChatango.
      * @param {string} gid Groupe visé.
      * @param {boolean} on Vrai pour l'ajouter.
      */
     setFavorite: function (gid, on) { return writeList('favorite', gid, on); },
     /**
-     * Permet de lire les groupes coupés dans Torch, dont il tait les mentions.
-     * @returns {?Array<string>} Noms des groupes, null si les réglages de Torch sont illisibles.
+     * Permet de lire les groupes coupés dans BetterChatango, dont il tait les mentions.
+     * @returns {?Array<string>} Noms des groupes, null si les réglages de BetterChatango sont illisibles.
      */
     mutedGroups: function () { return readList('muted'); },
     /**
-     * Permet de couper ou de rétablir un groupe dans Torch.
+     * Permet de couper ou de rétablir un groupe dans BetterChatango.
      * @param {string} gid Groupe visé.
      * @param {boolean} on Vrai pour le couper.
      */
     setMuted: function (gid, on) { return writeList('muted', gid, on); },
     /**
-     * Permet de lire les membres ignorés dans Torch, dont il tait les alertes.
-     * @returns {?Array<string>} Noms en minuscules, null si les réglages de Torch sont illisibles.
+     * Permet de lire les membres ignorés dans BetterChatango, dont il tait les alertes.
+     * @returns {?Array<string>} Noms en minuscules, null si les réglages de BetterChatango sont illisibles.
      */
     ignoredUsers: function () { return readList('ignored'); },
     /**
-     * Permet d'ignorer un membre dans Torch ou de ne plus l'ignorer.
+     * Permet d'ignorer un membre dans BetterChatango ou de ne plus l'ignorer.
      * @param {string} name Membre visé.
      * @param {boolean} on Vrai pour l'ignorer.
      */
     setIgnored: function (name, on) { return writeList('ignored', lower(name), on); },
     /**
-     * Permet de lire les hôtes de confiance de Torch, dont il ouvre les liens sans avertir.
-     * @returns {?Array<string>} Hôtes en minuscules, null si les réglages de Torch sont illisibles.
+     * Permet de lire les hôtes de confiance de BetterChatango, dont il ouvre les liens sans avertir.
+     * @returns {?Array<string>} Hôtes en minuscules, null si les réglages de BetterChatango sont illisibles.
      */
     trustedHosts: function () { var list = readList('trusted'); return list && list.map(lower); },
     /**
-     * Permet d'ajouter un hôte aux hôtes de confiance de Torch ou de l'en retirer.
+     * Permet d'ajouter un hôte aux hôtes de confiance de BetterChatango ou de l'en retirer.
      * @param {string} host Hôte en minuscules, sans schéma ni chemin.
      * @param {boolean} on Vrai pour l'ajouter.
      */
@@ -1320,13 +1320,13 @@ var liveBridge = (function () {
       });
     },
     /**
-     * Permet d'envoyer un fichier chez vissle comme la fenêtre Upload de Torch, sans que Torch en publie le lien.
+     * Permet d'envoyer un fichier chez vissle comme la fenêtre Upload de BetterChatango, sans que BetterChatango en publie le lien.
      * @param {File} file Fichier choisi.
      * @returns {Promise<string>} Lien https://vissle.me/{chemin}, rejetée avec le texte à afficher sur toute autre réponse.
      */
     uploadFile: function (file) {
       var failed = 'The file could not be uploaded. Try again.';
-      // Jamais progress : cette branche de Torch publie elle-même le lien dans client.focus.
+      // Jamais progress : cette branche de BetterChatango publie elle-même le lien dans client.focus.
       return post('https://vissle.me/chatango/upload', { filedata: file }, { key: true }).then(function (resp) {
         var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
         if (path) return 'https://vissle.me/' + path[1];
@@ -1358,7 +1358,7 @@ var liveBridge = (function () {
       });
   }
   /**
-   * Permet de préparer les champs communs aux formulaires updateprofile de Torch.
+   * Permet de préparer les champs communs aux formulaires updateprofile de BetterChatango.
    * @param {string} action update, fullpic ou thumb.
    * @param {Object} extra Champs propres au formulaire.
    */
@@ -1366,7 +1366,7 @@ var liveBridge = (function () {
     return Object.assign({ auth: 'token', arch: 'h5', src: 'group', action: action }, extra);
   }
   /**
-   * Permet de valider une réponse de updateprofile puis de la confier à Torch comme il le fait (setProfile).
+   * Permet de valider une réponse de updateprofile puis de la confier à BetterChatango comme il le fait (setProfile).
    * @param {string} resp Texte renvoyé par Chatango.
    * @param {string[]} keys Clés dont l'une au moins prouve une réponse de profil.
    */
@@ -1384,8 +1384,8 @@ var liveBridge = (function () {
   function busyOr(failed) {
     return function (e) {
       warn(e);
-      // Torch refuse une requête tant qu'une autre est en cours en rejetant avec l'URL de celle-ci, une chaîne.
-      throw new Error(typeof e === 'string' ? 'Torch is busy with another request. Try again in a moment.' : failed);
+      // BetterChatango refuse une requête tant qu'une autre est en cours en rejetant avec l'URL de celle-ci, une chaîne.
+      throw new Error(typeof e === 'string' ? 'BetterChatango is busy with another request. Try again in a moment.' : failed);
     };
   }
   function bumpAvatar() { AVATAR_VERSION[lower(C.user && C.user.name)] = Date.now(); }
@@ -1408,7 +1408,7 @@ var liveBridge = (function () {
         return data;
       });
   }
-  /** Création de groupe par le formulaire Chatango de Torch (mêmes champs, case « discovery » comprise). */
+  /** Création de groupe par le formulaire Chatango de BetterChatango (mêmes champs, case « discovery » comprise). */
   function createGroupNow(o) {
       var me = lower(C.user && C.user.name);
       var fields = { authType: 'cookie', uns: '0', u: o.name, n: o.title, d: o.description, owner: me };

@@ -3,7 +3,7 @@
     var KEY = 'torch-skin:journal', MAX = 1000, TEXT_MAX = 300, SAVE_MS = 2000, TICK_MS = 10000, STALL_MS = 30000;
     // Trames de session et de refus du serveur : seul leur nom est gardé, jamais leurs arguments.
     var LIFECYCLE = ['ok', 'inited', 'denied', 'reload', 'mustlogin', 'proxybanned', 'verificationrequired', 'climited', 'OK', 'DENIED', 'kickingoff', 'lowversion', 'toofast', 'show_fw'];
-    // Lignes de connexion de Torch (inject.js:5588, 5652, 5662, 5669, 5701). Le reste de sa console contient des trames et des MP.
+    // Lignes de connexion de BetterChatango (inject.js:5588, 5652, 5662, 5669, 5701). Le reste de sa console contient des trames et des MP.
     var BETTER_CHATANGO_LINES = [/^conn closed: /, /^CONNECTION TIMED OUT: /, /^environment server error$/, /^client version out of date$/];
     var UNKNOWN_FRAME = /^\[UNKNOWN\] \(([^)]*)\)/;
     var entries = [], listeners = [], saveTimer = null, sockets = 0;
@@ -57,7 +57,7 @@
     window.addEventListener('online', function () { add('network', 'Network online (' + network() + ')'); });
     window.addEventListener('offline', function () { add('network', 'Network offline'); });
     if (navigator.connection && navigator.connection.addEventListener) navigator.connection.addEventListener('change', function () { add('network', 'Network changed (' + network() + ')'); });
-    // Un minuteur en retard montre que le navigateur a ralenti ou suspendu la page, pings de Torch compris.
+    // Un minuteur en retard montre que le navigateur a ralenti ou suspendu la page, pings de BetterChatango compris.
     setInterval(function () {
       var now = Date.now(), gap = now - tick;
       tick = now;
@@ -69,14 +69,14 @@
     window.addEventListener('error', function (e) { add('error', (e.message || 'Script error') + (e.filename ? ' at ' + e.filename.split('?')[0] + ':' + e.lineno : '')); });
     window.addEventListener('unhandledrejection', function (e) { add('error', 'Unhandled rejection: ' + describe(e.reason)); });
 
-    /* Console : nos lignes, les lignes de connexion de Torch et les erreurs, rien d'autre. */
+    /* Console : nos lignes, les lignes de connexion de BetterChatango et les erreurs, rien d'autre. */
     function consoleText(args) {
       var first = args[0];
       if (typeof first === 'string') {
         if (first.indexOf('[torch-skin]') === 0) return [].map.call(args, describe).join(' ');
-        if (BETTER_CHATANGO_LINES.some(function (re) { return re.test(first); })) return 'Torch: ' + first;
+        if (BETTER_CHATANGO_LINES.some(function (re) { return re.test(first); })) return 'BetterChatango: ' + first;
         var frame = UNKNOWN_FRAME.exec(first);
-        if (frame) return 'Torch: unhandled frame ' + frame[1];
+        if (frame) return 'BetterChatango: unhandled frame ' + frame[1];
       }
       for (var i = 0; i < args.length; i++) if (args[i] instanceof Error) return describe(args[i]);
       return null;
@@ -94,7 +94,7 @@
     function target(url) {
       if (/^wss:\/\/c1\.chatango\.com\b/.test(url)) return 'private messages';
       var c = window.__betterChatangoRefs && window.__betterChatangoRefs.client;
-      // Torch note le groupe dans cache.connecting juste avant de créer son socket (inject.js:5613).
+      // BetterChatango note le groupe dans cache.connecting juste avant de créer son socket (inject.js:5613).
       return c && c.cache && c.cache.connecting ? '#' + c.cache.connecting : url.replace(/^wss?:\/\/([^/:]+).*$/, '$1');
     }
     function watch(socket, url) {
@@ -123,7 +123,7 @@
         watch(socket, String(url));
         return socket;
       };
-      // Le socket rendu reste un WebSocket natif : instanceof, readyState et constantes inchangés pour Torch.
+      // Le socket rendu reste un WebSocket natif : instanceof, readyState et constantes inchangés pour BetterChatango.
       Socket.prototype = NativeSocket.prototype;
       ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(function (k) { Socket[k] = NativeSocket[k]; });
       window.WebSocket = Socket;

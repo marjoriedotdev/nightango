@@ -2,28 +2,28 @@
 
 function warn(e) { try { console.warn('[torch-skin]', e); } catch (x) { /* console indisponible */ } }
 function lower(v) { return String(v == null ? '' : v).toLowerCase(); }
-// Comme urllib.parse.unquote (chatango-lib) et Torch : « + » reste un « + ».
+// Comme urllib.parse.unquote (chatango-lib) et BetterChatango : « + » reste un « + ».
 function unquote(v) { try { return decodeURIComponent(String(v || '')); } catch (e) { return String(v || ''); } }
-/** Échappe le texte saisi : client.sendMessage attend du HTML, comme le champ de saisie de Torch. */
+/** Échappe le texte saisi : client.sendMessage attend du HTML, comme le champ de saisie de BetterChatango. */
 function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-// Références de message dans <r…/> et <e…/> : Torch retire le "=" final et protège - et _.
+// Références de message dans <r…/> et <e…/> : BetterChatango retire le "=" final et protège - et _.
 function decodeRef(v) { return String(v).replace(/hypheN/g, '-').replace(/underS/g, '_') + '='; }
 function encodeRef(id) { var s = String(id); if (s.slice(-1) === '=') s = s.slice(0, -1); return s.replace(/-/g, 'hypheN').replace(/_/g, 'underS'); }
 
 // -- Contenu des messages -----------------------------------------------------
 
-// Face 0 : défaut que Torch envoie sans style utilisateur - la chaîne vide efface la police fusionnée d'un message précédent.
+// Face 0 : défaut que BetterChatango envoie sans style utilisateur - la chaîne vide efface la police fusionnée d'un message précédent.
 var FACES = [''].concat(FONT_FACES.slice(1));
 var decoder = document.createElement('textarea');
 
 function decodeHtml(html) { decoder.innerHTML = html; return decoder.value; }
 function fileUrlPattern(extensions) { return new RegExp('^https:\\/\\/\\S+\\.(?:' + extensions + ')(?:[?#]\\S*)?$', 'i'); }
 var IMAGE_URL = fileUrlPattern('png|apng|jpe?g|gif|bmp|webp'), VIDEO_URL = fileUrlPattern('mp4|webm'), AUDIO_URL = fileUrlPattern('mp3|ogg|wav');
-// Regex de Torch (inject.js:8256) appliquée à un seul lien : sensible à la casse et ouverte à http, seul l'identifiant est gardé.
+// Regex de BetterChatango (inject.js:8256) appliquée à un seul lien : sensible à la casse et ouverte à http, seul l'identifiant est gardé.
 var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|\/\w+\/|\/)([\w-]{11})/;
-// Comme renderMessage de Torch : seule une paire ▓…▒ devient un barré, un marqueur isolé reste du texte.
+// Comme renderMessage de BetterChatango : seule une paire ▓…▒ devient un barré, un marqueur isolé reste du texte.
 var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
-// Comme crawl de Torch (inject.js:1112) : un média en http se charge en https, celui de fp.chatango.com sur ust.chatango.com.
+// Comme crawl de BetterChatango (inject.js:1112) : un média en http se charge en https, celui de fp.chatango.com sur ust.chatango.com.
 function secureMediaUrl(url) { return url.replace(/^http:\/\//i, 'https://').replace(/^https:\/\/fp\.chatango\.com\//i, 'https://ust.chatango.com/'); }
 function embedOf(src) {
   var yt = /^vid:\/\/yt:([\w-]{11})/.exec(src), img = /^img:\/\/(?:cam|lib):([^"&?\/\s]+)/.exec(src);
@@ -94,7 +94,7 @@ function parseContent(raw, keepMedia, premium) {
  */
 function parsePm(data) { return parseContent(data.slice(5).join(':'), false, !!(parseInt(data[4], 10) & MSG_FLAG.PREMIUM)); }
 /**
- * Permet de lire un enregistrement de l'historique privé de Torch.
+ * Permet de lire un enregistrement de l'historique privé de BetterChatango.
  * @param {{ts: number, data: string, unread: number}} v Enregistrement (saveMessage), data étant la trame msg complète.
  * @returns {?Object} Message archivé avec sa clé archiveTs, null si la trame n'a pas tous ses champs.
  */
@@ -128,7 +128,7 @@ function screenPmRecords(records, me) {
 }
 /**
  * Permet de découper un corps de message en segments marqués gras, italique, souligné ou barré.
- * Liste blanche de Torch (renderMessage) : b, i sans attribut, u, s et strike.
+ * Liste blanche de BetterChatango (renderMessage) : b, i sans attribut, u, s et strike.
  * @param {string} body Corps dont les balises br, les médias et les paires ▓…▒ sont déjà convertis.
  * @returns {?Array} Segments {text, b, i, u, s} rognés comme le texte, null si aucun n'est marqué.
  */
@@ -175,7 +175,7 @@ function parseMods(entries) {
   return mods;
 }
 /**
- * Permet de lire une page de bannissements de Torch : entrées unid:ip:nom:horodatage:auteur séparées par des points-virgules.
+ * Permet de lire une page de bannissements de BetterChatango : entrées unid:ip:nom:horodatage:auteur séparées par des points-virgules.
  * @param {Array<string>} data Trame découpée sur :.
  * @returns {Array<Object>} Entrées, avec l'horodatage brut (ts) qui sert de curseur à la page suivante.
  */
@@ -184,14 +184,14 @@ function parseBans(data) {
   if (!raw) return [];
   return raw.split(';').map(function (x) {
     var t = x.split(':');
-    // Curseur converti comme Torch, qui lit l'horodatage par + avant de le renvoyer.
+    // Curseur converti comme BetterChatango, qui lit l'horodatage par + avant de le renvoyer.
     return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], ts: String(+t[3]), at: Math.round(parseFloat(t[3]) * 1000) || Date.now(), by: lower(t[4]) };
   }).filter(function (b) { return b.unid; });
 }
 /**
- * Permet de lire la trame unblocked comme Torch : entrées unid:ip:nom séparées par des points-virgules, auteur à l'avant-dernier champ.
+ * Permet de lire la trame unblocked comme BetterChatango : entrées unid:ip:nom séparées par des points-virgules, auteur à l'avant-dernier champ.
  * @param {Array<string>} data Trame découpée sur :.
- * @returns {Array<Object>} Débannissements, datés de la réception comme chez Torch.
+ * @returns {Array<Object>} Débannissements, datés de la réception comme chez BetterChatango.
  */
 function parseUnbanned(data) {
   var by = lower(data.slice(-2)[0]), at = Date.now();
@@ -201,14 +201,14 @@ function parseUnbanned(data) {
   }).filter(function (b) { return b.unid; });
 }
 /**
- * Permet de lire la réponse bansearchresult de Torch : autres noms, nom, IP, unid, auteur et date.
+ * Permet de lire la réponse bansearchresult de BetterChatango : autres noms, nom, IP, unid, auteur et date.
  * @param {Array<string>} data Trame découpée sur :, date comprise.
  * @returns {?Object} Bannissement trouvé, null si aucun.
  */
 function parseBanSearch(data) {
-  // Torch ne regarde que le nom et dirait introuvable un invité cherché par son IP.
+  // BetterChatango ne regarde que le nom et dirait introuvable un invité cherché par son IP.
   if (!data[1] && !data[3]) return null;
-  // Comme Torch, la date se lit en heure du Pacifique fixe. Seul, GMT-0800 passe pour une année : la date se valide sans lui.
+  // Comme BetterChatango, la date se lit en heure du Pacifique fixe. Seul, GMT-0800 passe pour une année : la date se valide sans lui.
   var date = data.slice(5).join(':'), at = isNaN(new Date(date).getTime()) ? 0 : new Date(date + ' GMT-0800').getTime();
   return { unid: data[3], ip: data[2], name: lower(data[1]) || '!anon', guest: !data[1], by: lower(data[4]), at: at, includes: data[0] ? data[0].split(';').filter(Boolean).map(lower) : [] };
 }
@@ -261,7 +261,7 @@ function parseMiniCss(css) {
     repeat: BACKGROUND_REPEAT.test(repeat) ? repeat : null
   };
 }
-// Valeurs du formulaire de fond de Torch quand le compte n'a pas encore de custom_profile.css (client.html:2296-2324).
+// Valeurs du formulaire de fond de BetterChatango quand le compte n'a pas encore de custom_profile.css (client.html:2296-2324).
 var MINI_STYLE_DEFAULT = { bg: '#ffffff', text: '#222222', link: '#0084ef' };
 /**
  * Permet de préparer le formulaire du fond Premium à partir du fond lu par parseMiniCss.
@@ -273,7 +273,7 @@ function miniStyleForm(mini) {
   function hex(v, fallback) { var c = hexToRgb(v); return c ? rgbToHex(c) : fallback; }
   return {
     bg: hex(m.bg, MINI_STYLE_DEFAULT.bg), text: hex(m.text, MINI_STYLE_DEFAULT.text), link: hex(m.link, MINI_STYLE_DEFAULT.link), image: m.image || '',
-    // Correspondance du switch de Torch (inject.js:4939-4950), que sa condition limite pourtant à repeat.
+    // Correspondance du switch de BetterChatango (inject.js:4939-4950), que sa condition limite pourtant à repeat.
     tileDown: repeat === 'repeat' || repeat === 'repeat-y', tileAcross: repeat === 'repeat' || repeat === 'repeat-x'
   };
 }
@@ -289,7 +289,7 @@ function miniStyleOfForm(form) {
 // -- Profil -------------------------------------------------------------------
 
 /**
- * Permet de lire la réponse de updateprofile, des paires clé=valeur séparées par &, comme Torch (inject.js:1399-1400).
+ * Permet de lire la réponse de updateprofile, des paires clé=valeur séparées par &, comme BetterChatango (inject.js:1399-1400).
  * @param {string} resp Texte renvoyé par Chatango.
  * @returns {Object} Valeurs encore encodées, error compris.
  */
@@ -316,7 +316,7 @@ function parseMsgBg(xml, image) {
     color: /^(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(bgc) ? '#' + bgc.toLowerCase() : null,
     alpha: percent('bgalp'),
     image: root.getAttribute('useimg') === '1' ? image : null,
-    // Alignement inconnu : coin haut gauche, la position par défaut du fond CSS de Torch.
+    // Alignement inconnu : coin haut gauche, la position par défaut du fond CSS de BetterChatango.
     align: Object.prototype.hasOwnProperty.call(MSG_BG_ALIGN, align) ? align : 'tl',
     imageAlpha: percent('ialp'),
     tile: root.getAttribute('tile') === '1'
@@ -329,7 +329,7 @@ var WHO_LEVELS = ['definite', 'linked', 'strong', 'medium', 'weak'];
 /**
  * Permet de lire la réponse de vissle aux comptes liés d'un compte sans rien reprendre d'autre que les noms des cinq niveaux.
  * @param {*} data Réponse JSON de /api/v1/who.
- * @returns {?Array<{level: string, names: Array<string>}>} Niveaux non vides dans l'ordre de Torch, null sans target.
+ * @returns {?Array<{level: string, names: Array<string>}>} Niveaux non vides dans l'ordre de BetterChatango, null sans target.
  */
 function parseWho(data) {
   if (!data || !data.target) return null;
@@ -357,20 +357,20 @@ function friendPresence(name, state, ts, minutes) {
 }
 function stateOf(sock) { return !sock ? 'closed' : sock.readyState === 1 ? 'open' : sock.readyState === 0 ? 'connecting' : 'closed'; }
 
-// -- Médiathèque de Torch -----------------------------------------------------
+// -- Médiathèque de BetterChatango -----------------------------------------------------
 
-// Taille des pages de la médiathèque, comme viewMedia et loadMedia de Torch.
+// Taille des pages de la médiathèque, comme viewMedia et loadMedia de BetterChatango.
 var MEDIA_PAGE = 21;
 var PHOTO_URL = /^https:\/\/chatango\.com\/pmmessageimg\?i=[^"&?\/\s]+$/;
 /**
- * Permet de savoir si une entrée de la médiathèque, lue dans la base de Torch ou dans un fichier, peut être affichée et écrite.
+ * Permet de savoir si une entrée de la médiathèque, lue dans la base de BetterChatango ou dans un fichier, peut être affichée et écrite.
  * @param {*} e Entrée {url, name}, non fiable.
  * @returns {boolean} Vrai pour une image https ou une pmmessageimg au nom en texte.
  */
 function mediaEntryOk(e) { return !!e && typeof e.url === 'string' && (IMAGE_URL.test(e.url) || PHOTO_URL.test(e.url)) && typeof e.name === 'string'; }
 /**
  * Permet de garder une entrée lue par pages : après la dernière de la page précédente dans l'ordre de l'index, et dont le nom contient la recherche, sans casse.
- * @param {string} index Index de Torch, url ou name, dont l'ordre suit la clé puis l'url.
+ * @param {string} index Index de BetterChatango, url ou name, dont l'ordre suit la clé puis l'url.
  * @param {{url: string, name: string}} e Entrée lue.
  * @param {?{url: string, name: string}} after Dernière entrée de la page précédente, null pour la première page.
  * @param {string} text Recherche, vide pour tout garder.
@@ -379,7 +379,7 @@ function mediaMatch(index, e, after, text) {
   return (!after || e[index] > after[index] || e[index] === after[index] && e.url > after.url) && lower(e.name).indexOf(lower(text)) >= 0;
 }
 /**
- * Permet de nommer un média comme Torch (favoriteMedia) : le dernier segment de son adresse.
+ * Permet de nommer un média comme BetterChatango (favoriteMedia) : le dernier segment de son adresse.
  * @param {string} url Adresse de l'image.
  */
 function mediaName(url) { return url.split('/').slice(-1)[0]; }

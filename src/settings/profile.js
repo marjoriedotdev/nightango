@@ -8,7 +8,7 @@ function ProfilePage() {
   var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
   var vis = [['age', 'Show my age', 'Displayed next to your name on your profile.'], ['gender', 'Show my gender', 'Hidden when set to Not specified.'], ['location', 'Show my location', 'Displayed next to your name on your profile.'], ['meet', 'Appear in Meet people', 'Lets other Chatango users find you by age and location.'], ['fullPage', 'Public full profile page', 'Your page on chatango.com. When off, only your mini profile is visible.']];
   var meta = [draft.visibility.age && draft.age ? draft.age : null, draft.visibility.gender ? genderShort(draft.gender) : null, draft.visibility.location && draft.location ? draft.location : null].filter(Boolean).join(' · ');
-  return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only Torch users.', wide: true },
+  return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only BetterChatango users.', wide: true },
     h('div', { className: 'split' },
       h('div', { className: 'grow' },
         h(T.SettingsSection, { title: 'Profile picture', padded: true },
@@ -70,13 +70,13 @@ function ProfilePreviewCard(p) {
       mini ? coverReveal(cover, mini) : null));
 }
 
-// Motifs de Torch recopiés tels quels, point de vissle.me non échappé compris (inject.js:1472, 1490).
+// Motifs de BetterChatango recopiés tels quels, point de vissle.me non échappé compris (inject.js:1472, 1490).
 var VISSLE_TRACKER = /<script src="(?:https:)?\/\/vissle.me\/profile\/(\d+)"><\/script>/;
 var VISSLE_TRACKER_LINE = /(\n)?(<script src="(?:https:)?\/\/vissle.me\/profile\/\d+"><\/script>)/;
 // Barre oblique échappée : le prototype inline ce code dans une balise script que la fin de balise fermerait.
 var VISSLE_TRACKER_ADD = '\n<script src="//vissle.me/profile/512"><\/script>';
 /**
- * Permet de lire le tracker vissle d'une bio avec le motif de Torch.
+ * Permet de lire le tracker vissle d'une bio avec le motif de BetterChatango.
  * @param {string} bio Bio du mini profil.
  * @returns {?number} Le n du tracker, null sans tracker.
  */
@@ -109,7 +109,7 @@ function VisitorsSection(p) {
   var inviteInList = !tracked && !rows.length && !loading && !(v && v.error);
   function toggleTracker() {
     if (drafted) { p.onDraft(p.draft.replace(VISSLE_TRACKER_LINE, '')); return; }
-    // Règle de Torch : la bio balise comprise reste strictement sous 2000 caractères.
+    // Règle de BetterChatango : la bio balise comprise reste strictement sous 2000 caractères.
     var over = p.draft.length - (2000 - VISSLE_TRACKER_ADD.length) + 1;
     if (over > 0) { app.ui.toast('Remove ' + over + (over === 1 ? ' character' : ' characters') + ' from your bio to make room for the tracker.'); return; }
     p.onDraft(p.draft + VISSLE_TRACKER_ADD);

@@ -1,6 +1,6 @@
 var LINES = {
-  community: ['Did the reconnect fix stick for everyone?', 'Theme import works on Firefox now.', 'Is there a way to pin a group to the top?', 'Welcome to the new folks.', 'The compact mode is so much easier to read.', 'Anyone tried the light theme on mobile?', 'Server s12 seems stable again.', 'How do I turn names colors back on?', 'Thanks for the quick fix.', 'Reminder: bug reports go to #torchdev.'],
-  torchdev: ['Pushed a fix for the reply preview.', 'CI is green again.', 'Can someone review the AutoMod copy?', 'Safari still clips the composer on iOS 17.', 'Merged the notification matrix.'],
+  community: ['Did the reconnect fix stick for everyone?', 'Theme import works on Firefox now.', 'Is there a way to pin a group to the top?', 'Welcome to the new folks.', 'The compact mode is so much easier to read.', 'Anyone tried the light theme on mobile?', 'Server s12 seems stable again.', 'How do I turn names colors back on?', 'Thanks for the quick fix.', 'Reminder: bug reports go to #betterchatangodev.'],
+  betterchatangodev: ['Pushed a fix for the reply preview.', 'CI is green again.', 'Can someone review the AutoMod copy?', 'Safari still clips the composer on iOS 17.', 'Merged the notification matrix.'],
   trade: ['Selling a 6 month Premium gift, PM me.', 'Looking for an old 4 letter name.', 'Anyone have spare gifts?', 'Price check on a 3 letter username?'],
   retrogaming: ['Speedrun night is Friday at 21:00.', 'Just finished a Dreamcast restore.', 'Which emulator do you use for PS2?', 'Found a boxed copy at a flea market.'],
   bots: ['!help', 'Commands: !weather, !define, !roll', 'Rolled a 17.', '!roll 20'],
@@ -21,7 +21,7 @@ function seedWorld(me) {
   function t(m) { return now - m * MIN; }
   function msg(author, text, m, extra) { return Object.assign({ id: uid(), kind: 'msg', author: author, text: text, ts: t(m) }, extra || {}); }
   var users = {
-    ember: { status: 'online', age: 31, location: 'Bristol, UK', about: "Started Torch. Breaks things on purpose so you don't have to.", style: { nameColor: '#ff5f1f', font: 'Georgia', textColor: '#ffd9c2' } },
+    ember: { status: 'online', age: 31, location: 'Bristol, UK', about: "Started BetterChatango. Breaks things on purpose so you don't have to.", style: { nameColor: '#ff5f1f', font: 'Georgia', textColor: '#ffd9c2' } },
     sable: { status: 'online', age: 24, location: 'Lyon, France', about: 'Moderator in community. Night shifts, mostly. Ask before posting links.', friend: true, style: { nameColor: '#3f7fff', textColor: '#cfe0ff' } },
     vantage: { status: 'idle', idleSince: t(40), age: 29, location: 'Oslo, Norway', about: 'Moderator. Quiet most of the time.', style: { nameColor: '#00bcd4' } },
     kestrel: { status: 'online', age: 22, location: 'Leeds, UK', about: 'Trading usernames since 2014.', style: { nameColor: '#2ecc71', font: 'Courier New' } },
@@ -35,7 +35,7 @@ function seedWorld(me) {
     rook: { status: 'online', age: 27, location: '', about: '', style: {} },
     tallow: { status: 'idle', idleSince: t(6), age: 30, location: '', about: '', style: {} }
   };
-  users[me] = { status: 'online', age: 27, gender: 'Not specified', location: 'Rennes, France', about: 'Building themes for Torch. Usually in #community and #torchdev. Ping me for theme import issues.', style: {}, self: true };
+  users[me] = { status: 'online', age: 27, gender: 'Not specified', location: 'Rennes, France', about: 'Building themes for BetterChatango. Usually in #community and #betterchatangodev. Ping me for theme import issues.', style: {}, self: true };
 
   function group(id, o) {
     return Object.assign({
@@ -46,11 +46,11 @@ function seedWorld(me) {
   var groups = {};
   var known = msg('sable', "Known issue on server s12, it's on Chatango's side. Reconnecting twice usually sticks.", 18);
   groups.community = group('community', {
-    title: 'Official Torch Client community', topic: 'Official Torch Client community. Bug reports go to #torchdev.', joined: true, favorite: true,
+    title: 'Official BetterChatango community', topic: 'Official BetterChatango community. Bug reports go to #betterchatangodev.', joined: true, favorite: true,
     members: ['ember', 'sable', 'vantage', me, 'kestrel', 'marrow', 'nightowl', 'quill', 'drift', 'halcyon', 'petrichor', 'rook', 'tallow'], guests: 12,
-    discover: { official: true, topic: 'Tech', desc: 'Official Torch Client community.' },
+    discover: { official: true, topic: 'Tech', desc: 'Official BetterChatango community.' },
     settings: mkSettings({
-      overview: { title: 'Official Torch Client community', description: 'Help, feedback and announcements for the Torch Client. Be kind, no spam.', showInDiscovery: true, membersPublic: true, nsfw: false },
+      overview: { title: 'Official BetterChatango community', description: 'Help, feedback and announcements for BetterChatango. Be kind, no spam.', showInDiscovery: true, membersPublic: true, nsfw: false },
       announcement: { enabled: true, text: 'Server s12 drops connections today. If you get disconnected, reconnect twice.', broadcast: false, interval: 0 },
       staff: (function () { var s = { ember: 'owner', sable: 'mod', vantage: 'mod' }; s[me] = 'admin'; return s; })()
     }),
@@ -65,7 +65,7 @@ function seedWorld(me) {
       { id: uid(), at: t(25), actor: 'sable', text: 'Updated the announcement' }
     ],
     messages: [
-      msg('ember', 'Torch 0.1.0-b is out. Changelog: https://github.com/Vissle-Drissle/Torch-Client', 60 * 24 + 40),
+      msg('ember', 'BetterChatango 0.1.0-b is out. Changelog: https://github.com/Vissle-Drissle/Torch-Client', 60 * 24 + 40),
       msg('quill', 'The new sidebar is so much calmer.', 60 * 24 + 35),
       msg('kestrel', 'Anyone else getting dropped from #trade every few minutes since this morning?', 19),
       known,
@@ -76,7 +76,7 @@ function seedWorld(me) {
       msg(me, "Good to hear. I'll publish the light variant tonight.", 11)
     ]
   });
-  groups.torchdev = group('torchdev', {
+  groups.betterchatangodev = group('betterchatangodev', {
     title: 'Bug reports and development', topic: 'Bug reports and development. One issue per message.', joined: true, favorite: true,
     members: ['ember', 'vantage', 'nightowl', 'quill', me, 'rook'], guests: 2, unread: 4, mentions: 2, lastReadTs: t(30),
     discover: { official: true, topic: 'Tech', desc: 'Bug reports and development.' },
@@ -166,7 +166,7 @@ function sampleVisits(q) {
   return SAMPLE_VISITS.filter(function (x) { return (q.get === 'all' || x.action === q.get) && (q.page === 1 || x.time < q.page); }).slice(0, VISIT_PAGE);
 }
 
-/* Médiathèque d'exemple du prototype, en mémoire, avec les appels que le pont fait sur la base de Torch. */
+/* Médiathèque d'exemple du prototype, en mémoire, avec les appels que le pont fait sur la base de BetterChatango. */
 var sampleMedia = (function () {
   var list = ['wave', 'thumbs up', 'party', 'facepalm', 'coffee', 'cat nap', 'good night', 'popcorn'].map(function (n) {
     return { url: 'https://media.example/' + n.replace(/ /g, '-') + '.gif', name: n };

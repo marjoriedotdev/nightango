@@ -64,7 +64,7 @@ function pmConnBanner(app, style) {
 
 var DM_SEARCH_MIN = 2, DM_SEARCH_MAX = 50, DM_SEARCH_DELAY = 300;
 /**
- * Permet de chercher un texte dans les messages privés : base d'historique de Torch en live, messages de l'état dans le prototype.
+ * Permet de chercher un texte dans les messages privés : base d'historique de BetterChatango en live, messages de l'état dans le prototype.
  * @param {Object} s État de l'application.
  * @param {string} query Texte cherché, sans casse.
  * @returns {Promise<{list: Array, more: boolean}>} Résultats du plus récent au plus ancien, et si la limite a coupé la liste.
@@ -313,10 +313,10 @@ function personRow(s, n, onClick, current) {
 /**
  * Permet de dire qui garde les MP retirés de ce navigateur.
  * @param {string} name Correspondant.
- * @param {boolean} betterChatango Vrai pour dire d'abord que seule la copie de Torch part.
+ * @param {boolean} betterChatango Vrai pour dire d'abord que seule la copie de BetterChatango part.
  */
 function keptCopyText(name, betterChatango) {
-  return (betterChatango ? 'Removes the copy Torch keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
+  return (betterChatango ? 'Removes the copy BetterChatango keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
 }
 
 /**
