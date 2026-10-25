@@ -31,7 +31,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Changed
 
-- Torch Skin is now called Nightango. It is still a skin for Torch: About Nightango in Settings says what Torch does for you.
+- Torch Skin is now called Nightango. It is still a skin for BetterChatango: About Nightango in Settings says what BetterChatango does for you.
 - The tab title and desktop notifications show Nightango.
 - Presence shows as a moon phase: full moon for online, crescent for idle, new moon for offline.
 - Group names, profile names and page titles use a serif typeface, Instrument Serif.
@@ -43,7 +43,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Removed
 
-- The Torch sign-in screen is no longer restyled. You sign in on Torch's original screen.
+- The BetterChatango sign-in screen is no longer restyled. You sign in on BetterChatango's original screen.
 
 ## [0.17.0] - 2026-10-25
 
@@ -72,7 +72,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Changed
 
-- Unread counts for private messages come from the history Torch keeps in this browser, so they stay right after a reload or a reconnection.
+- Unread counts for private messages come from the history BetterChatango keeps in this browser, so they stay right after a reload or a reconnection.
 - In the hosted prototype, message requests and the "Who can message you" setting are gone, as on Chatango.
 
 ## [0.15.4] - 2026-10-24
@@ -149,9 +149,9 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - Edit your own group messages, quote a message and jump to the original message of a reply.
 - Mention a member by clicking their name, or complete an @mention with Tab.
 - Recent mentions from every group in one list.
-- Chatango emoticons in messages, and Torch emoticons in a picker in both composers.
+- Chatango emoticons in messages, and BetterChatango emoticons in a picker in both composers.
 - Video, audio and YouTube links typed in text are embedded.
-- Send a file through vissle, and reuse the media library Torch keeps in this browser.
+- Send a file through vissle, and reuse the media library BetterChatango keeps in this browser.
 - The composer counts the characters you have left.
 - Format Markdown when sending, in Settings.
 - Members' Premium message backgrounds are shown.
@@ -176,7 +176,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - Load the ban list page by page, search it, and see recent unbans. Guests are left out.
 - Staff who can see IPs see the author's IP.
 - Trust sites for links and media, in Privacy.
-- Adjust Torch's sounds.
+- Adjust BetterChatango's sounds.
 
 ### Changed
 
@@ -187,7 +187,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 ### Removed
 
 - The Requests tab and the Language page, which had no effect.
-- The Privacy banner pointing to a Torch idle setting with no effect.
+- The Privacy banner pointing to a BetterChatango idle setting with no effect.
 
 ### Fixed
 
@@ -198,7 +198,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - Deleting a group message asks for confirmation.
 - A sound plays for private messages outside the open chat.
 - The member list follows account sign-in and sign-out.
-- Ignored members follow Torch's ignore list, and group mute follows Torch's muted groups.
+- Ignored members follow BetterChatango's ignore list, and group mute follows BetterChatango's muted groups.
 - Announcements keep their line breaks, emphasis and background mode on save.
 - A server error no longer shows as an empty full profile.
 - Add friend from the conversation menu, and Undo after removing a friend, report their result.
@@ -222,8 +222,8 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 ### Added
 
 - Load older group messages by scrolling up.
-- Favorites follow Torch's favorite list.
-- Torch startup settings, in Settings.
+- Favorites follow BetterChatango's favorite list.
+- BetterChatango startup settings, in Settings.
 - The full profile shows member colors and background. The profile dialog is restyled and opens the full photo.
 - Media in group announcements.
 - Member font sizes in group and private messages.
@@ -232,7 +232,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Changed
 
-- Torch errors show as notifications instead of lines in the thread.
+- BetterChatango errors show as notifications instead of lines in the thread.
 - Joins, leaves and friend presence no longer appear in the thread.
 - Pending and redundant success notifications are gone.
 - Private message notifications preview up to three lines.
@@ -247,8 +247,8 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - The thread keeps its position when older messages are added above.
 - On mobile, you can pick a channel, see the group description and members, and read banner text under its title.
 - You're told when Chatango refuses or never confirms a friend add. The Add button stays busy until the friend arrives.
-- Favorites Torch did not save are reported instead of dropped.
-- Notify when online stays apart from conversations and in sync with Torch.
+- Favorites BetterChatango did not save are reported instead of dropped.
+- Notify when online stays apart from conversations and in sync with BetterChatango.
 - Escape closes only the topmost dialog.
 - Your own style always applies on send, even when the clock is behind.
 - A member's newest style wins over older history.
@@ -259,12 +259,12 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Added
 
-- A redesigned interface on top of the Torch client: dark and light themes, adjustable accent color, compact density.
-- Sign in on Torch's own screen, restyled to match. Torch Skin never sees your password.
+- A redesigned interface on top of BetterChatango: dark and light themes, adjustable accent color, compact density.
+- Sign in on BetterChatango's own screen, restyled to match. Torch Skin never sees your password.
 - Groups: messages, replies, edited messages, channels, older history, presence and reconnection.
 - Moderation: delete, ban, unban, clear the group, close the group.
 - Group settings: announcement, banned words, slow mode, spam filters, links and media, broadcast mode, moderator permissions and moderation log.
-- Private messages: history from Torch, friends with last online, add and remove friends, block, status, close or delete a conversation.
+- Private messages: history from BetterChatango, friends with last online, add and remove friends, block, status, close or delete a conversation.
 - Private messages received while you were away arrive with one notification.
 - Your own message style, kept in this browser.
 - Meet people with filters, colored bios and infinite scroll.

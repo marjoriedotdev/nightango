@@ -4,7 +4,7 @@ Dans le mini profil (fiche About), l'image de fond Premium s'affiche en bandeau 
 
 ## Pourquoi c'est hors périmètre
 
-Le CSS du membre n'est jamais injecté ([ADR-0004](../docs/adr/0004-member-html-never-injected.md)), et l'image doit partir sans referrer. Dans le Shadow DOM de l'application, un fond CSS (`background-image`) suit la politique referrer de la page st.chatango.com, que Nightango ne contrôle pas : poser une `<meta name="referrer">` sur la page changerait le referrer de toutes les requêtes de Torch et de Chatango.
+Le CSS du membre n'est jamais injecté ([ADR-0004](../docs/adr/0004-member-html-never-injected.md)), et l'image doit partir sans referrer. Dans le Shadow DOM de l'application, un fond CSS (`background-image`) suit la politique referrer de la page st.chatango.com, que Nightango ne contrôle pas : poser une `<meta name="referrer">` sur la page changerait le referrer de toutes les requêtes de BetterChatango et de Chatango.
 
 Les techniques qui respecteraient la contrainte coûtent plus qu'elles ne rapportent pour une fiche de quelques lignes :
 

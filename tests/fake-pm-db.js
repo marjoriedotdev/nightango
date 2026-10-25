@@ -1,4 +1,4 @@
-/* Fausse base d'historique privé de Torch (IndexedDB), partagée par les suites live_ui et pm. */
+/* Fausse base d'historique privé de BetterChatango (IndexedDB), partagée par les suites live_ui et pm. */
 // Ordre des clés IndexedDB : une chaîne passe après tout nombre, un tableau se compare élément par élément.
 function keyCmp(a, b) {
   if (Array.isArray(a)) { for (let i = 0; i < Math.min(a.length, b.length); i++) { const c = keyCmp(a[i], b[i]); if (c) return c; } return a.length - b.length; }

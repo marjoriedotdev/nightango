@@ -20,5 +20,5 @@ esbuild ne sert qu'à la minification : la concaténation reste celle de `build.
 
 ## Conséquences
 
-- La suite `loader` joue sur les deux userscripts. C'est la seule qui les exécute : les autres lisent `dist/torch-client.html`, `dist/app.js`, les sources de `src/bridge/` ou le bundle du design system.
+- La suite `loader` joue sur les deux userscripts. C'est la seule qui les exécute : les autres lisent `dist/nightango.html`, `dist/app.js`, les sources de `src/bridge/` ou le bundle du design system.
 - esbuild est une dépendance de développement validée. pnpm 10 bloque son script d'installation par défaut, d'où `pnpm.onlyBuiltDependencies` dans `package.json`. Ce `postinstall` vérifie que le binaire natif d'esbuild propre à la plateforme est présent et à la bonne version, et le télécharge s'il manque.

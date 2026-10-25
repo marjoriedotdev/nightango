@@ -1,6 +1,6 @@
 # Nightango
 
-Nightango (anciennement Torch Skin) est un skin pour Torch. Userscript Tampermonkey pour https://st.chatango.com/ : il démarre Torch (client Chatango tiers de vissle.me), laisse l'utilisateur se connecter sur l'écran de Torch, puis affiche une interface refaite (React 18 dans un Shadow DOM) branchée sur le client Torch vivant.
+Nightango (anciennement Torch Skin) est un skin pour BetterChatango. Userscript Tampermonkey pour https://st.chatango.com/ : il démarre BetterChatango (client Chatango tiers de vissle.me), laisse l'utilisateur se connecter sur l'écran de BetterChatango, puis affiche une interface refaite (React 18 dans un Shadow DOM) branchée sur le client BetterChatango vivant.
 Le même code sert aussi un prototype hébergé à données simulées.
 La version installée chez l'utilisateur est en usage réel : chaque livraison touche son compte Chatango.
 
@@ -8,8 +8,8 @@ La version installée chez l'utilisateur est en usage réel : chaque livraison t
 
 Les règles 1, 2, 4 et 6 ont leur ADR sous `docs/adr/`, lié en fin de règle. Les règles 3 et 5 n'en ont pas. Lis l'ADR avant toute modification qui s'en approche.
 
-1. **Mot de passe hors de portée.** Notre code ne lit, ne stocke, ne journalise ni ne transmet jamais le mot de passe. La connexion se fait sur l'écran de Torch. N'appelle aucune fonction de Torch qui ajoute le mot de passe à une requête (dans `client.post`, aucune option `credential`). Les appels HTTP que notre code fait vers Chatango et vissle sont listés dans `docs/torch-protocol.md#appels-http-autorisés`, et cette liste est fermée. Les ressources chargées par le loader et l'interface (React, polices, script de Torch, médias, avatars) sont listées à part dans la même section. [ADR-0001](docs/adr/0001-password-never-read.md)
-2. **Trame sourcée ou rien.** Chaque trame Chatango envoyée vient du code de Torch ou d'une bibliothèque de référence (chadango, chatango-lib, ch.py). Sans source, la fonction reste marquée « not wired » et l'interface le dit. [ADR-0002](docs/adr/0002-no-invented-frames.md)
+1. **Mot de passe hors de portée.** Notre code ne lit, ne stocke, ne journalise ni ne transmet jamais le mot de passe. La connexion se fait sur l'écran de BetterChatango. N'appelle aucune fonction de BetterChatango qui ajoute le mot de passe à une requête (dans `client.post`, aucune option `credential`). Les appels HTTP que notre code fait vers Chatango et vissle sont listés dans `docs/betterchatango-protocol.md#appels-http-autorisés`, et cette liste est fermée. Les ressources chargées par le loader et l'interface (React, polices, script de BetterChatango, médias, avatars) sont listées à part dans la même section. [ADR-0001](docs/adr/0001-password-never-read.md)
+2. **Trame sourcée ou rien.** Chaque trame Chatango envoyée vient du code de BetterChatango ou d'une bibliothèque de référence (chadango, chatango-lib, ch.py). Sans source, la fonction reste marquée « not wired » et l'interface le dit. [ADR-0002](docs/adr/0002-no-invented-frames.md)
 3. **Aucun faux succès en live.** Une action qui n'est pas réellement envoyée est masquée ou affichée comme indisponible.
 4. **HTML des membres reconstruit, jamais injecté.** Mini profil : `RichText` (liste blanche reconstruite en éléments React). Profil complet : `iframe` `sandbox` sans `allow-scripts` ni `allow-same-origin`, CSP en `<meta>` (`fullProfileDoc`). CSS de mini : parsé, jamais injecté. [ADR-0004](docs/adr/0004-member-html-never-injected.md)
 5. **Dépendances figées.** Toute nouvelle dépendance attend la validation explicite de l'utilisateur. React 18.3.1 se charge depuis cdnjs avec SRI (empreintes vérifiées contre npm). Dépendances de développement validées : jsdom, react, react-dom (tests), esbuild (minification).
@@ -20,7 +20,7 @@ Décisions qui en découlent et qu'il ne faut pas « corriger » :
 - les comptes liés (`/api/v1/who`) ne sont demandés qu'au clic et montrés à l'utilisateur seul, sans être stockés ni journalisés ([ADR-0010](docs/adr/0010-linked-accounts-on-request.md)) ;
 - le loader tourne en deux contextes, bac à sable et page ([ADR-0003](docs/adr/0003-two-context-loader.md)) ;
 - le journal de diagnostic reste dans le navigateur et n'observe ni les envois des sockets ni le contenu des trames ([ADR-0011](docs/adr/0011-diagnostic-journal.md)) ;
-- les non-lus des MP ne viennent que de l'historique privé de Torch, l'état n'en garde qu'une copie relue ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
+- les non-lus des MP ne viennent que de l'historique privé de BetterChatango, l'état n'en garde qu'une copie relue ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
 
 ## Préférences du projet
 
@@ -45,9 +45,9 @@ pnpm build:ds         # régénère README.md et preview.html des composants du 
 Sorties de `pnpm build` (non versionnées) :
 - `dist/torch-skin.min.user.js` : le livrable, minifié par esbuild ;
 - `dist/torch-skin.user.js` : même assemblage, lisible, pour le débogage et l'audit ;
-- `dist/torch-client.html` et `dist/app.js` : prototype hébergé.
+- `dist/nightango.html` et `dist/app.js` : prototype hébergé.
 
-Seule la suite `loader` exécute les userscripts, les deux. Les autres lisent `dist/torch-client.html`, `dist/app.js`, des sources de `src/` ou le bundle du design system (détail dans `docs/architecture.md`, section Tests).
+Seule la suite `loader` exécute les userscripts, les deux. Les autres lisent `dist/nightango.html`, `dist/app.js`, des sources de `src/` ou le bundle du design system (détail dans `docs/architecture.md`, section Tests).
 
 Le lanceur `tests/run.mjs` juge chaque suite sur son code de sortie et sur sa sortie (lignes `FAIL`, `CRASH`, `ERRORS:` non vide) : certaines suites sortent en 0 malgré un échec. Lis la sortie, pas seulement le code retour.
 
@@ -64,10 +64,10 @@ La CI (`.github/workflows/ci.yml`) lance `pnpm test` sur chaque push et pull req
 
 ## Carte des docs
 
-- `GLOSSARY.md` : vocabulaire du domaine (Torch, pont, trame, MP, mini profil, présence...). Lis-le avant de nommer un concept dans du code, une issue ou un test.
+- `GLOSSARY.md` : vocabulaire du domaine (BetterChatango, pont, trame, MP, mini profil, présence...). Lis-le avant de nommer un concept dans du code, une issue ou un test.
 - `docs/architecture.md` : rôle de chaque dossier de `src/`, ordre de concaténation, contextes du loader, live / prototype, état React, Shadow DOM, design system, tests. Lis-le avant d'ajouter un fichier ou de toucher au build.
-- `docs/torch-protocol.md` : fonctionnement de Torch et de Chatango vérifié dans leur code, trames avec leur source, formats de présence, endpoints autorisés, fichiers publics, vissle. Lis-le avant d'envoyer ou de lire une trame, d'appeler un endpoint ou de toucher au pont.
-- `reference/torch/` : copie en lecture seule du code de Torch (licence MIT), téléchargée le 2026-10-19. Les références `inject.js:NNNN` des docs renvoient à cette copie. Ne la modifie jamais et ne la charge ni dans le build ni dans les tests (voir son `README.md`).
+- `docs/betterchatango-protocol.md` : fonctionnement de BetterChatango et de Chatango vérifié dans leur code, trames avec leur source, formats de présence, endpoints autorisés, fichiers publics, vissle. Lis-le avant d'envoyer ou de lire une trame, d'appeler un endpoint ou de toucher au pont.
+- `reference/torch/` : copie en lecture seule du code de BetterChatango (licence MIT), téléchargée le 2026-10-19. Les références `inject.js:NNNN` des docs renvoient à cette copie. Ne la modifie jamais et ne la charge ni dans le build ni dans les tests (voir son `README.md`).
 - `docs/coding-conventions.md` : style ES5, commentaires, textes, état, tests, design system, interdits.
 - `docs/adr/` : décisions et leur motif.
 - `CHANGELOG.md` : notes de version montrées à l'utilisateur dans What's new.

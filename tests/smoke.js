@@ -1,7 +1,7 @@
 const fs = require('fs'), path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
-let html = fs.readFileSync(S + '/dist/torch-client.html', 'utf8');
+let html = fs.readFileSync(S + '/dist/nightango.html', 'utf8');
 const react = fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8');
 const rdom = fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8');
 html = html.replace(/<script src="[^"]*react\.production\.min\.js"[^>]*><\/script>/, () => '<script>' + react + '</script>')
@@ -51,8 +51,8 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   click($$('.mrow')[0]); await wait(50);
   step('profile dialog', !!$('.profile-card'));
   key(d, 'Escape'); await wait(30);
-  click(byText('.tc-nav', 'torchdev')); await wait(80);
-  step('switch group + new marker', !!byText('h1', 'torchdev') && !!$('.newmark'));
+  click(byText('.tc-nav', 'betterchatangodev')); await wait(80);
+  step('switch group + new marker', !!byText('h1', 'betterchatangodev') && !!$('.newmark'));
   click(byText('.tc-nav', 'Private messages')); await wait(80);
   step('dm list', $$('.conv').length >= 3);
   click($$('.conv')[0]); await wait(80);

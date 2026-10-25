@@ -10,10 +10,10 @@ function NotificationsPage() {
     ['friendOff', 'Friend goes offline', 'Someone on your friends list disconnects'],
     ['gift', 'Premium gift', 'Someone gifts you Chatango Premium'],
     ['account', 'Account changes', 'Your email changes or you create a group'],
-    ['updates', 'Torch updates', 'A new version of the client is available']
+    ['updates', 'BetterChatango updates', 'A new version of the client is available']
   ];
   var cols = [['app', 'In app'], ['sound', 'Sound'], ['desktop', 'Desktop'], ['email', 'Email']];
-  // En live, Torch joue lui-même les sons et rien n'envoie d'e-mail : ces colonnes et événements sont retirés.
+  // En live, BetterChatango joue lui-même les sons et rien n'envoie d'e-mail : ces colonnes et événements sont retirés.
   if (LIVE) {
     rows = rows.filter(function (r) { return ['mentions', 'pm', 'friendOn', 'friendOff'].indexOf(r[0]) >= 0; });
     cols = cols.filter(function (c) { return c[0] === 'app' || c[0] === 'desktop'; });
@@ -40,7 +40,7 @@ function NotificationsPage() {
                   : h(T.Checkbox, { ariaLabel: r[1] + ', ' + c[1], checked: !!v, onChange: function (e) { pr.set('notify.' + r[0] + '.' + c[0], e.target.checked); } }));
               }));
           }))))),
-    LIVE ? h(TorchSoundsSection) : h(T.SettingsSection, { title: 'Sound' },
+    LIVE ? h(BetterChatangoSoundsSection) : h(T.SettingsSection, { title: 'Sound' },
       h(T.SettingRow, {
         asLabel: false, title: 'Volume', description: 'Applies to every alert sound.',
         control: h(VolumeControl, { label: 'Volume', value: prefs.volume, onChange: function (v) { pr.set('volume', v); }, onPlay: function () { beep(prefs.volume, true); } })
@@ -60,19 +60,19 @@ function VolumeControl(p) {
     h(T.IconButton, { icon: 'volume', label: 'Play test sound', disabled: p.disabled, onClick: p.onPlay }));
 }
 
-var TORCH_SOUND_ROWS = [
+var BETTER_CHATANGO_SOUND_ROWS = [
   ['mention', 'Mention sound', 'When someone mentions you or sends you a private message.', 'Mention volume'],
   ['online', 'Friend online sound', 'When a friend connects, at most once every 5 minutes per friend.', 'Friend online volume']
 ];
 
-function TorchSoundsSection() {
+function BetterChatangoSoundsSection() {
   var app = useApp();
-  var st = useTorchSettings(liveBridge.torchSounds, liveBridge.setTorchSound), sounds = st[0], set = st[1];
+  var st = useBetterChatangoSettings(liveBridge.betterChatangoSounds, liveBridge.setBetterChatangoSound), sounds = st[0], set = st[1];
   function play(kind) {
-    liveBridge.playTorchSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.'); });
+    liveBridge.playBetterChatangoSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.'); });
   }
-  return h(T.SettingsSection, { title: 'Sounds', description: "Torch plays these sounds. Nightango stays silent so you don't hear every alert twice." },
-    sounds ? TORCH_SOUND_ROWS.map(function (r) {
+  return h(T.SettingsSection, { title: 'Sounds', description: "BetterChatango plays these sounds. Nightango stays silent so you don't hear every alert twice." },
+    sounds ? BETTER_CHATANGO_SOUND_ROWS.map(function (r) {
       var on = sounds['play_' + r[0]];
       return h(T.SettingRow, {
         key: r[0], asLabel: false, title: r[1], description: r[2],
@@ -80,5 +80,5 @@ function TorchSoundsSection() {
           h(T.Switch, { label: r[1], checked: on, onChange: function (e) { set('play_' + r[0], e.target.checked); } }),
           h(VolumeControl, { label: r[3], value: sounds['volume_' + r[0]], disabled: !on, onChange: function (v) { set('volume_' + r[0], v); }, onPlay: function () { play(r[0]); } }))
       });
-    }) : h('p', { className: 'pal-empty' }, "Torch's sound settings could not be read. Reload the page and try again."));
+    }) : h('p', { className: 'pal-empty' }, "BetterChatango's sound settings could not be read. Reload the page and try again."));
 }

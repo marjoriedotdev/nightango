@@ -1,6 +1,6 @@
-/* ---------- Médiathèque de Torch ---------- */
+/* ---------- Médiathèque de BetterChatango ---------- */
 var MEDIA_SORTS = [{ value: 'name', label: 'Name' }, { value: 'url', label: 'Link' }];
-// Comme la complétion de Torch (searchMedia avec auto) : trois médias au plus.
+// Comme la complétion de BetterChatango (searchMedia avec auto) : trois médias au plus.
 var MEDIA_SUGGESTIONS = 3;
 // Au début d'un mot seulement : le « : » d'une adresse tapée ne propose rien.
 var MEDIA_TOKEN = /(?:^|\s):(\S+)$/;
@@ -51,7 +51,7 @@ function MediaStar(p) {
 }
 
 /**
- * Onglet Media du sélecteur : médiathèque de Torch par pages, recherche par nom, import et export au format de Torch.
+ * Onglet Media du sélecteur : médiathèque de BetterChatango par pages, recherche par nom, import et export au format de BetterChatango.
  * @param {{scrollRef: Object, onPick: function(string)}} p Zone qui défile et insertion de l'adresse choisie.
  */
 function MediaPanel(p) {
@@ -77,13 +77,13 @@ function MediaPanel(p) {
   }
   function importFile(file) {
     readJsonArray(file).then(function (entries) {
-      if (!entries) { toast('This file is not a Torch media file.'); return; }
+      if (!entries) { toast('This file is not a BetterChatango media file.'); return; }
       app.actions.importMedia(entries).then(function (res) {
         toast('Imported ' + plural(res.added, 'image', 'images') + '. ' + res.skipped + ' skipped.', { icon: res.added ? 'check' : 'info' });
       }, function (e) { toast(e.message); });
     });
   }
-  if (lib.failed) return h('p', { className: 'media-note' }, 'Torch could not open your media library. Reload the page and try again.');
+  if (lib.failed) return h('p', { className: 'media-note' }, 'BetterChatango could not open your media library. Reload the page and try again.');
   var grid = safety.embedImages, held = lib.list.some(function (e) { return !mediaThumbShown(safety, revealed, e.url); });
   var note = !lib.list.length ? (lib.loading ? h(T.Spinner, { label: 'Loading media' })
     : h('p', { className: 'media-note' }, text ? 'No media matches your search.' : 'No media yet. Star an image in a message to add it here.')) : null;
@@ -109,7 +109,7 @@ function MediaPanel(p) {
 
 /**
  * Permet de proposer les médias dont le nom contient le :texte tapé en fin de saisie, et de remplacer ce texte par l'adresse choisie, par Tab ou par un clic.
- * Contrairement à Torch, Enter envoie toujours le texte tel quel, suggestions ouvertes ou non.
+ * Contrairement à BetterChatango, Enter envoie toujours le texte tel quel, suggestions ouvertes ou non.
  * @param {string} value Texte du composeur.
  * @param {function(string)} setValue Écrit le texte du composeur.
  * @returns {{onKeyDown: Function, panel: Object}} Touches à traiter avant celles du composeur, et suggestions à rendre dans composer-wrap.

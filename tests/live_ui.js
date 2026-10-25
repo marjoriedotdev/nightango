@@ -1,4 +1,4 @@
-// Test de bout en bout du mode live : faux client Torch, interface pilotée comme par un utilisateur.
+// Test de bout en bout du mode live : faux client BetterChatango, interface pilotée comme par un utilisateur.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
@@ -37,7 +37,7 @@ w.IntersectionObserver = function (cb, opts) {
 w.CSS = { supports: () => false };
 w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
 
-/* ---------- Faux client Torch ---------- */
+/* ---------- Faux client BetterChatango ---------- */
 const sent = [], posts = [], calls = [];
 // Réponse de vissle à un envoi de fichier (chatango/upload).
 let uploadReply = () => Promise.resolve('data:abc/f.png');
@@ -48,7 +48,7 @@ w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
 const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
-// Enregistrement de la base d'historique de Torch (saveMessage) : clé ts, horodatage de la trame.
+// Enregistrement de la base d'historique de BetterChatango (saveMessage) : clé ts, horodatage de la trame.
 const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const pmRecords = [
   // Archivé non lu avant la mise à jour : la migration le marque lu.
@@ -56,8 +56,8 @@ const pmRecords = [
   pmRecord('dave', 'msg:marjorie:marjorie:unknown:1700000100.5:0:<n000/>Thanks', 0),
   pmRecord('fay', 'msg:fay:marjorie:unknown:1700000050.5:0:<n3366FF/><m v="1"><g x12s9900cc="4">Old styled</g></m>', 0)
 ];
-// Comme Torch : un MP reçu est archivé non lu, le pont ne donnant jamais à Torch le focus des MP.
-// Clé déjà prise : Torch réessaie une seconde plus tard (ConstraintError), horodatage de la trame compris.
+// Comme BetterChatango : un MP reçu est archivé non lu, le pont ne donnant jamais à BetterChatango le focus des MP.
+// Clé déjà prise : BetterChatango réessaie une seconde plus tard (ConstraintError), horodatage de la trame compris.
 function saveMessage(data) {
   while (pmRecords.some(r => r.ts === parseFloat(data[3]))) data[3] = String(parseFloat(data[3]) + 1);
   pmRecords.push(pmRecord(data[0], 'msg:' + data.join(':'), 1));
@@ -66,7 +66,7 @@ const { keyCmp, keyRange, fakePmDb } = require('./fake-pm-db.js');
 w.IDBKeyRange = keyRange;
 const migrationFlag = () => !!JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').pmReadMigrated;
 const pmTransaction = fakePmDb(pmRecords, () => calls.push(['written', migrationFlag()]));
-// Base favorite_media de Torch : magasin media à clé url, index url et name, écritures appliquées à la fin de la transaction.
+// Base favorite_media de BetterChatango : magasin media à clé url, index url et name, écritures appliquées à la fin de la transaction.
 const mediaRecords = [{ url: 'https://x.test/old.png', name: 'old' }];
 function mediaTransaction() {
   const tx = {}, writes = [];
@@ -93,15 +93,15 @@ function mediaTransaction() {
   tx.objectStore = () => store;
   return tx;
 }
-// Relevé du style de Torch au moment où il construit un corps de message (sendMessage avec length).
+// Relevé du style de BetterChatango au moment où il construit un corps de message (sendMessage avec length).
 let styleProbe = null;
 const styleAtBuild = [];
 function fakeGroup() { return { socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { information: { title: 'Test group', description: 'A test room' } }, load: 5 }; }
 const C = {
-  // DENIED : Torch affiche un alert() bloquant.
-  // msg et msgoff : Torch archive le message dans sa base d'historique (saveMessage), une seule fois.
-  // connect : Torch ouvre son propre écran de MP.
-  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['torchPmScreen']); } }) },
+  // DENIED : BetterChatango affiche un alert() bloquant.
+  // msg et msgoff : BetterChatango archive le message dans sa base d'historique (saveMessage), une seule fois.
+  // connect : BetterChatango ouvre son propre écran de MP.
+  event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['betterChatangoPmScreen']); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
   settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
@@ -109,11 +109,11 @@ const C = {
   socket(gid, frame) { sent.push([gid, frame]); },
   sendMessage(data, length, group, user) {
     if (length && styleProbe) styleAtBuild.push({ group, style: styleProbe() });
-    // Comme Torch, le corps d'un MP remplace un lien YouTube par sa balise <i>.
+    // Comme BetterChatango, le corps d'un MP remplace un lien YouTube par sa balise <i>.
     if (length) return group === 'private_message' ? '<n3366FF/><m v="1"><g x12s9900cc="4">' + data.replace(/https:\/\/youtu\.be\/([\w-]{11})\S*/, '<i s="vid://yt:$1" w="126" h="93"/>') + '</g></m>' : '<n000/><f x11000="0">' + data;
     calls.push(['pm', group, user, data]);
   },
-  // Comme socketEvent de Torch : un groupe encore dans cache.connect est ignoré, sa promesse ne se règle jamais.
+  // Comme socketEvent de BetterChatango : un groupe encore dans cache.connect est ignoré, sa promesse ne se règle jamais.
   cache: { connect: [] },
   connect(gid) {
     if (C.cache.connect.includes(gid)) return new Promise(noop);
@@ -122,12 +122,12 @@ const C = {
   },
   setFocus(o) { calls.push(['focus', o.group]); }, disconnectFrom(gid) { calls.push(['disconnect', gid]); delete C.groups[gid]; },
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
-  // Comme Torch, qui lit seul l'oEmbed d'un lien YouTube reçu (inject.js:7157).
+  // Comme BetterChatango, qui lit seul l'oEmbed d'un lien YouTube reçu (inject.js:7157).
   renderYouTube(link) { w.fetch('https://www.youtube.com/oembed?url=' + link + '&format=json'); },
   post(url, form, item) {
     const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f, item });
     if (/chatango\/upload$/.test(url)) return uploadReply();
-    // Formulaires avatar et recadrage de Torch : pix pour la photo, profil complet avec le carré pour le recadrage.
+    // Formulaires avatar et recadrage de BetterChatango : pix pour la photo, profil complet avec le carré pour le recadrage.
     if (f.action === 'fullpic') return Promise.resolve('pix:1');
     if (f.action === 'thumb') return Promise.resolve('x0=' + f.x0 + '&y0=' + f.y0 + '&ts=' + f.ts + '&age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
     return Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
@@ -136,13 +136,13 @@ const C = {
   database: { pm: { transaction: pmTransaction } }
 };
 const CH = {
-  // Comme Torch, qui lit seul le msgbg.xml de l'auteur d'un message Premium (inject.js:504).
+  // Comme BetterChatango, qui lit seul le msgbg.xml de l'auteur d'un message Premium (inject.js:504).
   getBackground(o) { w.fetch(CH.subdomain.msgbg(o.username, 'xml')); },
   getAnon() { return '!anon1234'; }, path(p, sub) { return 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p; },
   subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css', msgbg: (n, ext) => 'https://ust.chatango.com/' + n + '/msgbg.' + ext }, error: { creategroup: { groupexists: 'The group name is taken.' } }
 };
 const SB = { renderGroup(dt) { calls.push(['renderGroup', dt.group]); } };
-w.__torchRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'torchenv' } };
+w.__betterChatangoRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'betterchatangoenv' } };
 const fetches = [];
 let searchHold = null;
 const SEARCH_BODY = 'h=zoe;1;2:yann;3:marjorie;9';
@@ -150,13 +150,13 @@ let searchBody = SEARCH_BODY;
 // Profil complet du compte : 200 hors XML vaut fichier absent, 500 une erreur serveur passagère.
 let ownMod2Status = 200;
 const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img src="x" onerror="alert(2)"><a href="javascript:alert(3)">bad</a> <a href="https://example.com/p">good</a> <font color="#ff0000" size="5">red</font>');
-// Âge Chatango, comme Torch : année courante moins année de naissance.
+// Âge Chatango, comme BetterChatango : année courante moins année de naissance.
 const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
 const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">');
 // Fond Premium au format réel de custom_profile.css (compte goddess). Sans fichier, Chatango renvoie une image JPEG.
 const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
 const GODDESS_CSS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
-// Fond de message au format de msgbg.xml : attributs du premier élément, champs du formulaire de fond de Torch. Une réponse hors text/xml vaut absence de fond.
+// Fond de message au format de msgbg.xml : attributs du premier élément, champs du formulaire de fond de BetterChatango. Une réponse hors text/xml vaut absence de fond.
 const MSGBG = {
   rosa: '<?xml version="1.0" ?><bgi bgc="FFCC99" bgalp="100" useimg="1" ialp="40" align="br" tile="0" hasrec="0" isvid="0"/>',
   trap: '<?xml version="1.0" ?><bgi bgc="red;background:url(https://evil.test/a.png)" bgalp="100" useimg="1" ialp="250" align="constructor" tile="1" url="https://evil.test/b.jpg" onload="alert(1)"/>',
@@ -240,7 +240,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fetchesAtLogin = fetches.length;
   C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
   CH.getBackground({ username: 'alice', node: d.createElement('div') });
-  step("Torch's own oEmbed and message background requests muted", fetches.length === fetchesAtLogin, fetches.slice(fetchesAtLogin).map(x => x.url));
+  step("BetterChatango's own oEmbed and message background requests muted", fetches.length === fetchesAtLogin, fetches.slice(fetchesAtLogin).map(x => x.url));
   SB.renderGroup({ group: 'test', header: 'Test' });
   g('ok', 'test', ['marjorie', '', '', '', '1700000000', '', 'alice,' + MOD + ';bob,' + (MOD | 2 | 16), String(64)]);
   await until(() => !!$('.log .tc-skeleton'));
@@ -327,7 +327,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(menuItem('Quote message')); await wait(30);
   type($('.tc-composer textarea'), 'yes'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
   const quote = frame('bm:').pop() || '';
-  step('quote frame puts the Torch quote before the text', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">@alice: `Hi everyone` yes$/.test(quote), quote);
+  step('quote frame puts the BetterChatango quote before the text', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">@alice: `Hi everyone` yes$/.test(quote), quote);
 
   /* Modération depuis un message */
   click(aliceMsg.querySelector('button[aria-label="More actions"]')); await wait(30);
@@ -368,10 +368,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(menuItem('Ban from #test')); await wait(50);
   click(byText('.dialog-foot button', 'Ban')); await wait(30);
   step('ban targets the clicked message, not the latest same name', frame('block:').pop() === 'block:GUEST1:7.7.7.7:', frame('block:'));
-  g('ok', 'torchenv', ['torchbot', '', '', '', '1700000000', '', '', '0']);
-  g('b', 'torchenv', ['1700000260.1', 'Bot', '', 'u6', 'X', 'tmp12', '1.1.1.1', '0', '', 'env']);
+  g('ok', 'betterchatangoenv', ['betterchatangobot', '', '', '', '1700000000', '', '', '0']);
+  g('b', 'betterchatangoenv', ['1700000260.1', 'Bot', '', 'u6', 'X', 'tmp12', '1.1.1.1', '0', '', 'env']);
   await wait(60);
-  step("Torch's environment room stays hidden", !byText('.tc-nav', 'torchenv'));
+  step("BetterChatango's environment room stays hidden", !byText('.tc-nav', 'betterchatangoenv'));
 
   /* Comptes liés : un appel par clic, sans credential, noms en texte, cinq niveaux seulement, rien de gardé */
   const whoAsked = () => fetches.filter(x => /vissle\.me\/api\/v1\/who\//.test(x.url));
@@ -432,7 +432,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && /vissle could not be reached\. Try again later\./.test(whoReplies[3]) && whoAsked().length === 5,
     { whoReplies, calls: whoAsked().length });
 
-  /* Modification d'un message, comme Torch : trame <e…/>, fusion de l'historique, suppression des modifications */
+  /* Modification d'un message, comme BetterChatango : trame <e…/>, fusion de l'historique, suppression des modifications */
   C.groups.edits = fakeGroup();
   SB.renderGroup({ group: 'edits', header: 'Edits' });
   g('ok', 'edits', ['marjorie', '', '', '', '1700000000', '', '', '0']);
@@ -465,7 +465,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const delBefore = frame('delmsg:').length;
   await openMenu('Dana fixed'); click(menuItem('Delete message')); await wait(30);
   click(byText('.dialog-foot button', 'Delete')); await wait(30);
-  step('delete also deletes the edits, like Torch', JSON.stringify(frame('delmsg:').slice(delBefore)) === JSON.stringify(['delmsg:H-1=', 'delmsg:E-1=']), frame('delmsg:').slice(delBefore));
+  step('delete also deletes the edits, like BetterChatango', JSON.stringify(frame('delmsg:').slice(delBefore)) === JSON.stringify(['delmsg:H-1=', 'delmsg:E-1=']), frame('delmsg:').slice(delBefore));
 
   /* Envoi de fichier par vissle : Nightango publie le lien dans le groupe du choix, jamais dans client.focus */
   // Rend le texte de la confirmation. Sans bouton ni sélecteur, l'étape échoue sans arrêter la suite.
@@ -504,13 +504,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* Avertissements et connexion */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
-  step('Torch notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
+  step('BetterChatango notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
   let reloads = 0;
   C.setNotice({ icon: 'warning', content: 'Relogin required.', button: 'Reload', action: () => { reloads++; } }); await until(() => !!byText('.toast', 'Relogin required.'));
   const t = byText('.toast', 'Relogin required.');
-  step('Torch warning becomes a toast with its action', !!t && !!byText('.toast button', 'Reload'));
+  step('BetterChatango warning becomes a toast with its action', !!t && !!byText('.toast button', 'Reload'));
   click(byText('.toast button', 'Reload'));
-  step('toast action calls Torch', reloads === 1);
+  step('toast action calls BetterChatango', reloads === 1);
   C.groups.test.socket.readyState = 3; await wait(2300);
   step('disconnect banner', !!byText('.banner-wrap', 'Disconnected from #test'));
   click(byText('.banner-wrap button', 'Reconnect')); await wait(30);
@@ -528,7 +528,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const historyTop = historyWatcher();
   if (historyTop) historyTop.cb(historyTop.targets.map(target => ({ isIntersecting: true, target })), historyTop);
   await wait(30);
-  step('get_more uses Torch counter', frame('get_more:').pop() === 'get_more:20:5', { observed: !!historyTop, frames: frame('get_more:') });
+  step('get_more uses BetterChatango counter', frame('get_more:').pop() === 'get_more:20:5', { observed: !!historyTop, frames: frame('get_more:') });
   g('nomore', 'test', []); await until(() => d.body.textContent.includes('beginning of the history'));
   step('history end shown', d.body.textContent.includes('beginning of the history'));
 
@@ -587,7 +587,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   click(byText('.tc-nav', 'Bans')); await wait(50);
   step('ban list requested', frame('blocklist:block:0:next:50:anons:1').length >= 1, frame('blocklist:'));
-  /* Bannissements par pages de 50 comme Torch : la page suivante part de l'horodatage de la dernière ligne */
+  /* Bannissements par pages de 50 comme BetterChatango : la page suivante part de l'horodatage de la dernière ligne */
   const banTitle = () => ($$('.tc-section-title').find(x => x.textContent.indexOf('Banned') === 0) || {}).textContent || null;
   const banObserver = () => observers.find(x => x.targets.some(t => t.closest('.spage')));
   g('blocklist', 'test', [Array.from({ length: 50 }, (_, i) => 'PB' + i + ':10.0.0.' + i + ':user' + i + ':' + (1700001000 - i) + ':marjorie').join(';')]);
@@ -609,7 +609,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('ban list shown', !!byText('.lrow', 'alice') && !!byText('.lrow', '!anon'));
   click(byText('.lrow', 'alice').querySelector('.tc-btn')); await wait(20);
   step('unban frame', frame('removeblock:').pop() === 'removeblock:UNID1:1.2.3.4');
-  /* Recherche d'un bannissement comme Torch : searchban, puis bansearchresult (date en heure du Pacifique, avec ses :) ou badbansearchstring */
+  /* Recherche d'un bannissement comme BetterChatango : searchban, puis bansearchresult (date en heure du Pacifique, avec ses :) ou badbansearchstring */
   type($('#ban-search'), ' spamking '); key($('#ban-search'), 'Enter'); await wait(30);
   const banSearch = { frame: frame('searchban:').pop() };
   g('bansearchresult', 'test', ['alt1;alt2', 'spamking', '1.2.3.4', 'UNID7', 'marjorie', 'Oct 20 2026 10', '00', '00']);
@@ -634,7 +634,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     banSearch.frame === 'searchban:spamking' && /spamking/.test(banSearch.found) && /by marjorie/.test(banSearch.found) && /Includes alt1, alt2\./.test(banSearch.found) && !banSearch.list
       && banSearch.unban === 'removeblock:UNID7:1.2.3.4' && banSearch.none && banSearch.cleared && banSearch.error === "That's not a valid username.",
     banSearch);
-  /* Débannissements : onglet Unbanned chargé par pages comme Torch, tenu à jour par unblocked (auteur à l'avant-dernier champ) */
+  /* Débannissements : onglet Unbanned chargé par pages comme BetterChatango, tenu à jour par unblocked (auteur à l'avant-dernier champ) */
   const unbanTab = { before: frame('blocklist:unblock:').length };
   click(byText('.spage .tc-seg button', 'Unbanned'));
   await until(() => frame('blocklist:unblock:').length > unbanTab.before);
@@ -648,7 +648,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   unbanTab.buttons = $$('.spage .lrow .tc-btn').length;
   click(byText('.spage .tc-seg button', 'Banned')); await wait(30);
   unbanTab.aliceBanned = !!byText('.spage .lrow', 'alice');
-  step('unbanned tab loads from Torch and follows unblocked',
+  step('unbanned tab loads from BetterChatango and follows unblocked',
     unbanTab.frame === 'blocklist:unblock:0:next:50:anons:1' && /by marjorie/.test(unbanTab.carl) && unbanTab.rows.length === 2 && /alice/.test(unbanTab.rows[0]) && /by marjorie/.test(unbanTab.rows[0])
       && /carl/.test(unbanTab.rows[1]) && unbanTab.buttons === 0 && !unbanTab.aliceBanned,
     unbanTab);
@@ -672,11 +672,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('close frame', frame('updategroupflags:262144:0').length === 1);
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
 
-  /* Favori écrit dans les réglages de Torch */
+  /* Favori écrit dans les réglages de BetterChatango */
   click($('button[aria-label="Group options"]')); await wait(30);
   click(menuItem('Add to favorites')); await wait(50);
-  const torchSettings = JSON.parse(w.localStorage.getItem('settings') || '{}');
-  step('favorite persisted in Torch settings', C.settings.privacy.groups.favorite.indexOf('test') >= 0 && torchSettings.privacy.groups.favorite.indexOf('test') >= 0, torchSettings);
+  const betterChatangoSettings = JSON.parse(w.localStorage.getItem('settings') || '{}');
+  step('favorite persisted in BetterChatango settings', C.settings.privacy.groups.favorite.indexOf('test') >= 0 && betterChatangoSettings.privacy.groups.favorite.indexOf('test') >= 0, betterChatangoSettings);
 
   /* Migration des non-lus : la base ouverte au démarrage passe lue avant la connexion privée, le drapeau suit la fin de la transaction */
   const pmConnectAt = calls.findIndex(c => c[0] === 'connect' && c[1] === 'private_message'), migratedAt = calls.findIndex(c => c[0] === 'written');
@@ -692,7 +692,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmrSeen = [pmrView()];
   click(byText('.tc-nav', 'Back to chat')); await until(() => !!$('.log'));
 
-  /* Messages privés : base d'historique de Torch ouverte par le pont, avec son schéma */
+  /* Messages privés : base d'historique de BetterChatango ouverte par le pont, avec son schéma */
   const fakeDb = C.database.pm, schema = [];
   C.database.pm = false;
   w.indexedDB = { open(name, version) {
@@ -710,13 +710,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('OK', []); await until(() => !$('.convs .tc-skeleton'));
   pmSkeleton.afterHistory = !!$('.convs .tc-skeleton');
   step('loading skeletons', groupSkeleton.beforeInit && !groupSkeleton.afterInit && pmSkeleton.beforeReady && !pmSkeleton.afterHistory, { groupSkeleton, pmSkeleton });
-  step("Torch's history base opened with its exact schema", JSON.stringify(schema) === JSON.stringify([['open', 'marjorie_history', 1], ['store', 'messages', 'ts'], ['index', 'target_idx', '"target"'], ['index', 'target_read_idx', '["target","unread"]'], ['index', 'target_ts_idx', '["target","ts"]']]), schema);
-  step('base handed to Torch for archiving', C.database.pm === fakeDb);
+  step("BetterChatango's history base opened with its exact schema", JSON.stringify(schema) === JSON.stringify([['open', 'marjorie_history', 1], ['store', 'messages', 'ts'], ['index', 'target_idx', '"target"'], ['index', 'target_read_idx', '["target","unread"]'], ['index', 'target_ts_idx', '["target","ts"]']]), schema);
+  step('base handed to BetterChatango for archiving', C.database.pm === fakeDb);
   click(byText('.tc-nav', 'Private messages')); await wait(50);
-  step('pm history loaded from Torch', !!byText('.conv', 'dave'));
+  step('pm history loaded from BetterChatango', !!byText('.conv', 'dave'));
   click(byText('.conv', 'dave')); await wait(50);
   step('history text decoded', d.body.textContent.includes('Hello & welcome'));
-  step('Torch pm focus follows the open conversation', C.private.focus === 'dave');
+  step('BetterChatango pm focus follows the open conversation', C.private.focus === 'dave');
   type($('.thread .tc-composer textarea'), 'x < y'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(30);
   step('pm escaped', calls.some(c => c[0] === 'pm' && c[1] === 'private_message' && c[2] === 'dave' && c[3] === 'x &lt; y'));
   click(byText('.profile .mrow', 'Add friend')); await wait(30);
@@ -740,7 +740,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const live = styled('Hi');
   step('pm style rendered', styleOk(live), live.p && [live.p.style.cssText, live.name && live.name.style.cssText]);
   const hiRecord = pmRecords.find(r => r.target === 'dave' && r.ts === 1700000300.5);
-  step('pm received in the open conversation marked read after Torch archives it', !!hiRecord && hiRecord.unread === 0, hiRecord);
+  step('pm received in the open conversation marked read after BetterChatango archives it', !!hiRecord && hiRecord.unread === 0, hiRecord);
   const sentBeforeFay = sent.length;
   click(byText('.conv', 'fay')); await wait(50);
   const fayFrames = sent.slice(sentBeforeFay);
@@ -749,7 +749,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fayHead = { topic: ($('.thread .topbar .topic') || {}).textContent || '', offline: !!$('.thread .topbar .tc-presence-offline') };
   const fayDays = +((/^Last online (\d+) days ago$/.exec(fayHead.topic) || [])[1]);
   step('opening a pm asks Chatango for the presence', JSON.stringify(fayFrames) === JSON.stringify([['private_message', 'connect:fay']]) && fayHead.offline
-    && Math.abs(fayDays - (Date.now() - 1700000000000) / 86400000) <= 1 && !calls.some(c => c[0] === 'torchPmScreen'), { fayFrames, fayHead, torch: calls.filter(c => c[0] === 'torchPmScreen').length });
+    && Math.abs(fayDays - (Date.now() - 1700000000000) / 86400000) <= 1 && !calls.some(c => c[0] === 'betterChatangoPmScreen'), { fayFrames, fayHead, betterChatango: calls.filter(c => c[0] === 'betterChatangoPmScreen').length });
   const old = styled('Old styled');
   step('pm history keeps style', styleOk(old), old.p && [old.p.style.cssText, old.name && old.name.style.cssText]);
   type($('.thread .tc-composer textarea'), 'Mine'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
@@ -823,7 +823,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true], ['VIDEO', 'https://x.test/old.webm', true, true]])
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
 
-  /* Hôte de confiance (liste de Torch) : sous proxyMedia, seule son image s'affiche sans clic, l'hôte lu comme le navigateur */
+  /* Hôte de confiance (liste de BetterChatango) : sous proxyMedia, seule son image s'affiche sans clic, l'hôte lu comme le navigateur */
   const TRUST_LINKS = ['https://i.imgur.com/a.png', 'https://evil.example/b.png', 'https://i.imgur.com@evil.example/c.png'];
   g('b', 'test', ['1700000301.1', 'Eve', '', 'u7', 'UNID7', 'tmptrust', '9.9.9.9', '0', '', '<n000/><f x11000="0">Trusted ' + TRUST_LINKS.join(' ')]);
   const trustRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Trusted ') === 0); return p && p.closest('article'); };
@@ -831,7 +831,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const trustImgs = [...trustRow().querySelectorAll('.embeds img')].map(x => x.getAttribute('src'));
   step('trusted host images load without a click', JSON.stringify(trustImgs) === JSON.stringify(['https://i.imgur.com/a.png']), trustImgs);
 
-  /* Emphase reçue : liste blanche de Torch reconstruite en éléments, ni média ni identifiant de MP en italique, balises hors liste sans élément */
+  /* Emphase reçue : liste blanche de BetterChatango reconstruite en éléments, ni média ni identifiant de MP en italique, balises hors liste sans élément */
   const EMPH = '<b>Bold @alice</b> <I>Ital</I> <u>Under</u> <s>Gone</s> \u2593Struck\u2592 <iabc1234/>plain <i s="https://x.test/e.png"/>tail<script>alert(1)</script><img src="x" onerror="alert(2)">';
   const emphOf = scope => {
     const p = $$(scope + ' .tc-msg-text').find(x => x.textContent.includes('Struck'));
@@ -910,7 +910,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.thread button[aria-label="Conversation options"]')); await wait(30);
   click(menuItem('Delete conversation')); await wait(30);
   click(byText('.dialog-foot button', 'Delete')); await wait(50);
-  step('delete clears Torch history', calls.some(c => c[0] === 'clearHistory' && c[1] === 'dave') && !listed('dave'), calls.filter(c => c[0] === 'clearHistory'));
+  step('delete clears BetterChatango history', calls.some(c => c[0] === 'clearHistory' && c[1] === 'dave') && !listed('dave'), calls.filter(c => c[0] === 'clearHistory'));
   click($('.convs button[aria-label="New message"]')); await wait(50);
   const sentBeforeGhost = sent.length;
   type($('#newdm'), 'ghost'); click(byText('.dialog-foot button', 'Start conversation'));
@@ -984,7 +984,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && /tc-presence-idle/.test(after3[0]) && after3[1] === 'Idle 3 min', { before3, after3 });
   click(byText('.tc-nav', 'Meet people')); await wait(120);
   const search = fetches.find(x => /\/search$/.test(x.url));
-  step('meet search uses Torch parameters and the browser session', !!search && search.credentials === 'include' && search.f.s === 'B' && String(search.f.o) === '1' && String(search.f.ami) === '13' && String(search.f.ama) === '99' && String(search.f.f) === '0' && String(search.f.t) === '40', search);
+  step('meet search uses BetterChatango parameters and the browser session', !!search && search.credentials === 'include' && search.f.s === 'B' && String(search.f.o) === '1' && String(search.f.ami) === '13' && String(search.f.ama) === '99' && String(search.f.f) === '0' && String(search.f.t) === '40', search);
   step('presence requested for results', frame('getpresence:').pop() === 'getpresence:zoe;yann;marjorie');
   pm('presence', ['zoe', '0', 'online', 'yann', '5', 'online']); await until(() => !!$('.convs .conv .tc-presence-idle'));
   const meetRows = $$('.convs .conv').map(x => [x.textContent, (x.querySelector('.tc-presence') || {}).className]);
@@ -1107,8 +1107,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(visitors().querySelector('button[aria-label="Refresh"]')); await until(() => visitors().textContent.includes('This profile has tracking turned off.'));
   step('own visitors list: vissle error shown as sent', vissleReqs[3].page === 1 && vissleReqs[3].get === 'like' && visitors().textContent.includes('This profile has tracking turned off.'), visitors().textContent);
   /* Profil complet illisible (erreur serveur) : enregistrer un autre champ n'envoie rien, jamais un profil complet vide */
-  const torchFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
-  torchFull.value = ''; ownMod2Status = 500;
+  const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
+  betterChatangoFull.value = ''; ownMod2Status = 500;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
   click(byText('.tc-nav', 'Profile')); await until(() => !!byText('.tc-hint', 'did not return your full profile'));
   const fullDown = { failed: !!byText('.tc-hint', 'did not return your full profile') };
@@ -1116,14 +1116,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await until(() => !!byText('.toast', 'Nothing was saved') || profileUpdates().length > 0);
   fullDown.toast = !!byText('.toast', 'could not be read. Nothing was saved'); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
   step('full profile server error: saving another field sends nothing', fullDown.failed && fullDown.toast && fullDown.sent.length === 0, fullDown);
-  torchFull.value = 'FULL PAGE'; ownMod2Status = 200;
+  betterChatangoFull.value = 'FULL PAGE'; ownMod2Status = 200;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
   click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc') && $('#pf-loc').value === 'Rouen');
-  step('profile read from Torch fields', $('#pf-age').value === '34' && $('#pf-gender').value === 'Male' && $('#pf-loc').value === 'Rouen');
+  step('profile read from BetterChatango fields', $('#pf-age').value === '34' && $('#pf-gender').value === 'Male' && $('#pf-loc').value === 'Rouen');
   type($('#pf-loc'), 'Paris'); await wait(20);
   click($('.tc-savebar .tc-btn-primary')); await wait(80);
   const pp = posts.find(p => /updateprofile/.test(p.url));
-  step('profile posted through Torch', !!pp && pp.f.location === 'Paris' && pp.f.gender === 'M' && pp.f.full_profile === 'FULL PAGE' && pp.f.dir === 'checked' && pp.f.line === 'Hello there' && !('p' in pp.f), pp);
+  step('profile posted through BetterChatango', !!pp && pp.f.location === 'Paris' && pp.f.gender === 'M' && pp.f.full_profile === 'FULL PAGE' && pp.f.dir === 'checked' && pp.f.line === 'Hello there' && !('p' in pp.f), pp);
   /* Profil complet : envoyé tel quel, chaîne vide comprise, sans relire mod2.xml */
   const lastFull = () => posts.filter(p => /updateprofile/.test(p.url)).pop().f.full_profile;
   const ownFullReads = () => fetches.filter(x => /\/marjorie\/mod2\.xml/.test(x.url)).length;
@@ -1148,20 +1148,20 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Notifications')); await wait(50);
   const soundRow = title => { const r = $$('section[aria-label="Sounds"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title); return r && { on: r.querySelector('[role=switch]').checked, range: r.querySelector('input[type=range]').disabled ? 'off' : r.querySelector('input[type=range]').value, value: r.textContent.match(/\d+%/)[0], play: !r.querySelector('button[aria-label="Play test sound"]').disabled }; };
   const sounds = { mention: soundRow('Mention sound'), online: soundRow('Friend online sound') };
-  step('notifications: no email or sound columns', !byText('th', 'Email') && !byText('th', 'Sound') && !byText('.tc-banner', 'Torch plays alert sounds')
+  step('notifications: no email or sound columns', !byText('th', 'Email') && !byText('th', 'Sound') && !byText('.tc-banner', 'BetterChatango plays alert sounds')
     && JSON.stringify(sounds) === JSON.stringify({ mention: { on: true, range: '30', value: '30%', play: true }, online: { on: false, range: 'off', value: '45%', play: false } }), sounds);
   click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow() && !!pmrView().status);
   pmrSeen.push(pmrView());
   if (pmrRow()) {
     click(pmrRow().querySelector('[role=switch]')); await until(() => !pmrView().on);
-    pmrSeen.push(Object.assign(pmrView(), { torch: C.settings.privacy.private_messages.check_pmr, saved: JSON.parse(w.localStorage.getItem('settings')).privacy.private_messages.check_pmr }));
+    pmrSeen.push(Object.assign(pmrView(), { betterChatango: C.settings.privacy.private_messages.check_pmr, saved: JSON.parse(w.localStorage.getItem('settings')).privacy.private_messages.check_pmr }));
     click(pmrRow().querySelector('[role=switch]')); await until(() => !!pmrView().status);
     pmrSeen.push(pmrView());
   }
   const PMR_URL = ['https://api.vissle.me/v1/pmr/marjorie'], PMR_TEXT = 'vissle reports that your private messages appear to be restricted.';
   step('own private message restriction read once from vissle after the private connection', JSON.stringify(pmrSeen) === JSON.stringify([
     { on: true, status: null, asked: [] }, { on: true, status: PMR_TEXT, asked: PMR_URL },
-    { on: false, status: null, asked: PMR_URL, torch: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
+    { on: false, status: null, asked: PMR_URL, betterChatango: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
   ]), pmrSeen);
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   click(byText('.tc-nav', 'Private messages')); await wait(50);
@@ -1194,7 +1194,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const cardAfter = await ownCard();
   step('own bio raw in field', cardBefore.text === 'Hello there' && bioPage.field === 'a<br/>b' && bioPage.br && !bioPage.literal && bioPost === 'a<br/>b' && cardAfter.br && cardAfter.text === 'ab', { cardBefore, bioPage, bioPost, cardAfter });
 
-  /* Photo de profil : formulaire avatar de Torch puis recadrage sur full.jpg, carré borné à l'image */
+  /* Photo de profil : formulaire avatar de BetterChatango puis recadrage sur full.jpg, carré borné à l'image */
   click($('button[aria-label="Settings"]')); await wait(50);
   click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-mini-bg'));
   const avatarInput = $('input[type="file"][accept="image/jpeg,image/png,image/gif"]'), avatarFrom = posts.length;
@@ -1216,7 +1216,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (ownAvatar) ownAvatar.dispatchEvent(new w.Event('load'));
   await until(() => !!byText('button', 'Adjust crop'));
   click(byText('button', 'Adjust crop')); await until(() => !!$('.crop-stage img'));
-  // Recadrage connu de Torch (client.user.avatar) : 50, 50, 50 sur une image de 400 sur 300.
+  // Recadrage connu de BetterChatango (client.user.avatar) : 50, 50, 50 sur une image de 400 sur 300.
   loadCrop(400, 300); await until(() => !!$('.crop-box'));
   const cropSteps = [cropBox()];
   key($('.crop-box'), 'ArrowRight'); await wait(10); cropSteps.push(cropBox());
@@ -1231,7 +1231,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(thumbPost.f) === JSON.stringify({ auth: 'token', arch: 'h5', src: 'group', action: 'thumb', x0: '46', y0: '235', ts: '65' })
     && calls.some(c => c[0] === 'setProfile' && c[1].x0 === '46') && !!byText('.toast', 'Picture crop saved to Chatango.'), { cropSteps, f: thumbPost.f });
 
-  /* Fond Premium : formulaire de fond de Torch, envoyé après le profil, image collée ou envoyée chez vissle */
+  /* Fond Premium : formulaire de fond de BetterChatango, envoyé après le profil, image collée ou envoyée chez vissle */
   const miniForm = () => ({ bg: $('#pf-mini-bg').value, text: $('#pf-mini-text').value, link: $('#pf-mini-link').value, image: $('#pf-mini-img').value });
   const miniStart = miniForm();
   type($('#pf-mini-bg'), '#112233');
@@ -1253,10 +1253,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const styleFrom = posts.length;
   click($('.tc-savebar .tc-btn-primary')); await until(() => !$('.tc-savebar'));
   const [profilePost, cssPost] = posts.slice(styleFrom);
-  step('premium background: Torch defaults without custom_profile.css, bad link refused, vissle upload fills the link',
+  step('premium background: BetterChatango defaults without custom_profile.css, bad link refused, vissle upload fills the link',
     JSON.stringify(miniStart) === JSON.stringify({ bg: '#ffffff', text: '#222222', link: '#0084ef', image: '' }) && badLink.error && badLink.toast && badLink.sent === 0
     && bannerAsk.includes('Upload banner.png?') && bannerPost.url === 'https://vissle.me/chatango/upload' && JSON.stringify(bannerPost.item) === '{"key":true}' && previewBg === 'rgb(17, 34, 51)', { miniStart, badLink, bannerAsk, bannerPost: bannerPost && bannerPost.url, previewBg });
-  step('premium background: sent after the profile with the fields of the Torch form',
+  step('premium background: sent after the profile with the fields of the BetterChatango form',
     posts.length === styleFrom + 2 && profilePost.f.location === 'Brest' && !/\?css$/.test(profilePost.url)
     && cssPost.url === 'https://chatango.com/updateprofile?css' && JSON.stringify(cssPost.item) === '{}'
     && JSON.stringify(cssPost.f) === JSON.stringify({ auth: 'token', arch: 'h5', src: 'group', action: 'update', body_bg_col: '112233', body_col: '222222', body_a_col: '0084ef', body_bg_img: 'https://vissle.me/abc/banner.png', body_tile_d: '1', body_tile_a: '0', dir: 'checked' })
@@ -1270,27 +1270,27 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   type($('#cg-name'), 'newroom'); type($('#cg-title'), 'New room'); await wait(20);
   click(byText('.dialog-foot button', 'Create group')); await wait(100);
   const cp = posts.find(p => /creategrouploginjs/.test(p.url));
-  step('group creation posted through Torch', !!cp && cp.f.u === 'newroom' && cp.f.n === 'New room' && cp.f.owner === 'marjorie' && cp.f.authType === 'cookie', cp);
+  step('group creation posted through BetterChatango', !!cp && cp.f.u === 'newroom' && cp.f.n === 'New room' && cp.f.owner === 'marjorie' && cp.f.authType === 'cookie', cp);
   step('new group joined', calls.some(c => c[0] === 'connect' && c[1] === 'newroom'));
 
-  /* Style perso : champs de Torch écrits avant l'envoi, jamais enregistrés chez Chatango */
+  /* Style perso : champs de BetterChatango écrits avant l'envoi, jamais enregistrés chez Chatango */
   const fontsEl = d.querySelector('[data-preload="fonts"]'), emph = cls => fontsEl.querySelector(cls).previousElementSibling;
   let submits = 0;
   fontsEl.querySelector('form').addEventListener('submit', e => { submits++; e.preventDefault(); });
-  const torchStyle = () => JSON.stringify({
+  const betterChatangoStyle = () => JSON.stringify({
     face: d.querySelector('.font-face').firstElementChild.value, size: d.querySelector('.font-size .text-input').value,
     text: fontsEl.querySelector('[data-color="fontColor"]').value, name: fontsEl.querySelector('[data-color="nameColor"]').value,
     bold: emph('.fa-bold').checked, italic: emph('.fa-italic').checked, underline: emph('.fa-underline').checked, strike: emph('.fa-strikethrough').checked, on: fontsEl.querySelector('[name="stylesOn"]').checked, user: C.user.style
   });
   const WANT = JSON.stringify({ face: '4', size: '14', text: '#9900cc', name: '#3366ff', bold: true, italic: false, underline: false, strike: true, on: true, user: true });
-  // Torch recharge le style du compte à la reconnexion : ses champs reviennent aux valeurs de Chatango.
-  const resetTorchStyle = () => {
+  // BetterChatango recharge le style du compte à la reconnexion : ses champs reviennent aux valeurs de Chatango.
+  const resetBetterChatangoStyle = () => {
     d.querySelector('.font-face').firstElementChild.value = '0'; d.querySelector('.font-size .text-input').value = '11';
     fontsEl.querySelector('[data-color="fontColor"]').value = '#000000'; fontsEl.querySelector('[data-color="nameColor"]').value = '#000000';
     emph('.fa-bold').checked = false; emph('.fa-strikethrough').checked = false; fontsEl.querySelector('[name="stylesOn"]').checked = false; C.user.style = false;
   };
   const postsBeforeStyle = posts.length;
-  styleProbe = torchStyle;
+  styleProbe = betterChatangoStyle;
   click(byText('.tc-nav', 'test')); await wait(50);
   const styleBtn = $('.tc-composer button[aria-label="Message style"]');
   if (styleBtn) {
@@ -1301,11 +1301,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     if (strikeBox) click(strikeBox.querySelector('input'));
     await wait(20);
     click(byText('.dialog-foot button', 'Save')); await wait(50);
-    resetTorchStyle();
+    resetBetterChatangoStyle();
     type($('.tc-composer textarea'), 'Styled'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
   }
   const storedStyle = JSON.stringify(JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}'));
-  resetTorchStyle();
+  resetBetterChatangoStyle();
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   click(byText('.conv', 'fay')); await wait(50);
   type($('.thread .tc-composer textarea'), 'Styled pm'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(30);
@@ -1322,7 +1322,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.conv', 'kim')); await wait(50);
   step('pm history does not override live style', /Impact/.test(threadFont('Newer kim') || ''), threadFont('Newer kim'));
 
-  /* Médias d'un MP envoyé : affichés dès l'envoi, sans doublon quand OK rejoue l'archive de Torch */
+  /* Médias d'un MP envoyé : affichés dès l'envoi, sans doublon quand OK rejoue l'archive de BetterChatango */
   type($('.thread .tc-composer textarea'), 'Watch https://youtu.be/PLe_UgXBBCU'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
   const sentVideo = $$('.thread .embed-video').length;
   pmRecords.push(pmRecord('kim', 'msg:marjorie:marjorie:unknown:' + (Date.now() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', 0));
@@ -1397,8 +1397,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fayBefore = JSON.stringify(pmRecords.filter(r => r.target === 'fay')), countBefore = pmRecords.length;
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!$('input[type="file"]'));
-  chooseFile('{"messages":[]}'); await until(() => !!byText('.toast', 'This file is not a Torch message history.'));
-  const notHistory = { toast: !!byText('.toast', 'This file is not a Torch message history.'), written: pmRecords.length - countBefore };
+  chooseFile('{"messages":[]}'); await until(() => !!byText('.toast', 'This file is not a BetterChatango message history.'));
+  const notHistory = { toast: !!byText('.toast', 'This file is not a BetterChatango message history.'), written: pmRecords.length - countBefore };
   const RECEIVED = 'msg:ivan:marjorie:unknown:1700003000.5:0:<n000/>Kept from my old browser', SENT = 'msg:marjorie:marjorie:unknown:1700003010.5:0:<n000/>My old reply';
   chooseFile(JSON.stringify([
     { target: 'ivan', ts: 1700003000.5, data: RECEIVED, unread: 1 },
@@ -1444,7 +1444,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('pm history import reopens older pages', ivanSentinel && !ivanStart && ivanTexts.length === 122 && ivanTexts[0] === 'Older ivan 0',
     { ivanSentinel, ivanStart, observed: !!ivanTop, count: ivanTexts.length, head: ivanTexts.slice(0, 3) });
 
-  /* Import de médiathèque : seules les entrées dont l'URL est une image https et le nom un texte sont écrites dans la base de Torch */
+  /* Import de médiathèque : seules les entrées dont l'URL est une image https et le nom un texte sont écrites dans la base de BetterChatango */
   C.database.media = { transaction: mediaTransaction };
   const mediaNames = () => $$('.emoji-picker .media-name').map(x => x.textContent);
   const emojiButton = $('.thread .tc-composer button[aria-label="Emoji"]');
@@ -1468,7 +1468,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     mediaImport.toast === 'Imported 1 image. 3 skipped.' && JSON.stringify(mediaImport.written) === JSON.stringify([{ url: 'https://x.test/cat.gif', name: 'cat' }])
       && JSON.stringify(mediaImport.listed) === '["cat","old"]', mediaImport);
 
-  /* Retrait d'un MP de la base de Torch : l'enregistrement est relu avant suppression, celui d'un autre membre reste intact */
+  /* Retrait d'un MP de la base de BetterChatango : l'enregistrement est relu avant suppression, celui d'un autre membre reste intact */
   const recordAt = ts => pmRecords.find(r => r.ts === ts);
   const pmRow = txt => { const p = $$('.thread .tc-msg-text').find(x => x.textContent === txt); return p && p.closest('.tc-msg'); };
   const removeFromBrowser = async txt => {
@@ -1480,7 +1480,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     if (dialog) click(byText('.dialog-foot button', 'Remove'));
     return { item: !!item, dialog };
   };
-  // Clé déjà prise par un MP de walt : Torch archive celui de vera une seconde plus tard, le pont garde la clé de la trame.
+  // Clé déjà prise par un MP de walt : BetterChatango archive celui de vera une seconde plus tard, le pont garde la clé de la trame.
   pmRecords.push(pmRecord('walt', 'msg:walt:marjorie:unknown:1700004000.5:0:<n000/>Not yours', 0));
   pm('msg', ['vera', 'marjorie', 'unknown', '1700003900.5', '0', '<n000/>Remove me']);
   pm('msg', ['vera', 'marjorie', 'unknown', '1700004000.5', '0', '<n000/>Keep me']);
@@ -1506,7 +1506,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !pmRow('Only the edit'));
   const editOnly = { original: !!recordAt(1700004100.5), edit: !!recordAt(1700004200.5), shown: !!pmRow('Only the edit') };
   step('remove a private message from this browser',
-    removed.ask.item && /Remove this message from this browser\?/.test(removed.ask.dialog) && removed.ask.dialog.includes('Removes the copy Torch keeps in this browser. Chatango does not store private messages, and vera keeps their copy.')
+    removed.ask.item && /Remove this message from this browser\?/.test(removed.ask.dialog) && removed.ask.dialog.includes('Removes the copy BetterChatango keeps in this browser. Chatango does not store private messages, and vera keeps their copy.')
       && !removed.record && !removed.shown && removed.toast
       && refused.walt === 'walt' && refused.vera === 'vera' && refused.shown && refused.toast
       && !edited.original && !edited.edit && edited.nell && !edited.shown

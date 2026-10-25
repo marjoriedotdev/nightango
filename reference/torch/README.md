@@ -15,7 +15,7 @@ Pour une version plus récente, remplacer les quatre fichiers ensemble, puis met
 ## Usage
 
 - Vérifier un comportement de Torch avant de s'appuyer dessus dans le pont.
-- Servir de cible aux références `fichier:ligne` des docs (`docs/torch-protocol.md`, `docs/adr/`). Exemple : `inject.js:7452` renvoie à la ligne 7452 de `inject.js` ici.
+- Servir de cible aux références `fichier:ligne` des docs (`docs/betterchatango-protocol.md`, `docs/adr/`). Exemple : `inject.js:7452` renvoie à la ligne 7452 de `inject.js` ici.
 
 ## Fichiers
 

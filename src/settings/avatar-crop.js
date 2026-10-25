@@ -3,7 +3,7 @@
 var CROP_MIN = 32;
 
 /**
- * Permet de borner un carré de recadrage à l'image, avec les valeurs négatives que Torch remplace (inject.js:8473-8476).
+ * Permet de borner un carré de recadrage à l'image, avec les valeurs négatives que BetterChatango remplace (inject.js:8473-8476).
  * @param {{x0: number, y0: number, ts: number}} box Carré en pixels de l'image, ts nul ou négatif pour toute la largeur.
  * @param {number} w Largeur naturelle de l'image.
  * @param {number} ht Hauteur naturelle de l'image.

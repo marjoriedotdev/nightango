@@ -8,9 +8,9 @@ var RECONNECT_DELAYS = [3000, 10000, 30000];
 function Root(props) {
   var st = useState(function () { return props.boot && props.boot.auth ? props.boot : initialState(); }), state = st[0], setState = st[1];
   var stateRef = useRef(state); stateRef.current = state;
-  // Seule source des non-lus MP : la base de Torch en live, une archive en mémoire dans le prototype ou quand cette base manque.
+  // Seule source des non-lus MP : la base de BetterChatango en live, une archive en mémoire dans le prototype ou quand cette base manque.
   var pmArchive = useRef(null);
-  if (!pmArchive.current) pmArchive.current = LIVE ? torchPmArchive() : memoryPmArchive();
+  if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
   var update = useCallback(function (fn) { setState(function (prev) { var d = JSON.parse(JSON.stringify(prev)); fn(d); return d; }); }, []);
   var u1 = useState([]), toasts = u1[0], setToasts = u1[1];
   var u2 = useState(null), confirmCfg = u2[0], setConfirm = u2[1];
@@ -129,7 +129,7 @@ function Root(props) {
   function trimThread(g) {
     if (g.messages.length <= THREAD_MAX) return;
     g.messages.splice(0, g.messages.length - THREAD_MAX);
-    // Le compteur get_more de Torch ignore la coupe : une reprise sauterait les messages retirés.
+    // Le compteur get_more de BetterChatango ignore la coupe : une reprise sauterait les messages retirés.
     g.historyCapped = true;
   }
   /**
@@ -176,7 +176,7 @@ function Root(props) {
   function receiveGroup(gid, msg) {
     var s0 = stateRef.current, me = s0.me;
     var mention = msg.kind === 'msg' && mentionsMe(me, msg.text);
-    // Comme dans Torch, la mention d'un groupe coupé ou d'un auteur ignoré n'alerte pas, et les compteurs changent quand même.
+    // Comme dans BetterChatango, la mention d'un groupe coupé ou d'un auteur ignoré n'alerte pas, et les compteurs changent quand même.
     var quiet = !!(s0.groups[gid] && s0.groups[gid].muted) || !!userOf(s0, msg.author).ignored;
     var focused = s0.route.view === 'group' && s0.route.id === gid && document.visibilityState === 'visible';
     update(function (d) {
@@ -315,7 +315,7 @@ function Root(props) {
      */
     removeDmMessage: function (name, m) { dropDmMessage(name, m.id); },
     deleteAllDms: function () { update(function (d) { d.dms = {}; }); },
-    /** Messages d'exemple au format de l'historique privé de Torch, clé ts en secondes. */
+    /** Messages d'exemple au format de l'historique privé de BetterChatango, clé ts en secondes. */
     exportDms: function () {
       var s0 = stateRef.current, out = [];
       Object.keys(s0.dms).forEach(function (t) {
@@ -348,7 +348,7 @@ function Root(props) {
     searchMedia: function (text, count) { return mediaLib.searchMedia(text, count); },
     hasMedia: function (url) { return mediaLib.hasMedia(url); },
     /**
-     * Permet d'ajouter une image à la médiathèque, sous le nom que lui donne Torch, ou de l'en retirer.
+     * Permet d'ajouter une image à la médiathèque, sous le nom que lui donne BetterChatango, ou de l'en retirer.
      * @param {string} url Adresse de l'image.
      * @param {boolean} saved L'image est déjà dans la médiathèque.
      */
@@ -528,7 +528,7 @@ function Root(props) {
     return function () { alive = false; clearTimeout(timer); };
   }, [state.auth.loggedIn, prefs.simulate]);
 
-  /* ---------- Mode live : actions transmises à Chatango par le client Torch ---------- */
+  /* ---------- Mode live : actions transmises à Chatango par le client BetterChatango ---------- */
   var localRef = useRef(blankLocal());
   var profilePending = useRef({}), msgBgPending = useRef({});
   // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
@@ -581,19 +581,19 @@ function Root(props) {
     return sent;
   }
   /**
-   * Permet de basculer un drapeau de groupe tenu par une liste de Torch, sans rien changer si Torch ne l'enregistre pas.
+   * Permet de basculer un drapeau de groupe tenu par une liste de BetterChatango, sans rien changer si BetterChatango ne l'enregistre pas.
    * @param {string} gid Groupe visé.
    * @param {string} key favorite ou muted.
    * @param {function(string, boolean): boolean} save Écriture du pont.
-   * @param {string} failure Toast affiché si Torch n'enregistre pas.
+   * @param {string} failure Toast affiché si BetterChatango n'enregistre pas.
    */
-  function toggleTorchList(gid, key, save, failure) {
+  function toggleBetterChatangoList(gid, key, save, failure) {
     var on = !stateRef.current.groups[gid][key];
     if (!save(gid, on)) { toast(failure); return; }
     update(function (d) { d.groups[gid][key] = on; });
   }
   /**
-   * Permet d'envoyer un message de groupe construit par Torch avec le style perso, puis d'en garder le style.
+   * Permet d'envoyer un message de groupe construit par BetterChatango avec le style perso, puis d'en garder le style.
    * @param {string} gid Groupe visé.
    * @param {string} text Texte saisi.
    * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string}} opts Réponse, original modifié ou citation, et canal.
@@ -622,10 +622,10 @@ function Root(props) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
       if (replyId && !liveBridge.delivered(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
-      return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. Torch rejected it.');
+      return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. BetterChatango rejected it.');
     };
     // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
-    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. Torch rejected it.'); };
+    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. BetterChatango rejected it.'); };
     actions.sendDm = function (name, text, opts) {
       var me = stateRef.current.me;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
@@ -658,17 +658,17 @@ function Root(props) {
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
-    actions.toggleFavorite = function (gid) { toggleTorchList(gid, 'favorite', liveBridge.setFavorite, 'Torch could not save this favorite. Reload the page and try again.'); };
-    actions.toggleMute = function (gid) { toggleTorchList(gid, 'muted', liveBridge.setMuted, 'Torch could not save the mute for #' + gid + '. Reload the page and try again.'); };
+    actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', liveBridge.setFavorite, 'BetterChatango could not save this favorite. Reload the page and try again.'); };
+    actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', liveBridge.setMuted, 'BetterChatango could not save the mute for #' + gid + '. Reload the page and try again.'); };
     actions.setTrustedHost = function (host, on) {
-      if (!liveBridge.setTrustedHost(host, on)) { toast(TORCH_SAVE_FAILED); return false; }
+      if (!liveBridge.setTrustedHost(host, on)) { toast(BETTER_CHATANGO_SAVE_FAILED); return false; }
       update(function (d) { d.prefs.safety.trustedHosts = liveBridge.trustedHosts(); });
       return true;
     };
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
       var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
-      if (kept) toast('Torch could not remove #' + gid + ' from favorites. Reload the page and try again.');
+      if (kept) toast('BetterChatango could not remove #' + gid + ' from favorites. Reload the page and try again.');
       update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
@@ -724,7 +724,7 @@ function Root(props) {
       for (var k = 0; k < 4; k++) next();
     };
     /**
-     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme Torch avant de l'ouvrir.
+     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme BetterChatango avant de l'ouvrir.
      * @param {string} name Correspondant visé.
      * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
      */
@@ -774,7 +774,7 @@ function Root(props) {
       }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
-      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('Torch could not save its ignore list. Reload the page and try again.'); return; }
+      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('BetterChatango could not save its ignore list. Reload the page and try again.'); return; }
       update(function (d) { ensureLiveUser(d, name)[key] = !was; });
       toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
@@ -809,7 +809,7 @@ function Root(props) {
     actions.deleteMessage = function (gid, mid) {
       if (!liveBridge.delivered(mid)) { toast('This message is still being delivered. Try again in a moment.'); return; }
       var m = findMsg(stateRef.current.groups[gid], mid);
-      // Comme Torch : l'original, puis chacune de ses modifications dont Chatango a donné l'identifiant définitif.
+      // Comme BetterChatango : l'original, puis chacune de ses modifications dont Chatango a donné l'identifiant définitif.
       [mid].concat((m && m.editIds) || []).filter(liveBridge.delivered).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
     };
     actions.deleteAllFrom = function (gid, name, msg) {
@@ -974,7 +974,7 @@ function Root(props) {
    * @param {{list: Array, more: boolean}} op Page reçue du pont.
    */
   function receiveBanPage(list, op) {
-    // Seule la page suivante demandée par Nightango s'ajoute : un rechargement de Torch repart de la première page.
+    // Seule la page suivante demandée par Nightango s'ajoute : un rechargement de BetterChatango repart de la première page.
     var next = list.page.loading, known = {};
     if (!next) list.rows.splice(0);
     list.rows.forEach(function (b) { known[banKey(b)] = true; });
@@ -990,7 +990,7 @@ function Root(props) {
    */
   function pmAuthor(d) { return function (x) { mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts); }; }
   /**
-   * Permet de fusionner l'historique privé de Torch aux conversations, à chaque OK et après un import, sans doublon.
+   * Permet de fusionner l'historique privé de BetterChatango aux conversations, à chaque OK et après un import, sans doublon.
    * @param {boolean=} imported Vrai après un import, qui peut avoir ajouté des entrées plus anciennes que celles chargées.
    */
   function loadPmHistory(imported) {
@@ -1041,7 +1041,7 @@ function Root(props) {
    */
   function canRetry(s) { return (!s.session || s.session.reason === 'lost') && document.visibilityState === 'visible' && navigator.onLine; }
   /**
-   * Permet de relancer une connexion sans déplacer le focus de Torch quand son groupe n'est pas affiché.
+   * Permet de relancer une connexion sans déplacer le focus de BetterChatango quand son groupe n'est pas affiché.
    * @param {string} gid Groupe ou private_message.
    */
   function reconnectAuto(gid) {
@@ -1078,14 +1078,14 @@ function Root(props) {
       case 'login': {
         var stored = storageGet(skinKey(op.me)) || {}, raw = JSON.stringify(stored);
         var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
-        // Listes d'avant la synchronisation avec Torch : versées dans les siennes, retirées du stockage local une fois toutes acceptées.
+        // Listes d'avant la synchronisation avec BetterChatango : versées dans les siennes, retirées du stockage local une fois toutes acceptées.
         Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
         if (JSON.stringify(stored) !== raw) storageSet(skinKey(op.me), stored);
         localRef.current = Object.assign(blankLocal(), stored);
         update(function (d) {
           Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.auth = { loggedIn: true };
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n); });
-          Object.keys(TORCH_PREFS).forEach(function (path) { var v = liveBridge.setting(TORCH_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
+          Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
           d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
         });
         // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
@@ -1134,7 +1134,7 @@ function Root(props) {
           mergeStyle(u, hs, hm.ts);
           if (g.messages.some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return;
           var o = editTarget(g, hm);
-          // Historique reçu du plus récent au plus ancien : comme Torch, un original déjà modifié garde son texte.
+          // Historique reçu du plus récent au plus ancien : comme BetterChatango, un original déjà modifié garde son texte.
           if (o) { applyGroupEdit(o, hm, o.edited); return; }
           if (hm.editId) hm.edited = true;
           else { delete hm.editId; mergeEdits(g, hm); }
@@ -1221,7 +1221,7 @@ function Root(props) {
       case 'banSearch': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
       case 'banSearchRefused': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
       case 'banSearchTimeout': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s && s.status === 'pending') s.status = 'timeout'; }); break;
-      // Torch ne fait que journaliser allunblocked : la liste des débannissements est redemandée à son prochain affichage.
+      // BetterChatango ne fait que journaliser allunblocked : la liste des débannissements est redemandée à son prochain affichage.
       case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
         var known = {}, list = (g.live.modlog || []).slice();
@@ -1255,13 +1255,13 @@ function Root(props) {
           if (d.session && d.session.reason === 'offline' && open) d.session = null;
         });
         break;
-      // Torch adresse ses notices au groupe qu'il croit ouvert : un toast évite de les écrire dans le mauvais fil.
+      // BetterChatango adresse ses notices au groupe qu'il croit ouvert : un toast évite de les écrire dans le mauvais fil.
       case 'notice': toast(op.text, { icon: 'info' }); break;
       case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { icon: 'info', action: { label: op.button, run: op.action } } : { icon: 'info' }); break;
       case 'pm': {
         var s0 = stateRef.current;
         var focused = isDmInView(s0, op.from);
-        // Comme dans Torch, le MP d'un membre ignoré est reçu et archivé, sans alerte.
+        // Comme dans BetterChatango, le MP d'un membre ignoré est reçu et archivé, sans alerte.
         var ignored = !!userOf(s0, op.from).ignored;
         var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
         update(function (d) {
@@ -1270,7 +1270,7 @@ function Root(props) {
           receivePm(d, op);
         });
         pmArchive.current.record(op.from, op, true);
-        // Lecture créée après la pile en cours : Torch n'archive un MP reçu qu'après l'émission de pm.
+        // Lecture créée après la pile en cours : BetterChatango n'archive un MP reçu qu'après l'émission de pm.
         if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
         if (edit) break;
         if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
@@ -1346,7 +1346,7 @@ function Root(props) {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
-    // Favoris, sourdines et membres ignorés locaux que Torch n'a pas encore acceptés : gardés pour la prochaine connexion.
+    // Favoris, sourdines et membres ignorés locaux que BetterChatango n'a pas encore acceptés : gardés pour la prochaine connexion.
     o.fav = prev.fav;
     o.muted = prev.muted;
     o.ignored = prev.ignored;

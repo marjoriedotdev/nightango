@@ -2,7 +2,7 @@
 var SESSION_ATTEMPTS = 3;
 var SESSION_COPY = {
   kicked: { title: "You're signed in somewhere else", body: 'Chatango closed your private messages here because your account connected from another window or device.' },
-  denied: { title: 'Your session expired', body: 'Reload the page and sign in again on the Torch screen.' },
+  denied: { title: 'Your session expired', body: 'Reload the page and sign in again on the BetterChatango screen.' },
   offline: { title: "You're offline", body: 'Nightango will reconnect when your connection is back.' },
   lost: { title: 'Connection lost', body: 'Unable to connect, please try again in a few minutes.' }
 };

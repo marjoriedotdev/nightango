@@ -261,7 +261,7 @@ function linkAddress(url) {
 }
 
 /**
- * Avertissement avant un lien externe, qui propose de faire confiance à son hôte, ou de ne plus avertir si la liste de Torch est illisible.
+ * Avertissement avant un lien externe, qui propose de faire confiance à son hôte, ou de ne plus avertir si la liste de BetterChatango est illisible.
  * @param {{url: string, onClose: Function}} p Adresse du lien et fermeture de la fenêtre.
  */
 function LinkDialog(p) {

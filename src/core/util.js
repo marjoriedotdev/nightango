@@ -54,7 +54,7 @@ function readJsonFile(file) {
   });
 }
 /**
- * Permet de lire un fichier d'export de Torch, dont le contenu est un tableau.
+ * Permet de lire un fichier d'export de BetterChatango, dont le contenu est un tableau.
  * @param {File} file Fichier choisi.
  * @returns {Promise<?Array>} Tableau lu, null si le fichier est illisible ou ne contient pas de tableau.
  */
@@ -74,7 +74,7 @@ function downloadFile(name, text, type) {
   setTimeout(function () { URL.revokeObjectURL(link.href); }, MIN);
 }
 /**
- * Permet de faire télécharger une valeur en fichier JSON, au type text/json des exports de Torch.
+ * Permet de faire télécharger une valeur en fichier JSON, au type text/json des exports de BetterChatango.
  * @param {string} name Nom du fichier.
  * @param {*} value Valeur écrite par JSON.stringify.
  */

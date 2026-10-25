@@ -15,7 +15,7 @@ function LiveJoined() {
   var owned = rest.filter(function (k) { return s.groups[k].owned; });
   var recent = rest.filter(function (k) { return !s.groups[k].owned; });
   return h(Frag, null,
-    h(LiveGroupSection, { id: 'lj-h', title: 'Joined groups', names: joined, empty: 'Connecting to your groups. They appear here as Torch joins them.' }),
+    h(LiveGroupSection, { id: 'lj-h', title: 'Joined groups', names: joined, empty: 'Connecting to your groups. They appear here as BetterChatango joins them.' }),
     owned.length ? h(LiveGroupSection, { id: 'lo-h', title: 'Groups you own', names: owned }) : null,
     recent.length ? h(LiveGroupSection, { id: 'lr-h', title: 'Recent groups', names: recent }) : null);
 }

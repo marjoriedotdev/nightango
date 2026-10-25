@@ -1,4 +1,4 @@
-// Conversations MP : non-lus lus dans l'archive (base de Torch ou mémoire) et fusion de l'historique privé.
+// Conversations MP : non-lus lus dans l'archive (base de BetterChatango ou mémoire) et fusion de l'historique privé.
 const { JSDOM } = require('jsdom');
 const { concatSources, layerSources } = require('../scripts/build.mjs');
 const { keyRange, fakePmDb } = require('./fake-pm-db.js');
@@ -14,7 +14,7 @@ const log = [], errors = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' ' + JSON.stringify(detail))); }
 
 /**
- * Permet de charger le pont et le module MP sur un faux client Torch dont la base d'historique est records, ou absente.
+ * Permet de charger le pont et le module MP sur un faux client BetterChatango dont la base d'historique est records, ou absente.
  * @param {?Array} records Enregistrements de la base, null pour un navigateur sans base.
  */
 function load(records) {
@@ -34,16 +34,16 @@ function load(records) {
   w.eval(`
     window.client = { user: { name: '${ME}' }, groups: {}, event: { group: {}, private: {} }, database: { pm: ${records ? 'true' : 'false'} },
       on: function () {}, emit: function () {}, connect: function () {} };
-    window.__torchRefs = { client: window.client, chatango: {} };
+    window.__betterChatangoRefs = { client: window.client, chatango: {} };
   `);
   if (records) w.client.database.pm = { transaction };
-  w.eval(code + '; window.mod = { liveBridge: liveBridge, torchPmArchive: torchPmArchive, memoryPmArchive: memoryPmArchive, syncPmUnread: syncPmUnread, readPm: readPm, mergePmHistory: mergePmHistory, pmRecordEntry: pmRecordEntry };');
+  w.eval(code + '; window.mod = { liveBridge: liveBridge, betterChatangoPmArchive: betterChatangoPmArchive, memoryPmArchive: memoryPmArchive, syncPmUnread: syncPmUnread, readPm: readPm, mergePmHistory: mergePmHistory, pmRecordEntry: pmRecordEntry };');
   const d = { dms: {} };
   return { w, m: w.mod, d, update: fn => fn(d) };
 }
 
 (async () => {
-  /* Base de Torch : les MP reçus non lus comptent, ni leurs modifications, ni les entrées lues, ni l'autre conversation */
+  /* Base de BetterChatango : les MP reçus non lus comptent, ni leurs modifications, ni les entrées lues, ni l'autre conversation */
   const records = [
     record('gus', received('gus', '1700005000.5', '<n000/><iorig9876/>First'), 1),
     record('gus', received('gus', '1700005010.5', '<n000/><iedit4321/><m v="1"><g x12s000="0"><eorig9876/>First, fixed</g></m>'), 1),
@@ -53,18 +53,18 @@ function load(records) {
   ];
   let t = load(records);
   t.d.dms = { gus: { messages: [], unread: 0 }, ivan: { messages: [], unread: 0 } };
-  const torch = t.m.torchPmArchive();
-  await t.m.syncPmUnread(torch, t.update, ['gus', 'ivan']);
-  step('unread counted in Torch history without edits or read entries', t.d.dms.gus.unread === 2 && t.d.dms.ivan.unread === 1, t.d.dms);
+  const betterChatango = t.m.betterChatangoPmArchive();
+  await t.m.syncPmUnread(betterChatango, t.update, ['gus', 'ivan']);
+  step('unread counted in BetterChatango history without edits or read entries', t.d.dms.gus.unread === 2 && t.d.dms.ivan.unread === 1, t.d.dms);
 
-  /* Archivage par Torch juste après l'op pm : la lecture, créée après la pile en cours, le voit */
-  const pending = t.m.syncPmUnread(torch, t.update, ['ivan']);
+  /* Archivage par BetterChatango juste après l'op pm : la lecture, créée après la pile en cours, le voit */
+  const pending = t.m.syncPmUnread(betterChatango, t.update, ['ivan']);
   records.push(record('ivan', received('ivan', '1700005040.5', '<n000/>Just archived'), 1));
   await pending;
-  step('message archived by Torch after the pm op is counted', t.d.dms.ivan.unread === 2, t.d.dms.ivan);
+  step('message archived by BetterChatango after the pm op is counted', t.d.dms.ivan.unread === 2, t.d.dms.ivan);
 
   /* Lecture d'une conversation : ses entrées passent lues dans la base, le compteur suit, l'autre conversation garde les siens */
-  await t.m.readPm(torch, t.update, 'gus');
+  await t.m.readPm(betterChatango, t.update, 'gus');
   const gusUnread = records.filter(r => r.target === 'gus' && r.unread).length;
   step('reading a conversation marks its history read and clears its count', gusUnread === 0 && t.d.dms.gus.unread === 0 && t.d.dms.ivan.unread === 2, { gusUnread, dms: t.d.dms });
 
@@ -72,8 +72,8 @@ function load(records) {
   t = load(null);
   t.d.dms = { gus: { messages: [], unread: 3 } };
   const saved = await t.m.liveBridge.pmArchived();
-  await t.m.syncPmUnread(t.m.torchPmArchive(), t.update, ['gus']);
-  step('browser without Torch history reported', saved === false && t.d.dms.gus.unread === 0, { saved, unread: t.d.dms.gus.unread });
+  await t.m.syncPmUnread(t.m.betterChatangoPmArchive(), t.update, ['gus']);
+  step('browser without BetterChatango history reported', saved === false && t.d.dms.gus.unread === 0, { saved, unread: t.d.dms.gus.unread });
 
   /* Archive en mémoire : non-lus de départ, une modification ne compte pas, une lecture ne touche que sa conversation */
   const memory = t.m.memoryPmArchive({ kim: 2 });
@@ -84,7 +84,7 @@ function load(records) {
   await t.m.syncPmUnread(memory, t.update, ['kim', 'lou']);
   const before = { kim: t.d.dms.kim.unread, lou: t.d.dms.lou.unread };
   await t.m.readPm(memory, t.update, 'kim');
-  step('memory archive counts like Torch history', before.kim === 2 && before.lou === 1 && t.d.dms.kim.unread === 0 && t.d.dms.lou.unread === 1, { before, after: t.d.dms });
+  step('memory archive counts like BetterChatango history', before.kim === 2 && before.lou === 1 && t.d.dms.kim.unread === 0 && t.d.dms.lou.unread === 1, { before, after: t.d.dms });
 
   /* Fusion : l'entrée d'un MP déjà affiché ne le double pas, sa modification s'applique à l'original */
   const entries = [records[0], records[1]].map(r => t.m.pmRecordEntry(r));

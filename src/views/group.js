@@ -1,7 +1,7 @@
 /* ---------- Groupe ---------- */
-// Torch refuse la dixième modification d'un message.
+// BetterChatango refuse la dixième modification d'un message.
 var EDIT_MAX = 9;
-// Limite de Torch pour un groupe, comptée sur le corps qu'il construit et non sur le texte saisi.
+// Limite de BetterChatango pour un groupe, comptée sur le corps qu'il construit et non sur le texte saisi.
 var GROUP_MESSAGE_MAX = 2900;
 var COMPOSER_MODES = {
   reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply' },
@@ -45,7 +45,7 @@ function GroupView(p) {
   // Le canal d'envoi n'est jamais masqué, même s'il reste dans la liste gardée.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
 
-  // Comme Torch : la mention s'ajoute en fin de brouillon.
+  // Comme BetterChatango : la mention s'ajoute en fin de brouillon.
   function mention(handle) {
     setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
     if (inputRef.current) inputRef.current.focus();
@@ -60,7 +60,7 @@ function GroupView(p) {
       var caret = el.selectionEnd, word = el.selectionStart === caret && /(?:^|\s)@([A-Za-z0-9_-]{1,20})$/.exec(el.value.slice(0, caret));
       var names = word ? mentionCandidates(g, me, word[1]) : [];
       if (!names.length) return;
-      // Comme Torch, l'espace qui suit déjà le mot est remplacée avec lui.
+      // Comme BetterChatango, l'espace qui suit déjà le mot est remplacée avec lui.
       c = completion.current = { start: caret - word[1].length - 1, end: caret + (el.value.charAt(caret) === ' ' ? 1 : 0), names: names, index: -1 };
     }
     e.preventDefault();
@@ -81,7 +81,7 @@ function GroupView(p) {
   function enter(kind) { return function (m) { closeMode(); setMode({ kind: kind, m: m }); }; }
   var reply = enter('reply'), quote = enter('quote');
   function edit(m) {
-    if ((m.editCount || 0) >= EDIT_MAX) { app.ui.toast("You can't edit this message again. Torch allows " + EDIT_MAX + ' edits per message.'); return; }
+    if ((m.editCount || 0) >= EDIT_MAX) { app.ui.toast("You can't edit this message again. BetterChatango allows " + EDIT_MAX + ' edits per message.'); return; }
     if (!mode || mode.kind !== 'edit') stash.current = draft;
     setDraft(m.text);
     setMode({ kind: 'edit', m: m });
@@ -93,7 +93,7 @@ function GroupView(p) {
     app.actions.sendGroup(g.id, text, { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel });
     setMode(null);
   }
-  // Comme dans Torch, un message masqué compte encore dans les non-lus et les mentions.
+  // Comme dans BetterChatango, un message masqué compte encore dans les non-lus et les mentions.
   function shown(m) { return m.annc ? prefs.announcements : m.kind !== 'msg' || prefs.safety.guestMessages || !isGuest(m.author); }
   // Les messages d'exemple du prototype n'ont pas de canal.
   function hiddenByChannel(m) { return m.kind === 'msg' && hiddenChans.indexOf(m.channel || 'none') >= 0; }

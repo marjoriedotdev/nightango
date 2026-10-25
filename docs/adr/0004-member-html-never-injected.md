@@ -7,7 +7,7 @@ date: 2026-10
 
 ## Contexte
 
-Les profils Chatango contiennent du HTML et du CSS écrits par leurs membres (`mod1.xml`, `mod2.xml`, `custom_profile.css`). L'application tourne dans la page de Torch, à côté de la session Chatango : un HTML injecté pourrait exécuter du script, lire la page ou exfiltrer des données. Un CSS injecté pourrait déformer l'interface ou charger des ressources qui trahissent l'utilisateur.
+Les profils Chatango contiennent du HTML et du CSS écrits par leurs membres (`mod1.xml`, `mod2.xml`, `custom_profile.css`). L'application tourne dans la page de BetterChatango, à côté de la session Chatango : un HTML injecté pourrait exécuter du script, lire la page ou exfiltrer des données. Un CSS injecté pourrait déformer l'interface ou charger des ressources qui trahissent l'utilisateur.
 
 ## Décision
 

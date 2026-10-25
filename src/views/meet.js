@@ -1,6 +1,6 @@
 var MEET_DEFAULTS = { query: '', sex: 'B', ageMin: 13, ageMax: 99, online: true, avatar: 0 };
 var PULL_TRIGGER = 64, PULL_MAX = 96;
-/** Filtres qui s'écartent des valeurs par défaut de Torch, pour le compteur et les étiquettes. */
+/** Filtres qui s'écartent des valeurs par défaut de BetterChatango, pour le compteur et les étiquettes. */
 function meetActive(f) {
   var out = [];
   if (f.sex !== 'B') out.push(['sex', f.sex === 'M' ? 'Men' : 'Women']);
