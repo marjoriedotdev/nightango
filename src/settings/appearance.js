@@ -46,7 +46,13 @@ function AppearancePage() {
         h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } },
           h('input', { type: 'color', className: 'color-in', value: prefs.accent, 'aria-label': 'Custom accent color', onChange: function (e) { pr.set('accent', e.target.value); }, style: !palette ? { boxShadow: '0 0 0 2px var(--bg), 0 0 0 4px var(--text)' } : null }),
           'Custom'))),
-    h(T.SettingsSection, { title: 'Sky', description: "The moon follows tonight's real phase, computed on this device." },
+    h(T.SettingsSection, { title: 'Sky', description: "Tonight's moon is computed on this device. Nothing is requested." },
+      h(T.SettingRow, {
+        title: 'Moon', description: 'The moon next to Nightango. Day dividers keep the moon of each night.',
+        control: h('select', { className: 'tc-input', style: { width: 'auto' }, value: String(prefs.sky.moon), onChange: function (e) { pr.set('sky.moon', e.target.value === 'auto' ? 'auto' : +e.target.value); } },
+          h('option', { value: 'auto' }, "Auto (tonight's moon)"),
+          T.moonNames.map(function (n, i) { return h('option', { key: i, value: String(i) }, n); }))
+      }),
       h(T.SettingRow, { title: 'Calm sky', description: 'Stops the clouds drifting across the sky.', control: pr.sw('sky.calm') }),
       h(T.SettingRow, { title: 'Southern hemisphere', description: 'Draws the moon as it looks south of the equator. The phase is the same everywhere.', control: pr.sw('sky.south') })),
     h(T.SettingsSection, { title: 'Messages' },

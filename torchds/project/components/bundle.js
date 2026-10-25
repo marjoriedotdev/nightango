@@ -251,7 +251,9 @@
     var t = date == null ? Date.now() : +date;
     var age = ((t - NEW_MOON_REF) / 864e5) % SYNODIC_DAYS;
     if (age < 0) age += SYNODIC_DAYS;
-    var phase = age / SYNODIC_DAYS;
+    return moonInfo(age / SYNODIC_DAYS);
+  }
+  function moonInfo(phase) {
     return { phase: phase, lit: (1 - Math.cos(2 * Math.PI * phase)) / 2, name: MOON_NAMES[Math.round(phase * 8) % 8] };
   }
   function moonPath(phase, r) {
@@ -261,13 +263,32 @@
       'A' + (Math.abs(k) * r).toFixed(3) + ' ' + r + ' 0 0 ' + edge + ' ' + r + ' 0Z';
   }
 
+  // Mers de la face visible, nord en haut : [cx, cy, rx, ry, rotation].
+  var MARIA = [[4.6, 9.6, 2.6, 4.6, 12], [7.4, 5.8, 2.6, 2.1, 0], [9.5, 3.4, 4, 0.8, 0], [11.9, 6.6, 1.6, 1.5, 0], [13.3, 9.6, 2.1, 1.6, 20], [10.2, 9.4, 1.2, 0.9, 0],
+    [16.7, 7.8, 1.1, 0.95, 0], [15.4, 12.3, 1.3, 1.9, -15], [13.4, 13.2, 0.9, 0.9, 0], [8.6, 13.6, 1.9, 1.4, 0], [5.6, 13.8, 1, 1, 0]];
+  // Cratères clairs : Tycho et Copernic.
+  var CRATERS = [[9.2, 16.8, 0.55], [8.2, 9.6, 0.45]];
   function Moon(props) {
-    var size = props.size || 16, m = moonPhase(props.date);
+    var size = props.size || 16, m = props.phase == null ? moonPhase(props.date) : moonInfo(props.phase), lit = moonPath(m.phase, 10);
     var label = props.label === true ? m.name + ', ' + Math.round(m.lit * 100) + '% lit' : props.label;
+    // Les deux-points de useId ne passent pas dans url(#…).
+    var id = 'tc-moon-' + React.useId().replace(/[^\w-]/g, '');
     return h('svg', { className: cx('tc-moon', props.className), width: size, height: size, viewBox: '0 0 20 20', style: props.style,
       role: label ? 'img' : undefined, 'aria-label': label || undefined, 'aria-hidden': label ? undefined : 'true' },
+      h('defs', null,
+        h('linearGradient', { id: id + 'g', x1: 0, y1: 0, x2: 0, y2: 1 }, h('stop', { offset: 0, className: 'tc-moon-top' }), h('stop', { offset: 1, className: 'tc-moon-bottom' })),
+        h('radialGradient', { id: id + 'l', cx: 0.46, cy: 0.44, r: 0.56 }, h('stop', { offset: 0.6, className: 'tc-moon-limb', stopOpacity: 0 }), h('stop', { offset: 1, className: 'tc-moon-limb' })),
+        h('clipPath', { id: id + 'c' }, h('path', { d: lit })),
+        h('filter', { id: id + 'b', x: '-20%', y: '-20%', width: '140%', height: '140%' }, h('feGaussianBlur', { stdDeviation: 0.55 }))),
       h('circle', { className: 'tc-moon-shade', cx: 10, cy: 10, r: 10 }),
-      h('path', { className: 'tc-moon-lit', d: moonPath(m.phase, 10) }));
+      h('path', { className: 'tc-moon-lit', d: lit, fill: 'url(#' + id + 'g)' }),
+      h('g', { clipPath: 'url(#' + id + 'c)' },
+        h('g', { className: 'tc-moon-face' },
+          h('g', { className: 'tc-moon-maria', filter: 'url(#' + id + 'b)' }, MARIA.map(function (x, i) {
+            return h('ellipse', { key: i, cx: x[0], cy: x[1], rx: x[2], ry: x[3], transform: x[4] ? 'rotate(' + x[4] + ' ' + x[0] + ' ' + x[1] + ')' : undefined });
+          })),
+          CRATERS.map(function (x, i) { return h('circle', { key: i, className: 'tc-moon-crater', cx: x[0], cy: x[1], r: x[2] }); })),
+        h('circle', { cx: 10, cy: 10, r: 10, fill: 'url(#' + id + 'l)' })));
   }
 
   function DayDivider(props) {
@@ -394,7 +415,7 @@
     SegmentedControl: SegmentedControl, Badge: Badge, CountBadge: CountBadge, Avatar: Avatar, NavItem: NavItem,
     Message: Message, DayDivider: DayDivider, Banner: Banner, SettingsSection: SettingsSection, SettingRow: SettingRow,
     SaveBar: SaveBar, Composer: Composer, Skeleton: Skeleton, Spinner: Spinner, Moon: Moon,
-    avatarColor: avatarColor, moonPhase: moonPhase, iconNames: Object.keys(ICONS)
+    avatarColor: avatarColor, moonPhase: moonPhase, moonNames: MOON_NAMES.slice(), iconNames: Object.keys(ICONS)
   };
   window.Torch = Object.assign(window.Torch || {}, api);
 })();

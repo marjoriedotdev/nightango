@@ -35,9 +35,10 @@ function Shell() {
     main);
 }
 
-// La lune de ce soir, avec la braise de Torch.
+// La lune de ce soir, ou la phase fixe choisie dans Appearance (rang dans Torch.moonNames).
 function BrandMark() {
-  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true }), h('span', { className: 'brand-ember', 'aria-hidden': 'true' }));
+  var moon = useApp().state.prefs.sky.moon;
+  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true, phase: moon === 'auto' ? undefined : moon / 8 }));
 }
 
 function StartupScreen() {

@@ -151,7 +151,7 @@ Voir [ADR-0004](adr/0004-member-html-never-injected.md).
 ## Design system
 
 - `torchds/project/` contient les jetons (`tokens.json`), les composants (`components/bundle.js`, namespace `window.Torch`, et `bundle.css`), leurs types (`index.d.ts`), les polices embarquées (`fonts/`) et la charte (`README.md`).
-- Thème Clair de lune : un ciel (`sky-top`, `sky-bottom`, étoiles en `--stars` posé sur `#app`) derrière des panneaux pleins, le texte ne repose jamais sur le ciel. La lune vient de `Torch.Moon` et `Torch.moonPhase`, calculés sur l'appareil sans requête. Les préférences `sky.calm` et `sky.south` posent les classes `calm-sky` et `moon-south` sur la racine.
+- Thème Clair de lune : un ciel (`sky-top`, `sky-bottom`, étoiles en `--stars` posé sur `#app`) derrière des panneaux pleins, le texte ne repose jamais sur le ciel. La lune vient de `Torch.Moon` et `Torch.moonPhase`, calculés sur l'appareil sans requête. Les préférences `sky.calm` et `sky.south` posent les classes `calm-sky` et `moon-south` sur la racine. `sky.moon` vaut `auto` ou le rang d'une phase de `Torch.moonNames`, que la marque dessine à la place de la lune du soir.
 - `components/bundle.js` et `bundle.css` sont maintenus à la main. Le `README.md` et le `preview.html` de chaque composant sont générés par `pnpm build:ds`.
 - Le build produit la feuille des jetons depuis `tokens.json` : thème sombre par défaut, thème clair par préférence système ou par choix explicite.
 - `torch/project/` contient les maquettes (11 écrans) et leur canevas.

@@ -54,7 +54,7 @@ Nightango is themed after a full-moon night with scattered clouds, and a torch u
 Everything lives in Settings > Appearance and is saved on your device.
 
 - **Theme**: night (dark), dawn (light), or follow the system.
-- **Sky**: Calm sky stops the drifting clouds. Southern hemisphere draws the moon as it looks south of the equator.
+- **Sky**: keep the moon of tonight or pick a fixed phase. Calm sky stops the drifting clouds. Southern hemisphere draws the moon as it looks south of the equator.
 - **Accent color**: Ember, Blue, Green, Violet, Pink, Slate, or any color you pick. Text on the accent is adjusted so it stays readable.
 - **Density**: comfortable, or compact with no avatars and the time before the name.
 - **Text size** for message text.

@@ -2,6 +2,18 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.19.0] - 2026-10-25
+
+### Added
+
+- Settings, Appearance, Sky, Moon: keep tonight's moon next to Nightango (the default) or pick a fixed phase. Day dividers keep the moon of each night.
+
+### Changed
+
+- The Nightango mark is the moon alone. The small spark at its edge, which took the accent color, is gone.
+- In the light theme, the moon takes the colors of a sunrise, gold to coral, and the presence moons are orange instead of brown.
+- In the dark theme, the moon looks like the real one: its seas, the bright craters Tycho and Copernicus, and a darker edge. In the southern hemisphere it is turned half a turn, as seen from there.
+
 ## [0.18.0] - 2026-10-25
 
 ### Added
