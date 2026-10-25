@@ -45,7 +45,7 @@ Nightango is themed after a full-moon night with scattered clouds, and a torch u
 
 ![Group chat, group info and friends list on a phone](docs/readme/mobile.webp)
 
-![A member's profile card](docs/readme/profile.webp)
+![A Premium member's profile card](docs/readme/profile.webp)
 
 ## Customisation
 
