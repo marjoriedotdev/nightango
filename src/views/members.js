@@ -44,7 +44,6 @@ function GroupInfoSheet(p) {
   var g = p.g;
   return h(Dialog, { label: 'About #' + g.id, sheet: true, onClose: p.onClose },
     h('div', { className: 'topbar' },
-      h(T.Icon, { name: 'hash', size: 18, style: { color: 'var(--text-3)' } }),
       h('h2', { className: 'grow' }, g.id),
       h(T.IconButton, { icon: 'x', label: 'Close', onClick: p.onClose })),
     h('div', { className: 'scroll' },
