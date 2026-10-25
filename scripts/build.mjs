@@ -210,7 +210,9 @@ function skinCss(tokens, bundle, app) {
     .replace('html,body{height:100%}', () => ':host{display:block;height:100%}')
     .replace('body{background:var(--bg)', () => '#app{height:100%;background:var(--bg)')
     .replaceAll('.reduce-motion ', () => ':host(.reduce-motion) ')
-    .replaceAll('.underline-links ', () => ':host(.underline-links) ');
+    .replaceAll('.underline-links ', () => ':host(.underline-links) ')
+    .replaceAll('.calm-sky ', () => ':host(.calm-sky) ')
+    .replaceAll('.moon-south ', () => ':host(.moon-south) ');
   const css = shadowTokens + '\n[hidden]{display:none!important}\n' + bundle + '\n' + shadowApp;
   if (css.includes(':root') || css.includes('html,body{')) throw new Error('Userscript CSS still targets the document root.');
   return css;
@@ -238,7 +240,7 @@ async function userscript(source, pack) {
     .replaceAll('/*APP*/', () => source.appJs));
   // Tampermonkey lit l'en-tête tel quel : il reste hors de la transformation.
   const header = /^[\s\S]*?\/\/ ==\/UserScript==\r?\n/.exec(source.loader)[0];
-  const notice = `/*\nFonts embedded in this script: Geist and Geist Mono.\n\n${source.fontsLicense}*/\n`;
+  const notice = `/*\nFonts embedded in this script: Geist, Geist Mono and Instrument Serif.\n\n${source.fontsLicense}*/\n`;
   return header + notice + await pack.js(source.loader.slice(header.length).replaceAll('/*PAGE*/', () => jsonString(page)));
 }
 

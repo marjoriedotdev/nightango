@@ -15,6 +15,7 @@ function defaultPrefs() {
     privacy: { showIdle: true, joinOwned: true, joinRecent: true, joinFavorites: true, meet: false, usernameInTitle: false },
     safety: { embedImages: true, embedVideos: true, proxyMedia: true, warnLinks: true, trustedHosts: [], showGuests: true, guestMessages: true, syncBlocked: true, ignoreMode: 'collapse' },
     a11y: { reduceMotion: false, underlineLinks: false },
+    sky: { calm: false, south: false },
     language: 'en-US', simulate: true
   };
 }

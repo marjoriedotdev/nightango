@@ -784,7 +784,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     const p = $$('.log .tc-msg-text').find(x => x.textContent === txt), r = p && p.closest('article'), img = r && r.querySelector('img[src*="msgbg"]');
     return r ? [r.style.backgroundColor, img ? [img.getAttribute('src'), img.style.opacity, img.style.objectPosition, img.getAttribute('referrerpolicy'), img.getAttribute('alt'), img.getAttribute('loading')] : null] : null;
   };
-  const askedOff = ['rosa', 'trap', 'pale', 'plain'].map(bgAsked), ROSA = 'rgb(255, 246, 237)';
+  const askedOff = ['rosa', 'trap', 'pale', 'plain'].map(bgAsked), ROSA = 'rgb(253, 243, 233)';
   await toggle('Appearance', 'Message backgrounds');
   await until(() => (bgLook('Rosa first') || [])[0] === ROSA);
   const blockedBg = BG_TEXTS.slice(0, 4).map(bgLook);

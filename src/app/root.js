@@ -42,13 +42,15 @@ function Root(props) {
     var acc = hexToRgb(prefs.accent) ? prefs.accent : '#f27a3f';
     root.style.setProperty('--accent', acc);
     root.style.setProperty('--on-accent', contrast(hexToRgb(acc), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff');
-    root.style.setProperty('--accent-text-d', ensureContrast(acc, '#16171a', 4.5));
-    root.style.setProperty('--accent-text-l', ensureContrast(acc, '#ffffff', 4.5));
+    root.style.setProperty('--accent-text-d', ensureContrast(acc, SURFACE.dark.selected, 4.5));
+    root.style.setProperty('--accent-text-l', ensureContrast(acc, SURFACE.light.selected, 4.5));
     root.style.setProperty('--accent-soft-d', rgba(acc, 0.12));
     root.style.setProperty('--accent-soft-l', rgba(acc, 0.14));
     root.style.setProperty('--msg-size', prefs.textSize + 'px');
     root.classList.toggle('reduce-motion', !!prefs.a11y.reduceMotion);
     root.classList.toggle('underline-links', !!prefs.a11y.underlineLinks);
+    root.classList.toggle('calm-sky', !!prefs.sky.calm);
+    root.classList.toggle('moon-south', !!prefs.sky.south);
     storageSet(PREFS_KEY, prefs);
   }, [prefs]);
   useEffect(function () {

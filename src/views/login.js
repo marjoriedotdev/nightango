@@ -68,7 +68,7 @@ function Login() {
   }
   return h('div', { className: 'login' },
     h('section', { className: 'login-aside', 'aria-label': 'About Torch' },
-      h('div', { className: 'brand', style: { padding: 0 } }, h('span', { className: 'brand-mark', style: { width: 32, height: 32, borderRadius: 8 } }, h(T.Icon, { name: 'flame', size: 18, strokeWidth: 2.2 })), h('span', { className: 'brand-name', style: { fontSize: 17 } }, 'Torch')),
+      h('div', { className: 'login-brand' }, h('span', { className: 'login-mark' }, h(T.Icon, { name: 'flame', size: 18, strokeWidth: 2.2 })), h('span', { className: 'login-brand-name' }, 'Torch')),
       h('div', null,
         h('h1', null, 'A cleaner client for Chatango.'),
         h('p', { className: 'muted', style: { margin: '0 0 32px', fontSize: 15, color: 'var(--text-2)' } }, 'Same account, same groups. Fewer bugs and the tools Chatango never shipped.'),
