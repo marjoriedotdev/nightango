@@ -20,6 +20,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - Groups with new messages show a star. Unread counts, the send button and primary buttons glow like a torch.
 - Messages that mention you are lit from the left.
 - Group headers no longer show a # before the group name.
+- On phones, the members button in a group header shows only the count, so the group name fits.
 
 ### Removed
 
