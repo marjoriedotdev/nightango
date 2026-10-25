@@ -21,9 +21,9 @@ function page(userscript, url, before) {
   const injected = [], gm = [];
   new w.MutationObserver(rs => rs.forEach(r => r.addedNodes.forEach(n => { if (n.tagName === 'SCRIPT' && !n.src) injected.push(n.textContent); })))
     .observe(w.document, { childList: true, subtree: true });
-  // Bac à sable Tampermonkey : globales propres, DOM partagé, page atteinte par unsafeWindow.
+  // Bac à sable du gestionnaire : globales propres, DOM partagé, sans unsafeWindow, absent de Userscripts (Safari).
   const sandbox = vm.createContext({
-    document: w.document, location: w.location, unsafeWindow: w, CustomEvent: w.CustomEvent, console, setTimeout, clearTimeout,
+    document: w.document, location: w.location, CustomEvent: w.CustomEvent, console, setTimeout, clearTimeout,
     GM_xmlhttpRequest: details => { gm.push(details); }
   });
   sandbox.window = sandbox.top = sandbox.self = sandbox;

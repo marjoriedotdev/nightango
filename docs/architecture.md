@@ -95,10 +95,10 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
            CustomEvent torch-skin:vissle-response
 ```
 
-- En-tête : `@match https://st.chatango.com/*`, `@noframes`, `@grant GM_xmlhttpRequest`, `@grant unsafeWindow`, `@connect vissle.me`, `@run-at document-idle`.
+- En-tête : `@match https://st.chatango.com/*`, `@noframes`, `@grant GM_xmlhttpRequest`, `@connect vissle.me`, `@run-at document-idle`.
 - Le loader s'arrête hors de la page d'accueil (`window.top !== window` ou `pathname !== '/'`) : st.chatango.com sert aussi les fenêtres de discussion intégrées aux autres sites.
 - Le code page est injecté par un `<script>` dont le `textContent` est un littéral de chaîne JSON limité à l'ASCII. Il n'est jamais analysé comme HTML.
-- Seul le pont vissle tourne dans le bac à sable. Il lit le profil interrogé dans `unsafeWindow.__torchRefs.client.user.name` et ignore celui que la page demanderait ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
+- Seul le pont vissle tourne dans le bac à sable. Il lit le profil interrogé dans `client.user.name` par une sonde inline injectée à chaque requête, qui le lui rend par un `CustomEvent` synchrone (`torch-skin:account`), et ignore celui que la page demanderait. Pas d'`unsafeWindow` : Userscripts (Safari) ne le fournit pas ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
 - `skin-page.js` se protège d'un double démarrage (`window.__TORCH_SKIN__`), pose le journal de diagnostic (`skin-journal.js`, à la place de `/*JOURNAL*/`) avant tout socket de Torch, ajoute le script de démarrage de Torch, charge React et ReactDOM depuis cdnjs avec SRI, attend les objets globaux de Torch, puis monte l'interface.
 - Si le démarrage échoue, le client Torch d'origine reste en place.
 
