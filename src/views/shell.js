@@ -35,9 +35,9 @@ function Shell() {
     main);
 }
 
-// La lune de ce soir, avec la braise de Torch.
+// La lune de ce soir.
 function BrandMark() {
-  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true }), h('span', { className: 'brand-ember', 'aria-hidden': 'true' }));
+  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true }));
 }
 
 function StartupScreen() {
