@@ -15,7 +15,7 @@ Nightango is a calm, readable skin for Torch, a web client for Chatango. Its the
 ## Color
 
 - Dark (night) is the default theme, light (dawn) is the alternative; both use the same token names. The sky (`sky-top` to `sky-bottom`, `star`, `cloud`) sits behind everything. In front of it, put surfaces in this order from back to front: `sidebar`, `bg`, `panel`, `subtle`, `raised`.
-- Two lights, two meanings. Moonlight (`moon`, `moon-ink`) for structure, presence and the mark. Ember (`accent`) only for what asks for attention.
+- Two lights, two meanings. Moonlight (`moon`, `moon-ink`, `moon-lit-top` to `moon-lit-bottom`) for structure, presence and the mark. At dawn the drawn moon takes the colors of a sunrise, gold to coral. Ember (`accent`) only for what asks for attention.
 - Text: `text` for names, headings and labels, `text-body` for message bodies, `text-2` for secondary text and icons, `text-3` for timestamps and hints. All four hold 4.5:1 on every surface in both themes.
 - `accent` (ember) is a fill: primary buttons, unread counts, the send button, the on state of switches. Primary buttons, counts and the send button carry `shadow-glow`, the light of the torch. Text and icons on it use `on-accent`, never white.
 - An unread count is a `CountBadge` on the navigation item that leads to the list. A filter inside the list does not repeat it.
@@ -71,4 +71,4 @@ Chatango lets members choose name colors, fonts, text colors and message backgro
 
 ## Logo
 
-The mark is tonight's moon: a 30px `Moon` with its phase name as accessible label, in `moon-ink` whatever the accent. The word Nightango follows in `font-display` at 28px. The mark changes with the moon; do not freeze it into a fixed full moon.
+The mark is tonight's moon: a 30px `Moon` with its phase name as accessible label, in its moonlight colors whatever the accent. The word Nightango follows in `font-display` at 28px. The mark changes with the moon; do not freeze it into a fixed full moon.

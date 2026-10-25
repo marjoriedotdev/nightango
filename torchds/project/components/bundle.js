@@ -264,10 +264,14 @@
   function Moon(props) {
     var size = props.size || 16, m = moonPhase(props.date);
     var label = props.label === true ? m.name + ', ' + Math.round(m.lit * 100) + '% lit' : props.label;
+    // Les deux-points de useId ne passent pas dans url(#…).
+    var gradient = 'tc-moon-' + React.useId().replace(/[^\w-]/g, '');
     return h('svg', { className: cx('tc-moon', props.className), width: size, height: size, viewBox: '0 0 20 20', style: props.style,
       role: label ? 'img' : undefined, 'aria-label': label || undefined, 'aria-hidden': label ? undefined : 'true' },
+      h('defs', null, h('linearGradient', { id: gradient, x1: 0, y1: 0, x2: 0, y2: 1 },
+        h('stop', { offset: 0, className: 'tc-moon-top' }), h('stop', { offset: 1, className: 'tc-moon-bottom' }))),
       h('circle', { className: 'tc-moon-shade', cx: 10, cy: 10, r: 10 }),
-      h('path', { className: 'tc-moon-lit', d: moonPath(m.phase, 10) }));
+      h('path', { className: 'tc-moon-lit', d: moonPath(m.phase, 10), fill: 'url(#' + gradient + ')' }));
   }
 
   function DayDivider(props) {

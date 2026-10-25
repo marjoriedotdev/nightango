@@ -68,7 +68,8 @@ select.tc-input{padding:0 10px}
 
 .tc-moon{flex:none;display:inline-block;vertical-align:middle}
 .tc-moon-shade{fill:var(--moon-shade)}
-.tc-moon-lit{fill:var(--moon-ink)}
+.tc-moon-top{stop-color:var(--moon-lit-top)}
+.tc-moon-bottom{stop-color:var(--moon-lit-bottom)}
 
 .tc-nav{display:flex;align-items:center;gap:10px;width:100%;height:var(--size-control-md);padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);font:400 14px var(--font-sans);text-align:left;text-decoration:none;cursor:pointer}
 .tc-nav:hover{background:var(--hover);color:var(--text)}
