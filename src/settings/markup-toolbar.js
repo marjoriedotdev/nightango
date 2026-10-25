@@ -1,0 +1,138 @@
+/* ---------- Barre de mise en forme des champs de profil ---------- */
+
+var TEXT_SIZES = [['Small', 2], ['Large', 5], ['Huge', 7]];
+var TEXT_ALIGNMENTS = [['Left', 'left'], ['Center', 'center'], ['Right', 'right']];
+// Pas de Ctrl+K pour le lien : il ouvre la palette de commandes dans toute l'application.
+var MARKUP_SHORTCUTS = { b: 'b', i: 'i', u: 'u' };
+// Comme RichText, seuls les liens http(s) s'affichent. Sans guillemet ni chevron, l'URL ne sort pas de son attribut.
+var MARKUP_URL = /^https?:\/\/[^\s"<>]+$/i;
+
+/**
+ * Permet d'entourer la sélection d'une balise, ou de la retirer si elle l'entoure déjà.
+ * @param {string} value Texte du champ.
+ * @param {number} start Début de la sélection.
+ * @param {number} end Fin de la sélection.
+ * @param {string} open Balise ouvrante.
+ * @param {string} close Balise fermante.
+ * @returns {{from: number, to: number, text: string, selStart: number, selEnd: number}} Plage remplacée, texte inséré et sélection qui suit.
+ */
+function wrapMarkup(value, start, end, open, close) {
+  var sel = value.slice(start, end);
+  if (sel && start >= open.length && value.slice(start - open.length, start) === open && value.slice(end, end + close.length) === close)
+    return { from: start - open.length, to: end + close.length, text: sel, selStart: start - open.length, selEnd: end - open.length };
+  return { from: start, to: end, text: open + sel + close, selStart: start + open.length, selEnd: end + open.length };
+}
+
+/**
+ * Permet d'appliquer une édition au champ en gardant l'annulation du navigateur.
+ * @param {HTMLTextAreaElement} el Champ modifié.
+ * @param {{from: number, to: number, text: string, selStart: number, selEnd: number}} edit Édition calculée.
+ * @param {function(string)} toast Message affiché quand le champ n'a plus la place.
+ */
+function applyMarkupEdit(el, edit, toast) {
+  var over = el.maxLength > 0 ? el.value.length - (edit.to - edit.from) + edit.text.length - el.maxLength : 0;
+  if (over > 0) { toast('Remove ' + plural(over, 'character', 'characters') + ' to make room for this format.'); return; }
+  el.focus();
+  el.setSelectionRange(edit.from, edit.to);
+  // insertText garde Ctrl+Z. execCommand est déprécié : à défaut, setRangeText insère sans historique d'annulation.
+  if (!document.execCommand('insertText', false, edit.text)) {
+    el.setRangeText(edit.text, edit.from, edit.to);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  el.setSelectionRange(edit.selStart, edit.selEnd);
+}
+
+/**
+ * Fenêtre qui demande l'adresse d'un lien ou d'une image, ou la couleur du texte.
+ * @param {string} p.kind link, image ou color.
+ * @param {string} p.color Couleur proposée au départ.
+ * @param {function(string)} p.onSubmit Reçoit l'adresse ou la couleur.
+ * @param {Function} p.onClose Fermeture sans rien insérer.
+ */
+function MarkupDialog(p) {
+  var color = p.kind === 'color';
+  var v = useState(color ? p.color : ''), value = v[0], setValue = v[1];
+  var e = useState(''), err = e[0], setErr = e[1];
+  // Entrée empêchée : l'insertion rend le focus à la textarea avant l'action par défaut, qui y ajouterait un saut de ligne.
+  function submit() {
+    var url = value.trim();
+    if (!color && !MARKUP_URL.test(url)) { setErr('Enter a link that starts with https:// and has no spaces, quotes or angle brackets.'); return; }
+    p.onSubmit(color ? value : url);
+  }
+  var title = color ? 'Text color' : p.kind === 'link' ? 'Add a link' : 'Add an image';
+  return h(Dialog, {
+    title: title, onClose: p.onClose,
+    footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 's', variant: 'primary', onClick: submit }, color ? 'Apply color' : title)]
+  },
+    h('div', { className: 'dialog-body' },
+      color ? h(ColorField, { id: 'markup-color', label: 'Color', value: value, onChange: setValue })
+        : h(T.TextField, { id: 'markup-url', label: p.kind === 'link' ? 'Link' : 'Image link', placeholder: 'https://', value: value, error: err, autoComplete: 'off', onChange: function (ev) { setValue(ev.target.value); setErr(''); }, onKeyDown: function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); submit(); } } })));
+}
+
+/**
+ * Permet de mettre en forme le HTML d'un champ de profil par une barre d'outils et des raccourcis.
+ * @param {Object} inputRef Référence de la textarea, passée au TextField par inputRef.
+ * @param {string} fieldId Identifiant de la textarea.
+ * @param {boolean} [disabled] Barre désactivée avec le champ.
+ * @returns {{toolbar: Object, onKeyDown: Function}} Barre à passer au TextField et gestionnaire des raccourcis de la textarea.
+ */
+function useMarkupToolbar(inputRef, fieldId, disabled) {
+  var app = useApp();
+  var d = useState(null), dialog = d[0], setDialog = d[1];
+  var c = useState('#e5484d'), lastColor = c[0], setLastColor = c[1];
+  function edit(build) {
+    var el = inputRef.current;
+    applyMarkupEdit(el, build(el.value, el.selectionStart, el.selectionEnd), app.ui.toast);
+  }
+  function wrap(open, close) { edit(function (value, start, end) { return wrapMarkup(value, start, end, open, close); }); }
+  function insert(kind, value) {
+    if (kind === 'color') { setLastColor(value); wrap('<font color="' + value + '">', '</font>'); return; }
+    if (kind === 'image') {
+      edit(function (v, start, end) { var img = '<img src="' + value + '">'; return { from: end, to: end, text: img, selStart: end + img.length, selEnd: end + img.length }; });
+      return;
+    }
+    var open = '<a href="' + value + '">';
+    edit(function (v, start, end) {
+      if (start !== end) return wrapMarkup(v, start, end, open, '</a>');
+      return { from: start, to: start, text: open + value + '</a>', selStart: start + open.length, selEnd: start + open.length + value.length };
+    });
+  }
+  function tag(name) { wrap('<' + name + '>', '</' + name + '>'); }
+  function onKeyDown(e) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    var name = MARKUP_SHORTCUTS[e.key.toLowerCase()];
+    if (!name) return;
+    e.preventDefault();
+    tag(name);
+  }
+  function button(icon, label, onClick, keys) {
+    return h(T.IconButton, { icon: icon, label: label, size: 30, iconSize: 16, disabled: disabled, 'aria-keyshortcuts': keys, onClick: onClick });
+  }
+  function menu(icon, label, items) {
+    return h(MenuButton, { label: label, items: items, align: 'left', renderTrigger: function (t) { return h(T.IconButton, Object.assign({ icon: icon, label: label, size: 30, iconSize: 16, disabled: disabled }, t)); } });
+  }
+  var sep = h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' });
+  var toolbar = h(T.Toolbar, { label: 'Formatting', controls: fieldId },
+    button('bold', 'Bold', function () { tag('b'); }, 'Control+B Meta+B'),
+    button('italic', 'Italic', function () { tag('i'); }, 'Control+I Meta+I'),
+    button('underline', 'Underline', function () { tag('u'); }, 'Control+U Meta+U'),
+    button('strikethrough', 'Strikethrough', function () { tag('s'); }),
+    sep,
+    button('palette', 'Text color', function () { setDialog('color'); }),
+    menu('type', 'Text size', TEXT_SIZES.map(function (s) { return { label: s[0], onSelect: function () { wrap('<font size="' + s[1] + '">', '</font>'); } }; })),
+    menu('align-left', 'Alignment', TEXT_ALIGNMENTS.map(function (a) { return { label: a[0], icon: 'align-' + a[1], onSelect: function () { wrap('<div align="' + a[1] + '">', '</div>'); } }; })),
+    sep,
+    button('link', 'Add a link', function () { setDialog('link'); }),
+    button('image', 'Add an image', function () { setDialog('image'); }),
+    dialog ? h(MarkupDialog, {
+      kind: dialog, color: lastColor, onClose: function () { setDialog(null); },
+      onSubmit: function (value) {
+        var kind = dialog;
+        // Fermeture synchrone : la fenêtre rend le focus à son déclencheur en se démontant, l'insertion le reprend ensuite.
+        // Insérer depuis un effet casserait l'annulation, React y rétablit la valeur contrôlée du champ.
+        ReactDOM.flushSync(function () { setDialog(null); });
+        insert(kind, value);
+      }
+    }) : null);
+  return { toolbar: toolbar, onKeyDown: onKeyDown };
+}
