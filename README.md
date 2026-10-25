@@ -2,9 +2,9 @@
 
 ![A Nightango group chat on desktop and on a phone](docs/readme/hero.webp)
 
-Nightango is a skin for [Torch](https://vissle.me), a third-party web client for Chatango. It is a Tampermonkey userscript for [st.chatango.com](https://st.chatango.com/): it starts Torch, then draws a redesigned interface on top of it: group chats, private messages, profiles, moderation and Meet people, on desktop and on phones.
+Nightango is a skin for [BetterChatango](https://vissle.me), a third-party web client for Chatango. It is a Tampermonkey userscript for [st.chatango.com](https://st.chatango.com/): it starts BetterChatango, then draws a redesigned interface on top of it: group chats, private messages, profiles, moderation and Meet people, on desktop and on phones.
 
-You sign in on Torch's own screen. Nightango never reads your password and only sends Chatango frames that Torch or a reference library already uses.
+You sign in on BetterChatango's own screen. Nightango never reads your password and only sends Chatango frames that BetterChatango or a reference library already uses.
 
 ## A night sky
 
@@ -24,7 +24,7 @@ Nightango is themed after a full-moon night with scattered clouds, and a torch u
 - Red, blue and staff channels, with a color bar on every channel message.
 - Older messages load as you scroll up.
 - Errors and warnings show as short notices instead of filling the thread.
-- Your Torch media library: star an image to save it, insert it from the Media tab or by typing `:name` then Tab, and import or export it in Torch's format.
+- Your BetterChatango media library: star an image to save it, insert it from the Media tab or by typing `:name` then Tab, and import or export it in BetterChatango's format.
 
 **Private messages and friends**
 - Images and videos show as soon as you send them.
@@ -59,16 +59,16 @@ Everything lives in Settings > Appearance and is saved on your device.
 - **Density**: comfortable, or compact with no avatars and the time before the name.
 - **Text size** for message text.
 - **Chatango styles**: turn members' name colors, fonts and text colors, message backgrounds and profile backgrounds on or off. Hard-to-read colors are corrected. To hide the style of one member only, use Hide style in their message menu or profile.
-- **Imported themes**: load a theme file (.json) from the old Torch theme editor and use its accent color.
+- **Imported themes**: load a theme file (.json) from the old BetterChatango theme editor and use its accent color.
 - **Message style**: pick the font, size and colors of your own messages. It applies to what you send from Nightango in this browser and does not change your Chatango account style.
 
 ## Privacy and security
 
-- Your password stays with Torch. Nightango never reads, stores, logs or sends it.
+- Your password stays with BetterChatango. Nightango never reads, stores, logs or sends it.
 - Every HTTP call Nightango makes is listed in [docs/betterchatango-protocol.md](docs/betterchatango-protocol.md#appels-http-autorisés), and nothing outside that list is called.
 - Member HTML is rebuilt from an allow list, never injected. Full profiles render in a sandboxed frame without scripts.
 - Profile backgrounds, message backgrounds and full-size profile pictures load without sending a referrer.
-- Trusted sites, listed in Settings > Safety and shared with Torch, open without a link warning and load their images, videos and audio without a click. Other sites follow your media settings.
+- Trusted sites, listed in Settings > Safety and shared with BetterChatango, open without a link warning and load their images, videos and audio without a click. Other sites follow your media settings.
 - Fonts ship inside the userscript: no request to Google Fonts.
 - Activity on your own profile is the only visitor data Nightango reads.
 
@@ -77,7 +77,7 @@ Everything lives in Settings > Appearance and is saved on your device.
 1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.
 2. Download `torch-skin.min.user.js` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest), or build it yourself (see below).
 3. In Tampermonkey, create a new script, or open your existing Nightango script (named Torch Skin before 0.18.0), and replace all of its content with the file. Save.
-4. Open https://st.chatango.com/ and sign in on the Torch screen. Nightango appears once your session is open.
+4. Open https://st.chatango.com/ and sign in on the BetterChatango screen. Nightango appears once your session is open.
 
 ## Build and test
 
@@ -101,7 +101,7 @@ Geist, Geist Mono and Instrument Serif are embedded in the userscript and the pr
 
 ## Credits
 
-Nightango runs on top of [Torch](https://github.com/Vissle-Drissle/Torch-Client) by Vissle, released under the MIT license.
+Nightango runs on top of [BetterChatango](https://github.com/Vissle-Drissle/Torch-Client) by Vissle, released under the MIT license.
 
 ## Documentation
 
@@ -110,6 +110,6 @@ The project docs are written in French.
 - [AGENTS.md](AGENTS.md): project rules, commands, releasing a version
 - [GLOSSARY.md](GLOSSARY.md): domain vocabulary
 - [docs/architecture.md](docs/architecture.md): code and build layout
-- [docs/betterchatango-protocol.md](docs/betterchatango-protocol.md): how Torch and the Chatango protocol work
+- [docs/betterchatango-protocol.md](docs/betterchatango-protocol.md): how BetterChatango and the Chatango protocol work
 - [docs/coding-conventions.md](docs/coding-conventions.md): code and test conventions
 - [docs/adr/](docs/adr/): architecture decisions
