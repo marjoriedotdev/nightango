@@ -261,6 +261,43 @@ function parseMiniCss(css) {
     repeat: BACKGROUND_REPEAT.test(repeat) ? repeat : null
   };
 }
+// Valeurs du formulaire de fond de Torch quand le compte n'a pas encore de custom_profile.css (client.html:2296-2324).
+var MINI_STYLE_DEFAULT = { bg: '#ffffff', text: '#222222', link: '#0084ef' };
+/**
+ * Permet de préparer le formulaire du fond Premium à partir du fond lu par parseMiniCss.
+ * @param {?Object} mini Fond lu, null sans custom_profile.css.
+ * @returns {{bg: string, text: string, link: string, image: string, tileDown: boolean, tileAcross: boolean}} Couleurs en #rrggbb, image vide sans image.
+ */
+function miniStyleForm(mini) {
+  var m = mini || {}, repeat = m.repeat || '';
+  function hex(v, fallback) { var c = hexToRgb(v); return c ? rgbToHex(c) : fallback; }
+  return {
+    bg: hex(m.bg, MINI_STYLE_DEFAULT.bg), text: hex(m.text, MINI_STYLE_DEFAULT.text), link: hex(m.link, MINI_STYLE_DEFAULT.link), image: m.image || '',
+    // Correspondance du switch de Torch (inject.js:4939-4950), que sa condition limite pourtant à repeat.
+    tileDown: repeat === 'repeat' || repeat === 'repeat-y', tileAcross: repeat === 'repeat' || repeat === 'repeat-x'
+  };
+}
+/**
+ * Permet de reconstruire le fond tel que parseMiniCss le lirait après l'enregistrement d'un formulaire.
+ * @param {Object} form Formulaire tel que le renvoie miniStyleForm.
+ */
+function miniStyleOfForm(form) {
+  var repeat = form.tileDown ? (form.tileAcross ? 'repeat' : 'repeat-y') : form.tileAcross ? 'repeat-x' : 'no-repeat';
+  return { bg: form.bg, text: form.text, link: form.link, image: form.image || null, repeat: repeat };
+}
+
+// -- Profil -------------------------------------------------------------------
+
+/**
+ * Permet de lire la réponse de updateprofile, des paires clé=valeur séparées par &, comme Torch (inject.js:1399-1400).
+ * @param {string} resp Texte renvoyé par Chatango.
+ * @returns {Object} Valeurs encore encodées, error compris.
+ */
+function parseProfileReply(resp) {
+  var data = {};
+  String(resp).split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) data[kv.slice(0, i)] = kv.slice(i + 1); });
+  return data;
+}
 
 // -- Fond de message ----------------------------------------------------------
 

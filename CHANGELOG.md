@@ -2,6 +2,19 @@
 
 Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.17.0] - 2026-10-25
+
+### Added
+
+- Upload a new profile picture from Settings, Profile, then crop the square your avatar shows.
+- Adjust the crop of your current profile picture, with the mouse or the keyboard.
+- Premium members can set the background color, text color, link color and background image of their mini profile. Paste an image link or upload the image to vissle.
+
+### Fixed
+
+- The profile preview shows your Premium background colors and image.
+- Opening Profile in the hosted prototype no longer raises an error while the visitors list loads.
+
 ## [0.16.1] - 2026-10-25
 
 ### Changed

@@ -102,7 +102,8 @@ Ce ne sont pas des appels du code applicatif mais des ressources que le navigate
 - Les images de message et les vignettes de la médiathèque (URL https, ou http chargée en https et `fp.chatango.com` sur `ust.chatango.com` comme Torch, `inject.js:1112` ; `chatango.com/pmmessageimg`) selon `embedImages`, `proxyMedia` et les hôtes de confiance (voir Réglages de démarrage de Torch, Hôtes de confiance).
 - Les fichiers vidéo (mp4, webm) et audio (mp3, ogg, wav) de message, en URL https d'un hôte quelconque (http chargée en https, comme les images), en `<video>` ou `<audio>`, selon `embedVideos` et les hôtes de confiance : créés seulement au clic, ou dès l'affichage sans lecture automatique pour un hôte de confiance.
 - Les avatars `ust.chatango.com/profileimg/…/thumb.jpg` ou `thumb_m.jpg`, en `<img>`.
-- La photo de profil complète `ust.chatango.com/profileimg/…/full.jpg`, en `<img>` `referrerPolicy="no-referrer"`, chargée seulement au clic sur l'avatar du mini profil.
+- La photo de profil complète `ust.chatango.com/profileimg/…/full.jpg`, en `<img>` `referrerPolicy="no-referrer"`, chargée seulement au clic sur l'avatar du mini profil, ou dans le recadrage de sa propre photo.
+- Après un envoi ou un recadrage, les photos de son propre compte portent `?v={horodatage}` (voir Recadrage).
 - L'image du fond de message `ust.chatango.com/profileimg/…/msgbg.jpg`, en `<img>` `referrerPolicy="no-referrer"`, seulement si `embedImages` est actif et `proxyMedia` coupé.
 - L'image du fond Premium, URL `https` d'un hôte quelconque tirée de `custom_profile.css` (voir Fond Premium), en `<img>` `referrerPolicy="no-referrer"`, sous `styles.profileBackgrounds` et `embedImages`, au clic sous `proxyMedia` sauf pour un hôte de confiance.
 - Les images de la bio d'un mini profil (`RichText`, `core/rich-text.js`), URL `http` ou `https` d'un hôte quelconque écrite par le membre, en `<img>` `referrerPolicy="no-referrer"` et `loading="lazy"`, selon `embedImages` et `waitsForClick` (au clic sous `proxyMedia` sauf pour un hôte de confiance). Les cartes Meet n'en affichent aucune.
@@ -287,6 +288,29 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Le profil complet se modifie dans la page Profile, en texte brut, avec un aperçu dans le cadre isolé de `fullProfileDoc`. Quand seuls les autres champs changent, il est renvoyé intact. `full_profile` part tel quel, chaîne vide comprise. Le pont ne relit `mod2.xml` que si la page ne connaît pas encore le profil complet.
 - Une réponse 5xx de `mod2.xml` est un échec de lecture, pas un profil complet vide : la page Profile affiche l'échec et un enregistrement n'envoie rien. Torch ne remplit `full` que sur une réponse `text/xml` (`inject.js:4955-4964`) puis envoie ce champ tel quel (`inject.js:1547-1576`) : après une erreur serveur, son enregistrement effacerait le profil complet. Un 4xx ou une réponse 200 hors XML vaut fichier absent, donc profil vide.
 - `mod1.xml` et `mod2.xml` peuvent revenir du cache HTTP après un enregistrement. Pendant 5 minutes, le pont sert la version envoyée de la bio et du profil complet.
+- Réponse de `updateprofile` : des paires `clé=valeur` séparées par `&` (`parseProfileReply`, comme `inject.js:1399-1400`), avec `error` sur un refus. Le pont la confie à `client.setProfile`, comme Torch, qui y range `x0`, `y0` et `ts` dans `client.user.avatar` (`inject.js:4875-4878`).
+- Tous les formulaires ci-dessous passent par `client.post(chatango.path('updateprofile')…, form, {})`, sans `progress` ni `credential` : Torch y ajoute le seul jeton `s` (voir Appels HTTP autorisés). Une seule requête à la fois : le fond part après le profil.
+
+### Photo de profil
+
+- Envoi : `auth=token`, `arch=h5`, `src=group`, `action=fullpic`, fichier `Filedata` (formulaire `data-form="avatar"`, `client.html:1283-1289`, envoi `inject.js:1409-1432`). Le sélecteur de Torch Skin accepte JPG, PNG et GIF.
+- Réponse : seule `pix` est connue comme succès, sous ce nom dans la branche `progress` de Torch (`inject.js:4788`). `unauthed` : « Your Chatango session expired. ». `error:{texte}` : « Chatango did not accept this picture. », le texte de Chatango n'est pas affiché. Toute autre réponse : « Chatango sent an unexpected reply. Check your picture on chatango.com. ».
+- Torch rouvre ensuite son recadrage sur le nouveau `full.jpg`. Torch Skin aussi, sur le plus grand carré centré.
+- Pas de retrait de la photo : Torch envoie à la place `noimage.jpg`, lu chez vissle (`inject.js:1440-1446`), une ressource hors de la liste fermée.
+
+### Recadrage
+
+- Envoi : `auth=token`, `arch=h5`, `src=group`, `action=thumb`, `x0`, `y0` (coin haut gauche) et `ts` (côté), entiers en pixels de `full.jpg` (`inject.js:1390-1406`, `cropper.getData()` arrondi). Chatango en tire `thumb.jpg` et `thumb_m.jpg`. La réponse est celle de `updateprofile` et doit porter `x0`.
+- Recadrage actuel : `client.user.avatar`. Une valeur négative vaut 0 pour `x0` et `y0`, toute la largeur pour `ts` (`inject.js:8473-8476`). Le carré reste dans l'image (`clampCrop`).
+- Après un envoi ou un recadrage, les photos de son compte portent `?v={horodatage}` (`AVATAR_VERSION`) : le cache HTTP du navigateur garderait sinon l'ancienne. Torch relit les siennes avec `cache: "reload"` à la trame `updateprofile` (`inject.js:3873-3884`).
+
+### Écriture du fond Premium
+
+- Envoi : `updateprofile?css`, `auth=token`, `arch=h5`, `src=group`, `action=update`, `body_bg_col`, `body_col`, `body_a_col` (hex sans `#`), `body_bg_img` (URL de l'image, vide sans image), `body_tile_d` et `body_tile_a` (`1` ou `0`), et `dir=checked` si le compte paraît dans Meet people (`inject.js:4900-4916`, formulaire `client.html:2279-2345`). La réponse est celle de `updateprofile` et doit porter `age`, `sex` ou `loc`.
+- Valeurs de départ : le fond lu dans `custom_profile.css` (`miniStyleForm`), à défaut celles du formulaire de Torch (`#ffffff`, `#222222`, `#0084ef`). « Tile down » et « Tile across » reprennent `background-repeat` (`repeat-y`, `repeat-x`, `repeat`) comme le switch de Torch (`inject.js:4939-4950`) : ils repartent toujours, pour ne pas effacer la répétition enregistrée.
+- Image : une URL `https` sans espace, guillemet, chevron ni parenthèse (`SAFE_IMAGE_URL`), collée ou obtenue par l'envoi vissle (voir Envoi de fichiers). Chatango ne l'héberge pas.
+- La section n'apparaît que pour un compte Premium selon `mod1.xml` (balise `d`), seul cas où Chatango sert `custom_profile.css`. Pendant 5 minutes, le pont sert le fond envoyé.
+- Non vérifié sur un compte réel : que `action=update` sans les autres champs du profil les laisse intacts. Torch envoie ce formulaire tel quel.
 
 ## Meet people
 
@@ -314,6 +338,7 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Limites du chemin `fetch` : le statut HTTP n'est pas vérifié (les gestionnaires `status` de Torch ne servent qu'à la branche `progress`, `inject.js:4826`), et `client.post` refuse une requête tant qu'une autre est en cours, en rejetant avec l'URL de celle-ci (`inject.js:4752-4755`). Torch Skin l'annonce : « Torch is busy with another request. Try again in a moment. ».
 - Publication : Torch Skin publie le lien lui-même, par `actions.sendGroup` ou `actions.sendDm`, dans le groupe (et son canal) ou le MP où le fichier a été choisi, figé à ce moment. « File sent. » ne s'affiche qu'après la réponse `data:` et l'envoi de la trame du lien. Si la trame ne part pas, le lien reste à copier depuis la notification.
 - Le prototype n'envoie rien : « Uploading media is not part of this prototype. ».
+- Même envoi pour l'image du fond Premium (page Profile), après confirmation : le lien rendu remplit le champ de l'image et n'est publié nulle part.
 
 ## Activité du profil (vissle)
 

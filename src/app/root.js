@@ -291,11 +291,12 @@ function Root(props) {
       var req = uid(), q = { page: more ? stateRef.current.visitors.next : 1, order: 'desc', get: get };
       update(function (d) { d.visitors = Object.assign({ rows: [], next: null }, more ? d.visitors : null, { get: get, loading: true, error: null, req: req }); });
       // Seule la dernière demande s'applique : un changement de filtre rend les réponses précédentes obsolètes.
+      // React peut appliquer la réponse à un état qui n'a pas encore la demande ci-dessus, puis la rejouer dans l'ordre.
       (LIVE ? liveBridge.visitors(q) : Promise.resolve(sampleVisits(q))).then(function (items) {
         var pg = visitorPage(items, get);
-        update(function (d) { if (d.visitors.req === req) d.visitors = { get: get, rows: (more ? d.visitors.rows : []).concat(pg.rows), next: pg.next, loading: false, error: null, req: req }; });
+        update(function (d) { if (d.visitors && d.visitors.req === req) d.visitors = { get: get, rows: (more ? d.visitors.rows : []).concat(pg.rows), next: pg.next, loading: false, error: null, req: req }; });
       }, function (e) {
-        update(function (d) { if (d.visitors.req === req) Object.assign(d.visitors, { loading: false, error: e.message }); });
+        update(function (d) { if (d.visitors && d.visitors.req === req) Object.assign(d.visitors, { loading: false, error: e.message }); });
       });
     },
     closeDm: function (name) {

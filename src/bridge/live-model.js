@@ -3,6 +3,8 @@ var LIVE = !!window.__TORCH_LIVE__;
 // Posé par le code page avant Torch (loader/skin-journal.js) : absent du prototype et des suites qui ne lisent que le pont.
 var JOURNAL = window.__TORCH_JOURNAL__ || null;
 
+// Hors de l'état React : posée par le pont après un envoi ou un recadrage, elle contourne le cache HTTP des photos.
+var AVATAR_VERSION = {};
 /**
  * Permet de construire l'URL d'une photo de profil Chatango.
  * @param {string} name Nom du compte.
@@ -13,7 +15,7 @@ function profileImgSrc(name, file) {
   var n = String(name || '').toLowerCase();
   if (!/^[a-z0-9_-]+$/.test(n)) return null;
   var path = /^[_-]/.test(n) ? 'sp/sp' + n : n.charAt(0) + '/' + (n.charAt(1) || n.charAt(0)) + '/' + n;
-  return 'https://ust.chatango.com/profileimg/' + path + '/' + file + '.jpg';
+  return 'https://ust.chatango.com/profileimg/' + path + '/' + file + '.jpg' + (AVATAR_VERSION[n] ? '?v=' + AVATAR_VERSION[n] : '');
 }
 /**
  * Permet de construire l'URL de la miniature de profil Chatango.

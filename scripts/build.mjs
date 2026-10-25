@@ -54,6 +54,7 @@ export const APP_SOURCES = [
   'settings/live-group-view.js',
   'settings/live-group-pages.js',
   'settings/live-group-staff.js',
+  'settings/avatar-crop.js',
   'settings/live-account.js',
   'app/sound.js',
   'app/state.js',

@@ -1150,11 +1150,59 @@ var liveBridge = (function () {
       return {
         loaded: !!(C.user && C.user.avatar && typeof C.user.avatar === 'object' && document.querySelector('[data-text-field="age"]') && dir),
         age: readField('[data-text-field="age"]'), gender: readField('[data-text-field="gender"]'), location: readField('[data-text-field="location"]'),
-        about: readField('[data-text-field="about"]'), full: sent ? sent.data : readField('[data-text-field="full"]'), dir: !!(dir && dir.checked)
+        about: readField('[data-text-field="about"]'), full: sent ? sent.data : readField('[data-text-field="full"]'), dir: !!(dir && dir.checked),
+        // x0, y0 et ts de la dernière réponse de updateprofile, rangés par Torch (setProfile, inject.js:4875-4878).
+        crop: C.user && C.user.avatar && typeof C.user.avatar === 'object' ? { x0: +C.user.avatar.x0, y0: +C.user.avatar.y0, ts: +C.user.avatar.ts } : null
       };
     },
     saveProfile: function (p) {
       return Promise.resolve().then(function () { return saveProfileNow(p); });
+    },
+    /**
+     * Permet d'envoyer sa photo de profil comme le formulaire avatar de Torch (client.html:1283-1289), sans progress.
+     * @param {File} file Image choisie.
+     * @returns {Promise} Rejetée avec le texte à afficher sur toute autre réponse que pix.
+     */
+    uploadAvatar: function (file) {
+      return post(CH.path('updateprofile'), profileForm('fullpic', { Filedata: file }), {}).then(function (resp) {
+        var kind = String(resp).split(':')[0];
+        // Seule réponse de succès connue : la branche progress de Torch la traite sous ce nom (inject.js:4788).
+        if (kind === 'pix') { bumpAvatar(); return; }
+        throw new Error(kind === 'unauthed' ? 'Your Chatango session expired. Reload the page and sign in again.'
+          : kind === 'error' ? 'Chatango did not accept this picture. Try a smaller JPG or PNG.'
+            : 'Chatango sent an unexpected reply. Check your picture on chatango.com.');
+      }, busyOr('Your picture could not be uploaded. Try again.'));
+    },
+    /**
+     * Permet d'enregistrer la partie de la photo que montre la miniature, comme le recadrage de Torch (inject.js:1390-1406).
+     * @param {{x0: number, y0: number, ts: number}} box Carré en pixels de full.jpg.
+     */
+    saveAvatarCrop: function (box) {
+      return post(CH.path('updateprofile'), profileForm('thumb', { x0: Math.round(box.x0), y0: Math.round(box.y0), ts: Math.round(box.ts) }), {}).then(function (resp) {
+        var data = profileReply(resp, ['x0']);
+        bumpAvatar();
+        return data;
+      }, busyOr('Your crop could not be saved. Try again.'));
+    },
+    /**
+     * Permet d'enregistrer son fond Premium par le formulaire de fond de Torch (inject.js:4900-4916, client.html:2279-2345).
+     * @param {Object} form Formulaire tel que le renvoie miniStyleForm.
+     * @param {boolean} dir Case « Appear in Meet people », que Torch renvoie avec ce formulaire.
+     */
+    saveProfileStyle: function (form, dir) {
+      var me = lower(C.user && C.user.name);
+      var fields = profileForm('update', {
+        body_bg_col: form.bg.slice(1), body_col: form.text.slice(1), body_a_col: form.link.slice(1), body_bg_img: form.image,
+        body_tile_d: form.tileDown ? 1 : 0, body_tile_a: form.tileAcross ? 1 : 0
+      });
+      if (dir) fields.dir = 'checked';
+      return post(CH.path('updateprofile') + '?css', fields, {}).then(function (resp) {
+        var data = profileReply(resp, ['age', 'sex', 'loc']);
+        // custom_profile.css peut revenir du cache HTTP : le cache local sert le fond envoyé.
+        var prev = profileCache[me] ? profileCache[me].data : {};
+        profileCache[me] = { at: Date.now(), data: Object.assign({}, prev, { mini: miniStyleOfForm(form) }) };
+        return data;
+      }, busyOr('Chatango did not save your background. Try again.'));
     },
     setting: readSetting,
     /**
@@ -1283,11 +1331,7 @@ var liveBridge = (function () {
         var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
         if (path) return 'https://vissle.me/' + path[1];
         throw new Error(resp.split(':')[0] === 'unauthed' ? 'vissle did not accept your session. Reload the page and sign in again.' : failed);
-      }, function (e) {
-        warn(e);
-        // Torch refuse une requête tant qu'une autre est en cours en rejetant avec l'URL de celle-ci, une chaîne.
-        throw new Error(typeof e === 'string' ? 'Torch is busy with another request. Try again in a moment.' : failed);
-      });
+      }, busyOr(failed));
     },
     createGroup: function (o) {
       return Promise.resolve().then(function () { return createGroupNow(o); });
@@ -1313,6 +1357,38 @@ var liveBridge = (function () {
         return !doc.querySelector('parsererror') && body ? unquote(body.textContent) : '';
       });
   }
+  /**
+   * Permet de préparer les champs communs aux formulaires updateprofile de Torch.
+   * @param {string} action update, fullpic ou thumb.
+   * @param {Object} extra Champs propres au formulaire.
+   */
+  function profileForm(action, extra) {
+    return Object.assign({ auth: 'token', arch: 'h5', src: 'group', action: action }, extra);
+  }
+  /**
+   * Permet de valider une réponse de updateprofile puis de la confier à Torch comme il le fait (setProfile).
+   * @param {string} resp Texte renvoyé par Chatango.
+   * @param {string[]} keys Clés dont l'une au moins prouve une réponse de profil.
+   */
+  function profileReply(resp, keys) {
+    var data = parseProfileReply(resp);
+    if (data.error) throw new Error(unquote(data.error));
+    if (!keys.some(function (k) { return k in data; })) throw new Error('Chatango sent an unexpected reply. Check your profile on chatango.com.');
+    try { C.setProfile(data); } catch (e) { warn(e); }
+    return data;
+  }
+  /**
+   * Permet de traduire l'échec d'un client.post en texte à afficher.
+   * @param {string} failed Texte d'un échec réseau.
+   */
+  function busyOr(failed) {
+    return function (e) {
+      warn(e);
+      // Torch refuse une requête tant qu'une autre est en cours en rejetant avec l'URL de celle-ci, une chaîne.
+      throw new Error(typeof e === 'string' ? 'Torch is busy with another request. Try again in a moment.' : failed);
+    };
+  }
+  function bumpAvatar() { AVATAR_VERSION[lower(C.user && C.user.name)] = Date.now(); }
   function saveProfileNow(p) {
       var me = lower(C.user && C.user.name), sentFull;
       // Chaîne vide envoyée telle quelle : seul un profil complet inconnu de la page est relu chez Chatango.
@@ -1320,15 +1396,11 @@ var liveBridge = (function () {
       return full.then(function (fullText) {
         if (fullText === null) throw new Error('Your full profile could not be read. Nothing was saved.');
         sentFull = fullText;
-        var fields = { auth: 'token', arch: 'h5', src: 'group', action: 'update', age: p.age, gender: p.gender, location: p.location, line: p.about, full_profile: fullText };
+        var fields = profileForm('update', { age: p.age, gender: p.gender, location: p.location, line: p.about, full_profile: fullText });
         if (p.dir) fields.dir = 'checked';
         return post(CH.path('updateprofile'), fields, {});
       }).then(function (resp) {
-        var data = {};
-        String(resp).split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) data[kv.slice(0, i)] = kv.slice(i + 1); });
-        if (data.error) throw new Error(unquote(data.error));
-        if (!('age' in data || 'sex' in data || 'loc' in data)) throw new Error('Chatango sent an unexpected reply. Check your profile on chatango.com.');
-        try { C.setProfile(data); } catch (e) { warn(e); }
+        var data = profileReply(resp, ['age', 'sex', 'loc']);
         // mod1.xml et mod2.xml peuvent revenir du cache HTTP sans la version enregistrée : le cache local sert la version envoyée.
         var prev = profileCache[me] ? profileCache[me].data : {};
         profileCache[me] = { at: Date.now(), data: Object.assign({}, prev, { missing: false, age: String(p.age), gender: GENDERS[p.gender] || '', location: p.location, about: p.about }) };
