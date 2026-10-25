@@ -23,5 +23,5 @@ Sans source, la fonction reste marquée « not wired » et l'interface le dit ho
 
 - Le titre et la description d'un groupe restent en lecture seule : aucune trame d'écriture n'a de source ([hors périmètre](../../.out-of-scope/group-title-description-icon.md)).
 - La photo de profil et l'icône de groupe ne relèvent pas de cette décision : ce sont des appels HTTP, régis par [ADR-0001](0001-password-never-read.md) et la liste fermée. La photo a une source dans Torch (`updateprofile`, `action=fullpic` et `action=thumb`, `auth=token`), suivie dans #6. L'icône est une fonction vissle, hors périmètre.
-- Une source moins fiable (script Pastebin, par exemple) est signalée à côté de la trame dans `docs/torch-protocol.md`.
+- Une source moins fiable (script Pastebin, par exemple) est signalée à côté de la trame dans `docs/betterchatango-protocol.md`.
 - `live_ui` vérifie le format exact de chaque trame envoyée.

@@ -28,7 +28,7 @@ Garde-fous :
 - le résultat est montré à l'utilisateur seul, dans une fenêtre, jamais publié dans un groupe ni un MP ;
 - il n'est jamais stocké (ni état persistant, ni `torch-skin:<pseudo>`, ni cache) ni journalisé (ni `console`, ni `warn`) : il vit dans la fenêtre, et la fermer l'oublie. Les mini profils chargés pour les cartes rejoignent l'état en mémoire comme tout profil consulté, sans trace du lien avec le compte visé ;
 - un appel par clic de l'utilisateur, jamais automatique ni en lot ;
-- l'appel entre dans la liste fermée ([ADR-0001](0001-password-never-read.md), `docs/torch-protocol.md#appels-http-autorisés`) avec sa source : `GET https://vissle.me/api/v1/who/{nom}` par `fetch`, sans cookie ni credential, `{nom}` validé par `ACCOUNT_NAME` (`src/bridge/live-model.js`), source `inject.js:7452-7477` ;
+- l'appel entre dans la liste fermée ([ADR-0001](0001-password-never-read.md), `docs/betterchatango-protocol.md#appels-http-autorisés`) avec sa source : `GET https://vissle.me/api/v1/who/{nom}` par `fetch`, sans cookie ni credential, `{nom}` validé par `ACCOUNT_NAME` (`src/bridge/live-model.js`), source `inject.js:7452-7477` ;
 - seules les chaînes des cinq niveaux sont lues, tout autre champ est ignoré, et les noms sont rendus en texte, jamais en HTML.
 
 ## Risques acceptés par le propriétaire
@@ -47,5 +47,5 @@ Garde-fous :
 ## Conséquences
 
 - [ADR-0007](0007-no-linked-accounts.md) passe au statut `superseded by ADR-0010`.
-- `docs/torch-protocol.md` (Appels HTTP autorisés, Comptes liés) et [ADR-0001](0001-password-never-read.md) ajoutent l'appel à la liste fermée.
+- `docs/betterchatango-protocol.md` (Appels HTTP autorisés, Comptes liés) et [ADR-0001](0001-password-never-read.md) ajoutent l'appel à la liste fermée.
 - Garder le résultat, le partager, l'enchaîner sur plusieurs membres ou le demander sans clic rouvre cette décision avec le propriétaire.

@@ -65,7 +65,7 @@ Everything lives in Settings > Appearance and is saved on your device.
 ## Privacy and security
 
 - Your password stays with Torch. Nightango never reads, stores, logs or sends it.
-- Every HTTP call Nightango makes is listed in [docs/torch-protocol.md](docs/torch-protocol.md#appels-http-autorisés), and nothing outside that list is called.
+- Every HTTP call Nightango makes is listed in [docs/betterchatango-protocol.md](docs/betterchatango-protocol.md#appels-http-autorisés), and nothing outside that list is called.
 - Member HTML is rebuilt from an allow list, never injected. Full profiles render in a sandboxed frame without scripts.
 - Profile backgrounds, message backgrounds and full-size profile pictures load without sending a referrer.
 - Trusted sites, listed in Settings > Safety and shared with Torch, open without a link warning and load their images, videos and audio without a click. Other sites follow your media settings.
@@ -110,6 +110,6 @@ The project docs are written in French.
 - [AGENTS.md](AGENTS.md): project rules, commands, releasing a version
 - [GLOSSARY.md](GLOSSARY.md): domain vocabulary
 - [docs/architecture.md](docs/architecture.md): code and build layout
-- [docs/torch-protocol.md](docs/torch-protocol.md): how Torch and the Chatango protocol work
+- [docs/betterchatango-protocol.md](docs/betterchatango-protocol.md): how Torch and the Chatango protocol work
 - [docs/coding-conventions.md](docs/coding-conventions.md): code and test conventions
 - [docs/adr/](docs/adr/): architecture decisions

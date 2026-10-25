@@ -63,7 +63,7 @@
 
 - Lire, stocker, journaliser ou transmettre le mot de passe, ou appeler une fonction de Torch qui l'ajoute à une requête ([ADR-0001](adr/0001-password-never-read.md)).
 - Envoyer une trame Chatango sans source dans Torch ou dans une bibliothèque de référence ([ADR-0002](adr/0002-no-invented-frames.md)).
-- Faire, depuis le code applicatif, un appel HTTP vers Chatango ou vissle hors de la liste fermée de `docs/torch-protocol.md` (section Appels HTTP autorisés).
+- Faire, depuis le code applicatif, un appel HTTP vers Chatango ou vissle hors de la liste fermée de `docs/betterchatango-protocol.md` (section Appels HTTP autorisés).
 - Ajouter une ressource chargée par le loader ou l'interface (script, feuille, police, iframe) hors de la liste de la même section sans validation de l'utilisateur.
 - Injecter du HTML ou du CSS écrit par un membre ([ADR-0004](adr/0004-member-html-never-injected.md)).
 - Consulter l'activité d'un autre profil que celui de l'utilisateur connecté ([ADR-0005](adr/0005-visitors-own-profile-only.md)).

@@ -11,7 +11,7 @@ Torch Skin s'exécute dans la page de Torch, qui connaît le mot de passe Chatan
 
 ## Décision
 
-Notre code ne lit, ne stocke, ne journalise ni ne transmet jamais le mot de passe. La connexion se fait sur l'écran de Torch. Aucun appel à une fonction de Torch qui ajoute le mot de passe à une requête. Les seuls appels HTTP autorisés sont ceux de `docs/torch-protocol.md#appels-http-autorisés` :
+Notre code ne lit, ne stocke, ne journalise ni ne transmet jamais le mot de passe. La connexion se fait sur l'écran de Torch. Aucun appel à une fonction de Torch qui ajoute le mot de passe à une requête. Les seuls appels HTTP autorisés sont ceux de `docs/betterchatango-protocol.md#appels-http-autorisés` :
 
 - `client.post(url, form, {})` vers `chatango.com` seulement, car Torch ajoute sans option le jeton `s` vers tout hôte de sa liste, ou `client.post(url, form, { cookie: true })`, jamais `credential` ;
 - `client.post('https://vissle.me/chatango/upload', form, { key: true })`, cette URL seulement et jamais avec `progress` : Torch y ajoute la clé de session vissle, jamais le mot de passe ;
