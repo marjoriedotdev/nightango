@@ -2,7 +2,11 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
-## [0.18.1] - 2026-10-25
+## [0.19.0] - 2026-10-25
+
+### Added
+
+- Settings, Appearance, Sky, Moon: keep tonight's moon next to Nightango (the default) or pick a fixed phase. Day dividers keep the moon of each night.
 
 ### Changed
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nightango
 // @namespace    torch-skin
-// @version      0.18.1
+// @version      0.19.0
 // @description  Starts the Torch client on st.chatango.com and shows Nightango, a redesigned interface, on top of it.
 // @match        https://st.chatango.com/*
 // @noframes
