@@ -35,7 +35,7 @@ function AppearancePage() {
         return h('button', { key: t[0], type: 'button', role: 'radio', className: 'pick', 'aria-checked': String(prefs.theme === t[0]), onClick: function () { pr.set('theme', t[0]); } },
           thumb(t[2]), h('span', { className: 'pick-title' }, t[1]));
       }))),
-    h(T.SettingsSection, { title: 'Accent color', description: 'Used for buttons, mentions and unread markers. Torch adjusts text on the accent so it stays readable.', padded: true },
+    h(T.SettingsSection, { title: 'Accent color', description: 'Used for buttons, mentions and unread markers. Nightango adjusts text on the accent so it stays readable.', padded: true },
       h('div', { className: 'swatches', role: 'radiogroup', 'aria-label': 'Accent color' },
         accents.map(function (a) {
           var on = prefs.accent === a[1];
@@ -61,13 +61,13 @@ function AppearancePage() {
         title: 'Format Markdown when sending', description: '*text* sends as italic, **text** as bold and __text__ as underlined, in groups and private messages.',
         control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveTorchSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
       })),
-    h(T.SettingsSection, { title: 'Chatango styles', description: 'Members can style their name, messages and mini profile on Chatango. Torch corrects colors that would be hard to read.' },
+    h(T.SettingsSection, { title: 'Chatango styles', description: 'Members can style their name, messages and mini profile on Chatango. Nightango corrects colors that would be hard to read.' },
       h(T.SettingRow, { title: 'Name colors', description: 'The color each member picked for their username.', control: pr.sw('styles.names') }),
       h(T.SettingRow, { title: 'Fonts and text colors', description: 'Custom typefaces, text sizes and text colors in messages.', control: pr.sw('styles.fonts') }),
       h(T.SettingRow, { title: 'Message backgrounds', description: 'Background colors and images set by Premium members.', control: pr.sw('styles.backgrounds') }),
       h(T.SettingRow, { title: 'Profile backgrounds', description: 'Colors and images Premium members set on their mini profile.', control: pr.sw('styles.profileBackgrounds') })),
     h(T.SettingsSection, {
-      title: 'Imported themes', description: 'Theme files (.json) exported from the old Torch theme editor. Torch uses their accent color.',
+      title: 'Imported themes', description: 'Theme files (.json) exported from the old Torch theme editor. Nightango uses their accent color.',
       headerAside: h(JsonFileButton, { icon: 'upload', onFile: importFile }, 'Import file')
     },
       custom.length ? custom.map(function (t) {

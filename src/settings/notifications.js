@@ -23,7 +23,7 @@ function NotificationsPage() {
       window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.'); }, function () { app.ui.toast('The browser refused the request.'); });
     } catch (e) { app.ui.toast('This browser view cannot show desktop alerts.'); }
   }
-  return h(Page, { title: 'Notifications', lede: 'Choose where Torch alerts you. Changes are saved automatically.' },
+  return h(Page, { title: 'Notifications', lede: 'Choose where Nightango alerts you. Changes are saved automatically.' },
     permission !== 'granted' ? h(T.Banner, { tone: 'warning', action: permission === 'unsupported' ? null : h(T.Button, { size: 'sm', onClick: ask }, 'Allow in browser') },
       permission === 'unsupported' ? 'This browser view cannot show desktop alerts. The Desktop column has no effect here.' : "Your browser blocks desktop notifications for this site. Desktop alerts won't show until you allow them.") : null,
     h(T.SettingsSection, { title: 'Alerts' },
@@ -45,9 +45,9 @@ function NotificationsPage() {
         asLabel: false, title: 'Volume', description: 'Applies to every alert sound.',
         control: h(VolumeControl, { label: 'Volume', value: prefs.volume, onChange: function (v) { pr.set('volume', v); }, onPlay: function () { beep(prefs.volume, true); } })
       }),
-      h(T.SettingRow, { title: 'Only when Torch is in focus', description: "Stay silent while you're in another tab or app.", control: pr.sw('soundFocusOnly') })),
+      h(T.SettingRow, { title: 'Only when Nightango is in focus', description: "Stay silent while you're in another tab or app.", control: pr.sw('soundFocusOnly') })),
     h(T.SettingsSection, { title: 'In the app' },
-      h(T.SettingRow, { title: 'Show mentions in the tab title', description: 'Adds a counter to the browser tab, for example (2) Torch.', control: pr.sw('tabTitle') }),
+      h(T.SettingRow, { title: 'Show mentions in the tab title', description: 'Adds a counter to the browser tab, for example (2) Nightango.', control: pr.sw('tabTitle') }),
       h(T.SettingRow, { title: 'Mark new messages', description: "Draws a line above the first message you haven't read.", control: pr.sw('markNew') }),
       h(T.SettingRow, { title: 'Preview private messages', description: 'Shows the text in the alert instead of only the sender.', control: pr.sw('pmPreview') }),
       h(T.SettingRow, { title: 'Highlight new features', description: 'Marks settings and tools added in recent updates.', control: pr.sw('featureHints') })));
@@ -71,7 +71,7 @@ function TorchSoundsSection() {
   function play(kind) {
     liveBridge.playTorchSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.'); });
   }
-  return h(T.SettingsSection, { title: 'Sounds', description: "Torch plays these sounds. Torch Skin stays silent so you don't hear every alert twice." },
+  return h(T.SettingsSection, { title: 'Sounds', description: "Torch plays these sounds. Nightango stays silent so you don't hear every alert twice." },
     sounds ? TORCH_SOUND_ROWS.map(function (r) {
       var on = sounds['play_' + r[0]];
       return h(T.SettingRow, {

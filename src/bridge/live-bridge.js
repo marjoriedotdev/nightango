@@ -233,7 +233,7 @@ var liveBridge = (function () {
   var EXTRA = { group: ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb'], private: [] };
   function wrapTable(table, kind) {
     if (!table) return;
-    EXTRA[kind].forEach(function (name) { if (!(name in table)) table[name] = function () { /* gestionnaire ajouté par Torch Skin */ }; });
+    EXTRA[kind].forEach(function (name) { if (!(name in table)) table[name] = function () { /* gestionnaire ajouté par Nightango */ }; });
     Object.keys(table).forEach(function (name) {
       var orig = table[name];
       if (typeof orig !== 'function' || orig.__skin) return;
@@ -438,7 +438,7 @@ var liveBridge = (function () {
     });
   }
   /**
-   * Permet de marquer lus, une fois par compte, les messages archivés avant Torch Skin, que Torch a tous archivés
+   * Permet de marquer lus, une fois par compte, les messages archivés avant Nightango, que Torch a tous archivés
    * non lus faute de focus privé. Appelée par openPmDb avant la connexion privée, elle laisse non lus les msgoff de celle-ci.
    * @param {?IDBDatabase} db Base d'historique privé.
    */
@@ -671,7 +671,7 @@ var liveBridge = (function () {
       if (loggedIn) return;
       loggedIn = true;
       note('Signed in');
-      // Torch lit seul l'oEmbed YouTube et msgbg.xml, hors des réglages de médias de Torch Skin : neutralisés en mémoire, pas dans les réglages de Torch.
+      // Torch lit seul l'oEmbed YouTube et msgbg.xml, hors des réglages de médias de Nightango : neutralisés en mémoire, pas dans les réglages de Torch.
       C.renderYouTube = CH.getBackground = function () {};
       emit({ op: 'login', me: lower(C.user.name) });
       // Groupes déjà connectés avant nous : leurs trames inited et participants sont passées.

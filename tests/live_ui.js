@@ -428,7 +428,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { zoe: whoShown && whoShown.zoe, onTop, backToList, calls: whoAsked().length });
   const whoReplies = [await whoAnswer(JSON.stringify({ target: 'alice', definite: [], weak: [7] })), await whoAnswer('{"definite":["x"]}'), await whoAnswer('<html>'), await whoAnswer(null)];
   step('who is this says when vissle has nothing, an unreadable answer or no answer',
-    /vissle has no linked accounts for alice\./.test(whoReplies[0]) && /vissle sent an answer Torch Skin can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])
+    /vissle has no linked accounts for alice\./.test(whoReplies[0]) && /vissle sent an answer Nightango can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])
       && /vissle could not be reached\. Try again later\./.test(whoReplies[3]) && whoAsked().length === 5,
     { whoReplies, calls: whoAsked().length });
 
@@ -467,7 +467,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.dialog-foot button', 'Delete')); await wait(30);
   step('delete also deletes the edits, like Torch', JSON.stringify(frame('delmsg:').slice(delBefore)) === JSON.stringify(['delmsg:H-1=', 'delmsg:E-1=']), frame('delmsg:').slice(delBefore));
 
-  /* Envoi de fichier par vissle : Torch Skin publie le lien dans le groupe du choix, jamais dans client.focus */
+  /* Envoi de fichier par vissle : Nightango publie le lien dans le groupe du choix, jamais dans client.focus */
   // Rend le texte de la confirmation. Sans bouton ni sélecteur, l'étape échoue sans arrêter la suite.
   const pickFile = async name => {
     const btn = $('button[aria-label="Attach media"]'), input = $('.composer-wrap input[type="file"]');
@@ -492,7 +492,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!byText('.toast', 'File sent.'));
   const uploadLinks = linkFrames(uploadFrom.sent);
   step('uploaded file link sent to the group it was picked in, not client.focus',
-    uploadFrom.focus === 'test' && uploadAsk.includes('Upload f.png?') && uploadAsk.includes('vissle.me stores the file and Torch Skin posts its link in #edits. Anyone with the link can open it.') && posts.length === uploadFrom.posts + 1 && uploadPost.url === 'https://vissle.me/chatango/upload'
+    uploadFrom.focus === 'test' && uploadAsk.includes('Upload f.png?') && uploadAsk.includes('vissle.me stores the file and Nightango posts its link in #edits. Anyone with the link can open it.') && posts.length === uploadFrom.posts + 1 && uploadPost.url === 'https://vissle.me/chatango/upload'
       && JSON.stringify(uploadPost.item) === '{"key":true}' && JSON.stringify(Object.keys(uploadPost.f || {})) === '["filedata"]' && uploadPost.f.filedata.name === 'f.png' && uploading
       && uploadLinks.length === 1 && uploadLinks[0][0] === 'edits' && /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">https:\/\/vissle\.me\/abc\/f\.png$/.test(uploadLinks[0][1]) && !!byText('.toast', 'File sent.'),
     { uploadFrom, uploadAsk, uploadPost: { url: uploadPost.url, item: uploadPost.item, fields: Object.keys(uploadPost.f || {}) }, uploading, uploadLinks });
@@ -1358,7 +1358,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Non-lus de la base : les deux « ok » archivés non lus comptent, le msgoff affiché et archivé non lu ne compte qu'une fois */
   const gusUnreadRecords = () => pmRecords.filter(r => r.target === 'gus' && r.unread).length;
   const unreadOf = n => { const r = convRow(n), b = r && r.querySelector('.tc-count'); return r ? (b ? +b.textContent : 0) : null; };
-  // Une migration écrit sans drapeau stocké : une seule pour toute la page, malgré les écritures de Torch Skin dans le même stockage.
+  // Une migration écrit sans drapeau stocké : une seule pour toute la page, malgré les écritures de Nightango dans le même stockage.
   const kept = gusUnreadRecords(), resumed = unreadOf('gus'), migrations = calls.filter(c => c[0] === 'written' && !c[1]).length;
   pm('OK', []); await wait(150);
   const again = unreadOf('gus');

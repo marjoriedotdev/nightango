@@ -8,7 +8,7 @@ function GSOverviewLive(p) {
           h(T.Avatar, { name: g.id, square: true, size: 56 }),
           h('span', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { style: { fontWeight: 600 } }, o.title || g.id), h('span', { className: 'muted', style: { fontSize: 13 } }, g.id + '.chatango.com'))),
         h(T.TextField, { id: 'gs-title', label: 'Title', value: o.title, disabled: true }),
-        h(T.TextField, { id: 'gs-desc', label: 'Description', multiline: true, rows: 4, value: o.description, disabled: true, hint: "Torch Skin can't change the title, description or icon yet. Edit them on chatango.com." }))),
+        h(T.TextField, { id: 'gs-desc', label: 'Description', multiline: true, rows: 4, value: o.description, disabled: true, hint: "Nightango can't change the title, description or icon yet. Edit them on chatango.com." }))),
     owner ? h(T.SettingsSection, { title: 'Messages' },
       h(T.SettingRow, {
         asLabel: false, title: 'Clear all messages', description: 'Removes every message in #' + g.id + ' for everyone. This cannot be undone.',

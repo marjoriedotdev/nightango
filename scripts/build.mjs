@@ -281,7 +281,7 @@ async function build() {
   const css = tokensCss(tokens);
   const fontsCss = embeddedFontsCss();
 
-  const html = `<title>Torch Client</title>
+  const html = `<title>Nightango</title>
 <style>
 ${fontsCss}
 ${css}
@@ -289,7 +289,7 @@ ${bundleCss}
 ${appCss}
 </style>
 <div id="app"></div>
-<noscript>Torch needs JavaScript to run.</noscript>
+<noscript>Nightango needs JavaScript to run.</noscript>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
 <script>

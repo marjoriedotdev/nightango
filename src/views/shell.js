@@ -67,7 +67,7 @@ function Sidebar() {
   return h('nav', { className: 'sidebar', 'aria-label': 'Groups and messages' },
     h('div', { className: 'brand' },
       h('span', { className: 'brand-mark' }, h(T.Icon, { name: 'flame', size: 16, strokeWidth: 2.2 })),
-      h('span', { className: 'brand-name' }, 'Torch'),
+      h('span', { className: 'brand-name' }, 'Nightango'),
       h(MenuButton, {
         icon: 'plus', label: 'Join or create a group', items: [
           { label: 'Discover groups', icon: 'compass', onSelect: function () { app.nav({ view: 'discover' }); } },

@@ -200,7 +200,7 @@ function WhoDialog(p) {
   var o = useState(null), open = o[0], setOpen = o[1];
   useEffect(function () {
     liveBridge.fetchWho(p.name).then(function (levels) {
-      setRes(levels ? { levels: levels } : { error: "vissle sent an answer Torch Skin can't read." });
+      setRes(levels ? { levels: levels } : { error: "vissle sent an answer Nightango can't read." });
     }, function () { setRes({ error: 'vissle could not be reached. Try again later.' }); });
   }, [p.name]);
   var levels = res && res.levels || [];
@@ -272,7 +272,7 @@ function LinkDialog(p) {
   var choice = !hosts ? h(T.Checkbox, { label: "Don't warn me again", onChange: function (e) { var v = e.target.checked; app.update(function (d) { d.prefs.safety.warnLinks = !v; }); } })
     : host ? h(T.Checkbox, { label: 'Trust ' + host, checked: trust, onChange: function (e) { setTrust(e.target.checked); } }) : null;
   return h(Dialog, {
-    title: 'This link leaves Torch', description: 'Check the address before you continue. Torch does not check external sites.', onClose: p.onClose,
+    title: 'This link leaves Nightango', description: 'Check the address before you continue. Nightango does not check external sites.', onClose: p.onClose,
     footer: [
       h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
       openLinkButton(p.url, 'primary', function () { if (trust) app.actions.setTrustedHost(host, true); p.onClose(); })

@@ -89,7 +89,7 @@ function PremiumPage() {
         h('div', null, h('span', { className: 'muted' }, 'For'), h('span', null, forWho === 'me' ? s.me : recips.join(', '))),
         h('div', { className: 'total' }, h('span', null, 'Total'), h('span', { className: 'tnum' }, money(plan.price, cur)))),
       h(T.SettingRow, {
-        asLabel: false, title: 'Payment method', description: "You confirm and pay on chatango.com. Torch never sees your payment details.",
+        asLabel: false, title: 'Payment method', description: "You confirm and pay on chatango.com. Nightango never sees your payment details.",
         control: h(T.SegmentedControl, { label: 'Payment method', value: method, onChange: setMethod, options: [{ value: 'paypal', label: 'PayPal' }, { value: 'card', label: 'Card' }] })
       }),
       h('div', { className: 'btnrow', style: { justifyContent: 'space-between', padding: '14px 20px 18px', borderTop: '1px solid var(--divider)' } },
@@ -97,7 +97,7 @@ function PremiumPage() {
         h(T.Button, { variant: 'primary', iconRight: 'external', onClick: function () { app.ui.toast('Payments are disabled in this prototype. Nothing was charged.'); } }, 'Continue to Chatango')));
   }
   return h(Page, {
-    title: 'Chatango Premium', lede: 'Premium is sold by Chatango. Torch shows the offers and hands you over to pay.',
+    title: 'Chatango Premium', lede: 'Premium is sold by Chatango. Nightango shows the offers and hands you over to pay.',
     aside: h(T.SegmentedControl, { label: 'Purchase type', value: mode, onChange: function (v) { setMode(v); setStep('plan'); }, options: [{ value: 'premium', label: 'Premium' }, { value: 'name', label: 'Inactive username' }] })
   }, mode === 'premium' ? steps : null, body);
 }

@@ -159,7 +159,7 @@ Sizes:
     'A titled card that groups related settings.',
     `Provide \`title\`, an optional \`description\` and rows as children (\`SettingRow\`, or any content with \`padded\`). \`headerAside\` holds one action such as Import file. Stack sections with \`space-6\` between them; never nest them.`,
     `  return h(T.SettingsSection, { title: 'Sound', description: 'Applies to every alert sound.' },
-    h(T.SettingRow, { title: 'Only when Torch is in focus', description: "Stay silent while you're in another tab.", control: h(T.Switch, { defaultChecked: true }) }),
+    h(T.SettingRow, { title: 'Only when Nightango is in focus', description: "Stay silent while you're in another tab.", control: h(T.Switch, { defaultChecked: true }) }),
     h(T.SettingRow, { title: 'Play a sound when mentioned', control: h(T.Switch, null) }));`],
   ['SettingRow', 'Settings', 140,
     'A setting with a title, a one-line description and its control on the right.',
