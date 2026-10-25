@@ -6,6 +6,16 @@ Nightango is a skin for [Torch](https://vissle.me), a third-party web client for
 
 You sign in on Torch's own screen. Nightango never reads your password and only sends Chatango frames that Torch or a reference library already uses.
 
+## A night sky
+
+Nightango is themed after a full-moon night with scattered clouds, and a torch under it.
+
+- **The real moon.** The moon in the corner is tonight's moon, at its real phase, computed on your device. Every day divider in a conversation shows the moon of that night.
+- **Two lights.** Cool moonlight frames the interface. Warm ember, the torch, marks only what asks for you: unread counts, mentions, the send button.
+- **Presence by moon phase.** Online is a full moon, idle a crescent, offline a new moon. The shape tells the status, so it reads without relying on color.
+- **Night and dawn.** The dark theme is the night sky. The light theme is the same sky at first light.
+- Conversations always sit on solid panels. The sky stays around them.
+
 ## Features
 
 **Group chats**
@@ -31,19 +41,20 @@ You sign in on Torch's own screen. Nightango never reads your password and only 
 **Mobile**
 - Group info and member list in a full-screen sheet, channel picker next to the message box, pull to refresh in Meet people.
 
-![Group chat in dark and light themes](docs/readme/themes.webp)
+![Group chat in the night and dawn themes](docs/readme/themes.webp)
 
 ![Group chat, group info and friends list on a phone](docs/readme/mobile.webp)
 
-![A Premium member's profile card](docs/readme/profile.webp)
+![A member's profile card](docs/readme/profile.webp)
 
 ## Customisation
 
-![The same group chat in the six accent colors: Ember, Blue, Green, Violet, Pink and Slate](docs/readme/customisation.webp)
+![The navigation in the six accent colors: Ember, Blue, Green, Violet, Pink and Slate](docs/readme/customisation.webp)
 
 Everything lives in Settings > Appearance and is saved on your device.
 
-- **Theme**: dark, light, or follow the system.
+- **Theme**: night (dark), dawn (light), or follow the system.
+- **Sky**: Calm sky stops the drifting clouds. Southern hemisphere draws the moon as it looks south of the equator.
 - **Accent color**: Ember, Blue, Green, Violet, Pink, Slate, or any color you pick. Text on the accent is adjusted so it stays readable.
 - **Density**: comfortable, or compact with no avatars and the time before the name.
 - **Text size** for message text.
@@ -86,7 +97,7 @@ pnpm test live_ui     # build, then one suite
 
 ## Fonts
 
-Geist and Geist Mono are embedded in the userscript and the prototype. They are released under the SIL Open Font License 1.1: copyright notice and license in [torchds/project/fonts/OFL.txt](torchds/project/fonts/OFL.txt), copied by the build under the userscript header.
+Geist, Geist Mono and Instrument Serif are embedded in the userscript and the prototype. They are released under the SIL Open Font License 1.1: copyright notice and license in [torchds/project/fonts/OFL.txt](torchds/project/fonts/OFL.txt), copied by the build under the userscript header.
 
 ## Credits
 
