@@ -1,4 +1,3 @@
-var PM_CHECK_TIMEOUT = 5000;
 /**
  * Permet de refuser un nom avec lequel aucune conversation ne peut s'ouvrir.
  * @param {Object} s État de l'application.
@@ -18,14 +17,10 @@ function NewDmDialog(p) {
   useEffect(function () {
     if (!answer) return;
     setAsked(null);
+    if (answer.timeout) { setErr('Chatango did not answer. Try again.'); return; }
     if (!answer.found) { setErr(unknownUserText(answer.name)); return; }
     p.onClose(); app.actions.openDm(answer.name);
   }, [answer && answer.ts]);
-  useEffect(function () {
-    if (!asked) return undefined;
-    var t = setTimeout(function () { setAsked(null); setErr('Chatango did not answer. Try again.'); }, PM_CHECK_TIMEOUT);
-    return function () { clearTimeout(t); };
-  }, [asked]);
   function start() {
     if (asked) return;
     var v = name.trim().toLowerCase();

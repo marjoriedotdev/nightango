@@ -143,8 +143,8 @@ var liveBridge = (function () {
       case 'unblocklist': banPage(room, 'unblock', data); break;
       case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', guest: !data[2], by: lower(data[3]), at: Date.now() } }); break;
       case 'unblocked': emit({ op: 'unbanned', gid: room, list: parseUnbanned(data) }); break;
-      case 'bansearchresult': emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
-      case 'badbansearchstring': emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
+      case 'bansearchresult': gotReply('searchban:' + room); emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
+      case 'badbansearchstring': gotReply('searchban:' + room); emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
       case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
       case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
@@ -175,6 +175,7 @@ var liveBridge = (function () {
         break;
       }
       case 'wladd':
+        gotReply('wladd:' + lower(data[0]));
         if (data[1] === 'invalid') emit({ op: 'friendRefused', name: lower(data[0]) });
         // Triplet : la valeur vaut des minutes d'inactivité si on, un horodatage si off ou app.
         else emit({ op: 'friends', added: true, list: [friendPresence(data[0], data[1], data[2], data[2])] });
@@ -190,7 +191,7 @@ var liveBridge = (function () {
         var target = lower(data[0]) || connectTarget, state = data[0] && CONNECT_STATE[data[2]];
         if (state) emit({ op: 'people', list: [friendPresence(target, state, data[1], data[1])] });
         // Comme Torch, un état inconnu est ignoré.
-        if (state || !data[0] || data[2] === 'invalid' || data[2] === 'nouser') emit({ op: 'pmChecked', name: target, found: !!state });
+        if (state || !data[0] || data[2] === 'invalid' || data[2] === 'nouser') emit({ op: 'pmChecked', name: target, found: !!state, asked: gotReply('connect:' + target) });
         break;
       }
       case 'presence': {
@@ -320,6 +321,30 @@ var liveBridge = (function () {
   function pmOpen() { return !!(C.private && C.private.socket && C.private.socket.readyState === 1); }
   // Dernier correspondant demandé par connect, auquel se rattache une réponse à nom vide.
   var connectTarget = '';
+  // Chatango ne renvoie aucun identifiant de demande : une réponse se reconnaît à sa clé, et une demande plus récente remplace l'attente de la précédente.
+  var replyWaits = {};
+  var PM_CHECK_TIMEOUT = 5000;
+  /**
+   * Permet d'attendre la réponse de Chatango à une demande, et d'émettre un fait si elle ne vient pas à temps.
+   * @param {string} key Clé de la réponse attendue.
+   * @param {number} ms Délai d'attente.
+   * @param {Object} timeoutOp Op émise à l'expiration.
+   */
+  function awaitReply(key, ms, timeoutOp) {
+    clearTimeout(replyWaits[key]);
+    replyWaits[key] = setTimeout(function () { delete replyWaits[key]; emit(timeoutOp); }, ms);
+  }
+  /**
+   * Permet de clore l'attente d'une réponse arrivée.
+   * @param {string} key Clé de la réponse.
+   * @returns {boolean} Vrai si une demande l'attendait encore.
+   */
+  function gotReply(key) {
+    var waited = key in replyWaits;
+    clearTimeout(replyWaits[key]);
+    delete replyWaits[key];
+    return waited;
+  }
   /**
    * Permet de demander à Chatango la présence d'un correspondant, comme Torch à l'ouverture d'un MP.
    * @param {string} name Correspondant visé.
@@ -731,7 +756,17 @@ var liveBridge = (function () {
      * @returns {boolean} Statut 200 ou 210 de la trame premium, faux tant que la connexion privée n'est pas ouverte.
      */
     premium: function () { return !!C.private && [200, 210].indexOf(C.private.premium.status) >= 0; },
-    connectPm: connectPm,
+    /**
+     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme Torch avant de l'ouvrir : la réponse arrive en op pmChecked, avec asked.
+     * @param {string} name Correspondant visé.
+     * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
+     */
+    checkPm: function (name) {
+      var n = lower(name);
+      if (!connectPm(n)) return false;
+      awaitReply('connect:' + n, PM_CHECK_TIMEOUT, { op: 'pmChecked', name: n, timeout: true });
+      return true;
+    },
     join: function (gid) {
       delete left[gid];
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }
@@ -768,7 +803,11 @@ var liveBridge = (function () {
      * @param {string} ts Horodatage de la dernière ligne chargée, 0 pour la première page.
      */
     banList: function (gid, kind, ts) { return send(gid, 'blocklist:' + kind + ':' + ts + ':next:' + BAN_PAGE + ':anons:1', 'The ban list could not be loaded.'); },
-    searchBans: function (gid, query) { return send(gid, 'searchban:' + query, 'The search could not be sent.'); },
+    searchBans: function (gid, query) {
+      if (!send(gid, 'searchban:' + query, 'The search could not be sent.')) return false;
+      awaitReply('searchban:' + gid, CONFIRM_TIMEOUT, { op: 'banSearchTimeout', gid: gid });
+      return true;
+    },
     clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
     /* Réglages de groupe : trames relevées dans chadango et chatango-lib */
     requestSettings: function (gid) {
@@ -801,7 +840,11 @@ var liveBridge = (function () {
     },
     /* Messages privés */
     setStatus: function (status) { return send('private_message', 'idle:' + (status === 'idle' ? 0 : 1), 'Your status could not be changed.'); },
-    addFriend: function (name) { return send('private_message', 'wladd:' + name, 'The friend could not be added.'); },
+    addFriend: function (name) {
+      if (!send('private_message', 'wladd:' + name, 'The friend could not be added.')) return false;
+      awaitReply('wladd:' + lower(name), CONFIRM_TIMEOUT, { op: 'friendTimeout', name: lower(name) });
+      return true;
+    },
     removeFriend: function (name) { return send('private_message', 'wldelete:' + name, 'The friend could not be removed.'); },
     block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', 'The block could not be sent.'); },
     unblock: function (name) { return send('private_message', 'unblock:' + name, 'The unblock could not be sent.'); },

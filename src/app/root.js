@@ -535,7 +535,6 @@ function Root(props) {
   var localRef = useRef(blankLocal());
   var profilePending = useRef({}), msgBgPending = useRef({});
   // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
-  var pmAsked = useRef(null);
   var offlineCount = useRef(0);
   // Reconnexions automatiques en cours, par connexion : tentatives faites et minuteur de la suivante.
   var retries = useRef({});
@@ -732,11 +731,7 @@ function Root(props) {
      * @param {string} name Correspondant visé.
      * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
      */
-    actions.checkPm = function (name) {
-      if (!liveBridge.connectPm(name)) return false;
-      pmAsked.current = name;
-      return true;
-    };
+    actions.checkPm = function (name) { return liveBridge.checkPm(name); };
     actions.searchPeople = function (f, more) {
       var cur = stateRef.current.meet, from = more && cur ? cur.next : 0, token = (cur && cur.token || 0) + 1;
       update(function (d) { d.meet = Object.assign({ results: [] }, more ? d.meet : null, { loading: true, error: null, filters: f, token: token }); });
@@ -777,14 +772,7 @@ function Root(props) {
     actions.toggleUser = function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
       if (key === 'friend' && !was) {
-        if (!liveBridge.addFriend(name)) return;
-        var asked = Date.now();
-        update(function (d) { d.friendAdds[name] = asked; });
-        setTimeout(function () {
-          if (stateRef.current.friendAdds[name] !== asked) return;
-          update(function (d) { delete d.friendAdds[name]; });
-          toast("Chatango didn't confirm adding " + name + ' to friends.');
-        }, CONFIRM_TIMEOUT);
+        if (liveBridge.addFriend(name)) update(function (d) { d.friendAdds[name] = true; });
         return;
       }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
@@ -864,12 +852,7 @@ function Root(props) {
       if (liveBridge.banList(gid, kind, last && last.ts || '0')) groupUpdate(gid, function (g) { banListOf(g, kind).page.loading = true; });
     };
     actions.searchBans = function (gid, query) {
-      var at = Date.now();
-      if (!liveBridge.searchBans(gid, query)) return;
-      groupUpdate(gid, function (g) { g.live.banSearch = { query: query, at: at, status: 'pending', ban: null, code: '' }; });
-      setTimeout(function () {
-        groupUpdate(gid, function (g) { var s = g.live.banSearch; if (s && s.at === at && s.status === 'pending') s.status = 'timeout'; });
-      }, CONFIRM_TIMEOUT);
+      if (liveBridge.searchBans(gid, query)) groupUpdate(gid, function (g) { g.live.banSearch = { query: query, status: 'pending', ban: null, code: '' }; });
     };
     actions.clearBanSearch = function (gid) { groupUpdate(gid, function (g) { g.live.banSearch = null; }); };
     actions.saveGroupSettings = function (gid, draft, base) { return saveLiveSettings(stateRef.current.groups[gid], draft, base || stateRef.current.groups[gid].settings); };
@@ -1246,6 +1229,7 @@ function Root(props) {
       // Une réponse arrivée après le délai d'attente reste valable, mais pas après Clear search.
       case 'banSearch': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
       case 'banSearchRefused': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
+      case 'banSearchTimeout': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s && s.status === 'pending') s.status = 'timeout'; }); break;
       // Torch ne fait que journaliser allunblocked : la liste des débannissements est redemandée à son prochain affichage.
       case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
@@ -1330,15 +1314,18 @@ function Root(props) {
           op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
         });
         break;
+      case 'friendTimeout':
+        if (!stateRef.current.friendAdds[op.name]) break;
+        update(function (d) { delete d.friendAdds[op.name]; });
+        toast("Chatango didn't confirm adding " + op.name + ' to friends.');
+        break;
       case 'friendRefused':
         update(function (d) { delete d.friendAdds[op.name]; });
         toast(unknownUserText(op.name), { icon: 'info' });
         break;
       case 'pmChecked': {
-        var asked = pmAsked.current === op.name;
-        if (asked) pmAsked.current = null;
-        update(function (d) { d.pmChecked = { name: op.name, found: op.found, ts: Date.now() }; });
-        if (!op.found && !asked && stateRef.current.dms[op.name]) toast(unknownUserText(op.name), { icon: 'info' });
+        update(function (d) { d.pmChecked = { name: op.name, found: !!op.found, timeout: !!op.timeout, ts: Date.now() }; });
+        if (!op.found && !op.timeout && !op.asked && stateRef.current.dms[op.name]) toast(unknownUserText(op.name), { icon: 'info' });
         break;
       }
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
