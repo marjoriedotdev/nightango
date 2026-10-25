@@ -109,7 +109,7 @@ function GroupView(p) {
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
-    if (dk !== lastDay) { items.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
+    if (dk !== lastDay) { items.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
     if (!q && prefs.markNew && !marker && s.route.markerTs && m.ts > s.route.markerTs && m.author !== me && m.kind === 'msg') {
       items.push(h('div', { key: 'n' + m.id, className: 'newmark', role: 'separator' }, 'New messages')); marker = true; prev = null;
     }
@@ -164,17 +164,18 @@ function GroupView(p) {
     }), emoji.picker, attach.input);
   }
 
+  var waitingCount = LIVE && !g.membersLoaded && !g.liveCount;
   return h(Frag, null,
     h('main', { className: 'main' },
       h('header', { className: 'topbar' },
         h(MobileNavButton, null),
-        h(T.Icon, { name: 'hash', size: 18, style: { color: 'var(--text-3)' } }),
         h('h1', null, g.id),
         h('span', { className: 'vsep' }),
         h('p', { className: 'topic' }, g.topic),
         h('span', { className: 'grow only-mobile' }),
-        h('button', { type: 'button', className: 'pillbtn', 'aria-pressed': column.pressed == null ? undefined : String(column.pressed), onClick: column.toggle },
-          h(T.Icon, { name: 'users', size: 16 }), LIVE && !g.membersLoaded && !g.liveCount ? 'Members' : online + ' online'),
+        // Sur mobile, seul le nombre reste visible : le nom accessible garde « online ».
+        h('button', { type: 'button', className: 'pillbtn', 'aria-label': waitingCount ? undefined : online + ' online', 'aria-pressed': column.pressed == null ? undefined : String(column.pressed), onClick: column.toggle },
+          h(T.Icon, { name: 'users', size: 16 }), waitingCount ? 'Members' : online, waitingCount ? null : h('span', { className: 'hide-mobile' }, ' online')),
         h(T.IconButton, { icon: 'search', label: 'Search in this group', pressed: search != null, onClick: function () { setSearch(search == null ? '' : null); } }),
         h(T.IconButton, { icon: g.muted ? 'volume-x' : 'bell', label: g.muted ? 'Unmute group' : 'Mute group', pressed: g.muted, onClick: function () { app.actions.toggleMute(g.id); } }),
         h(MenuButton, {

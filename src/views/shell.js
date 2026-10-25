@@ -35,10 +35,15 @@ function Shell() {
     main);
 }
 
+// La lune de ce soir, avec la braise de Torch.
+function BrandMark() {
+  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true }), h('span', { className: 'brand-ember', 'aria-hidden': 'true' }));
+}
+
 function StartupScreen() {
   return h('main', { className: 'main' },
     h('div', { className: 'empty', role: 'status' },
-      h('span', { className: 'brand-mark' }, h(T.Icon, { name: 'flame', size: 16, strokeWidth: 2.2 })),
+      h(BrandMark),
       h('p', { className: 'startup' }, h(T.Spinner, null), 'Signing in')));
 }
 
@@ -66,8 +71,8 @@ function Sidebar() {
   var onlineFriends = Object.keys(s.users).filter(function (n) { return n !== s.me && s.users[n].friend && s.users[n].status !== 'offline'; }).length;
   return h('nav', { className: 'sidebar', 'aria-label': 'Groups and messages' },
     h('div', { className: 'brand' },
-      h('span', { className: 'brand-mark' }, h(T.Icon, { name: 'flame', size: 16, strokeWidth: 2.2 })),
-      h('span', { className: 'brand-name' }, 'Torch'),
+      h(BrandMark),
+      h('span', { className: 'brand-name' }, 'Nightango'),
       h(MenuButton, {
         icon: 'plus', label: 'Join or create a group', items: [
           { label: 'Discover groups', icon: 'compass', onSelect: function () { app.nav({ view: 'discover' }); } },

@@ -53,7 +53,8 @@ function cssColor(value) {
 function rgba(hex, a) { var c = hexToRgb(hex) || [242, 122, 63]; return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + a + ')'; }
 function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToHex(c.map(function (v) { return v * f; })); }
 
-var SURFACE = { dark: { bg: '#16171a', body: '#d6d8dc' }, light: { bg: '#ffffff', body: '#2a2c31' } };
+// Copie des jetons bg, text-body et selected de tokens.json : selected est la surface où l'accent en texte contraste le moins.
+var SURFACE = { dark: { bg: '#0d1427', body: '#d0d7e6', selected: '#1b2846' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
 var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Georgia': 'Georgia, serif', 'Courier New': 'Typewriter, "Courier New", monospace', 'Comic Sans MS': '"Comic Sans MS", "Comic Sans", cursive', 'Lucida Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Palatino': 'Palatino, serif', 'Impact': 'Impact, sans-serif', 'Papyrus': 'Papyrus, cursive', 'Times New Roman': 'Times, serif' };
 /**
  * Permet de convertir une taille de police Chatango en pourcentage.

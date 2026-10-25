@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const SUITES = ['smoke', 'live_ui', 'pm', 'loader', 'live_login', 'avatar', 'check_ds'];
+const SUITES = ['smoke', 'live_ui', 'pm', 'loader', 'live_login', 'avatar', 'moon', 'check_ds'];
 // Certaines suites sortent en 0 malgré un échec : seule leur sortie le signale.
 const FAILURE = /^(FAIL|CRASH)|^ERRORS:(?! none$)/m;
 

@@ -2,14 +2,14 @@ function AppearancePage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
   var md = useState(function () { return LIVE ? liveBridge.setting('markdown') : null; }), markdown = md[0], setMarkdown = md[1];
   var themes = [
-    ['dark', 'Dark', ['#16171a', '#111214', '#3a3d44', '#2e3036', '#1d1f23']],
-    ['light', 'Light', ['#ffffff', '#f6f6f7', '#c9cbd1', '#e4e4e8', '#ffffff']],
+    ['dark', 'Dark', ['#0d1427', '#0a1020', '#34446a', '#283657', '#142039']],
+    ['light', 'Light', ['#fdfcfa', '#f2f0f7', '#c6c2d1', '#d6d2df', '#ffffff']],
     ['system', 'Match system', null]
   ];
   var accents = [['Ember', '#f27a3f'], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
   function thumb(c) {
     if (!c) return h('span', { className: 'thumb', 'aria-hidden': 'true', style: { border: '1px solid var(--border-strong)' } },
-      h('span', { style: { flex: 1, background: '#f6f6f7' } }), h('span', { style: { flex: 1, background: '#16171a' } }));
+      h('span', { style: { flex: 1, background: '#f2f0f7' } }), h('span', { style: { flex: 1, background: '#0d1427' } }));
     return h('span', { className: 'thumb', 'aria-hidden': 'true', style: { background: c[0], border: '1px solid ' + c[3] } },
       h('span', { style: { width: '28%', background: c[1], borderRight: '1px solid ' + c[3], padding: '8px 6px', display: 'flex', flexDirection: 'column', gap: 5 } },
         h('span', { style: { height: 5, width: '70%', borderRadius: 3, background: c[2] } }), h('span', { style: { height: 5, width: '90%', borderRadius: 3, background: c[3] } })),
@@ -35,7 +35,7 @@ function AppearancePage() {
         return h('button', { key: t[0], type: 'button', role: 'radio', className: 'pick', 'aria-checked': String(prefs.theme === t[0]), onClick: function () { pr.set('theme', t[0]); } },
           thumb(t[2]), h('span', { className: 'pick-title' }, t[1]));
       }))),
-    h(T.SettingsSection, { title: 'Accent color', description: 'Used for buttons, mentions and unread markers. Torch adjusts text on the accent so it stays readable.', padded: true },
+    h(T.SettingsSection, { title: 'Accent color', description: 'Used for buttons, mentions and unread markers. Nightango adjusts text on the accent so it stays readable.', padded: true },
       h('div', { className: 'swatches', role: 'radiogroup', 'aria-label': 'Accent color' },
         accents.map(function (a) {
           var on = prefs.accent === a[1];
@@ -46,6 +46,9 @@ function AppearancePage() {
         h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } },
           h('input', { type: 'color', className: 'color-in', value: prefs.accent, 'aria-label': 'Custom accent color', onChange: function (e) { pr.set('accent', e.target.value); }, style: !palette ? { boxShadow: '0 0 0 2px var(--bg), 0 0 0 4px var(--text)' } : null }),
           'Custom'))),
+    h(T.SettingsSection, { title: 'Sky', description: "The moon follows tonight's real phase, computed on this device." },
+      h(T.SettingRow, { title: 'Calm sky', description: 'Stops the clouds drifting across the sky.', control: pr.sw('sky.calm') }),
+      h(T.SettingRow, { title: 'Southern hemisphere', description: 'Draws the moon as it looks south of the equator. The phase is the same everywhere.', control: pr.sw('sky.south') })),
     h(T.SettingsSection, { title: 'Messages' },
       h(T.SettingRow, { asLabel: false, title: 'Density', description: 'Compact hides avatars and puts the time before the name.', control: h(T.SegmentedControl, { label: 'Density', value: prefs.density, onChange: function (v) { pr.set('density', v); }, options: [{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }] }) }),
       h(T.SettingRow, {
@@ -61,13 +64,13 @@ function AppearancePage() {
         title: 'Format Markdown when sending', description: '*text* sends as italic, **text** as bold and __text__ as underlined, in groups and private messages.',
         control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveTorchSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
       })),
-    h(T.SettingsSection, { title: 'Chatango styles', description: 'Members can style their name, messages and mini profile on Chatango. Torch corrects colors that would be hard to read.' },
+    h(T.SettingsSection, { title: 'Chatango styles', description: 'Members can style their name, messages and mini profile on Chatango. Nightango corrects colors that would be hard to read.' },
       h(T.SettingRow, { title: 'Name colors', description: 'The color each member picked for their username.', control: pr.sw('styles.names') }),
       h(T.SettingRow, { title: 'Fonts and text colors', description: 'Custom typefaces, text sizes and text colors in messages.', control: pr.sw('styles.fonts') }),
       h(T.SettingRow, { title: 'Message backgrounds', description: 'Background colors and images set by Premium members.', control: pr.sw('styles.backgrounds') }),
       h(T.SettingRow, { title: 'Profile backgrounds', description: 'Colors and images Premium members set on their mini profile.', control: pr.sw('styles.profileBackgrounds') })),
     h(T.SettingsSection, {
-      title: 'Imported themes', description: 'Theme files (.json) exported from the old Torch theme editor. Torch uses their accent color.',
+      title: 'Imported themes', description: 'Theme files (.json) exported from the old Torch theme editor. Nightango uses their accent color.',
       headerAside: h(JsonFileButton, { icon: 'upload', onFile: importFile }, 'Import file')
     },
       custom.length ? custom.map(function (t) {

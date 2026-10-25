@@ -167,16 +167,6 @@ function tokensCss(tokens) {
     themeRules(tokens, ':root', ':root:not([data-theme="dark"])', ':root[data-theme="light"]', ':root[data-theme="dark"]');
 }
 
-/**
- * Permet de produire la feuille de l'écran de connexion de Torch.
- * @param {object} tokens Contenu de tokens.json.
- * @param {string} sheet Feuille login.css.
- */
-function loginCss(tokens, sheet) {
-  // Thème posé en classe sur <html> : Torch lit le premier [data-theme] du document pour le sien.
-  return themeRules(tokens, '.login', 'html:not(.tsk-dark) .login', 'html.tsk-light .login', 'html.tsk-dark .login') + sheet;
-}
-
 // -- Polices ------------------------------------------------------------------
 
 const FONTS_DIR = join(ROOT, 'torchds', 'project', 'fonts');
@@ -220,7 +210,9 @@ function skinCss(tokens, bundle, app) {
     .replace('html,body{height:100%}', () => ':host{display:block;height:100%}')
     .replace('body{background:var(--bg)', () => '#app{height:100%;background:var(--bg)')
     .replaceAll('.reduce-motion ', () => ':host(.reduce-motion) ')
-    .replaceAll('.underline-links ', () => ':host(.underline-links) ');
+    .replaceAll('.underline-links ', () => ':host(.underline-links) ')
+    .replaceAll('.calm-sky ', () => ':host(.calm-sky) ')
+    .replaceAll('.moon-south ', () => ':host(.moon-south) ');
   const css = shadowTokens + '\n[hidden]{display:none!important}\n' + bundle + '\n' + shadowApp;
   if (css.includes(':root') || css.includes('html,body{')) throw new Error('Userscript CSS still targets the document root.');
   return css;
@@ -238,18 +230,17 @@ const MINIFIED = {
  * @param {{ js: Function, css: Function }} pack Transformation du code et des feuilles.
  */
 async function userscript(source, pack) {
-  const [css, loginCss, fontsCss] = await Promise.all([pack.css(source.css), pack.css(source.loginCss), pack.css(source.fontsCss)]);
+  const [css, fontsCss] = await Promise.all([pack.css(source.css), pack.css(source.fontsCss)]);
   // Le code page devient un littéral de chaîne, exécuté par un <script> en textContent : jamais analysé comme HTML.
   const page = await pack.js(source.page
     .replaceAll('/*CSS*/', () => jsonString(css))
-    .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginCss))
     .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
     .replaceAll('/*JOURNAL*/', () => source.journalJs)
     .replaceAll('/*BUNDLE*/', () => source.bundleJs)
     .replaceAll('/*APP*/', () => source.appJs));
   // Tampermonkey lit l'en-tête tel quel : il reste hors de la transformation.
   const header = /^[\s\S]*?\/\/ ==\/UserScript==\r?\n/.exec(source.loader)[0];
-  const notice = `/*\nFonts embedded in this script: Geist and Geist Mono.\n\n${source.fontsLicense}*/\n`;
+  const notice = `/*\nFonts embedded in this script: Geist, Geist Mono and Instrument Serif.\n\n${source.fontsLicense}*/\n`;
   return header + notice + await pack.js(source.loader.slice(header.length).replaceAll('/*PAGE*/', () => jsonString(page)));
 }
 
@@ -292,7 +283,7 @@ async function build() {
   const css = tokensCss(tokens);
   const fontsCss = embeddedFontsCss();
 
-  const html = `<title>Torch Client</title>
+  const html = `<title>Nightango</title>
 <style>
 ${fontsCss}
 ${css}
@@ -300,7 +291,7 @@ ${bundleCss}
 ${appCss}
 </style>
 <div id="app"></div>
-<noscript>Torch needs JavaScript to run.</noscript>
+<noscript>Nightango needs JavaScript to run.</noscript>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
 <script>
@@ -316,7 +307,6 @@ ${appJs}
     page: read('src', 'loader', 'skin-page.js'),
     journalJs: read('src', 'loader', 'skin-journal.js'),
     css: skinCss(css, bundleCss, appCss),
-    loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
     fontsCss,
     fontsLicense: read('torchds', 'project', 'fonts', 'OFL.txt'),
     bundleJs,

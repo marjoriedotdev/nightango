@@ -1,6 +1,6 @@
 # Modifier le titre, la description ou l'icône d'un groupe
 
-Torch Skin ne modifie ni le titre, ni la description, ni l'icône d'un groupe. Les réglages de groupe les affichent en lecture seule.
+Nightango ne modifie ni le titre, ni la description, ni l'icône d'un groupe. Les réglages de groupe les affichent en lecture seule.
 
 ## Pourquoi c'est hors périmètre
 

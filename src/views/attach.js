@@ -23,7 +23,7 @@ function useAttachMedia(to) {
     e.target.value = '';
     app.ui.confirm({
       title: 'Upload ' + file.name + '?',
-      body: 'vissle.me stores the file and Torch Skin posts its link ' + (to.kind === 'dm' ? 'to ' + to.id : 'in #' + to.id) + '. Anyone with the link can open it.',
+      body: 'vissle.me stores the file and Nightango posts its link ' + (to.kind === 'dm' ? 'to ' + to.id : 'in #' + to.id) + '. Anyone with the link can open it.',
       confirmLabel: 'Upload', onConfirm: function () { app.actions.uploadFile(to, file); }
     });
   }

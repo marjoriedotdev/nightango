@@ -21,7 +21,7 @@ function MessageStyleDialog(p) {
   var ms = memberStyles({ style: { nameColor: draft.nameColor, textColor: draft.textColor, font: FONT_FACES[+draft.face] } }, { names: true, fonts: true }, app.theme, false);
   var textStyle = Object.assign({}, ms.text, { fontSize: fontPercent(draft.size) + '%', fontWeight: draft.bold ? 700 : 400, fontStyle: draft.italic ? 'italic' : 'normal', textDecoration: [draft.underline && 'underline', draft.strike && 'line-through'].filter(Boolean).join(' ') || 'none' });
   return h(Dialog, {
-    title: 'Message style', description: 'Applies to messages you send from Torch Skin in this browser. Your Chatango account style is not changed.', onClose: p.onClose,
+    title: 'Message style', description: 'Applies to messages you send from Nightango in this browser. Your Chatango account style is not changed.', onClose: p.onClose,
     footer: [
       s.ownStyle ? h(T.Button, { key: 'r', variant: 'ghost', onClick: function () { save(null); } }, 'Use account style') : null,
       h('span', { key: 'g', className: 'grow' }),

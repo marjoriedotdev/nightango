@@ -30,7 +30,7 @@ function ProfilePage() {
         h(T.SettingsSection, { title: 'Visibility' }, vis.map(function (v) {
           return h(T.SettingRow, { key: v[0], title: v[1], description: v[2], control: h(T.Switch, { checked: !!draft.visibility[v[0]], onChange: function (e) { set('visibility.' + v[0], e.target.checked); } }) });
         })),
-        h(T.SettingsSection, { title: 'Full profile page', description: 'Colors of your page on chatango.com. Torch shows profiles in its own theme.', padded: true },
+        h(T.SettingsSection, { title: 'Full profile page', description: 'Colors of your page on chatango.com. Nightango shows profiles in its own theme.', padded: true },
           h('div', { className: 'grid3' }, [['bg', 'Background'], ['text', 'Text'], ['link', 'Links']].map(function (c) {
             return h(ColorField, { key: c[0], id: 'pf-c-' + c[0], label: c[1], value: draft.colors[c[0]], onChange: function (v) { set('colors.' + c[0], v); } });
           }))),

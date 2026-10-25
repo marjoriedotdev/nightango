@@ -1,6 +1,30 @@
 # Changelog
 
-Changes in Torch Skin that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
+Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
+
+## [0.18.0] - 2026-10-25
+
+### Added
+
+- A night sky theme: the panels float over a starry sky, and a cloud drifts across the top of the navigation.
+- The moon next to the Nightango name is tonight's moon, at its real phase, computed on your device. Day dividers show the moon of each night.
+- Settings, Appearance, Sky: Calm sky stops the drifting cloud, Southern hemisphere draws the moon as it looks south of the equator.
+
+### Changed
+
+- Torch Skin is now called Nightango. It is still a skin for Torch: About Nightango in Settings says what Torch does for you.
+- The tab title and desktop notifications show Nightango.
+- Presence shows as a moon phase: full moon for online, crescent for idle, new moon for offline.
+- Group names, profile names and page titles use a serif typeface, Instrument Serif.
+- The light theme becomes dawn: a lavender sky over warm paper.
+- Groups with new messages show a star. Unread counts, the send button and primary buttons glow like a torch.
+- Messages that mention you are lit from the left.
+- Group headers no longer show a # before the group name.
+- On phones, the members button in a group header shows only the count, so the group name fits.
+
+### Removed
+
+- The Torch sign-in screen is no longer restyled. You sign in on Torch's original screen.
 
 ## [0.17.0] - 2026-10-25
 

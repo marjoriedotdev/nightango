@@ -166,7 +166,7 @@ function DmThread(p) {
   var rows = [], prev = null, lastDay = null;
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts);
-    if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id }, dayLabel(m.ts))); lastDay = dk; prev = null; }
+    if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
     rows.push(h(DmMessageRow, { key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id }));
     prev = m;
   });

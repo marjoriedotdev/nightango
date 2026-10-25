@@ -13,7 +13,7 @@
 var T = window.Torch, h = React.createElement;
 function Demo() {
   return h(T.SettingsSection, { title: 'Sound', description: 'Applies to every alert sound.' },
-    h(T.SettingRow, { title: 'Only when Torch is in focus', description: "Stay silent while you're in another tab.", control: h(T.Switch, { defaultChecked: true }) }),
+    h(T.SettingRow, { title: 'Only when Nightango is in focus', description: "Stay silent while you're in another tab.", control: h(T.Switch, { defaultChecked: true }) }),
     h(T.SettingRow, { title: 'Play a sound when mentioned', control: h(T.Switch, null) }));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));

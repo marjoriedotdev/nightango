@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"Torch","components":[{"name":"Icon"},{"name":"Button"},{"name":"IconButton"},{"name":"TextField"},{"name":"Switch"},{"name":"Checkbox"},{"name":"SegmentedControl"},{"name":"Badge"},{"name":"CountBadge"},{"name":"Avatar"},{"name":"NavItem"},{"name":"Message"},{"name":"DayDivider"},{"name":"Banner"},{"name":"SettingsSection"},{"name":"SettingRow"},{"name":"SaveBar"},{"name":"Composer"},{"name":"Skeleton"},{"name":"Spinner"}]} */
+/* @ds-bundle: {"format":4,"namespace":"Torch","components":[{"name":"Icon"},{"name":"Button"},{"name":"IconButton"},{"name":"TextField"},{"name":"Switch"},{"name":"Checkbox"},{"name":"SegmentedControl"},{"name":"Badge"},{"name":"CountBadge"},{"name":"Avatar"},{"name":"NavItem"},{"name":"Message"},{"name":"DayDivider"},{"name":"Banner"},{"name":"SettingsSection"},{"name":"SettingRow"},{"name":"SaveBar"},{"name":"Composer"},{"name":"Skeleton"},{"name":"Spinner"},{"name":"Moon"}]} */
 (function () {
   'use strict';
   var React = window.React;
@@ -177,11 +177,11 @@
 
   function Avatar(props) {
     var size = props.size || 36;
-    var dot = Math.max(8, Math.round(size * 0.3));
+    var dot = Math.max(11, Math.round(size * 0.34));
     var failed = React.useState(0)[1];
     var fade = React.useState(null), fadedSrc = fade[0], setFadedSrc = fade[1];
     var src = props.src && !brokenAvatars[props.src] ? props.src : null;
-    var style = Object.assign({ width: size, height: size, background: props.color || avatarColor(props.name), fontSize: Math.round(size * (props.square ? 0.45 : 0.36)) }, props.ring ? { '--presence-ring': props.ring } : null, props.style);
+    var style = Object.assign({ width: size, height: size, background: props.color || avatarColor(props.name), fontSize: Math.round(size * (props.square ? 0.45 : 0.36)), '--dot': dot + 'px' }, props.ring ? { '--presence-ring': props.ring } : null, props.style);
     return h('span', { className: cx('tc-avatar', props.square && 'tc-avatar-square'), style: style, 'aria-hidden': 'true' },
       props.square ? String(props.name || '?').charAt(0).toUpperCase() : initials(props.name),
       src ? h('img', { className: cx('tc-avatar-img', fadedSrc === src ? 'tc-fade-in' : !loadedAvatars[src] && 'tc-avatar-img-wait'), src: src, alt: '', loading: 'lazy', decoding: 'async', draggable: false,
@@ -244,8 +244,37 @@
       actions);
   }
 
+  // Nouvelle lune de référence du 6 janvier 2000 à 18:14 UTC et mois synodique moyen : quelques heures d'écart au plus.
+  var SYNODIC_DAYS = 29.530588853, NEW_MOON_REF = Date.UTC(2000, 0, 6, 18, 14);
+  var MOON_NAMES = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
+  function moonPhase(date) {
+    var t = date == null ? Date.now() : +date;
+    var age = ((t - NEW_MOON_REF) / 864e5) % SYNODIC_DAYS;
+    if (age < 0) age += SYNODIC_DAYS;
+    var phase = age / SYNODIC_DAYS;
+    return { phase: phase, lit: (1 - Math.cos(2 * Math.PI * phase)) / 2, name: MOON_NAMES[Math.round(phase * 8) % 8] };
+  }
+  function moonPath(phase, r) {
+    var k = Math.cos(2 * Math.PI * phase), waxing = phase < 0.5;
+    var edge = waxing ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0);
+    return 'M' + r + ' 0A' + r + ' ' + r + ' 0 0 ' + (waxing ? 1 : 0) + ' ' + r + ' ' + 2 * r +
+      'A' + (Math.abs(k) * r).toFixed(3) + ' ' + r + ' 0 0 ' + edge + ' ' + r + ' 0Z';
+  }
+
+  function Moon(props) {
+    var size = props.size || 16, m = moonPhase(props.date);
+    var label = props.label === true ? m.name + ', ' + Math.round(m.lit * 100) + '% lit' : props.label;
+    return h('svg', { className: cx('tc-moon', props.className), width: size, height: size, viewBox: '0 0 20 20', style: props.style,
+      role: label ? 'img' : undefined, 'aria-label': label || undefined, 'aria-hidden': label ? undefined : 'true' },
+      h('circle', { className: 'tc-moon-shade', cx: 10, cy: 10, r: 10 }),
+      h('path', { className: 'tc-moon-lit', d: moonPath(m.phase, 10) }));
+  }
+
   function DayDivider(props) {
-    return h('div', { className: 'tc-day', role: 'separator' }, props.children);
+    var d = props.date == null ? null : new Date(props.date);
+    // La lune de la nuit de ce jour, prise à 22 h locales.
+    var night = d && new Date(d.getFullYear(), d.getMonth(), d.getDate(), 22);
+    return h('div', { className: 'tc-day', role: 'separator' }, night ? h(Moon, { date: night, size: 12 }) : null, props.children);
   }
 
   function Banner(props) {
@@ -364,8 +393,8 @@
     Icon: Icon, Button: Button, IconButton: IconButton, TextField: TextField, Switch: Switch, Checkbox: Checkbox,
     SegmentedControl: SegmentedControl, Badge: Badge, CountBadge: CountBadge, Avatar: Avatar, NavItem: NavItem,
     Message: Message, DayDivider: DayDivider, Banner: Banner, SettingsSection: SettingsSection, SettingRow: SettingRow,
-    SaveBar: SaveBar, Composer: Composer, Skeleton: Skeleton, Spinner: Spinner,
-    avatarColor: avatarColor, iconNames: Object.keys(ICONS)
+    SaveBar: SaveBar, Composer: Composer, Skeleton: Skeleton, Spinner: Spinner, Moon: Moon,
+    avatarColor: avatarColor, moonPhase: moonPhase, iconNames: Object.keys(ICONS)
   };
   window.Torch = Object.assign(window.Torch || {}, api);
 })();

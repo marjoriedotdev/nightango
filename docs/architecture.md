@@ -1,6 +1,6 @@
 # Architecture
 
-Torch Skin est une seule application React 18 écrite en JavaScript ES5, sans JSX ni bundler. Le même code sert deux cibles : le userscript branché sur le client Torch vivant, et un prototype hébergé à données simulées.
+Nightango est une seule application React 18 écrite en JavaScript ES5, sans JSX ni bundler. Le même code sert deux cibles : le userscript branché sur le client Torch vivant, et un prototype hébergé à données simulées.
 
 ## Arborescence
 
@@ -59,7 +59,6 @@ src/
     skin-journal.js  journal de diagnostic, inséré par le build en tête du code page (ADR-0011)
   styles/
     app.css          styles de l'application
-    login.css        habillage de l'écran de login de Torch, posé par skin-page.js
 scripts/
   build.mjs          build Node (concaténation, assemblage des userscripts, minification esbuild)
   ds-components.mjs  régénère README.md et preview.html des composants du design system
@@ -110,11 +109,11 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 ## Montage et affichage
 
 - L'hôte `#torch-skin` est créé après le démarrage de Torch, qui reconstruit sa page. Il porte un Shadow DOM ouvert qui contient la feuille de l'application et le point de montage `#app`.
-- La feuille de l'application est adaptée au Shadow DOM par le build : `:root` devient `:host`, et les classes globales (`reduce-motion`, `underline-links`) passent sur `:host(...)`.
-- L'interface reste masquée tant que la session Torch n'est pas ouverte. La connexion se fait sur l'écran de Torch, habillé par `styles/login.css`.
-- À la connexion, `window.__TORCH_SHOW__` retire l'habillage du login, masque le reste de la page de Torch et affiche l'hôte.
+- La feuille de l'application est adaptée au Shadow DOM par le build : `:root` devient `:host`, et les classes globales (`reduce-motion`, `underline-links`, `calm-sky`, `moon-south`) passent sur `:host(...)`.
+- L'interface reste masquée tant que la session Torch n'est pas ouverte. La connexion se fait sur l'écran de Torch, laissé tel quel.
+- À la connexion, `window.__TORCH_SHOW__` masque le reste de la page de Torch et affiche l'hôte.
 - Les fenêtres, menus et notifications passent par `Portal`, rendu dans un calque `#layer` voisin de `#app`, pour ne pas déformer la mise en page.
-- Les polices de l'interface (Geist, Geist Mono) sont embarquées : fichiers woff2 du sous-ensemble latin dans `torchds/project/fonts/`, sous SIL OFL 1.1 (`OFL.txt`). Le build les encode en `data:` base64 dans les `@font-face` de `fonts.css`. `skin-page.js` pose ces `@font-face` dans une `<style id="torch-skin-fonts">` de `document.head`, avec l'habillage du login puis au montage : Chrome ignore un `@font-face` déclaré seulement dans le shadow root. Le prototype hébergé reçoit les mêmes `@font-face` dans sa feuille. Les aperçus du design system et les maquettes lient `fonts.css`. Aucune requête de police externe.
+- Les polices de l'interface (Geist, Geist Mono, Instrument Serif) sont embarquées : fichiers woff2 du sous-ensemble latin dans `torchds/project/fonts/`, sous SIL OFL 1.1 (`OFL.txt`). Le build les encode en `data:` base64 dans les `@font-face` de `fonts.css`. `skin-page.js` pose ces `@font-face` dans une `<style id="torch-skin-fonts">` de `document.head` au montage de l'interface : Chrome ignore un `@font-face` déclaré seulement dans le shadow root. Le prototype hébergé reçoit les mêmes `@font-face` dans sa feuille. Les aperçus du design system et les maquettes lient `fonts.css`. Aucune requête de police externe.
 
 ## Mode live et mode prototype
 
@@ -122,7 +121,7 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 - Les écarts entre les deux modes sont gardés par `if (LIVE)`.
 - Les droits dans un groupe suivent le modèle de Chatango dans les deux modes : un propriétaire et des modérateurs avec leurs bits de droits (`settings.staff`, `settings.modFlags`), lus par `groupRights`. Le prototype n'a aucun rôle que Chatango n'a pas.
 - En live, les actions de `app/root.js` sont surchargées par celles du bloc « Mode live ». Le pont (`liveBridge`) traduit les trames de Torch en opérations, que `handleLiveOp` applique à l'état.
-- Les sons de Torch Skin sont coupés en live : Torch joue déjà les siens. Le pont lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
+- Les sons de Nightango sont coupés en live : Torch joue déjà les siens. Le pont lui fait seulement jouer son son de mention pour un MP hors de la conversation ouverte (`docs/torch-protocol.md`, Ce qui reste dans Torch).
 
 ## État React
 
@@ -152,6 +151,7 @@ Voir [ADR-0004](adr/0004-member-html-never-injected.md).
 ## Design system
 
 - `torchds/project/` contient les jetons (`tokens.json`), les composants (`components/bundle.js`, namespace `window.Torch`, et `bundle.css`), leurs types (`index.d.ts`), les polices embarquées (`fonts/`) et la charte (`README.md`).
+- Thème Clair de lune : un ciel (`sky-top`, `sky-bottom`, étoiles en `--stars` posé sur `#app`) derrière des panneaux pleins, le texte ne repose jamais sur le ciel. La lune vient de `Torch.Moon` et `Torch.moonPhase`, calculés sur l'appareil sans requête. Les préférences `sky.calm` et `sky.south` posent les classes `calm-sky` et `moon-south` sur la racine.
 - `components/bundle.js` et `bundle.css` sont maintenus à la main. Le `README.md` et le `preview.html` de chaque composant sont générés par `pnpm build:ds`.
 - Le build produit la feuille des jetons depuis `tokens.json` : thème sombre par défaut, thème clair par préférence système ou par choix explicite.
 - `torch/project/` contient les maquettes (11 écrans) et leur canevas.
@@ -170,10 +170,11 @@ Suites jsdom dans `tests/`, lancées par `tests/run.mjs` après le build :
 
 - `smoke` : prototype hébergé, chargé depuis `dist/torch-client.html`.
 - `live_ui` : mode live avec un faux client Torch, sur `dist/app.js` et le bundle du design system. Il enregistre chaque trame envoyée et vérifie son format exact.
-- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, feuille de login, pont vissle, journal de diagnostic. Jouée sur `dist/torch-skin.user.js` puis sur `dist/torch-skin.min.user.js`. C'est la seule suite qui exécute les userscripts.
+- `loader` : userscript, démarrage de Torch, pages ignorées, double démarrage, pont vissle, journal de diagnostic. Jouée sur `dist/torch-skin.user.js` puis sur `dist/torch-skin.min.user.js`. C'est la seule suite qui exécute les userscripts.
 - `pm` : non-lus des MP et fusion de l'historique privé, sur les sources de `src/core/`, `src/bridge/` et `src/app/pm.js`, avec la fausse base d'historique de `tests/fake-pm-db.js`, partagée avec `live_ui`.
 - `live_login` : détection de connexion, sur la concaténation des sources de `src/bridge/`.
 - `avatar` : avatars, sur le bundle du design system et les sources de `src/bridge/`.
+- `moon` : phase de la lune comparée à des dates publiées et sens du tracé, sur le bundle du design system.
 - `check_ds` : rendu des aperçus du design system, sur `torchds/project/components/bundle.js`.
 
 Politique de tests : [ADR-0009](adr/0009-test-only-complex-behaviour.md) et `docs/coding-conventions.md`.

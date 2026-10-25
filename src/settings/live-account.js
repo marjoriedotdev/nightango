@@ -199,7 +199,7 @@ function PrivacyPageLive() {
   var checking = !!(pmr && pmr.pmrCheck);
   // Aussi réglage coupé : pmrStatus répond alors null, ce qui retire l'état et le bandeau des MP.
   useEffect(function () { app.actions.checkPmr(); }, [checking]);
-  return h(Page, { title: 'Privacy', lede: 'What Torch Skin keeps in this browser.' },
+  return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
       pmr ? h(T.SettingRow, {
         title: 'Check my private message status', description: checking ? PMR_STATUS[app.state.pmrStatus] : null,
@@ -218,11 +218,11 @@ function PrivacyPageLive() {
 function AccountPageLive() {
   return h(Page, { title: 'Password and email', lede: 'Sign-in details for your Chatango account.' },
     h(T.Banner, { icon: 'lock', title: 'Managed on chatango.com', action: chatangoLink('Open chatango.com') },
-      'Torch Skin never handles your password, so it cannot change it, change your email or delete your account. Do it on chatango.com.'));
+      'Nightango never handles your password, so it cannot change it, change your email or delete your account. Do it on chatango.com.'));
 }
 
 function PremiumPageLive() {
   return h(Page, { title: 'Chatango Premium', lede: 'Custom backgrounds, media and badges for your account.' },
-    h(T.Banner, { icon: 'info', title: 'Not available in Torch Skin', action: chatangoLink('Open chatango.com') },
-      'Torch Skin does not take payments. Buy or gift Premium on chatango.com.'));
+    h(T.Banner, { icon: 'info', title: 'Not available in Nightango', action: chatangoLink('Open chatango.com') },
+      'Nightango does not take payments. Buy or gift Premium on chatango.com.'));
 }

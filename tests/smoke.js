@@ -73,7 +73,7 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   step('palette', !!$('.pal-input'));
   type($('.pal-input'), 'appear'); await wait(30); key($('.pal-input'), 'Enter'); await wait(80);
   step('palette to appearance', !!byText('h1', 'Appearance'));
-  for (const pg of ['Profile', 'Privacy', 'Safety', 'Password and email', 'Chatango Premium', 'Notifications', 'Language', 'Accessibility', "What's new", 'About Torch', 'Appearance']) {
+  for (const pg of ['Profile', 'Privacy', 'Safety', 'Password and email', 'Chatango Premium', 'Notifications', 'Language', 'Accessibility', "What's new", 'About Nightango', 'Appearance']) {
     click(byText('.snav .tc-nav', pg)); await wait(40);
     step('settings ' + pg, !!byText('h1', pg));
   }

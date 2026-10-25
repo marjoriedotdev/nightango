@@ -42,13 +42,15 @@ function Root(props) {
     var acc = hexToRgb(prefs.accent) ? prefs.accent : '#f27a3f';
     root.style.setProperty('--accent', acc);
     root.style.setProperty('--on-accent', contrast(hexToRgb(acc), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff');
-    root.style.setProperty('--accent-text-d', ensureContrast(acc, '#16171a', 4.5));
-    root.style.setProperty('--accent-text-l', ensureContrast(acc, '#ffffff', 4.5));
+    root.style.setProperty('--accent-text-d', ensureContrast(acc, SURFACE.dark.selected, 4.5));
+    root.style.setProperty('--accent-text-l', ensureContrast(acc, SURFACE.light.selected, 4.5));
     root.style.setProperty('--accent-soft-d', rgba(acc, 0.12));
     root.style.setProperty('--accent-soft-l', rgba(acc, 0.14));
     root.style.setProperty('--msg-size', prefs.textSize + 'px');
     root.classList.toggle('reduce-motion', !!prefs.a11y.reduceMotion);
     root.classList.toggle('underline-links', !!prefs.a11y.underlineLinks);
+    root.classList.toggle('calm-sky', !!prefs.sky.calm);
+    root.classList.toggle('moon-south', !!prefs.sky.south);
     storageSet(PREFS_KEY, prefs);
   }, [prefs]);
   useEffect(function () {
@@ -72,10 +74,10 @@ function Root(props) {
 
   /* Titre de l'onglet */
   useEffect(function () {
-    if (!state.auth.loggedIn) { document.title = 'Torch'; return; }
+    if (!state.auth.loggedIn) { document.title = 'Nightango'; return; }
     var n = unreadDmCount(state);
     Object.keys(state.groups).forEach(function (k) { n += state.groups[k].mentions || 0; });
-    document.title = (prefs.tabTitle && n ? '(' + n + ') ' : '') + (prefs.privacy.usernameInTitle ? state.me + ' | ' : '') + 'Torch';
+    document.title = (prefs.tabTitle && n ? '(' + n + ') ' : '') + (prefs.privacy.usernameInTitle ? state.me + ' | ' : '') + 'Nightango';
   });
 
   /* Raccourcis clavier globaux */
@@ -120,7 +122,7 @@ function Root(props) {
     if (n.sound && (!p.soundFocusOnly || focused)) beep(p.volume);
     if (n.app && info.toast) toast(info.toast, info.action ? { action: info.action, icon: info.icon, clamp: kind === 'pm' } : { icon: info.icon, clamp: kind === 'pm' });
     if (n.desktop && !focused) {
-      try { if (window.Notification && window.Notification.permission === 'granted') new window.Notification('Torch', { body: info.toast }); } catch (e) { /* notifications système indisponibles */ }
+      try { if (window.Notification && window.Notification.permission === 'granted') new window.Notification('Nightango', { body: info.toast }); } catch (e) { /* notifications système indisponibles */ }
     }
   }
 
@@ -972,7 +974,7 @@ function Root(props) {
    * @param {{list: Array, more: boolean}} op Page reçue du pont.
    */
   function receiveBanPage(list, op) {
-    // Seule la page suivante demandée par Torch Skin s'ajoute : un rechargement de Torch repart de la première page.
+    // Seule la page suivante demandée par Nightango s'ajoute : un rechargement de Torch repart de la première page.
     var next = list.page.loading, known = {};
     if (!next) list.rows.splice(0);
     list.rows.forEach(function (b) { known[banKey(b)] = true; });
