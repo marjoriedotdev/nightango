@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"Torch","components":[{"name":"Icon"},{"name":"Button"},{"name":"IconButton"},{"name":"TextField"},{"name":"Switch"},{"name":"Checkbox"},{"name":"SegmentedControl"},{"name":"Badge"},{"name":"CountBadge"},{"name":"Avatar"},{"name":"NavItem"},{"name":"Message"},{"name":"DayDivider"},{"name":"Banner"},{"name":"SettingsSection"},{"name":"SettingRow"},{"name":"SaveBar"},{"name":"Composer"},{"name":"Skeleton"},{"name":"Spinner"},{"name":"Moon"}]} */
+/* @ds-bundle: {"format":4,"namespace":"Torch","components":[{"name":"Icon"},{"name":"Button"},{"name":"IconButton"},{"name":"TextField"},{"name":"Toolbar"},{"name":"Switch"},{"name":"Checkbox"},{"name":"SegmentedControl"},{"name":"Badge"},{"name":"CountBadge"},{"name":"Avatar"},{"name":"NavItem"},{"name":"Message"},{"name":"DayDivider"},{"name":"Banner"},{"name":"SettingsSection"},{"name":"SettingRow"},{"name":"SaveBar"},{"name":"Composer"},{"name":"Skeleton"},{"name":"Spinner"},{"name":"Moon"}]} */
 (function () {
   'use strict';
   var React = window.React;
@@ -52,6 +52,12 @@
     paperclip: [['path', { d: 'm21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48' }]],
     bold: [['path', { d: 'M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8' }]],
     italic: [['line', { x1: 19, x2: 10, y1: 4, y2: 4 }], ['line', { x1: 14, x2: 5, y1: 20, y2: 20 }], ['line', { x1: 15, x2: 9, y1: 4, y2: 20 }]],
+    underline: [['path', { d: 'M6 4v6a6 6 0 0 0 12 0V4' }], ['line', { x1: 4, x2: 20, y1: 20, y2: 20 }]],
+    strikethrough: [['path', { d: 'M16 4H9a3 3 0 0 0-2.83 4' }], ['path', { d: 'M14 12a4 4 0 0 1 0 8H6' }], ['line', { x1: 4, x2: 20, y1: 12, y2: 12 }]],
+    'align-left': [['line', { x1: 21, x2: 3, y1: 6, y2: 6 }], ['line', { x1: 15, x2: 3, y1: 12, y2: 12 }], ['line', { x1: 17, x2: 3, y1: 18, y2: 18 }]],
+    'align-center': [['line', { x1: 21, x2: 3, y1: 6, y2: 6 }], ['line', { x1: 17, x2: 7, y1: 12, y2: 12 }], ['line', { x1: 19, x2: 5, y1: 18, y2: 18 }]],
+    'align-right': [['line', { x1: 21, x2: 3, y1: 6, y2: 6 }], ['line', { x1: 21, x2: 9, y1: 12, y2: 12 }], ['line', { x1: 21, x2: 7, y1: 18, y2: 18 }]],
+    palette: [['circle', { cx: 13.5, cy: 6.5, r: 0.5 }], ['circle', { cx: 17.5, cy: 10.5, r: 0.5 }], ['circle', { cx: 8.5, cy: 7.5, r: 0.5 }], ['circle', { cx: 6.5, cy: 12.5, r: 0.5 }], ['path', { d: 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.55-5.55C21.97 6.01 17.46 2 12 2z' }]],
     link: [['path', { d: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' }], ['path', { d: 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' }]],
     copy: [['rect', { width: 14, height: 14, x: 8, y: 8, rx: 2, ry: 2 }], ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }]],
     upload: [['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }], ['polyline', { points: '17 8 12 3 7 8' }], ['line', { x1: 12, x2: 12, y1: 3, y2: 15 }]],
@@ -110,16 +116,35 @@
     var autoId = React.useId();
     var id = props.id || autoId;
     var hintId = id + '-hint';
-    var rest = omit(props, ['label', 'hint', 'error', 'multiline', 'id', 'className', 'labelAside', 'action']);
+    var rest = omit(props, ['label', 'hint', 'error', 'multiline', 'id', 'className', 'labelAside', 'action', 'toolbar', 'inputRef']);
     var describedBy = props.error || props.hint ? hintId : undefined;
     var control = h(props.multiline ? 'textarea' : 'input', Object.assign({
-      id: id, className: cx('tc-input', props.className), 'aria-invalid': props.error ? 'true' : undefined, 'aria-describedby': describedBy
+      id: id, ref: props.inputRef, className: cx('tc-input', props.className), 'aria-invalid': props.error ? 'true' : undefined, 'aria-describedby': describedBy
     }, props.multiline ? { rows: props.rows || 4 } : { type: props.type || 'text' }, rest));
     return h('div', { className: 'tc-field' },
       props.label ? h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 } },
         h('label', { className: 'tc-label', htmlFor: id }, props.label), props.labelAside || null) : null,
+      props.toolbar || null,
       props.action ? h('div', { className: 'tc-field-row' }, control, props.action) : control,
       props.error ? h('span', { id: hintId, className: 'tc-error' }, props.error) : props.hint ? h('span', { id: hintId, className: 'tc-hint' }, props.hint) : null);
+  }
+
+  // Un seul arrêt de tabulation pour toute la barre, les flèches passent d'un bouton à l'autre (pattern WAI-ARIA Toolbar).
+  function Toolbar(props) {
+    var ref = React.useRef(null), current = React.useRef(0);
+    function items() { return Array.prototype.filter.call(ref.current.querySelectorAll('button'), function (b) { return !b.matches(':disabled'); }); }
+    function rove(list, i) { list.forEach(function (b, k) { b.tabIndex = k === i ? 0 : -1; }); }
+    React.useEffect(function () { var list = items(); rove(list, Math.min(current.current, list.length - 1)); });
+    function onFocus(e) { var list = items(), i = list.indexOf(e.target); if (i >= 0) { current.current = i; rove(list, i); } }
+    function onKeyDown(e) {
+      var list = items(), i = list.indexOf(e.target);
+      if (i < 0) return;
+      var next = e.key === 'ArrowRight' ? (i + 1) % list.length : e.key === 'ArrowLeft' ? (i - 1 + list.length) % list.length : e.key === 'Home' ? 0 : e.key === 'End' ? list.length - 1 : -1;
+      if (next < 0) return;
+      e.preventDefault();
+      list[next].focus();
+    }
+    return h('div', { role: 'toolbar', 'aria-label': props.label, 'aria-controls': props.controls, className: cx('tc-toolbar', props.className), ref: ref, onFocus: onFocus, onKeyDown: onKeyDown }, props.children);
   }
 
   function Switch(props) {
@@ -411,7 +436,7 @@
   }
 
   var api = {
-    Icon: Icon, Button: Button, IconButton: IconButton, TextField: TextField, Switch: Switch, Checkbox: Checkbox,
+    Icon: Icon, Button: Button, IconButton: IconButton, TextField: TextField, Toolbar: Toolbar, Switch: Switch, Checkbox: Checkbox,
     SegmentedControl: SegmentedControl, Badge: Badge, CountBadge: CountBadge, Avatar: Avatar, NavItem: NavItem,
     Message: Message, DayDivider: DayDivider, Banner: Banner, SettingsSection: SettingsSection, SettingRow: SettingRow,
     SaveBar: SaveBar, Composer: Composer, Skeleton: Skeleton, Spinner: Spinner, Moon: Moon,

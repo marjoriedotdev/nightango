@@ -6,7 +6,8 @@ export type Presence = 'online' | 'idle' | 'offline';
 export interface IconProps { name: IconName; size?: number; strokeWidth?: number; label?: string; className?: string }
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; size?: 'sm' | 'md' | 'lg'; block?: boolean; icon?: IconName; iconRight?: IconName; children?: ReactNode }
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { icon: IconName; label: string; size?: number; iconSize?: number; pressed?: boolean }
-export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> { label?: string; hint?: string; error?: string; multiline?: boolean; rows?: number; labelAside?: ReactNode; action?: ReactNode }
+export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> { label?: string; hint?: string; error?: string; multiline?: boolean; rows?: number; labelAside?: ReactNode; action?: ReactNode; /** Barre de mise en forme, entre le libellé et le champ. */ toolbar?: ReactNode; /** Reçoit le champ de saisie. */ inputRef?: { current: HTMLInputElement | HTMLTextAreaElement | null } }
+export interface ToolbarProps { label: string; /** Identifiant du champ que la barre modifie. */ controls?: string; className?: string; children: ReactNode }
 export interface SwitchProps extends InputHTMLAttributes<HTMLInputElement> { label?: string }
 export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> { label?: ReactNode; ariaLabel?: string }
 export interface SegmentedControlProps { options: Array<string | { value: string; label: ReactNode }>; value: string; onChange?: (value: string) => void; label: string; block?: boolean }

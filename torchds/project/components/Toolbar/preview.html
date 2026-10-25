@@ -1,0 +1,26 @@
+<!-- @dsCard group="Forms" height=140 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Toolbar, preview</title>
+<link rel="stylesheet" href="../../fonts/fonts.css">
+<style>body{margin:0;padding:16px;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:1.45}.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.col{display:flex;flex-direction:column;gap:12px}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+var T = window.Torch, h = React.createElement;
+function Demo() {
+  return h('div', { className: 'col', style: { maxWidth: 420 } },
+    h(T.TextField, { id: 'tb-demo', label: 'Bio', multiline: true, rows: 3, defaultValue: '<b>Night owl</b> and moon watcher.', toolbar: h(T.Toolbar, { label: 'Formatting', controls: 'tb-demo' },
+      h(T.IconButton, { icon: 'bold', label: 'Bold', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'italic', label: 'Italic', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'underline', label: 'Underline', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'strikethrough', label: 'Strikethrough', size: 30, iconSize: 16 }),
+      h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' }),
+      h(T.IconButton, { icon: 'palette', label: 'Text color', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'type', label: 'Text size', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'align-left', label: 'Alignment', size: 30, iconSize: 16 }),
+      h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' }),
+      h(T.IconButton, { icon: 'link', label: 'Add a link', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'image', label: 'Add an image', size: 30, iconSize: 16 })) }));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>
