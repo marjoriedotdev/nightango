@@ -276,7 +276,9 @@ var liveBridge = (function () {
       var notice = C.setNotice;
       C.setNotice = function (data) {
         try {
-          if (data && data.icon === 'warning' && data.content) alertOnce({ op: 'alert', text: String(data.content), button: data.button || null, action: typeof data.action === 'function' ? data.action : null });
+          // Le bandeau de connexion l'affiche déjà, et ce Reconnect de Torch contourne le pont : la relance automatique ouvrirait un second socket.
+          var lost = /^You have disconnected from #/.test(String(data && data.content));
+          if (data && data.icon === 'warning' && data.content && !lost) alertOnce({ op: 'alert', text: String(data.content), button: data.button || null, action: typeof data.action === 'function' ? data.action : null });
         } catch (e) { warn(e); }
         return notice.apply(this, arguments);
       };
