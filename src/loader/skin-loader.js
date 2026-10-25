@@ -2,7 +2,7 @@
 // @name         Nightango
 // @namespace    torch-skin
 // @version      0.19.0
-// @description  Starts BetterChatango on st.chatango.com and shows Nightango, a redesigned interface, on top of it.
+// @description  Starts BetterChatango on st.chatango.com and shows Nightango, a redesigned interface, on top of it. Not affiliated with BetterChatango or Chatango.
 // @match        https://st.chatango.com/*
 // @noframes
 // @grant        GM_xmlhttpRequest

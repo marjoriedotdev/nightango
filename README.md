@@ -103,6 +103,10 @@ Geist, Geist Mono and Instrument Serif are embedded in the userscript and the pr
 
 Nightango runs on top of [BetterChatango](https://github.com/Vissle-Drissle/Torch-Client) by Vissle, released under the MIT license.
 
+## Disclaimer
+
+Nightango is an independent project. It is not affiliated with, endorsed by or sponsored by BetterChatango or Chatango.
+
 ## Documentation
 
 The project docs are written in French.

@@ -91,6 +91,7 @@ function AboutPage() {
     h(T.SettingsSection, { title: 'Version', padded: true }, h('span', { className: 'mono' }, APP_VERSION)),
     h(T.SettingsSection, { title: 'Built on BetterChatango', description: 'BetterChatango is made by Vissle and released under the MIT license.', padded: true },
       h('a', { href: 'https://github.com/Vissle-Drissle/Torch-Client', target: '_blank', rel: 'noopener noreferrer' }, 'BetterChatango source code and issue tracker')),
+    h(T.SettingsSection, { title: 'Independent project', description: 'Nightango is not affiliated with, endorsed by or sponsored by BetterChatango or Chatango.' }),
     LIVE ? h(T.Banner, { icon: 'info' }, 'Test build. Nightango runs on top of BetterChatango on st.chatango.com. BetterChatango handles sign-in and the Chatango connection; Nightango never sees your password.') : null,
     LIVE ? null : h(T.SettingsSection, { title: 'Prototype', description: 'This build runs on sample data. Nothing is sent to Chatango.' },
       h(T.SettingRow, { title: 'Simulate activity', description: 'Members post, join, leave and send you messages every few seconds.', control: pr.sw('simulate') }),
