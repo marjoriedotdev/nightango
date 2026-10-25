@@ -4,7 +4,6 @@
   window.__TORCH_SKIN__ = true;
 /*JOURNAL*/
   var CSS = /*CSS*/;
-  var LOGIN_CSS = /*LOGIN_CSS*/;
   var FONTS_CSS = /*FONTS_CSS*/;
   var TORCH_START = 'https://vissle.me/client/start';
 
@@ -32,24 +31,6 @@
     font.textContent = FONTS_CSS;
     document.head.appendChild(font);
   }
-
-  /* Écran de connexion de Torch rhabillé en CSS seul : ses champs, leurs valeurs et ses écouteurs restent intacts. */
-  function dressLogin() {
-    if (document.getElementById('torch-skin-login') || !document.querySelector('.login-wrapper')) return;
-    var theme = null;
-    try { theme = (JSON.parse(localStorage.getItem('torch-prototype-prefs')) || {}).theme; } catch (e) { /* stockage indisponible : thème du système */ }
-    document.documentElement.classList.toggle('tsk-light', theme === 'light');
-    document.documentElement.classList.toggle('tsk-dark', theme === 'dark');
-    var style = document.createElement('style');
-    style.id = 'torch-skin-login';
-    style.textContent = LOGIN_CSS;
-    document.head.appendChild(style);
-    addFont();
-  }
-  // Torch remplace tout le contenu de <html> en démarrant : la feuille est reposée dès que son écran apparaît.
-  var loginWatch = new MutationObserver(dressLogin);
-  loginWatch.observe(document.documentElement, { childList: true, subtree: true });
-  dressLogin();
 
   /* Démarrage de Torch, comme son favori : même script, sans rechargement en boucle en cas d'échec. */
   function startTorch() {
@@ -92,10 +73,6 @@
       addFont();
       // L'interface reste masquée tant que la session Torch n'est pas ouverte : la connexion se fait sur l'écran de Torch.
       window.__TORCH_SHOW__ = function () {
-        loginWatch.disconnect();
-        var login = document.getElementById('torch-skin-login');
-        if (login) login.remove();
-        document.documentElement.classList.remove('tsk-light', 'tsk-dark');
         if (!host.isConnected) document.body.appendChild(host);
         if (!document.getElementById('torch-skin-hide')) {
           var hide = document.createElement('style');

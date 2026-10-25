@@ -167,16 +167,6 @@ function tokensCss(tokens) {
     themeRules(tokens, ':root', ':root:not([data-theme="dark"])', ':root[data-theme="light"]', ':root[data-theme="dark"]');
 }
 
-/**
- * Permet de produire la feuille de l'écran de connexion de Torch.
- * @param {object} tokens Contenu de tokens.json.
- * @param {string} sheet Feuille login.css.
- */
-function loginCss(tokens, sheet) {
-  // Thème posé en classe sur <html> : Torch lit le premier [data-theme] du document pour le sien.
-  return themeRules(tokens, '.login', 'html:not(.tsk-dark) .login', 'html.tsk-light .login', 'html.tsk-dark .login') + sheet;
-}
-
 // -- Polices ------------------------------------------------------------------
 
 const FONTS_DIR = join(ROOT, 'torchds', 'project', 'fonts');
@@ -238,11 +228,10 @@ const MINIFIED = {
  * @param {{ js: Function, css: Function }} pack Transformation du code et des feuilles.
  */
 async function userscript(source, pack) {
-  const [css, loginCss, fontsCss] = await Promise.all([pack.css(source.css), pack.css(source.loginCss), pack.css(source.fontsCss)]);
+  const [css, fontsCss] = await Promise.all([pack.css(source.css), pack.css(source.fontsCss)]);
   // Le code page devient un littéral de chaîne, exécuté par un <script> en textContent : jamais analysé comme HTML.
   const page = await pack.js(source.page
     .replaceAll('/*CSS*/', () => jsonString(css))
-    .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginCss))
     .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
     .replaceAll('/*JOURNAL*/', () => source.journalJs)
     .replaceAll('/*BUNDLE*/', () => source.bundleJs)
@@ -316,7 +305,6 @@ ${appJs}
     page: read('src', 'loader', 'skin-page.js'),
     journalJs: read('src', 'loader', 'skin-journal.js'),
     css: skinCss(css, bundleCss, appCss),
-    loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
     fontsCss,
     fontsLicense: read('torchds', 'project', 'fonts', 'OFL.txt'),
     bundleJs,

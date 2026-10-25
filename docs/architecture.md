@@ -59,7 +59,6 @@ src/
     skin-journal.js  journal de diagnostic, inséré par le build en tête du code page (ADR-0011)
   styles/
     app.css          styles de l'application
-    login.css        habillage de l'écran de login de Torch, posé par skin-page.js
 scripts/
   build.mjs          build Node (concaténation, assemblage des userscripts, minification esbuild)
   ds-components.mjs  régénère README.md et preview.html des composants du design system
@@ -111,8 +110,8 @@ Bac à sable Tampermonkey (skin-loader.js)        Page st.chatango.com
 
 - L'hôte `#torch-skin` est créé après le démarrage de Torch, qui reconstruit sa page. Il porte un Shadow DOM ouvert qui contient la feuille de l'application et le point de montage `#app`.
 - La feuille de l'application est adaptée au Shadow DOM par le build : `:root` devient `:host`, et les classes globales (`reduce-motion`, `underline-links`) passent sur `:host(...)`.
-- L'interface reste masquée tant que la session Torch n'est pas ouverte. La connexion se fait sur l'écran de Torch, habillé par `styles/login.css`.
-- À la connexion, `window.__TORCH_SHOW__` retire l'habillage du login, masque le reste de la page de Torch et affiche l'hôte.
+- L'interface reste masquée tant que la session Torch n'est pas ouverte. La connexion se fait sur l'écran de Torch, laissé tel quel.
+- À la connexion, `window.__TORCH_SHOW__` masque le reste de la page de Torch et affiche l'hôte.
 - Les fenêtres, menus et notifications passent par `Portal`, rendu dans un calque `#layer` voisin de `#app`, pour ne pas déformer la mise en page.
 - Les polices de l'interface (Geist, Geist Mono) sont embarquées : fichiers woff2 du sous-ensemble latin dans `torchds/project/fonts/`, sous SIL OFL 1.1 (`OFL.txt`). Le build les encode en `data:` base64 dans les `@font-face` de `fonts.css`. `skin-page.js` pose ces `@font-face` dans une `<style id="torch-skin-fonts">` de `document.head`, avec l'habillage du login puis au montage : Chrome ignore un `@font-face` déclaré seulement dans le shadow root. Le prototype hébergé reçoit les mêmes `@font-face` dans sa feuille. Les aperçus du design system et les maquettes lient `fonts.css`. Aucune requête de police externe.
 
