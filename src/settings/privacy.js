@@ -14,11 +14,11 @@ function PrivacyPage() {
       h(T.SettingRow, { title: 'Show my profile in Meet people', description: 'Lets other Chatango users find you by age and location.', control: pr.sw('privacy.meet') }),
       h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
     h(T.SettingsSection, { title: 'Your data' },
-      h(T.SettingRow, { asLabel: false, title: 'Request a copy of your data', description: 'Chatango holds your account data. Torch keeps only your encrypted sign-in and these settings.', control: h(T.Button, { size: 'sm', onClick: function () { app.ui.toast('Data requests are not part of this prototype.'); } }, 'Request') })));
+      h(T.SettingRow, { asLabel: false, title: 'Request a copy of your data', description: 'Chatango holds your account data. BetterChatango keeps only your encrypted sign-in and these settings.', control: h(T.Button, { size: 'sm', onClick: function () { app.ui.toast('Data requests are not part of this prototype.'); } }, 'Request') })));
 }
 
 /**
- * Export et import de l'historique privé, au format de fichier de Torch (exportMessages et importMessages).
+ * Export et import de l'historique privé, au format de fichier de BetterChatango (exportMessages et importMessages).
  */
 function PmHistoryRows() {
   var app = useApp(), toast = app.ui.toast;
@@ -29,7 +29,7 @@ function PmHistoryRows() {
   }
   function importFile(file) {
     readJsonArray(file).then(function (records) {
-      if (!records) { toast('This file is not a Torch message history.'); return; }
+      if (!records) { toast('This file is not a BetterChatango message history.'); return; }
       app.actions.importDms(records).then(function (r) {
         if (r.foreign) toast("This file holds another account's messages. Nothing was imported.");
         else toast('Imported ' + plural(r.added, 'message', 'messages') + '. ' + r.saved + ' already saved, ' + r.skipped + ' skipped.', { icon: r.added ? 'check' : 'info' });
@@ -38,17 +38,17 @@ function PmHistoryRows() {
   }
   return h(Frag, null,
     h(T.SettingRow, { asLabel: false, title: 'Export messages', description: 'The file holds your messages in plain text. Keep it private.', control: h(T.Button, { size: 'sm', onClick: exportFile }, 'Export') }),
-    h(T.SettingRow, { asLabel: false, title: 'Import messages', description: 'Adds the messages of a Torch history file. Messages already saved stay as they are.', control: h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import') }));
+    h(T.SettingRow, { asLabel: false, title: 'Import messages', description: 'Adds the messages of a BetterChatango history file. Messages already saved stay as they are.', control: h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import') }));
 }
 
 var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
 
 /**
- * Réglages de démarrage de Torch.
+ * Réglages de démarrage de BetterChatango.
  * @param {{value: Object, onChange: function}} p value porte les trois interrupteurs, onChange reçoit la clé et la nouvelle valeur.
  */
 function StartupSection(p) {
-  return h(T.SettingsSection, { title: 'On startup', description: 'Torch applies these the next time it loads.' },
+  return h(T.SettingsSection, { title: 'On startup', description: 'BetterChatango applies these the next time it loads.' },
     STARTUP_ROWS.map(function (r) {
       return h(T.SettingRow, { key: r[0], title: r[1], control: h(T.Switch, { checked: !!p.value[r[0]], onChange: function (e) { p.onChange(r[0], e.target.checked); } }) });
     }));

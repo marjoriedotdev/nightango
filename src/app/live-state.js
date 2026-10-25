@@ -35,7 +35,7 @@ function liveWorld(me) {
 function banKey(b) { return b.unid + ':' + b.ip; }
 function blankBanPage() { return { loaded: false, more: false, loading: false }; }
 /**
- * Permet de lire une liste de Torch chargée par pages : bannissements (block) ou débannissements (unblock).
+ * Permet de lire une liste de BetterChatango chargée par pages : bannissements (block) ou débannissements (unblock).
  * @param {Object} g Groupe live.
  * @param {string} kind block ou unblock.
  * @returns {{rows: Array, page: {loaded: boolean, more: boolean, loading: boolean}}} Lignes chargées et état de la liste.

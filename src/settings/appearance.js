@@ -25,7 +25,7 @@ function AppearancePage() {
       var colors = [src.backdrop, src.primary, src.secondary, accent].filter(hexToRgb);
       app.update(function (d) { d.prefs.customThemes = (d.prefs.customThemes || []).concat([{ id: uid(), name: name, accent: accent, colors: colors, at: Date.now() }]); });
       app.ui.toast('Imported ' + name + '.', { icon: 'check' });
-    }).catch(function () { app.ui.toast('This file is not a Torch theme. Export one from the old theme editor and try again.'); });
+    }).catch(function () { app.ui.toast('This file is not a BetterChatango theme. Export one from the old theme editor and try again.'); });
   }
   var custom = prefs.customThemes || [];
   var palette = accents.some(function (a) { return a[1] === prefs.accent; });
@@ -68,7 +68,7 @@ function AppearancePage() {
       h(T.SettingRow, { title: 'Show group announcements', description: 'Announcements staff post on a timer, and the banner at the top of a group.', control: pr.sw('announcements') }),
       markdown === null ? null : h(T.SettingRow, {
         title: 'Format Markdown when sending', description: '*text* sends as italic, **text** as bold and __text__ as underlined, in groups and private messages.',
-        control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveTorchSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
+        control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveBetterChatangoSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
       })),
     h(T.SettingsSection, { title: 'Chatango styles', description: 'Members can style their name, messages and mini profile on Chatango. Nightango corrects colors that would be hard to read.' },
       h(T.SettingRow, { title: 'Name colors', description: 'The color each member picked for their username.', control: pr.sw('styles.names') }),
@@ -76,7 +76,7 @@ function AppearancePage() {
       h(T.SettingRow, { title: 'Message backgrounds', description: 'Background colors and images set by Premium members.', control: pr.sw('styles.backgrounds') }),
       h(T.SettingRow, { title: 'Profile backgrounds', description: 'Colors and images Premium members set on their mini profile.', control: pr.sw('styles.profileBackgrounds') })),
     h(T.SettingsSection, {
-      title: 'Imported themes', description: 'Theme files (.json) exported from the old Torch theme editor. Nightango uses their accent color.',
+      title: 'Imported themes', description: 'Theme files (.json) exported from the old BetterChatango theme editor. Nightango uses their accent color.',
       headerAside: h(JsonFileButton, { icon: 'upload', onFile: importFile }, 'Import file')
     },
       custom.length ? custom.map(function (t) {

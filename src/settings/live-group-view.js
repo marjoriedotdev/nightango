@@ -1,4 +1,4 @@
-/* ---------- Écrans du mode live : réglages branchés sur Chatango par le client Torch ---------- */
+/* ---------- Écrans du mode live : réglages branchés sur Chatango par le client BetterChatango ---------- */
 
 function liveSelect(id, label, value, options, onChange, disabled) {
   return h('select', { id: id, className: 'tc-input', style: { width: 'auto' }, 'aria-label': label, value: value, disabled: !!disabled, onChange: function (e) { onChange(+e.target.value); } },

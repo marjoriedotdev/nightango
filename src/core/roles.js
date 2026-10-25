@@ -22,7 +22,7 @@ var ROLE_DESC = {
   admin: 'A moderator allowed to change group settings.',
   mod: "A moderator who can't change group settings."
 };
-/* Bits de droits d'un modérateur Chatango, relevés dans le client Torch (chatango.flags) et recoupés avec chadango et chatango-lib. */
+/* Bits de droits d'un modérateur Chatango, relevés dans le client BetterChatango (chatango.flags) et recoupés avec chadango et chatango-lib. */
 var PERM_FLAG = { seeCounter: 64, seeIps: 16384, staffChannel: 128, modLog: 256, broadcast: 65536, bypass: 8192, bannedWords: 8, automod: 512, unbanAll: 1048576, editGroup: 32, editAnnouncement: 1024, editRestrictions: 16, manageMods: 2, closeGroup: 32768 };
 var PERM_MASK = Object.keys(PERM_FLAG).reduce(function (n, k) { return n | PERM_FLAG[k]; }, 0);
 // Droits qui font d'un modérateur un administrateur dans le vocabulaire Chatango.

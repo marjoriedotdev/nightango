@@ -131,7 +131,7 @@ Sizes:
     `  return h('div', { style: { width: 240, background: 'var(--sidebar)', padding: 8, borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2 } },
     h(T.NavItem, { icon: 'message', label: 'Private messages', count: 2 }),
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'community', square: true, size: 22 }), label: 'community', active: true }),
-    h(T.NavItem, { avatar: h(T.Avatar, { name: 'torchdev', square: true, size: 22 }), label: 'torchdev', count: 2, mention: true }),
+    h(T.NavItem, { avatar: h(T.Avatar, { name: 'betterchatangodev', square: true, size: 22 }), label: 'betterchatangodev', count: 2, mention: true }),
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'trade', square: true, size: 22 }), label: 'trade', unread: true }),
     h(T.NavItem, { avatar: h(T.Avatar, { name: 'artcorner', square: true, size: 22 }), label: 'artcorner', muted: true }));`],
   ['Message', 'Chat', 480,
@@ -201,7 +201,7 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
 - \`onKeyDown(e)\` sees each key before the composer does. Call \`e.preventDefault()\` to keep the key from it, such as Tab completing a mention. Leave Tab alone when there is nothing to complete, so focus moves on.
 - \`hint\` puts a short text in the bar, before \`aside\`, and describes the input for assistive tech, such as "240 characters left". Its digits are tabular. With \`hintTone: 'warning'\`, the \`alert\` icon in \`warning\` comes first and the text says what to do: "Shorten your message by 12 characters to send it."
 - \`canSend={false}\` disables Send, and Enter neither sends nor clears the input. Say why in \`hint\`.`,
-    `  var s = React.useState('Thanks @sa'), long = React.useState('A message past the length Torch allows');
+    `  var s = React.useState('Thanks @sa'), long = React.useState('A message past the length BetterChatango allows');
   return h('div', { className: 'col' },
     h(T.Composer, { placeholder: 'Message #community', value: s[0], onChange: s[1], onKeyDown: function (e) { if (e.key === 'Tab' && !e.shiftKey && /@sa$/.test(s[0])) { e.preventDefault(); s[1](s[0] + 'ble '); } }, context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) }),
     h(T.Composer, { placeholder: 'Message #community', value: long[0], onChange: long[1], onSend: function () {}, hint: 'Shorten your message by 12 characters to send it.', hintTone: 'warning', canSend: false }));`],

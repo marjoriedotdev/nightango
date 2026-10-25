@@ -1,5 +1,5 @@
 /* ---------- Commandes des composeurs ---------- */
-// /background et /style de Torch restent des messages tant que #70 et #71 ne leur donnent pas d'équivalent.
+// /background et /style de BetterChatango restent des messages tant que #70 et #71 ne leur donnent pas d'équivalent.
 var COMMANDS = {
   '/join': { usage: '/join <group>', text: 'Joins a group by its name.' },
   '/leave': { usage: '/leave [group]', text: 'Leaves a group. Without a name, leaves the open group.' },

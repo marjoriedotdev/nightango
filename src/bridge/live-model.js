@@ -1,6 +1,6 @@
-/* ---------- Pont vers le client Torch réel (mode injecté uniquement) ---------- */
+/* ---------- Pont vers le client BetterChatango réel (mode injecté uniquement) ---------- */
 var LIVE = !!window.__TORCH_LIVE__;
-// Posé par le code page avant Torch (loader/skin-journal.js) : absent du prototype et des suites qui ne lisent que le pont.
+// Posé par le code page avant BetterChatango (loader/skin-journal.js) : absent du prototype et des suites qui ne lisent que le pont.
 var JOURNAL = window.__TORCH_JOURNAL__ || null;
 
 // Hors de l'état React : posée par le pont après un envoi ou un recadrage, elle contourne le cache HTTP des photos.
@@ -56,14 +56,14 @@ function visitorPage(items, get) {
   };
 }
 
-/* Bits Chatango, relevés dans le client Torch (chatango.flags) et recoupés avec chadango et chatango-lib. */
+/* Bits Chatango, relevés dans le client BetterChatango (chatango.flags) et recoupés avec chadango et chatango-lib. */
 var GROUP_FLAG = { NOANONS: 4, NOCOUNTER: 16, NOIMAGES: 32, NOLINKS: 64, NOVIDEOS: 128, CHANNELSDISABLED: 8192, NLP_SINGLEMSG: 16384, NLP_MSGQUEUE: 32768, BROADCAST_MODE: 65536, IS_CLOSED: 262144, NLP_NGRAM: 2097152, NO_PROXIES: 4194304 };
 var CHANNEL_FLAG = { red: 256, blue: 2048, mod: 32768 };
 var MSG_FLAG = { PREMIUM: 4, BG_ON: 8 };
 // Polices Chatango dans l'ordre de leur numéro (0 à 8), celui des balises <f x…="n"> et <g x…="n">.
 var FONT_FACES = ['Arial', 'Comic Sans MS', 'Georgia', 'Lucida Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times New Roman', 'Courier New'];
 
-// Émoticônes de Torch dans l'ordre de client.html : nom de la balise sm://, raccourcis de data-entity (le premier est celui que Torch insère), emoji système.
+// Émoticônes de BetterChatango dans l'ordre de client.html : nom de la balise sm://, raccourcis de data-entity (le premier est celui que BetterChatango insère), emoji système.
 var EMOTICONS = [
   { name: 'smile', keys: [':)', ':-)', '=]'], premium: false, emoji: '🙂' },
   { name: 'sad', keys: [':('], premium: false, emoji: '🙁' },

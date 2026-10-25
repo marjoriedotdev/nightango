@@ -2,7 +2,7 @@
 // @name         Nightango
 // @namespace    torch-skin
 // @version      0.20.1
-// @description  Starts the Torch client on st.chatango.com and shows Nightango, a redesigned interface, on top of it.
+// @description  Starts BetterChatango on st.chatango.com and shows Nightango, a redesigned interface, on top of it. Not affiliated with BetterChatango or Chatango.
 // @match        https://st.chatango.com/*
 // @noframes
 // @grant        GM_xmlhttpRequest
@@ -13,13 +13,13 @@
   'use strict';
   // st.chatango.com sert aussi les fenêtres de discussion intégrées aux autres sites : seule la page d'accueil est concernée.
   if (window.top !== window || location.pathname !== '/') return;
-  // Le userscript tourne dans un bac à sable qui ne voit ni Torch ni React : l'interface est injectée dans la page.
+  // Le userscript tourne dans un bac à sable qui ne voit ni BetterChatango ni React : l'interface est injectée dans la page.
   var page = document.createElement('script');
   page.textContent = /*PAGE*/;
   document.head.appendChild(page); page.remove();
 
   /* Pont vers vissle.me : la page ne peut pas l'appeler elle-même, vissle refuse l'origine st.chatango.com. */
-  // Le bac à sable ne voit pas Torch et Userscripts (Safari) n'a pas unsafeWindow : une sonde lit le nom dans la page, l'événement est synchrone.
+  // Le bac à sable ne voit pas BetterChatango et Userscripts (Safari) n'a pas unsafeWindow : une sonde lit le nom dans la page, l'événement est synchrone.
   function accountName() {
     var name = '';
     function take(e) { name = String(e.detail); }
@@ -36,9 +36,9 @@
   }
   document.addEventListener('torch-skin:vissle-request', function (e) {
     var q = JSON.parse(e.detail);
-    // Le profil interrogé est toujours celui de la session Torch, jamais celui que la page demanderait.
+    // Le profil interrogé est toujours celui de la session BetterChatango, jamais celui que la page demanderait.
     var me = accountName();
-    if (!me) { reply(q.id, { error: 'Your Torch account could not be read. Reload the page and try again.' }); return; }
+    if (!me) { reply(q.id, { error: 'Your BetterChatango account could not be read. Reload the page and try again.' }); return; }
     GM_xmlhttpRequest({
       method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, timeout: 15000,
       // Même en-tête que le client vissle, qui envoie le JSON comme texte brut.

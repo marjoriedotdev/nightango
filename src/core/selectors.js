@@ -90,7 +90,7 @@ function unreadDmCount(state) { return listedDms(state).filter(function (n) { re
  * @param {string} name Membre de la conversation.
  */
 function isDmInView(state, name) { return state.route.view === 'dm' && state.route.id === name && document.visibilityState === 'visible'; }
-// Mots et médias en ensemble trié : Torch archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
+// Mots et médias en ensemble trié : BetterChatango archive l'URL d'image tapée dans le texte sous forme de balise <i s>.
 function pmContentKey(m) {
   var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
   return String(m.text).split(/\s+/).concat(media).filter(Boolean).sort().filter(function (v, i, a) { return v !== a[i - 1]; }).join(' ');

@@ -1,15 +1,15 @@
-Nightango is a calm, readable skin for Torch, a web client for Chatango. Its theme is a full-moon night with scattered clouds, and a torch: cool moonlight frames the interface, warm ember marks what is alive and what asks for the reader. Conversations stay on solid surfaces and carry the color. Build every screen from these tokens and the `Torch` components; never paste raw values.
+Nightango is a calm, readable skin for BetterChatango, a web client for Chatango. Its theme is a full-moon night with scattered clouds, and a torch: cool moonlight frames the interface, warm ember marks what is alive and what asks for the reader. Conversations stay on solid surfaces and carry the color. Build every screen from these tokens and the `Torch` components; never paste raw values.
 
 ## Content fundamentals
 
 - Write interface copy in English, sentence case: "Save changes", "Private messages", "Discover groups". Capitals only for `label-caps` section labels (FAVORITES, STAFF · 3).
 - Buttons start with a verb and say what happens: "Join", "Send reset link", "Create account". Never "OK" or "Submit".
 - A menu entry that opens a dialog to confirm or complete the action ends with an ellipsis (…, not three dots): "Block…", "Leave group…", "Create a group…". Entries that act at once or only show something ("Copy text", "View profile") have none, and neither do buttons, even one that asks for confirmation ("Clear all").
-- Address the reader as "you", the product as "Nightango". Torch is named when Torch does the work: sign-in, the private message history, the media library, its own settings. Chatango is named when an action goes to Chatango: "This is your Chatango profile. Everyone on Chatango sees it."
+- Address the reader as "you", the product as "Nightango". BetterChatango is named when BetterChatango does the work: sign-in, the private message history, the media library, its own settings. Chatango is named when an action goes to Chatango: "This is your Chatango profile. Everyone on Chatango sees it."
 - Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read."
 - Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input".
 - No emoji in the interface, no exclamation marks, no filler ("Oops", "Awesome").
-- Be honest about trade-offs where they affect trust. The login screen states that credentials are stored encrypted on Torch servers.
+- Be honest about trade-offs where they affect trust. The login screen states that credentials are stored encrypted on BetterChatango servers.
 - Roles: next to a name, the short role is a `Badge` with its icon (Mod with a shield, Owner with a crown). The long role (Moderator) belongs in a sentence or a title. The viewer's own row carries a `You` badge, never "(you)" in text.
 
 ## Color

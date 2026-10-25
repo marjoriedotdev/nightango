@@ -315,7 +315,7 @@ ${appJs}
   };
 
   mkdirSync(join(ROOT, 'dist'), { recursive: true });
-  emit('torch-client.html', html);
+  emit('nightango.html', html);
   emit('app.js', appJs);
   emit('torch-skin.user.js', await userscript(source, READABLE));
   emit('torch-skin.min.user.js', await userscript(source, MINIFIED));

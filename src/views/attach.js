@@ -1,5 +1,5 @@
 /* ---------- Envoi de fichier des composeurs ---------- */
-// Types proposés par la fenêtre Upload de Torch (inject.js:7552).
+// Types proposés par la fenêtre Upload de BetterChatango (inject.js:7552).
 var UPLOAD_TYPES = '.png, .apng, .jpg, .jpeg, .gif, .bmp, .webp, .mp3, .ogg, .wav, .mp4, .wmv, .webm';
 
 /**
@@ -28,7 +28,7 @@ function useAttachMedia(to) {
     });
   }
   return {
-    // Torch n'accepte qu'une requête à la fois : pas de second envoi depuis ce composeur avant la fin du premier.
+    // BetterChatango n'accepte qu'une requête à la fois : pas de second envoi depuis ce composeur avant la fin du premier.
     onAttach: name ? null : function () { inputRef.current.click(); },
     status: name ? 'Uploading ' + name : null,
     input: h('input', { ref: inputRef, type: 'file', accept: UPLOAD_TYPES, hidden: true, onChange: choose })

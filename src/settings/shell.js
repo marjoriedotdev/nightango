@@ -1,7 +1,7 @@
 /* ---------- Réglages utilisateur ---------- */
 var SETTINGS_NAV = [
   { title: 'Account', items: [['profile', 'Profile'], ['privacy', 'Privacy'], ['safety', 'Safety'], ['account', 'Password and email'], ['premium', 'Chatango Premium']] },
-  // Torch ne traduit rien, la page Language serait sans effet en live
+  // BetterChatango ne traduit rien, la page Language serait sans effet en live
   { title: 'App', items: [['appearance', 'Appearance'], ['notifications', 'Notifications'], ['language', 'Language'], ['accessibility', 'Accessibility']].filter(function (it) { return !LIVE || it[0] !== 'language'; }) },
   { title: 'Support', items: [['whatsnew', "What's new"], ['diagnostics', 'Diagnostics'], ['about', 'About Nightango']].filter(function (it) { return JOURNAL || it[0] !== 'diagnostics'; }) }
 ];
@@ -18,23 +18,23 @@ function usePref() {
     get: function (path) { return getIn(app.state.prefs, path); },
     set: function (path, v) { app.update(function (d) { setIn(d.prefs, path, v); }); },
     sw: function (path) {
-      var v = getIn(app.state.prefs, path), key = LIVE && TORCH_PREFS[path];
-      return h(T.Switch, { checked: !!v, onChange: function (e) { var nv = e.target.checked; if (!key || saveTorchSetting(app, liveBridge.setSetting, key, nv)) app.update(function (d) { setIn(d.prefs, path, nv); }); } });
+      var v = getIn(app.state.prefs, path), key = LIVE && BETTER_CHATANGO_PREFS[path];
+      return h(T.Switch, { checked: !!v, onChange: function (e) { var nv = e.target.checked; if (!key || saveBetterChatangoSetting(app, liveBridge.setSetting, key, nv)) app.update(function (d) { setIn(d.prefs, path, nv); }); } });
     }
   };
 }
 
 /**
- * Permet d'enregistrer un réglage dans ceux de Torch, avec un toast si Torch ne l'enregistre pas.
+ * Permet d'enregistrer un réglage dans ceux de BetterChatango, avec un toast si BetterChatango ne l'enregistre pas.
  * @param {Object} app Contexte de l'application.
- * @param {Function} write Écriture du pont, vraie si Torch a enregistré la valeur.
+ * @param {Function} write Écriture du pont, vraie si BetterChatango a enregistré la valeur.
  * @param {string} key Clé du réglage dans le pont.
  * @param {boolean|number} value Nouvelle valeur.
- * @returns {boolean} Vrai si Torch l'a enregistré.
+ * @returns {boolean} Vrai si BetterChatango l'a enregistré.
  */
-function saveTorchSetting(app, write, key, value) {
+function saveBetterChatangoSetting(app, write, key, value) {
   if (write(key, value)) return true;
-  app.ui.toast(TORCH_SAVE_FAILED);
+  app.ui.toast(BETTER_CHATANGO_SAVE_FAILED);
   return false;
 }
 

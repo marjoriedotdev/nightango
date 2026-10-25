@@ -1,7 +1,7 @@
 {
   "v": 3,
   "createdOnFiles": { "v": 1, "at": "2026-10-16T11:02:00Z" },
-  "title": "Torch Client Redesign",
+  "title": "BetterChatango Redesign",
   "launch": { "view": "canvas" },
   "pages": [],
   "boards": {
@@ -19,7 +19,7 @@
   },
   "order": ["Main.dc.html", "Login.dc.html", "Mobile.dc.html", "Settings.dc.html", "GroupSettings.dc.html", "MainLight.dc.html", "PrivateMessages.dc.html", "Profile.dc.html", "Appearance.dc.html", "Roles.dc.html", "Discover.dc.html"],
   "notes": {
-    "title": { "x": 0, "y": -300, "text": "Torch Client, refonte", "kind": "title1", "maxW": 4480 }
+    "title": { "x": 0, "y": -300, "text": "BetterChatango, refonte", "kind": "title1", "maxW": 4480 }
   },
   "designSystems": []
 }

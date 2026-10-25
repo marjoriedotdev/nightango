@@ -1,21 +1,21 @@
 # Nightango
 
-Nightango habille le client Chatango Torch d'une interface refaite, sans changer ce que Torch envoie à Chatango. Ce glossaire fixe le vocabulaire du code, des docs et des issues.
+Nightango habille BetterChatango, client Chatango tiers, d'une interface refaite, sans changer ce que BetterChatango envoie à Chatango. Ce glossaire fixe le vocabulaire du code, des docs et des issues.
 
 ## Produits et acteurs
 
 **Chatango**:
 Service de discussion en ligne (groupes, messages privés, profils) sur lequel tout repose.
 
-**Torch**:
-Client web tiers pour Chatango, édité par vissle, qui tient la session et les connexions. Dans les textes d'interface, « Torch » ne désigne que ce que fait Torch : la connexion, l'historique des MP, la médiathèque, les réglages de Torch.
-_Avoid_: Torch Client (sauf pour le client d'origine affiché sans habillage)
+**BetterChatango**:
+Client web tiers pour Chatango, édité par vissle, qui tient la session et les connexions. Son code, ses écrans et sa globale `torch` gardent son nom interne, Torch. Dans les textes d'interface, « BetterChatango » ne désigne que ce que fait BetterChatango : la connexion, l'historique des MP, la médiathèque, ses réglages.
+_Avoid_: Torch, Torch Client (nom interne, sauf pour citer son code ou ses écrans)
 
 **vissle**:
-Éditeur de Torch (vissle.me), qui héberge aussi le tracker de profil.
+Éditeur de BetterChatango (vissle.me), qui héberge aussi le tracker de profil.
 
 **Nightango**:
-Ce projet : un skin pour Torch, sous forme de userscript Tampermonkey qui démarre Torch puis affiche par-dessus une interface refaite, branchée sur Torch. Nom affiché depuis la 0.18.0. Les identifiants techniques gardent `torch-skin` : namespace du userscript, hôte `#torch-skin`, événements du pont, clés de stockage, préfixe des logs, livrable.
+Ce projet : un skin pour BetterChatango, sous forme de userscript Tampermonkey qui démarre BetterChatango puis affiche par-dessus une interface refaite, branchée sur BetterChatango. Nom affiché depuis la 0.18.0. Les identifiants techniques gardent `torch-skin` : namespace du userscript, hôte `#torch-skin`, globales `__TORCH_*__`, événements du pont, clés de stockage, préfixe des logs, livrable.
 _Avoid_: Torch Skin (ancien nom), thème
 
 **Client officiel**:
@@ -27,7 +27,7 @@ Projet tiers maintenu qui implémente le protocole Chatango et sert de source po
 ## Architecture
 
 **Pont**:
-Couche qui traduit les trames et les objets de Torch en opérations pour l'interface, et les actions de l'interface en appels à Torch.
+Couche qui traduit les trames et les objets de BetterChatango en opérations pour l'interface, et les actions de l'interface en appels à BetterChatango.
 _Avoid_: adaptateur, wrapper
 
 **Pont vissle**:
@@ -38,30 +38,30 @@ Message texte du protocole Chatango sur une connexion, aux champs séparés par 
 _Avoid_: commande, paquet, frame (en prose française)
 
 **Table d'événements**:
-Table de Torch qui associe un nom de trame entrante à son gestionnaire, une pour les groupes et une pour les messages privés.
+Table de BetterChatango qui associe un nom de trame entrante à son gestionnaire, une pour les groupes et une pour les messages privés.
 
 **Connexion privée**:
 Connexion de Chatango qui porte les MP, la liste d'amis et la présence, distincte des connexions de groupe.
 
 **Live**:
-Mode où l'interface est branchée sur le client Torch vivant et agit sur le vrai compte.
+Mode où l'interface est branchée sur le client BetterChatango vivant et agit sur le vrai compte.
 
 **Prototype**:
 Mode hébergé où la même interface tourne sur des données simulées.
 _Avoid_: démo, maquette
 
 **Bac à sable**:
-Contexte isolé où Tampermonkey exécute le userscript, avec ses privilèges mais sans accès à Torch.
+Contexte isolé où Tampermonkey exécute le userscript, avec ses privilèges mais sans accès à BetterChatango.
 _Avoid_: sandbox (en prose française)
 
 **Page**:
-Contexte de st.chatango.com où vivent Torch et l'interface, sans les privilèges du userscript.
+Contexte de st.chatango.com où vivent BetterChatango et l'interface, sans les privilèges du userscript.
 
 **Loader**:
 Partie du userscript qui tourne dans le bac à sable et injecte le code page.
 
 **Code page**:
-Partie du userscript injectée dans la page, qui démarre Torch et monte l'interface.
+Partie du userscript injectée dans la page, qui démarre BetterChatango et monte l'interface.
 
 **Not wired**:
 État d'une fonction de l'interface sans trame sourcée, affichée comme indisponible en live.
@@ -70,7 +70,7 @@ Partie du userscript injectée dans la page, qui démarre Torch et monte l'inter
 Le userscript minifié que l'utilisateur installe dans Tampermonkey, au nom fixe d'une version à l'autre.
 
 **Design system**:
-Jetons, composants et charte de Nightango (torchds), dont l'interface est construite.
+Jetons, composants et charte de Nightango (torchds, namespace `window.Torch`), dont l'interface est construite.
 
 ## Groupes
 
@@ -109,7 +109,7 @@ _Avoid_: DM, PM, message direct (en prose française). L'interface dit « Chats 
 MP reçu pendant que le destinataire était hors ligne, livré une seule fois à sa reconnexion.
 
 **Historique privé**:
-Copie locale des MP que Torch garde dans le navigateur. Chatango n'en garde aucune.
+Copie locale des MP que BetterChatango garde dans le navigateur. Chatango n'en garde aucune.
 
 **Conversation fermée**:
 MP retiré de la liste avec son historique gardé, qui revient à un MP entrant ou à une réouverture.
@@ -132,12 +132,12 @@ Refus des MP d'un compte, côté messages privés.
 ## Médias
 
 **Médiathèque**:
-Images favorites que Torch garde dans ce navigateur, communes à tous ses comptes, insérées dans un message par leur adresse. L'interface dit « Media ».
+Images favorites que BetterChatango garde dans ce navigateur, communes à tous ses comptes, insérées dans un message par leur adresse. L'interface dit « Media ».
 _Avoid_: favoris (réservé aux groupes), galerie
 
 **Hôte de confiance**:
-Hôte exact choisi par l'utilisateur, dont les liens s'ouvrent sans avertissement et dont les images, vidéos et audios se chargent sans clic. En live, la liste est celle de Torch (`safety.whitelist.domain`). L'interface dit « Trusted sites ».
-_Avoid_: domaine de confiance, liste blanche (ambigu avec la liste de domaines que le serveur de Torch envoie)
+Hôte exact choisi par l'utilisateur, dont les liens s'ouvrent sans avertissement et dont les images, vidéos et audios se chargent sans clic. En live, la liste est celle de BetterChatango (`safety.whitelist.domain`). L'interface dit « Trusted sites ».
+_Avoid_: domaine de confiance, liste blanche (ambigu avec la liste de domaines que le serveur de BetterChatango envoie)
 
 ## Présence
 
@@ -188,7 +188,7 @@ Recherche de membres de Chatango filtrée par âge, genre, photo et présence.
 _Avoid_: découverte (réservé à Discover, la liste de groupes à rejoindre)
 
 **Comptes liés**:
-Autres comptes que vissle rapproche d'un compte, rangés par niveau de rapprochement (Definite à Weak), selon une méthode que le code de Torch ne dit pas. Demandés au clic sur « Who is this », montrés à l'utilisateur seul, sans être gardés.
+Autres comptes que vissle rapproche d'un compte, rangés par niveau de rapprochement (Definite à Weak), selon une méthode que le code de BetterChatango ne dit pas. Demandés au clic sur « Who is this », montrés à l'utilisateur seul, sans être gardés.
 _Avoid_: alts, multicomptes, doubles comptes
 
 ## Style
@@ -210,5 +210,5 @@ _Avoid_: style masqué, style bloqué
 ## Session
 
 **Session coupée**:
-Perte de la session Torch qui bloque l'interface : connecté ailleurs, session expirée, hors ligne ou connexion perdue.
+Perte de la session BetterChatango qui bloque l'interface : connecté ailleurs, session expirée, hors ligne ou connexion perdue.
 _Avoid_: déconnexion (ambigu avec la fermeture d'un seul groupe)
