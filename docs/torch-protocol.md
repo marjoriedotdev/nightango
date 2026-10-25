@@ -105,6 +105,8 @@ Ce ne sont pas des appels du code applicatif mais des ressources que le navigate
 - La photo de profil complète `ust.chatango.com/profileimg/…/full.jpg`, en `<img>` `referrerPolicy="no-referrer"`, chargée seulement au clic sur l'avatar du mini profil.
 - L'image du fond de message `ust.chatango.com/profileimg/…/msgbg.jpg`, en `<img>` `referrerPolicy="no-referrer"`, seulement si `embedImages` est actif et `proxyMedia` coupé.
 - L'image du fond Premium, URL `https` d'un hôte quelconque tirée de `custom_profile.css` (voir Fond Premium), en `<img>` `referrerPolicy="no-referrer"`, sous `styles.profileBackgrounds` et `embedImages`, au clic sous `proxyMedia` sauf pour un hôte de confiance.
+- Les images de la bio d'un mini profil (`RichText`, `core/rich-text.js`), URL `http` ou `https` d'un hôte quelconque écrite par le membre, en `<img>` `referrerPolicy="no-referrer"` et `loading="lazy"`, selon `embedImages` et `waitsForClick` (au clic sous `proxyMedia` sauf pour un hôte de confiance). Les cartes Meet n'en affichent aucune.
+- Les ressources du profil complet, chargées dans l'`iframe` `sandbox` (`fullProfileDoc`) avec `<meta name="referrer" content="no-referrer">`. Tant que ses médias ne sont pas autorisés, la CSP n'admet que `data:`. Autorisés d'emblée si `embedImages` est actif et `proxyMedia` coupé, sinon par « Load images », ils ouvrent la CSP aux images, feuilles de style et polices en `http` et `https` d'un hôte quelconque, et à l'audio et la vidéo en `https` ([ADR-0004](adr/0004-member-html-never-injected.md)).
 
 Un appel exclu pour cette raison : le formulaire de style de Torch (`updatemsgstyles`) transmet le mot de passe. Le style de message perso n'est donc jamais enregistré sur le compte ([ADR-0006](adr/0006-local-message-style.md)).
 
