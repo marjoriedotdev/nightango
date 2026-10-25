@@ -24,7 +24,7 @@ function ProfilePageLive() {
       setDraft(function (x) { return Object.assign({}, x, { full: html }); });
     }, function () { setFullFailed(true); });
   }
-  useEffect(function () { if (base.full === null) fetchFull(); }, []);
+  useEffect(function () { if (base.full === null) fetchFull(); app.actions.loadProfile(s.me); }, []);
   function reload() { var nb = load(); setBase(nb); setDraft(editable(nb)); if (nb.full === null) fetchFull(); }
   function save() {
     if (ageErr) { app.ui.toast('Fix the age before saving.'); return; }
@@ -74,7 +74,7 @@ function ProfilePageLive() {
         h(VisitorsSection, { bio: base.about, draft: draft.about, onDraft: function (v) { set('about', v); }, disabled: !base.loaded || saving })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
-        profilePreviewCard(s.me, meta, draft.about))),
+        h(ProfilePreviewCard, { name: s.me, meta: meta, about: draft.about, mini: miniStyleOf(s.prefs, userOf(s, s.me), app.theme) }))),
     dirty && base.loaded ? h(T.SaveBar, { onDiscard: function () { setDraft(editable(base)); }, onSave: saving ? function () {} : save, saveLabel: saving ? 'Saving' : 'Save profile' }, 'Unsaved changes to your Chatango profile') : null);
 }
 
