@@ -18,6 +18,8 @@ var liveBridge = (function () {
   // Taille des pages de bannissements et de débannissements demandées par Torch.
   var BAN_PAGE = 50;
 
+  // Un message affiché avant son identifiant définitif garde l'identifiant provisoire k:{clé}, que Chatango désigne par la clé seule.
+  function withTempIds(ids) { return ids.concat(ids.map(function (id) { return 'k:' + id; })); }
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
   function note(text) { if (JOURNAL) JOURNAL.add('app', text); }
@@ -110,8 +112,8 @@ var liveBridge = (function () {
         if (waitingIds[ku]) { delete waitingIds[ku]; emit({ op: 'msgid', gid: room, tmp: 'k:' + data[0], id: data[1] }); } else earlyIds[ku] = data[1];
         break;
       }
-      case 'delete': emit({ op: 'del', gid: room, ids: [data[0]] }); break;
-      case 'deleteall': emit({ op: 'del', gid: room, ids: data.slice() }); break;
+      case 'delete': emit({ op: 'del', gid: room, ids: withTempIds([data[0]]) }); break;
+      case 'deleteall': emit({ op: 'del', gid: room, ids: withTempIds(data.slice()) }); break;
       case 'clearall': if (data[0] === 'ok') emit({ op: 'cleared', gid: room }); else emit({ op: 'notice', gid: room, text: 'Chatango refused to clear the messages.' }); break;
       case 'g_participants': participants(room, data.join(':').split(';')); break;
       case 'gparticipants': participants(room, data.slice(1).join(':').split(';')); break;
@@ -711,7 +713,11 @@ var liveBridge = (function () {
     onOp: onOp,
     note: note,
     connName: connName,
-    canReply: function (id) { return !!id && String(id).indexOf('k:') !== 0; },
+    /**
+     * Permet de savoir si un message a déjà son identifiant définitif, que la réponse, la modification et la suppression attendent.
+     * @param {string} id Identifiant du message dans l'état.
+     */
+    delivered: function (id) { return !!id && String(id).indexOf('k:') !== 0; },
     /**
      * Permet d'envoyer un message de groupe, ou la modification d'un message.
      * @param {string} gid Groupe visé.

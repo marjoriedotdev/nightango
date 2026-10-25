@@ -145,19 +145,13 @@ function Root(props) {
     d.mentionLog.splice(MENTION_MAX);
   }
   /**
-   * Permet de savoir si un message figure parmi des identifiants reçus de Chatango, sous son identifiant provisoire ou définitif.
-   * @param {string[]} ids Identifiants reçus.
-   * @param {string} id Identifiant du message dans l'état.
-   */
-  function idIn(ids, id) { return ids.indexOf(id) >= 0 || ids.indexOf(String(id).replace(/^k:/, '')) >= 0; }
-  /**
    * Permet de retirer de la page Mentions les messages d'un groupe.
    * @param {Object} d État en cours de modification.
    * @param {string} gid Groupe visé.
    * @param {?string[]} ids Messages retirés, null pour tout le groupe.
    */
   function dropMentions(d, gid, ids) {
-    d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && !idIn(ids, x.id)); });
+    d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && ids.indexOf(x.id) < 0); });
   }
   /**
    * Permet de poser le monde d'exemple du prototype, ses mentions relevées comme celles de l'historique en live.
@@ -624,7 +618,7 @@ function Root(props) {
     actions.sendGroup = function (gid, text, opts) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
-      if (replyId && !liveBridge.canReply(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
+      if (replyId && !liveBridge.delivered(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
       return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. Torch rejected it.');
     };
     // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
@@ -810,10 +804,10 @@ function Root(props) {
       }, function (e) { toast(e && e.message ? e.message : 'Chatango refused to create the group.'); return false; });
     };
     actions.deleteMessage = function (gid, mid) {
-      if (String(mid).indexOf('k:') === 0) { toast('This message is still being delivered. Try again in a moment.'); return; }
+      if (!liveBridge.delivered(mid)) { toast('This message is still being delivered. Try again in a moment.'); return; }
       var m = findMsg(stateRef.current.groups[gid], mid);
       // Comme Torch : l'original, puis chacune de ses modifications dont Chatango a donné l'identifiant définitif.
-      [mid].concat((m && m.editIds) || []).filter(liveBridge.canReply).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
+      [mid].concat((m && m.editIds) || []).filter(liveBridge.delivered).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
     };
     actions.deleteAllFrom = function (gid, name, msg) {
       var g = stateRef.current.groups[gid], m = msg && msg.unid ? msg : g && lastMessageOf(g, name);
@@ -1158,8 +1152,8 @@ function Root(props) {
       }); break;
       case 'del': groupUpdate(op.gid, function (g, d) {
         // Une modification affichée à part disparaît avec son original, même quand celui-ci n'est pas chargé.
-        g.messages = g.messages.filter(function (x) { return !(x.editId && idIn(op.ids, x.editId)); });
-        g.messages.forEach(function (x) { if (idIn(op.ids, x.id)) x.deleted = { by: 'staff' }; });
+        g.messages = g.messages.filter(function (x) { return !(x.editId && op.ids.indexOf(x.editId) >= 0); });
+        g.messages.forEach(function (x) { if (op.ids.indexOf(x.id) >= 0) x.deleted = { by: 'staff' }; });
         dropMentions(d, op.gid, op.ids);
       }); break;
       case 'cleared': groupUpdate(op.gid, function (g, d) {
