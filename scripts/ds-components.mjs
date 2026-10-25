@@ -98,7 +98,7 @@ const COMPONENTS = [
     'Profile picture or initials on a muted color derived from the username, with optional presence.',
     `Pass \`src\` to show a profile picture. The initials stay underneath and remain visible while it loads or if it fails (account without a picture, guest); a failed URL is not requested again on the same page. The picture fades in once loaded, and shows at once when the page already loaded it. \`onLoad\` is called each time the picture loads, to offer actions that need it, such as opening the full photo.
 
-Pass \`name\`; the color comes from a fixed palette of eight muted tones so a user keeps the same color everywhere. \`status\` is online, idle or offline, and the dot is never the only cue: where one person is shown, write the status next to the avatar (Online, Idle, Last online …); in a list row, the dot may stand alone and the row's accessible name states the status. Set \`ring\` to the surface color behind the avatar so the presence dot is cut out cleanly. \`square\` renders a group icon.
+Pass \`name\`; the color comes from a fixed palette of eight muted tones so a user keeps the same color everywhere. \`status\` is online, idle or offline, drawn as a moon phase: full moon, crescent, new moon outline. The shape carries the state, so it reads without color, yet it is never the only cue: where one person is shown, write the status next to the avatar (Online, Idle, Last online …); in a list row, the dot may stand alone and the row's accessible name states the status. Set \`ring\` to the surface color behind the avatar so the presence dot is cut out cleanly. \`square\` renders a group icon.
 
 Sizes:
 
@@ -146,9 +146,11 @@ Sizes:
       h(T.Message, { compact: true, author: 'quill', time: '12:44', reply: { author: 'sable', avatar: h(T.Avatar, { name: 'sable', size: 16 }), text: parent } }, 'Confirmed, the second reconnect held.'),
       h(T.Message, { compact: true, author: 'nightowl', time: '12:48', mention: true }, '@orrin the theme you exported imports cleanly now.')));`],
   ['DayDivider', 'Chat', 56,
-    'A centered date label between two hairlines in the chat log.',
-    `Children are Today, Yesterday or a short date (Mon 12 Oct). Place one before the first message of each day.`,
-    `  return h(T.DayDivider, null, 'Today');`],
+    'A centered date label between two hairlines in the chat log, with the moon of that night.',
+    `Children are Today, Yesterday or a short date (Mon 12 Oct). Place one before the first message of each day.
+
+Pass \`date\` (the timestamp of the first message) to draw the moon as it was at 22:00 that day. Leave it out for a label without a moon.`,
+    `  return h('div', null, h(T.DayDivider, { date: Date.now() - 5 * 864e5 }, 'Mon 12 Oct'), h(T.DayDivider, { date: Date.now() }, 'Today'));`],
   ['Banner', 'Feedback', 120,
     'A one-line notice above content: group announcements and permission warnings.',
     `\`tone\` is \`info\` (pin icon in \`accent-text\`) or \`warning\` (alert icon in \`warning\`). Give a short \`title\`, the text as children, an optional \`action\` button and \`onDismiss\` when the reader may hide it. Below 860px the text goes under the title. One banner per view.`,
@@ -202,7 +204,16 @@ Sizes:
 
 - Pass \`label\` when no visible text says what is loading; leave it out next to a text such as "Signing in".
 - It stops turning when the reader asks for reduced motion.`,
-    `  return h('div', { className: 'row', style: { color: 'var(--text-2)' } }, h(T.Spinner, { label: 'Loading' }), h(T.Spinner, { size: 24 }), h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 8 } }, h(T.Spinner, null), 'Signing in'));`]
+    `  return h('div', { className: 'row', style: { color: 'var(--text-2)' } }, h(T.Spinner, { label: 'Loading' }), h(T.Spinner, { size: 24 }), h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 8 } }, h(T.Spinner, null), 'Signing in'));`],
+  ['Moon', 'Foundations', 80,
+    'The moon at its real phase for a given moment, computed on the device.',
+    `\`date\` defaults to now. The phase is the same everywhere on Earth; a \`moon-south\` class on the root mirrors every moon for the southern hemisphere. \`Torch.moonPhase(date)\` returns \`{ phase, lit, name }\` for text: phase from 0 (new) to 1, lit from 0 to 1, name such as Waxing gibbous.
+
+- Decorative by default. Pass \`label: true\` to name the phase and its lit part (Waxing gibbous, 82% lit), or a text of your own.
+- The lit side uses \`moon-ink\`, the dark side \`moon-shade\`: it reads on every surface in both themes.
+- 30 for the Nightango mark, 12 in day dividers.`,
+    `  var day = 864e5;
+  return h('div', { className: 'row' }, [0, 4, 8, 12, 15, 19, 23, 26].map(function (d) { return h(T.Moon, { key: d, date: Date.UTC(2026, 9, 11) + d * day, size: 28, label: true }); }));`]
 ];
 
 // -- Génération ---------------------------------------------------------------

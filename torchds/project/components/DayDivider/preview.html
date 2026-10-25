@@ -12,7 +12,7 @@
 <script>
 var T = window.Torch, h = React.createElement;
 function Demo() {
-  return h(T.DayDivider, null, 'Today');
+  return h('div', null, h(T.DayDivider, { date: Date.now() - 5 * 864e5 }, 'Mon 12 Oct'), h(T.DayDivider, { date: Date.now() }, 'Today'));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
 </script>

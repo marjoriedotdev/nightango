@@ -1,10 +1,10 @@
-/* Torch components. Every value comes from tokens.css. */
+/* Torch components (Nightango design system). Every value comes from tokens.css. */
 .tc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .tc-icon{flex:none;display:inline-block;vertical-align:middle}
 
 .tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);height:var(--size-control-md);padding:0 14px;border-radius:var(--radius-lg);border:1px solid transparent;background:none;color:var(--text);font:500 13.5px/1 var(--font-sans);white-space:nowrap;cursor:pointer;transition:background-color .12s,border-color .12s}
 .tc-btn:focus-visible,.tc-ib:focus-visible,.tc-nav:focus-visible,.tc-seg button:focus-visible,.tc-send:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
-.tc-btn-primary{background:var(--accent);color:var(--on-accent);font-weight:600}
+.tc-btn-primary{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--shadow-glow)}
 .tc-btn-primary:hover{filter:brightness(1.06)}
 .tc-btn-secondary{border-color:var(--control)}
 .tc-btn-secondary:hover,.tc-btn-ghost:hover,.tc-btn-danger:hover{background:var(--hover-2)}
@@ -53,17 +53,22 @@ select.tc-input{padding:0 10px}
 
 .tc-badge{display:inline-flex;align-items:center;gap:var(--space-1);height:18px;padding:0 6px;border-radius:var(--radius-sm);background:var(--selected);color:var(--text-2);font-size:11px;font-weight:500;white-space:nowrap;vertical-align:middle}
 .tc-badge-accent{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
-.tc-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:20px;height:18px;padding:0 6px;border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:600}
-.tc-dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--text)}
+.tc-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:20px;height:18px;padding:0 6px;border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:600;box-shadow:var(--shadow-glow)}
+.tc-dot{flex:none;width:11px;height:11px;background:var(--moon-ink);clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
 
 .tc-avatar{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;border-radius:50%;color:#e8eaee;font-weight:600;line-height:1;user-select:none}
 .tc-avatar-square{border-radius:var(--radius-md)}
 .tc-avatar-img{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;object-fit:cover}
 .tc-avatar-img-wait{opacity:0}
-.tc-presence{position:absolute;right:-2px;bottom:-2px;border-radius:50%;border:2px solid var(--presence-ring,var(--bg))}
-.tc-presence-online{background:var(--status-online)}
-.tc-presence-idle{background:var(--status-idle)}
-.tc-presence-offline{background:var(--status-offline)}
+/* Présence en phases de lune : la forme porte l'état (pleine, croissant, nouvelle lune), pas seulement la couleur. */
+.tc-presence{position:absolute;right:-2px;bottom:-2px;border-radius:50%;border:2px solid var(--presence-ring,var(--bg));background:var(--presence-ring,var(--bg))}
+.tc-presence-online{background:var(--status-online);box-shadow:0 0 6px color-mix(in srgb,var(--status-online) 55%,transparent)}
+.tc-presence-idle{box-shadow:inset calc((var(--dot,11px) - 4px) * -.42) 0 0 0 var(--status-idle)}
+.tc-presence-offline{box-shadow:inset 0 0 0 1.6px var(--status-offline)}
+
+.tc-moon{flex:none;display:inline-block;vertical-align:middle}
+.tc-moon-shade{fill:var(--moon-shade)}
+.tc-moon-lit{fill:var(--moon-ink)}
 
 .tc-nav{display:flex;align-items:center;gap:10px;width:100%;height:var(--size-control-md);padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);font:400 14px var(--font-sans);text-align:left;text-decoration:none;cursor:pointer}
 .tc-nav:hover{background:var(--hover);color:var(--text)}
@@ -74,7 +79,7 @@ select.tc-input{padding:0 10px}
 
 .tc-msg{position:relative;display:flex;gap:var(--space-3);padding:6px var(--space-5);transition:background-color .15s}
 .tc-msg:hover{background:var(--subtle)}
-.tc-msg-mention,.tc-msg-mention:hover{background:var(--accent-soft)}
+.tc-msg-mention,.tc-msg-mention:hover{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,transparent),var(--accent-soft) 45%,transparent)}
 .tc-msg-cont{padding-top:2px;padding-bottom:2px}
 .tc-msg-body{flex:1;min-width:0}
 .tc-msg-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--space-2)}
@@ -97,14 +102,16 @@ select.tc-input{padding:0 10px}
 .cmsg .tc-msg-time{flex:none;width:58px}
 .cmsg .tc-msg-author{flex:none}
 .cmsg .tc-msg-text{margin:0;flex:1;min-width:0}
-.cmsg.tc-msg-mention{background:var(--accent-soft)}
+.cmsg.tc-msg-mention{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,transparent),var(--accent-soft) 45%,transparent)}
 .cmsg .tc-msg-actions{top:-12px}
 .tc-msg-layered{isolation:isolate}
 .tc-msg-bg{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
 .tc-msg-bg img{display:block;width:100%;height:100%;object-fit:none}
 .tc-mention{padding:0 3px;border-radius:var(--radius-sm);background:var(--accent-soft);color:var(--accent-text);font-weight:500}
 .tc-day{display:flex;align-items:center;gap:var(--space-3);padding:14px var(--space-5) 8px;color:var(--text-3);font-size:12px;font-weight:500}
-.tc-day::before,.tc-day::after{content:"";flex:1;height:1px;background:var(--border)}
+.tc-day::before{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border-strong))}
+.tc-day::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border-strong),transparent)}
+.tc-day .tc-moon{margin-right:-4px}
 
 .tc-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-lg);background:var(--subtle);border:1px solid var(--border);font-size:13px}
 .tc-banner-body{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
@@ -137,8 +144,8 @@ label.tc-row{cursor:pointer}
 .tc-composer-hint-warning .tc-icon{flex:none;color:var(--warning)}
 .tc-composer-context{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text-3)}
 .tc-composer-context-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tc-send{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;margin-left:6px;border:0;border-radius:7px;background:var(--accent);color:var(--on-accent);cursor:pointer}
-.tc-send:disabled{opacity:.4;cursor:not-allowed}
+.tc-send{display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;margin-left:6px;border:0;border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-glow);cursor:pointer}
+.tc-send:disabled{opacity:.4;box-shadow:none;cursor:not-allowed}
 
 .tc-skeleton{display:inline-block;flex:none;max-width:100%;vertical-align:middle;border-radius:var(--radius-sm);background:var(--selected) linear-gradient(90deg,transparent 25%,var(--thumb) 50%,transparent 75%) no-repeat;background-size:200% 100%;background-position:150% 0;animation:tc-shimmer 1.6s ease-in-out infinite}
 .tc-skeleton-circle{border-radius:var(--radius-full)}
