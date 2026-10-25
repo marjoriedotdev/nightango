@@ -42,9 +42,11 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   click($('button[aria-label="More actions"]')); await wait(50);
   step('message menu', !!$('.menu'));
   key(d, 'Escape'); await wait(20);
+  const shownBefore = $$('.tc-msg').length;
   click($('button[aria-label="Search in this group"]')); await wait(50);
   type($('#gsearch'), 'reconnect'); await wait(50);
-  step('search filters', $$('.tc-msg, .cmsg').length >= 1);
+  const hits = $$('.tc-msg .tc-msg-text').map(x => x.textContent.toLowerCase());
+  step('search filters', hits.length >= 1 && hits.length < shownBefore && hits.every(t => t.includes('reconnect')));
   click($('button[aria-label="Search in this group"]'));
   click($$('.mrow')[0]); await wait(50);
   step('profile dialog', !!$('.profile-card'));
@@ -56,7 +58,7 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   click($$('.conv')[0]); await wait(80);
   const ta2 = $('.thread .tc-composer textarea'); if (ta2) { type(ta2, 'ping'); key(ta2, 'Enter'); }
   await wait(50);
-  step('dm send', d.body.textContent.includes('ping'));
+  step('dm send', $$('.thread .tc-msg-text').some(x => x.textContent === 'ping'));
   click(byText('.tc-nav', 'Discover groups')); await wait(80);
   step('discover', !!byText('h2', 'Popular right now'));
   type($('#join'), 'https://nihongo.chatango.com/'); click(byText('button[type=submit]', 'Join')); await wait(100);
