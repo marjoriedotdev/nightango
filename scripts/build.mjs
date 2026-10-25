@@ -42,6 +42,7 @@ export const APP_SOURCES = [
   'views/live-joined.js',
   'views/session.js',
   'settings/shell.js',
+  'settings/markup-toolbar.js',
   'settings/profile.js',
   'settings/appearance.js',
   'settings/notifications.js',
