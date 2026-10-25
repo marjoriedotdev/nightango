@@ -2,6 +2,13 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.18.1] - 2026-10-25
+
+### Changed
+
+- The Nightango mark is the moon alone. The small spark at its edge, which took the accent color, is gone.
+- In the light theme, the moon and the presence moons are orange instead of brown.
+
 ## [0.18.0] - 2026-10-25
 
 ### Added
