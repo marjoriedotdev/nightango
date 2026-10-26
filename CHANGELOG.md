@@ -10,6 +10,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Changed
 
+- The userscript file is now named `nightango.min.user.js`. Paste it over your existing Nightango script as before.
 - Group settings show the group title and description as text.
 - Reduce motion now only mentions transitions.
 - In Staff and roles, the descriptions of Configure AutoMod, Edit group info and Edit restrictions list only what these permissions cover.

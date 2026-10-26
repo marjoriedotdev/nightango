@@ -75,7 +75,7 @@ Everything lives in Settings > Appearance and is saved on your device.
 ## Install
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.
-2. Download `torch-skin.min.user.js` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest), or build it yourself (see below).
+2. Download `nightango.min.user.js` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest), or build it yourself (see below).
 3. In Tampermonkey, create a new script, or open your existing Nightango script (named Torch Skin before 0.18.0), and replace all of its content with the file. Save.
 4. Open https://st.chatango.com/ and sign in on the BetterChatango screen. Nightango appears once your session is open.
 
@@ -91,8 +91,8 @@ pnpm test live_ui     # build, then one suite
 ```
 
 `pnpm build` writes:
-- `dist/torch-skin.min.user.js`: the userscript to install.
-- `dist/torch-skin.user.js`: the same script, readable, for review.
+- `dist/nightango.min.user.js`: the userscript to install.
+- `dist/nightango.user.js`: the same script, readable, for review.
 - `dist/nightango.html` and `dist/app.js`: a prototype with simulated data.
 
 ## Fonts

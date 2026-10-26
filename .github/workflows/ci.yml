@@ -62,4 +62,4 @@ jobs:
             cat view.err
             exit 1
           fi
-          gh release create "$tag" dist/torch-skin.min.user.js dist/torch-skin.user.js --target "$GITHUB_SHA" --title "$tag" --generate-notes
+          gh release create "$tag" dist/nightango.min.user.js dist/nightango.user.js --target "$GITHUB_SHA" --title "$tag" --generate-notes

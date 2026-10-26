@@ -157,8 +157,8 @@ See [ADR-0004](adr/0004-member-html-never-injected.md).
 
 ## Build outputs
 
-- `dist/torch-skin.min.user.js`: the deliverable. Same assembly as the readable version, with the esbuild transform (`transform`, ES5 target, `minify`) applied to the page code, the loader code and both stylesheets. The `==UserScript==` header is copied as is, without a source map ([ADR-0008](adr/0008-separate-minified-output.md)).
-- `dist/torch-skin.user.js`: readable version, for debugging and audit.
+- `dist/nightango.min.user.js`: the deliverable. Same assembly as the readable version, with the esbuild transform (`transform`, ES5 target, `minify`) applied to the page code, the loader code and both stylesheets. The `==UserScript==` header is copied as is, without a source map ([ADR-0008](adr/0008-separate-minified-output.md)).
+- `dist/nightango.user.js`: readable version, for debugging and audit.
 - `dist/nightango.html` and `dist/app.js`: hosted prototype.
 
 Both userscripts come out of the same `userscript()` function, which describes the assembly steps only once. esbuild is used only for minification: the concatenation stays the one in `build.mjs`.
@@ -169,7 +169,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 
 - `smoke`: hosted prototype, loaded from `dist/nightango.html`.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
-- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle bridge, diagnostic journal. Run on `dist/torch-skin.user.js` then on `dist/torch-skin.min.user.js`. It is the only suite that runs the userscripts.
+- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle bridge, diagnostic journal. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
 - `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
 - `live_login`: sign-in detection, on the concatenation of the sources of `src/bridge/`.

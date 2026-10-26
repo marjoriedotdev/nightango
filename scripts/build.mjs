@@ -316,8 +316,8 @@ ${appJs}
   mkdirSync(join(ROOT, 'dist'), { recursive: true });
   emit('nightango.html', html);
   emit('app.js', appJs);
-  emit('torch-skin.user.js', await userscript(source, READABLE));
-  emit('torch-skin.min.user.js', await userscript(source, MINIFIED));
+  emit('nightango.user.js', await userscript(source, READABLE));
+  emit('nightango.min.user.js', await userscript(source, MINIFIED));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) build();

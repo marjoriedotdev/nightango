@@ -13,8 +13,8 @@ The userscript embeds the design system, the application and the stylesheets. Th
 
 The build produces two userscripts from the same `userscript()` function in `scripts/build.mjs`:
 
-- `dist/torch-skin.min.user.js`: the deliverable, with a fixed name from one version to the next. esbuild (`transform`, ES5 target, `minify`) applies to the page code, the loader code and both stylesheets. The `==UserScript==` header is copied as is, without a source map
-- `dist/torch-skin.user.js`: readable version, unchanged, for debugging and audit.
+- `dist/nightango.min.user.js` (named `torch-skin.min.user.js` before 0.21.0): the deliverable, with a fixed name from one version to the next. esbuild (`transform`, ES5 target, `minify`) applies to the page code, the loader code and both stylesheets. The `==UserScript==` header is copied as is, without a source map
+- `dist/nightango.user.js`: readable version, unchanged, for debugging and audit.
 
 esbuild is used only for minification: the concatenation stays the one in `build.mjs`, without a bundler.
 

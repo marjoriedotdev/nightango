@@ -26,7 +26,7 @@ Decisions that follow from these and must not be "fixed":
 
 - **Short plan** before any change that touches more than 2 or 3 files.
 - **pnpm** only, version pinned by `packageManager` in `package.json`. pnpm 10 blocks install scripts: `pnpm.onlyBuiltDependencies` allows esbuild's, a `postinstall` that checks (and downloads if missing) esbuild's native binary for the platform.
-- **Deliverable with a fixed name**: `dist/torch-skin.min.user.js`, from one version to the next. The user pastes it into Tampermonkey in place of the existing script.
+- **Deliverable with a fixed name**: `dist/nightango.min.user.js`, from one version to the next. The user pastes it into Tampermonkey in place of the existing script.
 - **Tests: complex behaviour only.** No test per fix. [ADR-0009](docs/adr/0009-test-only-complex-behaviour.md)
 - **Language**: comments, JSDoc, docs and tests are written in English in this repo. UI text and logs are in English too, in the tone of the design system (`torchds/project/README.md`, section Content fundamentals).
 
@@ -43,8 +43,8 @@ pnpm build:ds         # regenerates README.md and preview.html of the design sys
 ```
 
 Outputs of `pnpm build` (not versioned):
-- `dist/torch-skin.min.user.js`: the deliverable, minified by esbuild
-- `dist/torch-skin.user.js`: same assembly, readable, for debugging and audit
+- `dist/nightango.min.user.js`: the deliverable, minified by esbuild
+- `dist/nightango.user.js`: same assembly, readable, for debugging and audit
 - `dist/nightango.html` and `dist/app.js`: hosted prototype.
 
 Only the `loader` suite runs the userscripts, both of them. The others read `dist/nightango.html`, `dist/app.js`, sources from `src/` or the design system bundle (details in `docs/architecture.md`, section Tests).
@@ -56,7 +56,7 @@ The runner `tests/run.mjs` judges each suite on its exit code and on its output 
 1. Increment `@version` in the header of `src/loader/skin-loader.js`. The build injects it into `APP_VERSION`.
 2. Add at the top of `CHANGELOG.md` the section `## [X.Y.Z] - YYYY-MM-DD` for this version: what the user sees change, in English, one line per change, under `### Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` or `Security`. The build shows it in What's new and fails if it is missing.
 3. Run `pnpm test`: every suite green, build included.
-4. Ship `dist/torch-skin.min.user.js`, the only file the user installs, by one of two paths:
+4. Ship `dist/nightango.min.user.js`, the only file the user installs, by one of two paths:
    - send the file directly to the user
    - merge into `main`: once the tests are green, the CI creates the `vX.Y.Z` tag from `@version` and the GitHub release with both userscripts attached. A `@version` that already has its release publishes nothing: no increment, no release. Do not push a tag by hand.
 
