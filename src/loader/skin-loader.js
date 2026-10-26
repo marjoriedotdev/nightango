@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name         Nightango
 // @namespace    torch-skin
-// @version      0.20.0
+// @version      0.20.1
 // @description  Starts BetterChatango on st.chatango.com and shows Nightango, a redesigned interface, on top of it. Not affiliated with BetterChatango or Chatango.
 // @match        https://st.chatango.com/*
 // @noframes
 // @grant        GM_xmlhttpRequest
-// @grant        unsafeWindow
 // @connect      vissle.me
 // @run-at       document-idle
 // ==/UserScript==
@@ -20,6 +19,17 @@
   document.head.appendChild(page); page.remove();
 
   /* Pont vers vissle.me : la page ne peut pas l'appeler elle-même, vissle refuse l'origine st.chatango.com. */
+  // Le bac à sable ne voit pas BetterChatango et Userscripts (Safari) n'a pas unsafeWindow : une sonde lit le nom dans la page, l'événement est synchrone.
+  function accountName() {
+    var name = '';
+    function take(e) { name = String(e.detail); }
+    document.addEventListener('torch-skin:account', take);
+    var probe = document.createElement('script');
+    probe.textContent = 'document.dispatchEvent(new CustomEvent("torch-skin:account", { detail: typeof client !== "undefined" && client.user ? String(client.user.name || "") : "" }));';
+    document.head.appendChild(probe); probe.remove();
+    document.removeEventListener('torch-skin:account', take);
+    return name.toLowerCase();
+  }
   function reply(id, out) {
     out.id = id;
     document.dispatchEvent(new CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify(out) }));
@@ -27,7 +37,8 @@
   document.addEventListener('torch-skin:vissle-request', function (e) {
     var q = JSON.parse(e.detail);
     // Le profil interrogé est toujours celui de la session BetterChatango, jamais celui que la page demanderait.
-    var me = String(unsafeWindow.__betterChatangoRefs.client.user.name).toLowerCase();
+    var me = accountName();
+    if (!me) { reply(q.id, { error: 'Your BetterChatango account could not be read. Reload the page and try again.' }); return; }
     GM_xmlhttpRequest({
       method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, timeout: 15000,
       // Même en-tête que le client vissle, qui envoie le JSON comme texte brut.

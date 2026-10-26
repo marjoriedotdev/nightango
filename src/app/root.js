@@ -1018,6 +1018,7 @@ function Root(props) {
    */
   function reconnectClosed() {
     var s0 = stateRef.current, held = s0.session && SESSION_RANK[s0.session.reason] >= SESSION_RANK.kicked;
+    if (!s0.auth.loggedIn) return;
     var gids = Object.keys(s0.groups).filter(function (gid) { var g = s0.groups[gid]; return g.joined && g.conn === 'closed'; });
     if (s0.pmConn === 'closed' && !held) gids.push('private_message');
     gids.forEach(function (gid) { stopRetry(gid); retries.current[gid] = { tries: 0, timer: null }; reconnectAuto(gid); });
@@ -1250,6 +1251,7 @@ function Root(props) {
       case 'online':
         reconnectClosed();
         update(function (d) {
+          if (!d.auth.loggedIn) return;
           var open = d.pmConn === 'open' || Object.keys(d.groups).some(function (k) { return d.groups[k].joined && d.groups[k].conn === 'open'; });
           // Coupure brève : les sockets restés ouverts ne changent pas d'état, aucune trame conn ne lèverait la fenêtre.
           if (d.session && d.session.reason === 'offline' && open) d.session = null;
