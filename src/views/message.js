@@ -82,7 +82,7 @@ function MessageRow(p) {
     : authorName(m.author, nameStyle);
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
-    avatar: h(Person, { name: m.author, gid: g.id, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(role), chan), reply: reply, actions: actions,
+    avatar: h(Person, { name: m.author, gid: g.id, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(role), developerBadge(m.author), chan), reply: reply, actions: actions,
     msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle, background: bgImage
   }, body);
 }

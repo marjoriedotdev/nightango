@@ -138,6 +138,7 @@ function ProfileSummary(p) {
       // Clé sur le nom : le panneau garde son instance d'une conversation à l'autre.
       h(ProfilePhoto, { key: name, name: name, size: p.size, status: name === s.me ? s.meStatus : u.status, ring: p.ring }),
       h(p.heading, p.focusHeading ? { className: 'profile-name', tabIndex: -1, 'data-autofocus': true } : { className: 'profile-name' }, name),
+      developerBadge(name),
       h('span', { className: 'muted profile-line' }, personStatus(s, name, p.gid)),
       profileMeta(s, name),
       p.skin ? coverReveal(cover, p.skin) : null),

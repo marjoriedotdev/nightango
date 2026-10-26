@@ -273,6 +273,13 @@ function roleBadge(role) { return role ? h(T.Badge, { icon: role === 'owner' ? '
  * @param {boolean} isMe Ligne de l'utilisateur connecté.
  */
 function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
+// Comptes enregistrés seulement : un invité porte un # devant son nom et ne peut pas l'usurper.
+var DEVELOPERS = ['marjorie'];
+/**
+ * Permet de signaler un développeur de Nightango à côté de son nom.
+ * @param {string} name Nom du membre, en minuscules.
+ */
+function developerBadge(name) { return DEVELOPERS.indexOf(name) !== -1 ? h(T.Badge, { tone: 'accent' }, 'Nightango developer') : null; }
 /**
  * Permet de donner la présence d'une ligne de liste aux lecteurs d'écran, le point de l'avatar restant seul à l'œil.
  * @param {string} status Présence du membre.

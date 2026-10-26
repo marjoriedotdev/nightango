@@ -14,7 +14,7 @@ function MembersList(p) {
     return h('button', { key: n, type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, g.id); } },
       h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
       h('span', { className: 'grow', style: u.status === 'offline' && !isMe ? { color: 'var(--text-3)' } : null }, n),
-      presenceSr(status), youBadge(isMe), roleBadge(roleOf(g, n)));
+      presenceSr(status), youBadge(isMe), developerBadge(n), roleBadge(roleOf(g, n)));
   }
   return LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
     : h('div', { className: 'members-list' },

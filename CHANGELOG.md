@@ -4,6 +4,10 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ## [0.21.0] - 2026-10-26
 
+### Added
+
+- A "Nightango developer" badge next to the developers' names in messages, member lists, Meet people and profiles.
+
 ### Changed
 
 - Group settings show the group title and description as text.
