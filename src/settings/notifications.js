@@ -10,7 +10,7 @@ function NotificationsPage() {
     ['friendOff', 'Friend goes offline', 'Someone on your friends list disconnects']
   ];
   var cols = [['app', 'In app'], ['sound', 'Sound'], ['desktop', 'Desktop']];
-  // En live, BetterChatango joue lui-même les sons : la colonne est retirée.
+  // In live, BetterChatango plays the sounds itself: the column is removed.
   if (LIVE) cols = cols.filter(function (c) { return c[0] !== 'sound'; });
   function ask() {
     try {

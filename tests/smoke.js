@@ -14,7 +14,7 @@ vc.on('warn', e => { if (!/act\(|ReactDOM.render|useLayoutEffect/.test(String(e)
 const dom = new JSDOM('<!doctype html><html><head></head><body>' + html + '</body></html>', { runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc, url: 'https://example.test/' });
 const w = dom.window, d = w.document;
 w.matchMedia = w.matchMedia || (() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
-// jsdom n'a ni CSS.supports ni ResizeObserver : le fil prend le chemin sans ancrage natif, sans mesure.
+// jsdom has neither CSS.supports nor ResizeObserver: the message log takes the path without native anchoring or measuring.
 w.CSS = { supports: () => false };
 w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
 w.HTMLElement.prototype.scrollIntoView = function () {};

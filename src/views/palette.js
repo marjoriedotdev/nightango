@@ -1,4 +1,4 @@
-/* ---------- Palette de commandes ---------- */
+/* ---------- Command palette ---------- */
 function Palette(p) {
   var app = useApp(), s = app.state;
   var a = useState(''), q = a[0], setQ = a[1];

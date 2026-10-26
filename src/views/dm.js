@@ -1,4 +1,4 @@
-/* ---------- Messages privés ---------- */
+/* ---------- Private messages ---------- */
 function DMView(p) {
   var app = useApp(), s = app.state, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
@@ -52,9 +52,10 @@ function DMView(p) {
 }
 
 /**
- * Permet d'afficher la coupure de la connexion privée, une fois les MP chargés et hors session coupée, qui a sa propre fenêtre.
- * @param {Object} app Contexte de l'application.
- * @param {Object=} style Marge du conteneur.
+ * Shows the private connection loss once PMs are loaded and outside a session loss.
+ * A session loss has its own dialog.
+ * @param {Object} app Application context.
+ * @param {Object=} style Container margin.
  */
 function pmConnBanner(app, style) {
   var s = app.state;
@@ -64,10 +65,11 @@ function pmConnBanner(app, style) {
 
 var DM_SEARCH_MIN = 2, DM_SEARCH_MAX = 50, DM_SEARCH_DELAY = 300;
 /**
- * Permet de chercher un texte dans les messages privés : base d'historique de BetterChatango en live, messages de l'état dans le prototype.
- * @param {Object} s État de l'application.
- * @param {string} query Texte cherché, sans casse.
- * @returns {Promise<{list: Array, more: boolean}>} Résultats du plus récent au plus ancien, et si la limite a coupé la liste.
+ * Searches a text in the private messages.
+ * Reads BetterChatango's history database in live and the state messages in the prototype.
+ * @param {Object} s Application state.
+ * @param {string} query Searched text, case-insensitive.
+ * @returns {Promise<{list: Array, more: boolean}>} Results from newest to oldest, and whether the limit cut the list.
  */
 function searchDms(s, query) {
   if (LIVE) return liveBridge.searchPm(query, DM_SEARCH_MAX);
@@ -79,9 +81,9 @@ function searchDms(s, query) {
   return Promise.resolve({ list: list.slice(0, DM_SEARCH_MAX), more: list.length > DM_SEARCH_MAX });
 }
 /**
- * Permet de chercher dans les messages privés après une pause de saisie.
- * @param {string} term Texte saisi, sans espaces autour.
- * @returns {?Object} Résultats du terme ({query, list, more}) ou échec ({query, failed}), null pendant la lecture.
+ * Searches the private messages after a typing pause.
+ * @param {string} term Typed text, trimmed.
+ * @returns {?Object} Results for the term ({query, list, more}) or failure ({query, failed}), null while reading.
  */
 function useDmSearch(term) {
   var app = useApp();
@@ -99,9 +101,9 @@ function useDmSearch(term) {
   return found && found.query === term ? found : null;
 }
 /**
- * Permet de découper le passage d'un texte autour d'un terme, terme mis en évidence.
- * @param {string} text Texte du message.
- * @param {string} term Terme trouvé dans le texte, sans casse.
+ * Cuts the excerpt of a text around a highlighted term.
+ * @param {string} text Message text.
+ * @param {string} term Term found in the text, case-insensitive.
  */
 function hitExcerpt(text, term) {
   var at = text.toLowerCase().indexOf(term.toLowerCase()), end = at + term.length, start = Math.max(0, at - 30), space = text.indexOf(' ', start);
@@ -109,8 +111,9 @@ function hitExcerpt(text, term) {
   return h(Frag, null, (start ? '…' : '') + text.slice(start, at), h('mark', null, text.slice(at, end)), text.slice(end));
 }
 /**
- * Section Messages de la recherche des Chats, sous les conversations. Les onglets ne la filtrent pas.
- * @param {{found: ?Object}} p Recherche lue par useDmSearch, null pendant la lecture.
+ * Messages section of the Chats search under the conversations.
+ * The tabs do not filter it.
+ * @param {{found: ?Object}} p Search read by useDmSearch, null while reading.
  */
 function DmSearchHits(p) {
   var app = useApp(), me = app.state.me, found = p.found, body;
@@ -126,20 +129,20 @@ function DmSearchHits(p) {
   return h('section', null, h('h2', { className: 'mlabel' }, 'Messages'), body);
 }
 /**
- * Permet de retrouver dans une conversation le message d'un résultat de recherche.
- * @param {Object} c Conversation dans l'état.
- * @param {Object} hit Résultat de searchDms.
- * @returns {?Object} Message affiché, null s'il n'est pas chargé.
+ * Finds the message of a search result in a conversation.
+ * @param {Object} c Conversation in the state.
+ * @param {Object} hit searchDms result.
+ * @returns {?Object} Shown message, null if it is not loaded.
  */
 function dmHitMessage(c, hit) {
   if (!LIVE) return c.messages.find(function (m) { return m.id === hit.id; }) || null;
-  // Une modification s'affiche dans son original, et un MP envoyé depuis le dernier OK n'a pas encore de clé d'archive.
+  // An edit shows inside its original, and a PM sent since the last OK has no archive key yet.
   return pmEditTarget(c, hit) || c.messages[pmShownIndex(c.messages, hit)] || null;
 }
 
 /**
- * Fil d'une conversation privée, monté à neuf pour chaque correspondant.
- * @param {{id: string, tab: ?string, column: Object, seek: ?Object}} p Correspondant, onglet de la liste, colonne du profil (useRightColumn) et résultat de recherche à montrer.
+ * Message log of a private conversation, mounted fresh for each correspondent.
+ * @param {{id: string, tab: ?string, column: Object, seek: ?Object}} p Correspondent, list tab, profile column (useRightColumn) and search result to show.
  */
 function DmThread(p) {
   var app = useApp(), s = app.state, id = p.id, convo = s.dms[id];
@@ -147,7 +150,7 @@ function DmThread(p) {
   var len = convo.messages.length;
   var log = useMessageLog();
   var personActions = useProfileActions(id, null);
-  // Résultat de recherche : les pages plus anciennes se chargent une à une jusqu'à lui.
+  // Search result: older pages load one by one until it is reached.
   useEffect(function () {
     var seek = p.seek, failed = asked.current && convo.olderFailed;
     if (!seek) return;
@@ -155,7 +158,7 @@ function DmThread(p) {
     if (m) log.jumpTo(m.id);
     else if (convo.loadingOlder) return;
     else if (convo.olderMore && !failed) { asked.current = true; app.actions.loadOlderDm(id); return; }
-    // Lecture en échec : loadOlderDm l'a déjà annoncée.
+    // Failed read: loadOlderDm already announced it.
     else if (!failed) app.ui.toast('This message is no longer saved in this browser.');
     asked.current = false;
     app.update(function (d) { delete d.route.seek; });
@@ -173,7 +176,7 @@ function DmThread(p) {
     : !convo.olderMore ? { status: 'start', text: 'This is the start of the messages saved in this browser.' }
     : {
       status: 'more', loading: convo.loadingOlder, ready: !convo.loadingOlder && !convo.olderFailed, load: function () { app.actions.loadOlderDm(id); },
-      // Après un échec de lecture, la sentinelle ne relance la lecture qu'au défilement suivant.
+      // After a failed read, the sentinel retries the read only on the next scroll.
       retry: convo.olderFailed ? function () { app.update(function (d) { d.dms[id].olderFailed = false; }); } : null
     };
   var bottom;
@@ -195,14 +198,15 @@ function DmThread(p) {
 }
 
 /**
- * Ligne d'un message privé avec son menu d'actions locales, sans Reply faute de trame sourcée.
- * @param {{m: Object, peer: string, continued: boolean, highlight: boolean}} p Message, correspondant de la conversation, suite du message précédent du même auteur et mise en évidence.
+ * Private message row with its local action menu.
+ * It has no Reply because no sourced frame exists for it.
+ * @param {{m: Object, peer: string, continued: boolean, highlight: boolean}} p Message, conversation correspondent, follow-up of the previous message from the same author, and highlight.
  */
 function DmMessageRow(p) {
   var app = useApp(), s = app.state, m = p.m;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var ms = memberStyles(userOf(s, m.from), s.prefs.styles, app.theme, false);
-  // Un MP envoyé n'a sa clé d'archive qu'au prochain OK : son entrée de retrait n'apparaît qu'ensuite.
+  // A sent PM gets its archive key only at the next OK: its remove entry appears only after that.
   var canRemove = !LIVE || !!m.archiveTs;
   var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
     canRemove ? { divider: true } : null,
@@ -217,8 +221,8 @@ function DmMessageRow(p) {
 }
 
 /**
- * Composeur d'une conversation privée, avec son brouillon, son sélecteur d'émoticônes et de médias, la complétion :nom et l'envoi de fichier.
- * @param {{id: string}} p Correspondant de la conversation.
+ * Private conversation composer with its draft, emoticon and media picker, :name completion and file upload.
+ * @param {{id: string}} p Conversation correspondent.
  */
 function DmComposer(p) {
   var app = useApp(), id = p.id;
@@ -235,32 +239,33 @@ function DmComposer(p) {
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };
 function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
 /**
- * Permet d'écrire la présence d'un membre, avec sa dernière connexion quand elle est connue.
- * @param {Object} u Membre dans l'état.
+ * Writes a member's presence with their last online time when it is known.
+ * @param {Object} u Member in the state.
  */
 function presenceText(u) { return u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : statusLabel(u.status); }
 /**
- * Permet d'écrire la ligne de statut d'une personne : présence, ami et rôle dans le groupe d'où son profil est ouvert.
- * @param {Object} s État de l'application.
- * @param {string} name Nom du membre.
- * @param {?string} gid Groupe d'où le profil est ouvert.
+ * Writes a person's status line.
+ * The line holds presence, friend and role in the group the profile is opened from.
+ * @param {Object} s Application state.
+ * @param {string} name Member name.
+ * @param {?string} gid Group the profile is opened from.
  */
 function personStatus(s, name, gid) {
   var u = userOf(s, name), role = gid ? roleOf(s.groups[gid], name) : null;
   return [name === s.me ? statusLabel(s.meStatus) : presenceText(u), u.friend ? 'Friend' : null, role ? ROLE_LONG[role] + ' in #' + gid : null].filter(Boolean).join(' · ');
 }
 /**
- * Permet d'écrire l'ASL d'une personne.
- * @param {Object} s État de l'application.
- * @param {string} name Nom du membre.
+ * Writes a person's ASL.
+ * @param {Object} s Application state.
+ * @param {string} name Member name.
  */
 function personAsl(s, name) {
   var u = userOf(s, name);
   return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
 /**
- * Permet de dater l'inactivité ou la dernière connexion d'un ami.
- * @param {Object} u Membre dans l'état.
+ * Dates a friend's idle time or last online time.
+ * @param {Object} u Member in the state.
  */
 function presenceSince(u) {
   if (!u.friend) return null;
@@ -269,8 +274,8 @@ function presenceSince(u) {
   return null;
 }
 /**
- * Durée d'inactivité ou de déconnexion d'un ami, rafraîchie chaque minute.
- * @param {{user: Object}} p Membre dans l'état.
+ * Idle or offline duration of a friend, refreshed every minute.
+ * @param {{user: Object}} p Member in the state.
  */
 function PresenceTime(p) {
   var tick = useState(0)[1];
@@ -282,9 +287,9 @@ function PresenceTime(p) {
   return x ? h('time', { className: 'tc-msg-time conv-time', dateTime: new Date(x.ts).toISOString(), title: x.title + new Date(x.ts).toLocaleString('en-GB') }, x.text) : null;
 }
 /**
- * Ligne d'informations d'une personne.
- * @param {Object} s État de l'application.
- * @param {string} n Nom du membre.
+ * Info line of a person.
+ * @param {Object} s Application state.
+ * @param {string} n Member name.
  */
 function personMetaLine(s, n) {
   return h('span', { className: 'conv-meta' }, personAsl(s, n), isProfilePending(n, userOf(s, n)) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
@@ -306,18 +311,18 @@ function personRow(s, n, onClick, current) {
 }
 
 /**
- * Permet de dire qui garde les MP retirés de ce navigateur.
- * @param {string} name Correspondant.
- * @param {boolean} betterChatango Vrai pour dire d'abord que seule la copie de BetterChatango part.
+ * Tells who keeps the PMs removed from this browser.
+ * @param {string} name Correspondent.
+ * @param {boolean} betterChatango True to say first that only BetterChatango's copy goes away.
  */
 function keptCopyText(name, betterChatango) {
   return (betterChatango ? 'Removes the copy BetterChatango keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
 }
 
 /**
- * Permet de lister les actions de fermeture et de suppression d'une conversation.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Membre de la conversation.
+ * Lists the close and delete actions of a conversation.
+ * @param {Object} app Application context.
+ * @param {string} name Conversation member.
  */
 function convActions(app, name) {
   return [
@@ -329,9 +334,9 @@ function convActions(app, name) {
 }
 
 /**
- * Permet de lister les actions d'une ligne de la liste d'amis.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Ami de la ligne.
+ * Lists the actions of a friend list row.
+ * @param {Object} app Application context.
+ * @param {string} name Friend of the row.
  */
 function friendActions(app, name) {
   return [
@@ -342,15 +347,15 @@ function friendActions(app, name) {
 
 var SWIPE_REVEAL = 144;
 /**
- * Ligne de liste avec ses actions par balayage et son menu, qui ouvre aussi le profil.
- * @param {{name: string, actions: Array, children: *}} p Membre de la ligne, actions de la ligne et bouton principal.
+ * List row with swipe actions and a menu that also opens the profile.
+ * @param {{name: string, actions: Array, children: *}} p Row member, row actions and main button.
  */
 function SwipeRow(p) {
   var app = useApp(), n = p.name, actions = p.actions;
   var m = useState(null), menu = m[0], setMenu = m[1];
   var w = useState(null), swipe = w[0], setSwipe = w[1];
   var rowRef = useRef(null), drag = useRef(null), swallow = useRef(false);
-  // Le décalage suit le doigt hors de React : un rendu par pointermove serait trop coûteux.
+  // The offset follows the finger outside React: one render per pointermove would cost too much.
   function settle(open) { rowRef.current.style.setProperty('--swipe', (open ? -SWIPE_REVEAL : 0) + 'px'); setSwipe(open ? 'open' : null); }
   useOutside(rowRef, swipe === 'open', function () { settle(false); });
   function onPointerDown(e) {
@@ -384,7 +389,7 @@ function SwipeRow(p) {
     drag.current = null;
     if (d && d.axis === 'x') settle(false);
   }
-  // Le click qui suit un glissement n'ouvre pas la conversation : un toucher sur une ligne ouverte la referme.
+  // The click that follows a swipe does not open the conversation: a tap on an open row closes it.
   function onClickCapture(e) {
     if (swallow.current) swallow.current = false;
     else if (swipe === 'open' && e.target.closest('.conv')) settle(false);
@@ -408,8 +413,8 @@ function SwipeRow(p) {
 }
 
 /**
- * Ligne de la liste Chats avec ses actions de conversation.
- * @param {{name: string, current: string}} p Membre de la conversation et conversation ouverte.
+ * Chats list row with its conversation actions.
+ * @param {{name: string, current: string}} p Conversation member and open conversation.
  */
 function ChatRow(p) {
   var app = useApp(), n = p.name;

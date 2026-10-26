@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// -- Gabarit ------------------------------------------------------------------
+// -- Template -----------------------------------------------------------------
 
 const COMPONENTS_DIR = join(dirname(dirname(fileURLToPath(import.meta.url))), 'torchds', 'project', 'components');
 
@@ -27,7 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
 </html>
 `;
 
-// -- Composants ---------------------------------------------------------------
+// -- Components ---------------------------------------------------------------
 
 const COMPONENTS = [
   ['Icon', 'Foundations', 64,
@@ -232,7 +232,7 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
   return h('div', { className: 'row' }, [0, 4, 8, 12, 15, 19, 23, 26].map(function (d) { return h(T.Moon, { key: d, date: Date.UTC(2026, 9, 11) + d * day, size: 28, label: true }); }));`]
 ];
 
-// -- Génération ---------------------------------------------------------------
+// -- Generation ---------------------------------------------------------------
 
 for (const [name, group, height, summary, guide, body] of COMPONENTS) {
   const folder = join(COMPONENTS_DIR, name);

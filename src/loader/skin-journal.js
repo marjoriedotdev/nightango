@@ -1,19 +1,19 @@
-  /* Journal de diagnostic : connexions et vie de la page, gardés dans ce navigateur seulement (ADR-0011). */
+  /* Diagnostic journal: connections and page lifecycle, kept in this browser only (ADR-0011). */
   (function () {
     var KEY = 'torch-skin:journal', MAX = 1000, TEXT_MAX = 300, SAVE_MS = 2000, TICK_MS = 10000, STALL_MS = 30000;
-    // Trames de session et de refus du serveur : seul leur nom est gardé, jamais leurs arguments.
+    // Session frames and server refusal frames: only their name is kept, never their arguments.
     var LIFECYCLE = ['ok', 'inited', 'denied', 'reload', 'mustlogin', 'proxybanned', 'verificationrequired', 'climited', 'OK', 'DENIED', 'kickingoff', 'lowversion', 'toofast', 'show_fw'];
-    // Lignes de connexion de BetterChatango (inject.js:5588, 5652, 5662, 5669, 5701). Le reste de sa console contient des trames et des MP.
+    // BetterChatango connection lines (inject.js:5588, 5652, 5662, 5669, 5701). The rest of its console contains frames and PMs.
     var BETTER_CHATANGO_LINES = [/^conn closed: /, /^CONNECTION TIMED OUT: /, /^environment server error$/, /^client version out of date$/];
     var UNKNOWN_FRAME = /^\[UNKNOWN\] \(([^)]*)\)/;
     var entries = [], listeners = [], saveTimer = null, sockets = 0;
-    try { entries = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { /* journal illisible : il repart vide */ }
+    try { entries = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { /* unreadable journal: it starts empty again */ }
     if (!Array.isArray(entries)) entries = [];
 
     function save() {
       clearTimeout(saveTimer);
       saveTimer = null;
-      try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) { /* stockage plein ou indisponible : le journal reste en mémoire */ }
+      try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) { /* storage full or unavailable: the journal stays in memory */ }
     }
     function add(kind, text) {
       entries.push({ t: Date.now(), k: kind, m: String(text).slice(0, TEXT_MAX) });
@@ -36,7 +36,7 @@
       return typeof v === 'string' ? v : Object.prototype.toString.call(v);
     }
 
-    /* Vie de la page : un mobile met en veille l'onglet en arrière-plan, et ses sockets avec. */
+    /* Page lifecycle: a mobile device suspends the background tab and its sockets with it. */
     add('page', 'Page loaded (' + network() + '). ' + navigator.userAgent);
     var hiddenAt = 0, hiddenStall = 0, tick = Date.now();
     document.addEventListener('visibilitychange', function () {
@@ -57,7 +57,7 @@
     window.addEventListener('online', function () { add('network', 'Network online (' + network() + ')'); });
     window.addEventListener('offline', function () { add('network', 'Network offline'); });
     if (navigator.connection && navigator.connection.addEventListener) navigator.connection.addEventListener('change', function () { add('network', 'Network changed (' + network() + ')'); });
-    // Un minuteur en retard montre que le navigateur a ralenti ou suspendu la page, pings de BetterChatango compris.
+    // A late timer shows that the browser slowed down or suspended the page, BetterChatango pings included.
     setInterval(function () {
       var now = Date.now(), gap = now - tick;
       tick = now;
@@ -69,7 +69,7 @@
     window.addEventListener('error', function (e) { add('error', (e.message || 'Script error') + (e.filename ? ' at ' + e.filename.split('?')[0] + ':' + e.lineno : '')); });
     window.addEventListener('unhandledrejection', function (e) { add('error', 'Unhandled rejection: ' + describe(e.reason)); });
 
-    /* Console : nos lignes, les lignes de connexion de BetterChatango et les erreurs, rien d'autre. */
+    /* Console: our lines, BetterChatango connection lines and errors, nothing else. */
     function consoleText(args) {
       var first = args[0];
       if (typeof first === 'string') {
@@ -90,11 +90,11 @@
       };
     });
 
-    /* Sockets : ouverture, trames de session, fermeture avec son code. Les envois ne sont jamais observés, l'authentification porte le mot de passe (ADR-0001). */
+    /* Sockets: opening, session frames, closing with its code. Sends are never observed, the authentication carries the password (ADR-0001). */
     function target(url) {
       if (/^wss:\/\/c1\.chatango\.com\b/.test(url)) return 'private messages';
       var c = window.__betterChatangoRefs && window.__betterChatangoRefs.client;
-      // BetterChatango note le groupe dans cache.connecting juste avant de créer son socket (inject.js:5613).
+      // BetterChatango records the group in cache.connecting just before it creates its socket (inject.js:5613).
       return c && c.cache && c.cache.connecting ? '#' + c.cache.connecting : url.replace(/^wss?:\/\/([^/:]+).*$/, '$1');
     }
     function watch(socket, url) {
@@ -123,7 +123,7 @@
         watch(socket, String(url));
         return socket;
       };
-      // Le socket rendu reste un WebSocket natif : instanceof, readyState et constantes inchangés pour BetterChatango.
+      // The returned socket stays a native WebSocket: instanceof, readyState and constants unchanged for BetterChatango.
       Socket.prototype = NativeSocket.prototype;
       ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(function (k) { Socket[k] = NativeSocket[k]; });
       window.WebSocket = Socket;

@@ -11,15 +11,15 @@
 // ==/UserScript==
 (function () {
   'use strict';
-  // st.chatango.com sert aussi les fenêtres de discussion intégrées aux autres sites : seule la page d'accueil est concernée.
+  // st.chatango.com also serves the chat windows embedded in other sites: only the home page is concerned.
   if (window.top !== window || location.pathname !== '/') return;
-  // Le userscript tourne dans un bac à sable qui ne voit ni BetterChatango ni React : l'interface est injectée dans la page.
+  // The userscript runs in a sandbox that sees neither BetterChatango nor React: the interface is injected into the page.
   var page = document.createElement('script');
   page.textContent = /*PAGE*/;
   document.head.appendChild(page); page.remove();
 
-  /* Pont vers vissle.me : la page ne peut pas l'appeler elle-même, vissle refuse l'origine st.chatango.com. */
-  // Le bac à sable ne voit pas BetterChatango et Userscripts (Safari) n'a pas unsafeWindow : une sonde lit le nom dans la page, l'événement est synchrone.
+  /* Bridge to vissle.me: the page cannot call it itself, vissle refuses the st.chatango.com origin. */
+  // The sandbox does not see BetterChatango and Userscripts (Safari) has no unsafeWindow: a probe reads the name in the page, the event is synchronous.
   function accountName() {
     var name = '';
     function take(e) { name = String(e.detail); }
@@ -36,12 +36,12 @@
   }
   document.addEventListener('torch-skin:vissle-request', function (e) {
     var q = JSON.parse(e.detail);
-    // Le profil interrogé est toujours celui de la session BetterChatango, jamais celui que la page demanderait.
+    // The queried profile is always the one of the BetterChatango session, never one the page would ask for.
     var me = accountName();
     if (!me) { reply(q.id, { error: 'Your BetterChatango account could not be read. Reload the page and try again.' }); return; }
     GM_xmlhttpRequest({
       method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, timeout: 15000,
-      // Même en-tête que le client vissle, qui envoie le JSON comme texte brut.
+      // Same header as the vissle client, which sends the JSON as plain text.
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       data: JSON.stringify({ action: 'activity', profile: me, page: q.page, order: q.order, get: q.get }),
       onload: function (r) {

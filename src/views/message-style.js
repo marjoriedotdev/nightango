@@ -1,4 +1,4 @@
-/* ---------- Style perso des messages ---------- */
+/* ---------- Own message style ---------- */
 var DEFAULT_MESSAGE_STYLE = { face: '0', size: 11, textColor: '#000000', nameColor: '#000000', bold: false, italic: false, underline: false, strike: false };
 var MESSAGE_STYLE_SIZES = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 
@@ -10,8 +10,8 @@ function MessageStyleButton() {
 }
 
 /**
- * Fenêtre de réglage du style perso.
- * @param {{onClose: function}} p onClose ferme la fenêtre.
+ * Own style settings dialog.
+ * @param {{onClose: function}} p onClose closes the dialog.
  */
 function MessageStyleDialog(p) {
   var app = useApp(), s = app.state;

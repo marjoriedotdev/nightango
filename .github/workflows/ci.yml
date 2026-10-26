@@ -42,7 +42,7 @@ jobs:
           node-version: 24
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      # Une release par @version : un push sans incrément de version ne publie rien.
+      # One release per @version: a push without a version bump publishes nothing.
       - name: Create release for @version
         env:
           GH_TOKEN: ${{ github.token }}

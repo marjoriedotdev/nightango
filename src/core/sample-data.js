@@ -152,14 +152,14 @@ var SAMPLE_VISITS = (function () {
   });
 })();
 /**
- * Permet de simuler une page d'activité vissle.
- * @param {{page: number, get: string}} q Curseur et filtre de la page demandée.
+ * Simulates a page of vissle activity.
+ * @param {{page: number, get: string}} q Cursor and filter of the requested page.
  */
 function sampleVisits(q) {
   return SAMPLE_VISITS.filter(function (x) { return (q.get === 'all' || x.action === q.get) && (q.page === 1 || x.time < q.page); }).slice(0, VISIT_PAGE);
 }
 
-/* Médiathèque d'exemple du prototype, en mémoire, avec les appels que le pont fait sur la base de BetterChatango. */
+/* Sample media library of the prototype, in memory, with the calls the bridge makes on the BetterChatango database. */
 var sampleMedia = (function () {
   var list = ['wave', 'thumbs up', 'party', 'facepalm', 'coffee', 'cat nap', 'good night', 'popcorn'].map(function (n) {
     return { url: 'https://media.example/' + n.replace(/ /g, '-') + '.gif', name: n };

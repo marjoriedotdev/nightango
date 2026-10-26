@@ -1,4 +1,4 @@
-// Barre de mise en forme du profil : balises posées autour de la sélection et fusion des attributs de <font>.
+// Profile formatting toolbar: tags placed around the selection and merging of <font> attributes.
 const vm = require('vm');
 const { concatSources } = require('../scripts/build.mjs');
 
@@ -9,14 +9,14 @@ vm.runInContext(concatSources(ROOT, ['settings/markup-toolbar.js']), ctx);
 
 let failed = 0;
 /**
- * Permet d'appliquer une édition comme la textarea et de comparer texte et sélection.
- * @param {string} name Nom du cas.
- * @param {string} value Texte du champ.
- * @param {string} selected Texte sélectionné, repéré par sa première occurrence après skip caractères.
- * @param {Function} make Calcule l'édition à partir de (value, start, end).
- * @param {string} want Texte attendu.
- * @param {string} wantSel Sélection attendue.
- * @param {number} [skip] Position à partir de laquelle chercher la sélection.
+ * Applies an edit like the textarea and compares text and selection.
+ * @param {string} name Case name.
+ * @param {string} value Field text.
+ * @param {string} selected Selected text, located by its first occurrence after skip characters.
+ * @param {Function} make Computes the edit from (value, start, end).
+ * @param {string} want Expected text.
+ * @param {string} wantSel Expected selection.
+ * @param {number} [skip] Position from which to search for the selection.
  */
 function check(name, value, selected, make, want, wantSel, skip) {
   let got, sel;

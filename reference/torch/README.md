@@ -1,35 +1,35 @@
-# Copie de référence de Torch
+# Torch reference copy
 
-Code du client Torch tel que servi par vissle.me, téléchargé le 2026-10-19. Licence MIT, copyright Vissle Drissle (voir `LICENSE`).
+Code of the Torch client as served by vissle.me, downloaded on 2026-10-19. MIT licence, copyright Vissle Drissle (see `LICENSE`).
 
-## Statut
+## Status
 
-Lecture seule :
+Read-only:
 
-- ne jamais modifier ces fichiers, même pour corriger une faute ou reformater
-- ne jamais les charger dans le build (`scripts/build.mjs`) ni dans les tests (`tests/`)
-- ne jamais les exécuter
+- never modify these files, not even to fix a typo or reformat
+- never load them in the build (`scripts/build.mjs`) or in the tests (`tests/`)
+- never run them
 
-Pour une version plus récente, remplacer les quatre fichiers ensemble, puis mettre à jour la date, les empreintes et les références `inject.js:NNNN` des docs.
+For a newer version, replace the four files together, then update the date, the hashes and the `inject.js:NNNN` references in the docs.
 
 ## Usage
 
-- Vérifier un comportement de Torch avant de s'appuyer dessus dans le pont.
-- Servir de cible aux références `fichier:ligne` des docs (`docs/betterchatango-protocol.md`, `docs/adr/`). Exemple : `inject.js:7452` renvoie à la ligne 7452 de `inject.js` ici.
+- Check a Torch behaviour before relying on it in the bridge.
+- Serve as the target of the `file:line` references in the docs (`docs/betterchatango-protocol.md`, `docs/adr/`). Example: `inject.js:7452` points to line 7452 of `inject.js` here.
 
-## Fichiers
+## Files
 
-- `start.js` : script du favori, `https://vissle.me/client/start`
-- `client.html` : page du client, `https://vissle.me/client`
-- `inject.js` : code du client, `https://vissle.me/client/inject`
-- `client.css` : feuille du client, `https://vissle.me/css/client.css`
-- `LICENSE` : texte exact de `https://github.com/Vissle-Drissle/Torch-Client/blob/main/LICENSE` (commit `fae3c7f547ce9819f105a2c4931f5dbdb7f802c0`)
+- `start.js`: bookmarklet script, `https://vissle.me/client/start`
+- `client.html`: client page, `https://vissle.me/client`
+- `inject.js`: client code, `https://vissle.me/client/inject`
+- `client.css`: client stylesheet, `https://vissle.me/css/client.css`
+- `LICENSE`: exact text of `https://github.com/Vissle-Drissle/Torch-Client/blob/main/LICENSE` (commit `fae3c7f547ce9819f105a2c4931f5dbdb7f802c0`)
 
-Le footer de `client.html` cite la licence MIT (`opensource.org/licenses/MIT`) et renvoie au dépôt `https://github.com/Vissle-Drissle/Torch-Client`. Ce dépôt ne contient que le fichier `LICENSE` : le code n'est publié que sur vissle.me.
+The footer of `client.html` cites the MIT licence (`opensource.org/licenses/MIT`) and links to the `https://github.com/Vissle-Drissle/Torch-Client` repository. That repository contains only the `LICENSE` file: the code is published only on vissle.me.
 
-Les scripts du tracker de profil (`vissle.me/js/track.js` et les pages `/track`) ne sont pas copiés. Ils ne font pas partie du client Torch et aucune licence connue ne les couvre.
+The profile tracker scripts (`vissle.me/js/track.js` and the `/track` pages) are not copied. They are not part of the Torch client and no known licence covers them.
 
-## Empreintes SHA-256
+## SHA-256 hashes
 
 ```
 20767031c75c82acbd4916611bb65646667ab1352b210b4f29c76e485f86fb7c  start.js

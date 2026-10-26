@@ -1,17 +1,17 @@
-/* ---------- Envoi de fichier des composeurs ---------- */
-// Types proposés par la fenêtre Upload de BetterChatango (inject.js:7552).
+/* ---------- Composer file upload ---------- */
+// Types offered by BetterChatango's Upload window (inject.js:7552).
 var UPLOAD_TYPES = '.png, .apng, .jpg, .jpeg, .gif, .bmp, .webp, .mp3, .ogg, .wav, .mp4, .wmv, .webm';
 
 /**
- * Permet de nommer l'envoi de fichier en cours vers un groupe ou un MP.
- * @param {{kind: string, id: string}} to Groupe (group) ou MP (dm) de destination.
+ * Names the file upload in progress to a group or a PM.
+ * @param {{kind: string, id: string}} to Target group (group) or PM (dm).
  */
 function uploadKey(to) { return to.kind + ':' + to.id; }
 
 /**
- * Permet de choisir un fichier depuis un composeur puis, après confirmation, de l'envoyer par vissle.
- * @param {{kind: string, id: string, channel: ?string}} to Groupe ou MP du composeur, et canal choisi pour un groupe.
- * @returns {{onAttach: ?Function, status: ?string, input: ?Object}} Action du bouton Attach media, envoi en cours et sélecteur à rendre à côté du composeur.
+ * Picks a file from a composer and uploads it through vissle after confirmation.
+ * @param {{kind: string, id: string, channel: ?string}} to Group or PM of the composer, and the channel chosen for a group.
+ * @returns {{onAttach: ?Function, status: ?string, input: ?Object}} Attach media button action, upload in progress and picker to render next to the composer.
  */
 function useAttachMedia(to) {
   var app = useApp(), inputRef = useRef(null);
@@ -19,7 +19,7 @@ function useAttachMedia(to) {
   var name = app.uploads[uploadKey(to)];
   function choose(e) {
     var file = e.target.files[0];
-    // Champ vidé : sans cela, choisir de nouveau le même fichier ne déclenche pas change.
+    // Field cleared: otherwise picking the same file again does not fire change.
     e.target.value = '';
     app.ui.confirm({
       title: 'Upload ' + file.name + '?',
@@ -28,7 +28,7 @@ function useAttachMedia(to) {
     });
   }
   return {
-    // BetterChatango n'accepte qu'une requête à la fois : pas de second envoi depuis ce composeur avant la fin du premier.
+    // BetterChatango accepts one request at a time: no second upload from this composer before the first one ends.
     onAttach: name ? null : function () { inputRef.current.click(); },
     status: name ? 'Uploading ' + name : null,
     input: h('input', { ref: inputRef, type: 'file', accept: UPLOAD_TYPES, hidden: true, onChange: choose })

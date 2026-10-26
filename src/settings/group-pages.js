@@ -34,8 +34,8 @@ function GSAnnouncement(p) {
 }
 
 /**
- * Filtres de messages d'AutoMod.
- * @param {{filters: Object, disabled: boolean, onChange: Function}} p Filtres du brouillon, interrupteurs bloqués, reçoit la clé et la nouvelle valeur.
+ * AutoMod message filters.
+ * @param {{filters: Object, disabled: boolean, onChange: Function}} p Draft filters, switches locked, receives the key and the new value.
  */
 function AutoModFilters(p) {
   var f = p.filters;
@@ -50,8 +50,8 @@ function AutoModFilters(p) {
 }
 
 /**
- * Interrupteur du blocage des proxys et VPN.
- * @param {{on: boolean, disabled: boolean, onChange: Function}} p Blocage actif, interrupteur bloqué, reçoit la nouvelle valeur.
+ * Switch for blocking proxies and VPNs.
+ * @param {{on: boolean, disabled: boolean, onChange: Function}} p Blocking on, switch locked, receives the new value.
  */
 function ProxiesRow(p) {
   return h(T.SettingRow, { title: 'Block proxies and VPNs', description: 'Members connecting through a known proxy or VPN can read but not post.', control: h(T.Switch, { checked: !!p.on, disabled: p.disabled, onChange: function (e) { p.onChange(e.target.checked); } }) });

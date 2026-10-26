@@ -1,4 +1,4 @@
-/* ---------- Réglages de groupe ---------- */
+/* ---------- Group settings ---------- */
 function GroupSettingsView(p) {
   if (LIVE) return h(GroupSettingsViewLive, p);
   var app = useApp(), s = app.state, g = s.groups[p.gid], me = s.me;

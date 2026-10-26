@@ -12,27 +12,27 @@ var liveBridge = (function () {
   };
   var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'], trusted: ['safety', 'whitelist', 'domain'] };
   var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
-  // Seuls réglages de son que BetterChatango lit, avec l'objet Audio que chacun règle.
+  // Only sound settings that BetterChatango reads, with the Audio object each one sets.
   var SOUND_KEYS = ['play_mention', 'volume_mention', 'play_online', 'volume_online'];
   var SOUND_AUDIO = { mention: 'message', online: 'play_online' };
-  // Taille des pages de bannissements et de débannissements demandées par BetterChatango.
+  // Size of the ban and unban pages requested by BetterChatango.
   var BAN_PAGE = 50;
 
-  // Un message affiché avant son identifiant définitif garde l'identifiant provisoire k:{clé}, que Chatango désigne par la clé seule.
+  // A message shown before its final id keeps the temporary id k:{key}, which Chatango refers to by the key alone.
   function withTempIds(ids) { return ids.concat(ids.map(function (id) { return 'k:' + id; })); }
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
   function note(text) { if (JOURNAL) JOURNAL.add('app', text); }
   function connName(gid) { return gid === 'private_message' ? 'private messages' : '#' + gid; }
   /**
-   * Permet de transmettre une page de la liste des bannissements (block) ou des débannissements (unblock).
-   * @param {string} room Groupe.
-   * @param {string} kind block ou unblock.
-   * @param {Array<string>} data Trame découpée sur :.
+   * Forwards a page of the ban list (block) or the unban list (unblock).
+   * @param {string} room Group.
+   * @param {string} kind block or unblock.
+   * @param {Array<string>} data Frame split on :.
    */
   function banPage(room, kind, data) {
     var list = parseBans(data);
-    // Comme BetterChatango, une page incomplète est la dernière.
+    // Like BetterChatango, an incomplete page is the last one.
     emit({ op: 'bans', gid: room, kind: kind, list: list, more: list.length >= BAN_PAGE });
   }
   function author(data) {
@@ -42,7 +42,7 @@ var liveBridge = (function () {
   }
   function toMsg(room, data, temp) {
     var flags = parseInt(data[7], 10) || 0, name = author(data);
-    // Comme BetterChatango, les messages du propriétaire du groupe comptent comme Premium.
+    // Like BetterChatango, messages from the group owner count as Premium.
     var premium = !!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner);
     var parsed = parseContent(data.slice(9).join(':'), false, premium);
     return {
@@ -52,7 +52,7 @@ var liveBridge = (function () {
     };
   }
 
-  // Identifiants définitifs (trame u) arrivés avant le message (trame b) correspondant.
+  // Final ids (u frame) that arrived before the matching message (b frame).
   var earlyIds = {}, waitingIds = {};
   var profileCache = {}, fullProfileCache = {}, msgBgCache = {}, CACHE_MS = 300000;
   function fresh(store, n) { var hit = store[n]; return hit && Date.now() - hit.at < CACHE_MS ? hit : null; }
@@ -61,12 +61,12 @@ var liveBridge = (function () {
     if (hit) return Promise.resolve(hit.data);
     return load().then(function (data) { store[n] = { at: Date.now(), data: data }; return data; });
   }
-  // Comme BetterChatango, seule une réponse du type attendu compte : sans fichier de style, Chatango renvoie une petite image JPEG.
+  // Like BetterChatango, only a reply of the expected type counts: without a style file, Chatango returns a small JPEG image.
   function memberFile(url, type, parse) {
     return fetch(url).then(function (r) { return r.ok && type.test(r.headers.get('content-type')) ? r.text().then(parse) : null; })
       .catch(function (e) { warn(e); return null; });
   }
-  // Sessions de chaque groupe, par horodatage de session comme BetterChatango : { account }, { guest } ou { anon: true }.
+  // Sessions of each group, by session timestamp like BetterChatango: { account }, { guest } or { anon: true }.
   var sessions = {};
   function emitGuests(room) {
     var t = sessions[room], names = [], anons = 0;
@@ -85,14 +85,14 @@ var liveBridge = (function () {
   function holders(t, name) { return Object.keys(t).filter(function (k) { return t[k].account === name; }).length; }
   function participant(room, data) {
     var t = sessions[room] || (sessions[room] = {}), ts = data[6], action = +data[0];
-    // Départ d'une session inconnue (trame reçue avant g_participants) : seul data[3] dit quel compte part.
+    // Departure of an unknown session (frame received before g_participants): only data[3] tells which account leaves.
     var before = t[ts] || (action === 0 ? sessionOf(data[3]) : {});
     if (action === 0) delete t[ts];
-    // Action 2 : BetterChatango teste le nom d'invité avant le compte.
+    // Action 2: BetterChatango tests the guest name before the account.
     else if (action === 2 && notNone(data[4])) t[ts] = sessionOf('None', data[4]);
     else t[ts] = sessionOf(data[3], data[4]);
     var after = t[ts] || {};
-    // Un compte ouvert dans plusieurs sessions reste membre jusqu'à la dernière.
+    // An account open in several sessions stays a member until the last one.
     if (before.account && before.account !== after.account && !holders(t, before.account)) emit({ op: 'member', gid: room, action: 0, name: before.account });
     if (after.account && after.account !== before.account && holders(t, after.account) === 1) emit({ op: 'member', gid: room, action: 1, name: after.account });
     emitGuests(room);
@@ -125,7 +125,7 @@ var liveBridge = (function () {
       case 'inited':
         emit({ op: 'inited', gid: room });
         send(room, 'getannouncement', '');
-        // BetterChatango charge le titre et la description du groupe juste après la connexion.
+        // BetterChatango loads the group title and description right after the connection.
         setTimeout(function () { var info = roomInfo(room); if (info) emit({ op: 'info', gid: room, title: info.title, description: info.description }); }, 3000);
         break;
       case 'nomore': emit({ op: 'histEnd', gid: room }); break;
@@ -133,9 +133,9 @@ var liveBridge = (function () {
       case 'getannc':
         if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, mode: 0, enabled: false, interval: 0, text: '', displayText: '', embeds: [] });
         else {
-          // Comme BetterChatango, une annonce a d'office le drapeau Premium.
+          // Like BetterChatango, an announcement always has the Premium flag.
           var raw = data.slice(4).join(':'), shown = parseContent(raw, false, true);
-          // Le style d'origine (couleurs, police, emphase posée par BetterChatango après <f>) est conservé pour le prochain enregistrement, et les médias restent dans le texte renvoyé.
+          // The original style (colors, font, emphasis set by BetterChatango after <f>) is kept for the next save, and media stay in the text sent back.
           emit({ op: 'annc', gid: room, mode: parseInt(data[0], 10) || 0, enabled: data[0] !== '0', interval: parseInt(data[3], 10) || 0, text: parseContent(raw, true).text, displayText: shown.text, embeds: shown.embeds, prefix: (/^(<n[^>]*\/>)?(<f [^>]*>(<b>)?(<i>)?(<u>)?)?/.exec(raw) || [''])[0] });
         }
         break;
@@ -157,7 +157,7 @@ var liveBridge = (function () {
       case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
       case 'updgroupinfo': emit({ op: 'info', gid: room, title: unquote(data[0]), description: unquote(data.slice(1).join(':')) }); break;
       case 'denied':
-        // Ni inited ni participants n'arriveront : le fil et les membres quittent l'attente.
+        // Neither inited nor participants will arrive: the message log and the members stop waiting.
         emit({ op: 'denied', gid: room });
         emit({ op: 'notice', gid: room, text: 'Chatango refused the connection to #' + room + '.' });
         break;
@@ -173,11 +173,11 @@ var liveBridge = (function () {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
         emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
-        // BetterChatango sonne lui-même pour le MP de client.private.focus, remis à false à chaque connexion privée : le pont sonne pour les autres, comme BetterChatango, hors modification et membre ignoré.
+        // BetterChatango plays the sound itself for the PM of client.private.focus, reset to false on each private connection: the bridge plays it for the others, like BetterChatango, except for edits and ignored members.
         var from = lower(data[0]);
         if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
           var sounds = readSounds();
-          // Lecture refusée par le navigateur : silence voulu, sans toast.
+          // Playback refused by the browser: intended silence, no toast.
           if (sounds && sounds.play_mention) playSound('mention').then(null, function () {});
         }
         break;
@@ -191,26 +191,26 @@ var liveBridge = (function () {
       case 'wladd':
         gotReply('wladd:' + lower(data[0]));
         if (data[1] === 'invalid') emit({ op: 'friendRefused', name: lower(data[0]) });
-        // Triplet : la valeur vaut des minutes d'inactivité si on, un horodatage si off ou app.
+        // Triplet: the value is idle minutes if on, a timestamp if off or app.
         else emit({ op: 'friends', added: true, list: [friendPresence(data[0], data[1], data[2], data[2])] });
         break;
       case 'wldelete': if (data[1] === 'deleted') emit({ op: 'unfriend', name: lower(data[0]) }); break;
       case 'wlonline': case 'wlapp': emit({ op: 'presence', name: lower(data[0]), status: 'online' }); break;
       case 'wloffline': emit({ op: 'presence', name: lower(data[0]), status: 'offline', lastOn: epochMs(data[1]) }); break;
-      // La trame status ne dit pas si le compte est inactif : un état idle connu doit rester en place.
+      // The status frame does not tell whether the account is idle: a known idle state must stay in place.
       case 'status': emit(data[2] === 'offline' ? { op: 'presence', name: lower(data[0]), status: 'offline', lastOn: epochMs(data[1]) } : { op: 'presence', name: lower(data[0]), status: 'online', keepIdle: true }); break;
       case 'idleupdate': emit({ op: 'presence', name: lower(data[0]), status: data[1] === '0' ? 'idle' : 'online' }); break;
       case 'connect': {
-        // Une réponse à nom vide refuse le dernier nom envoyé.
+        // A reply with an empty name refuses the last name sent.
         var target = lower(data[0]) || connectTarget, state = data[0] && CONNECT_STATE[data[2]];
         if (state) emit({ op: 'people', list: [friendPresence(target, state, data[1], data[1])] });
-        // Comme BetterChatango, un état inconnu est ignoré.
+        // Like BetterChatango, an unknown state is ignored.
         if (state || !data[0] || data[2] === 'invalid' || data[2] === 'nouser') emit({ op: 'pmChecked', name: target, found: !!state, asked: gotReply('connect:' + target) });
         break;
       }
       case 'presence': {
         var people = [];
-        // Hors ligne, les minutes ne sont pas de l'inactivité : elles servent de dernière connexion approchée.
+        // When offline, the minutes are not idle time: they serve as an approximate last online time.
         for (var j = 0; j + 2 < data.length; j += 3) if (data[j]) {
           var on = data[j + 2] === 'online' || data[j + 2] === 'app', idle = on && +data[j + 1] > 0;
           people.push({ name: lower(data[j]), status: idle ? 'idle' : on ? 'online' : 'offline', lastOn: !on && +data[j + 1] ? Date.now() - data[j + 1] * MIN : 0, idleSince: idle ? Date.now() - data[j + 1] * MIN : 0 });
@@ -229,18 +229,18 @@ var liveBridge = (function () {
       default: break;
     }
   }
-  // Trames que BetterChatango n'écoute pas : on ajoute un gestionnaire, que son dispatcher appelle comme les siens.
+  // Frames that BetterChatango does not listen to: we add a handler, which its dispatcher calls like its own.
   var EXTRA = { group: ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb'], private: [] };
   function wrapTable(table, kind) {
     if (!table) return;
-    EXTRA[kind].forEach(function (name) { if (!(name in table)) table[name] = function () { /* gestionnaire ajouté par Nightango */ }; });
+    EXTRA[kind].forEach(function (name) { if (!(name in table)) table[name] = function () { /* handler added by Nightango */ }; });
     Object.keys(table).forEach(function (name) {
       var orig = table[name];
       if (typeof orig !== 'function' || orig.__skin) return;
       var w = function (c, socket, room, data) {
         try { if (kind === 'group') tapGroup(name, room, data || []); else tapPrivate(name, data || []); } catch (e) { warn(e); }
-        // BetterChatango répond à DENIED par un alert() bloquant : la fenêtre de session expirée le remplace.
-        // Son gestionnaire connect ouvre son écran de MP et peut appeler api.vissle.me, hors de la liste fermée.
+        // BetterChatango answers DENIED with a blocking alert(): the session-expired dialog replaces it.
+        // Its connect handler opens its PM screen and can call api.vissle.me, outside the closed list.
         if (kind === 'private' && (name === 'DENIED' || name === 'connect')) return;
         return orig.apply(this, arguments);
       };
@@ -249,7 +249,7 @@ var liveBridge = (function () {
     });
   }
 
-  /* Avertissements de BetterChatango : refus du serveur, connexion perdue, limites */
+  /* BetterChatango warnings: server refusals, lost connection, limits */
   var lastAlert = { text: '', at: 0 };
   function alertOnce(op) {
     if (op.text === lastAlert.text && Date.now() - lastAlert.at < 2500) return;
@@ -264,7 +264,7 @@ var liveBridge = (function () {
       C.systemMessage = function (data) {
         try {
           var text = String(data && data.content || '').replace(/\r/g, ' ').trim();
-          // Présence d'un ami (unique status) : BetterChatango la destine au MP ouvert, sans groupe. La liste d'amis la montre déjà.
+          // Friend presence (unique status): BetterChatango meant it for the open PM, with no group. The friend list already shows it.
           var presence = data && data.unique === 'status';
           if (text && !presence && !QUIET.some(function (re) { return re.test(text); })) alertOnce({ op: 'notice', gid: (data && data.group) || C.focus, text: text });
         } catch (e) { warn(e); }
@@ -276,7 +276,7 @@ var liveBridge = (function () {
       var notice = C.setNotice;
       C.setNotice = function (data) {
         try {
-          // Le bandeau de connexion l'affiche déjà, et ce Reconnect de BetterChatango contourne le pont : la relance automatique ouvrirait un second socket.
+          // The connection banner already shows it, and this BetterChatango Reconnect bypasses the bridge: the automatic retry would open a second socket.
           var lost = /^You have disconnected from #/.test(String(data && data.content));
           if (data && data.icon === 'warning' && data.content && !lost) alertOnce({ op: 'alert', text: String(data.content), button: data.button || null, action: typeof data.action === 'function' ? data.action : null });
         } catch (e) { warn(e); }
@@ -286,7 +286,7 @@ var liveBridge = (function () {
     }
   }
 
-  /* État des connexions : BetterChatango ne publie pas d'événement, on observe ses sockets. */
+  /* Connection state: BetterChatango publishes no event, so we watch its sockets. */
   var connState = {}, pmState = null, left = {}, attempts = {};
   function watchConnections() {
     setInterval(function () {
@@ -309,22 +309,22 @@ var liveBridge = (function () {
     }, 2000);
   }
   /**
-   * Permet de lancer une connexion de BetterChatango.
-   * @param {string} gid Groupe ou private_message.
+   * Starts a BetterChatango connection.
+   * @param {string} gid Group or private_message.
    */
   function connect(gid) {
-    // Une seconde session MP ouverte pendant la première ferait renvoyer kickingoff à la nôtre : une seule tentative à la fois.
+    // A second PM session opened during the first would send kickingoff to ours: only one attempt at a time.
     if (attempts[gid]) return attempts[gid];
-    // BetterChatango ignore client.connect tant que gid reste dans cache.connect : comme lui, on l'en retire autour de chaque tentative.
+    // BetterChatango ignores client.connect while gid stays in cache.connect: like it, we remove it around each attempt.
     function forget() { C.cache.connect = C.cache.connect.filter(function (x) { return x !== gid; }); }
     function settle() {
       delete attempts[gid];
       forget();
-      // Sans nouveau socket, l'état observé ne change pas : on force sa réémission pour sortir de « connecting », y compris pour un groupe que BetterChatango a retiré.
+      // Without a new socket, the observed state does not change: we force it to be emitted again to leave "connecting", including for a group that BetterChatango removed.
       if (gid === 'private_message') pmState = null; else connState[gid] = 'connecting';
     }
     function attempt() { forget(); return C.connect(gid); }
-    // Comme BetterChatango, la base d'historique s'ouvre avant la connexion privée : les msgoff, livrés une seule fois juste après OK, y sont archivés.
+    // Like BetterChatango, the history database opens before the private connection: the msgoff frames, delivered only once right after OK, are archived there.
     note('Connecting to ' + connName(gid));
     var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
     attempts[gid] = sock.then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) { settle(); note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e)); throw e; });
@@ -335,25 +335,25 @@ var liveBridge = (function () {
     try { C.socket(gid, frame, failure); return true; } catch (e) { warn(e); return false; }
   }
   function pmOpen() { return !!(C.private && C.private.socket && C.private.socket.readyState === 1); }
-  // Dernier correspondant demandé par connect, auquel se rattache une réponse à nom vide.
+  // Last correspondent requested by connect, to which a reply with an empty name belongs.
   var connectTarget = '';
-  // Chatango ne renvoie aucun identifiant de demande : une réponse se reconnaît à sa clé, et une demande plus récente remplace l'attente de la précédente.
+  // Chatango returns no request id: a reply is recognized by its key, and a newer request replaces the wait of the previous one.
   var replyWaits = {};
   var PM_CHECK_TIMEOUT = 5000;
   /**
-   * Permet d'attendre la réponse de Chatango à une demande, et d'émettre un fait si elle ne vient pas à temps.
-   * @param {string} key Clé de la réponse attendue.
-   * @param {number} ms Délai d'attente.
-   * @param {Object} timeoutOp Op émise à l'expiration.
+   * Waits for the Chatango reply to a request and emits a fact if it does not come in time.
+   * @param {string} key Key of the expected reply.
+   * @param {number} ms Wait delay.
+   * @param {Object} timeoutOp Op emitted on expiry.
    */
   function awaitReply(key, ms, timeoutOp) {
     clearTimeout(replyWaits[key]);
     replyWaits[key] = setTimeout(function () { delete replyWaits[key]; emit(timeoutOp); }, ms);
   }
   /**
-   * Permet de clore l'attente d'une réponse arrivée.
-   * @param {string} key Clé de la réponse.
-   * @returns {boolean} Vrai si une demande l'attendait encore.
+   * Closes the wait for a reply that arrived.
+   * @param {string} key Key of the reply.
+   * @returns {boolean} True if a request was still waiting for it.
    */
   function gotReply(key) {
     var waited = key in replyWaits;
@@ -362,9 +362,9 @@ var liveBridge = (function () {
     return waited;
   }
   /**
-   * Permet de demander à Chatango la présence d'un correspondant, comme BetterChatango à l'ouverture d'un MP.
-   * @param {string} name Correspondant visé.
-   * @returns {boolean} Vrai si la trame est partie.
+   * Asks Chatango for the presence of a correspondent like BetterChatango when a PM opens.
+   * @param {string} name Target correspondent.
+   * @returns {boolean} True if the frame was sent.
    */
   function connectPm(name) {
     var n = lower(name);
@@ -380,8 +380,8 @@ var liveBridge = (function () {
   }
   var pmrCheck = null, pmrConnected = null;
   /**
-   * Permet de lire chez vissle la restriction des MP de son propre compte, comme BetterChatango (inject.js:10631-10643).
-   * @returns {Promise<string>} restricted, ok, ou unknown si la réponse ne l'établit pas.
+   * Reads the PM restriction of one's own account from vissle like BetterChatango (inject.js:10631-10643).
+   * @returns {Promise<string>} restricted, ok, or unknown if the reply does not establish it.
    */
   function fetchPmr() {
     return fetch('https://api.vissle.me/v1/pmr/' + C.user.name).then(function (r) {
@@ -390,8 +390,8 @@ var liveBridge = (function () {
     }).catch(function (e) { warn(e); return 'unknown'; });
   }
   /**
-   * Base d'historique privé de BetterChatango (« <pseudo>_history »). BetterChatango ne l'ouvre que depuis son propre écran
-   * de messages privés : on l'ouvre ici avec le même schéma, puis on la lui confie pour qu'il y archive.
+   * BetterChatango private history database ("<username>_history"). BetterChatango only opens it from its own private
+   * messages screen: we open it here with the same schema, then hand it over so that it archives there.
    */
   function openPmDb() {
     var open = C.database && C.database.pm ? Promise.resolve(C.database.pm) : new Promise(function (resolve) {
@@ -413,7 +413,7 @@ var liveBridge = (function () {
     return open.then(migrateUnread);
   }
   /**
-   * Permet d'ouvrir la base d'historique privé pour une lecture par pages, une recherche, un export ou un import, qui échouent sans elle.
+   * Opens the private history database for the history operations that cannot run without it.
    */
   function pmDbOrFail() {
     return openPmDb().then(function (db) {
@@ -422,9 +422,9 @@ var liveBridge = (function () {
     });
   }
   /**
-   * Permet de marquer lus des messages de l'historique privé, par l'index de BetterChatango (markRead).
-   * @param {IDBDatabase} db Base d'historique privé.
-   * @param {?IDBKeyRange} range Plage de target_ts_idx, null pour toute la base.
+   * Marks private history messages read through the BetterChatango index (markRead).
+   * @param {IDBDatabase} db Private history database.
+   * @param {?IDBKeyRange} range Range of target_ts_idx, null for the whole database.
    */
   function markRead(db, range) {
     return new Promise(function (resolve, reject) {
@@ -440,33 +440,33 @@ var liveBridge = (function () {
     });
   }
   /**
-   * Permet de marquer lus, une fois par compte, les messages archivés avant Nightango, que BetterChatango a tous archivés
-   * non lus faute de focus privé. Appelée par openPmDb avant la connexion privée, elle laisse non lus les msgoff de celle-ci.
-   * @param {?IDBDatabase} db Base d'historique privé.
+   * Marks read once per account the messages archived before Nightango.
+   * BetterChatango archived them all unread for lack of a private focus. Called by openPmDb before the private connection, it leaves that connection's msgoff unread.
+   * @param {?IDBDatabase} db Private history database.
    */
   function migrateUnread(db) {
     var key = skinKey(lower(C.user.name));
     if (!db || (storageGet(key) || {}).pmReadMigrated) return db;
     return markRead(db, null).then(function () { storageMerge(key, { pmReadMigrated: true }); }, warn).then(function () { return db; });
   }
-  // Borne haute en chaîne comme BetterChatango : dans l'ordre IndexedDB, une chaîne passe après tout horodatage.
+  // String upper bound like BetterChatango: in IndexedDB order, a string comes after any timestamp.
   function targetRange(target) { return IDBKeyRange.bound([target, 1], [target, '']); }
   /**
-   * Permet de savoir si une entrée de l'historique privé est un message affiché.
-   * @param {Object} x Entrée lue par pmRecordEntry.
-   * @param {{from: string, text: string, key: ?string}} m Message affiché.
+   * Tells whether a private history entry is a shown message.
+   * @param {Object} x Entry read by pmRecordEntry.
+   * @param {{from: string, text: string, key: ?string}} m Shown message.
    */
   function isPmOf(x, m) {
     if (x.from !== m.from) return false;
-    // Une modification appliquée change le texte affiché : la clé du MP, quand il en a une, désigne l'original et ses modifications.
+    // An applied edit changes the shown text: the PM key, when it has one, designates the original and its edits.
     return m.key ? x.key === m.key || x.editId === m.key : x.text === m.text;
   }
   /**
-   * Permet de lire par curseur au plus count entrées retenues, plus une qui dit s'il en reste.
-   * @param {IDBRequest} req Curseur ouvert sur l'historique privé ou la médiathèque.
-   * @param {number} count Nombre d'entrées au plus.
-   * @param {Function} pick Entrée retenue pour un enregistrement, null pour l'écarter.
-   * @returns {Promise<{list: Array, more: boolean}>} Entrées dans l'ordre du curseur, et s'il en reste après elles.
+   * Reads by cursor at most count kept entries plus one that tells whether more remain.
+   * @param {IDBRequest} req Cursor open on the private history or the media library.
+   * @param {number} count Maximum number of entries.
+   * @param {Function} pick Entry kept for a record, null to drop it.
+   * @returns {Promise<{list: Array, more: boolean}>} Entries in cursor order, and whether more remain after them.
    */
   function cursorPage(req, count, pick) {
     return new Promise(function (resolve, reject) {
@@ -481,9 +481,9 @@ var liveBridge = (function () {
     });
   }
   /**
-   * Permet d'atteindre le magasin de la médiathèque que BetterChatango ouvre à la connexion (favorite_media), sans lequel chaque appel échoue.
-   * @param {string} mode readonly ou readwrite.
-   * @returns {Promise<IDBObjectStore>} Magasin media d'une nouvelle transaction, rejetée sans base.
+   * Reaches the media library object store that BetterChatango opens at sign-in (favorite_media) and without which every call fails.
+   * @param {string} mode readonly or readwrite.
+   * @returns {Promise<IDBObjectStore>} media object store of a new transaction, rejected without a database.
    */
   function mediaStore(mode) {
     return new Promise(function (resolve) {
@@ -492,8 +492,8 @@ var liveBridge = (function () {
     });
   }
   /**
-   * Permet d'attendre le résultat d'une requête IndexedDB.
-   * @param {IDBRequest} req Requête.
+   * Waits for the result of an IndexedDB request.
+   * @param {IDBRequest} req Request.
    */
   function requestResult(req) {
     return new Promise(function (resolve, reject) {
@@ -502,9 +502,9 @@ var liveBridge = (function () {
     });
   }
   /**
-   * Permet d'écrire dans la médiathèque, une fois la transaction terminée.
-   * @param {function(IDBObjectStore)} write Écritures faites dans la transaction.
-   * @param {string} failure Texte d'échec, quand la transaction est annulée.
+   * Writes to the media library and settles once the transaction completes.
+   * @param {function(IDBObjectStore)} write Writes made in the transaction.
+   * @param {string} failure Failure text, when the transaction is aborted.
    */
   function mediaWrite(write, failure) {
     return mediaStore('readwrite').then(function (store) { return new Promise(function (resolve, reject) {
@@ -515,12 +515,12 @@ var liveBridge = (function () {
     }); });
   }
   /**
-   * Permet de lire la médiathèque dans l'ordre d'un index de BetterChatango, après une entrée et filtrée par nom, en écartant les entrées invalides.
-   * @param {string} index url ou name.
-   * @param {?{url: string, name: string}} after Dernière entrée déjà lue, null pour commencer.
-   * @param {string} text Recherche dans le nom, vide pour tout lire.
-   * @param {number} count Nombre d'entrées au plus.
-   * @returns {Promise<{list: Array, more: boolean}>} Entrées {url, name}, et s'il en reste après.
+   * Reads the media library in the order of a BetterChatango index and drops invalid entries.
+   * @param {string} index url or name.
+   * @param {?{url: string, name: string}} after Last entry already read, null to start.
+   * @param {string} text Search in the name, empty to read everything.
+   * @param {number} count Maximum number of entries.
+   * @returns {Promise<{list: Array, more: boolean}>} Entries {url, name}, and whether more remain after them.
    */
   function readMedia(index, after, text, count) {
     return mediaStore('readonly').then(function (store) {
@@ -530,21 +530,21 @@ var liveBridge = (function () {
     });
   }
   function readField(sel) { var el = document.querySelector(sel); return el ? String(el.value || '') : ''; }
-  // Persistance identique à BetterChatango : l'objet entier est réécrit sous la seule clé settings.
+  // Same persistence as BetterChatango: the whole object is rewritten under the single settings key.
   function saveSettings() { localStorage.setItem('settings', JSON.stringify(C.settings)); }
   /**
-   * Permet de lire un interrupteur des réglages de BetterChatango.
-   * @param {string} key Clé de SETTINGS.
-   * @returns {?boolean} Valeur lue, null si les réglages de BetterChatango sont illisibles.
+   * Reads a switch from the BetterChatango settings.
+   * @param {string} key SETTINGS key.
+   * @returns {?boolean} Value read, null if the BetterChatango settings are unreadable.
    */
   function readSetting(key) {
     var p = SETTINGS[key];
     try { return !!C.settings[p[0]][p[1]][p[2]]; } catch (e) { warn(e); return null; }
   }
   /**
-   * Permet de lire une liste des réglages de BetterChatango.
-   * @param {string} kind Clé de LISTS.
-   * @returns {?Array<string>} Copie de la liste, null si les réglages de BetterChatango sont illisibles.
+   * Reads a list from the BetterChatango settings.
+   * @param {string} kind LISTS key.
+   * @returns {?Array<string>} Copy of the list, null if the BetterChatango settings are unreadable.
    */
   function roomInfo(gid) {
     var info = C.groups && C.groups[gid] && C.groups[gid].room && C.groups[gid].room.information;
@@ -553,7 +553,7 @@ var liveBridge = (function () {
   function readSounds() {
     try {
       var sound = C.settings.notifications.sound, out = {};
-      // Le curseur de BetterChatango enregistre le volume en texte.
+      // The BetterChatango slider saves the volume as text.
       SOUND_KEYS.forEach(function (k) { out[k] = k.indexOf('volume_') === 0 ? parseInt(sound[k], 10) : !!sound[k]; });
       return out;
     } catch (e) { warn(e); return null; }
@@ -570,10 +570,10 @@ var liveBridge = (function () {
     try { return C.settings[p[0]][p[1]][p[2]].slice(); } catch (e) { warn(e); return null; }
   }
   /**
-   * Permet d'ajouter ou de retirer une valeur d'une liste des réglages de BetterChatango, comme lui : filter ou push sans doublon.
-   * @param {string} kind Clé de LISTS.
-   * @param {string} value Valeur visée.
-   * @param {boolean} on Vrai pour l'ajouter.
+   * Adds or removes a value in a BetterChatango settings list the way BetterChatango does with filter or a push without duplicates.
+   * @param {string} kind LISTS key.
+   * @param {string} value Target value.
+   * @param {boolean} on True to add it.
    */
   function writeList(kind, value, on) {
     var p = LISTS[kind];
@@ -587,8 +587,8 @@ var liveBridge = (function () {
   }
 
   /*
-   * Style perso : écrit dans le formulaire de style de BetterChatango, relu par client.sendMessage à chaque envoi.
-   * Ce formulaire n'est jamais soumis : son enregistrement (updatemsgstyles) transmet le mot de passe.
+   * Own style: written into the BetterChatango style form, read again by client.sendMessage on each send.
+   * This form is never submitted: saving it (updatemsgstyles) transmits the password.
    */
   var accountStyle = null;
   function styleFields() {
@@ -612,8 +612,8 @@ var liveBridge = (function () {
     C.user.style = v.active;
   }
   /**
-   * Permet d'appliquer le style perso aux champs que BetterChatango lit à l'envoi.
-   * @param {?Object} style Style perso, null pour revenir au style du compte.
+   * Applies the own style to the fields that BetterChatango reads when sending.
+   * @param {?Object} style Own style, null to go back to the account style.
    */
   function applyStyle(style) {
     if (!style && !accountStyle) return;
@@ -623,23 +623,23 @@ var liveBridge = (function () {
     writeStyle(f, Object.assign({}, style, { on: true, active: true }));
   }
   /**
-   * Permet de faire construire par BetterChatango le corps d'un message de groupe, sans l'envoyer, avec la référence et la citation que l'envoi insère.
-   * @param {string} gid Groupe visé.
-   * @param {string} text Texte saisi.
-   * @param {{replyId: ?string, editId: ?string, quote: ?string, style: ?Object}} opts Réponse, original modifié ou citation en texte brut, et style perso.
-   * @returns {?{body: string, style: Object}} Corps, et style propre lu dans celui de BetterChatango, null si BetterChatango ne construit rien.
+   * Has BetterChatango build the body of a group message without sending it and with the reference and the quote that sending inserts.
+   * @param {string} gid Target group.
+   * @param {string} text Typed text.
+   * @param {{replyId: ?string, editId: ?string, quote: ?string, style: ?Object}} opts Reply, edited original or plain-text quote, and own style.
+   * @returns {?{body: string, style: Object}} Body, and the message's own style read from the BetterChatango one, null if BetterChatango builds nothing.
    */
   function groupBody(gid, text, opts) {
     applyStyle(opts.style);
     var body = C.sendMessage(esc(text), true, gid);
     if (typeof body !== 'string' || !body) return null;
     var style = parseContent(body).style;
-    // Comme BetterChatango, une modification ne porte jamais de réponse.
+    // Like BetterChatango, an edit never carries a reply.
     var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
     var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
     body = head + ref + body.slice(head.length);
     if (opts.quote) {
-      // BetterChatango place la citation juste avant le texte saisi : après l'emphase de son style, lue dans ses cases, et avant celle du Markdown.
+      // BetterChatango places the quote right before the typed text: after the emphasis of its style, read from its checkboxes, and before the Markdown one.
       var f = C.user.style ? styleFields() : null;
       var at = head.length + (f ? (f.bold.checked ? '<b>' : '') + (f.italic.checked ? '<i>' : '') + (f.underline.checked ? '<u>' : '') : '').length;
       body = body.slice(0, at) + esc(opts.quote) + body.slice(at);
@@ -647,7 +647,7 @@ var liveBridge = (function () {
     return { body: body, style: style };
   }
 
-  /* Réponses du pont vissle du userscript, rapprochées des demandes par identifiant */
+  /* Replies from the userscript vissle bridge, matched to requests by id */
   var vissleWaits = {};
   document.addEventListener('torch-skin:vissle-response', function (e) {
     var r = JSON.parse(e.detail), wait = vissleWaits[r.id];
@@ -662,10 +662,10 @@ var liveBridge = (function () {
     wrapTable(C.event.private, 'private');
     hookNotices();
     watchConnections();
-    // BetterChatango occupe window.onoffline et window.ononline : on écoute à côté sans les remplacer.
+    // BetterChatango holds window.onoffline and window.ononline: we listen alongside without replacing them.
     window.addEventListener('offline', function () { emit({ op: 'session', reason: 'offline' }); });
     window.addEventListener('online', function () { emit({ op: 'online' }); });
-    // iOS coupe les sockets d'une page cachée sans prévenir : retour au premier plan, page restaurée du cache compris.
+    // iOS cuts the sockets of a hidden page without notice: back to the foreground, page restored from the cache included.
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') emit({ op: 'visible' }); });
     window.addEventListener('pageshow', function (e) { if (e.persisted) emit({ op: 'visible' }); });
     var loggedIn = false;
@@ -673,14 +673,14 @@ var liveBridge = (function () {
       if (loggedIn) return;
       loggedIn = true;
       note('Signed in');
-      // BetterChatango lit seul l'oEmbed YouTube et msgbg.xml, hors des réglages de médias de Nightango : neutralisés en mémoire, pas dans les réglages de BetterChatango.
+      // BetterChatango reads the YouTube oEmbed and msgbg.xml on its own, outside the Nightango media settings: disabled in memory, not in the BetterChatango settings.
       C.renderYouTube = CH.getBackground = function () {};
       emit({ op: 'login', me: lower(C.user.name) });
-      // Groupes déjà connectés avant nous : leurs trames inited et participants sont passées.
+      // Groups already connected before us: their inited and participants frames have gone by.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
       if (typeof window.__TORCH_SHOW__ === 'function') window.__TORCH_SHOW__();
       if (pmOpen()) {
-        // Session déjà ouverte : la liste d'amis et l'historique ont été reçus avant nous, on les redemande.
+        // Session already open: the friend list and the history were received before us, so we request them again.
         emit({ op: 'pmReady' });
         send('private_message', 'wl', '');
         send('private_message', 'getblock', '');
@@ -688,9 +688,9 @@ var liveBridge = (function () {
         setTimeout(function () { if (!pmOpen()) { try { connect('private_message').catch(warn); } catch (e) { warn(e); } } }, 2500);
       }
     };
-    // client.on reçoit un CustomEvent du document, pas le client : on relit l'état sur C.
+    // client.on receives a CustomEvent from the document, not the client: we read the state again on C.
     C.on('clientLogin', function () { try { onLogin(false); } catch (e) { warn(e); } });
-    // Filet de sécurité si l'événement est manqué : session détectée dès qu'un nom et un groupe existent.
+    // Safety net if the event is missed: session detected as soon as a name and a group exist.
     var sessionOpen = function () { return !!(C.user && C.user.name && C.groups && Object.keys(C.groups).length); };
     if (sessionOpen()) setTimeout(function () { onLogin(true); }, 0);
     else {
@@ -716,16 +716,16 @@ var liveBridge = (function () {
     note: note,
     connName: connName,
     /**
-     * Permet de savoir si un message a déjà son identifiant définitif, que la réponse, la modification et la suppression attendent.
-     * @param {string} id Identifiant du message dans l'état.
+     * Tells whether a message already has the final id that replying to it or editing or deleting it waits for.
+     * @param {string} id Message id in the state.
      */
     delivered: function (id) { return !!id && String(id).indexOf('k:') !== 0; },
     /**
-     * Permet d'envoyer un message de groupe, ou la modification d'un message.
-     * @param {string} gid Groupe visé.
-     * @param {string} text Texte saisi.
-     * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string, style: ?Object}} opts Réponse, original modifié ou citation en texte brut, canal et style perso.
-     * @returns {?Object} Style propre lu dans le corps construit par BetterChatango, null si rien n'est parti.
+     * Sends a group message or the edit of a message.
+     * @param {string} gid Target group.
+     * @param {string} text Typed text.
+     * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string, style: ?Object}} opts Reply, edited original or plain-text quote, channel and own style.
+     * @returns {?Object} The message's own style read from the body built by BetterChatango, null if nothing was sent.
      */
     send: function (gid, text, opts) {
       opts = opts || {};
@@ -738,37 +738,37 @@ var liveBridge = (function () {
       return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure) ? built.style : null;
     },
     /**
-     * Permet de mesurer, comme le compteur de BetterChatango, le corps qu'enverrait send, sans le préfixe bm.
-     * @param {string} gid Groupe visé.
-     * @param {string} text Texte saisi.
-     * @param {{replyId: ?string, editId: ?string, quote: ?string, style: ?Object}} opts Mêmes options que send.
-     * @returns {number} Longueur du corps, 0 pour un texte vide.
+     * Measures the body that send would send without the bm prefix like the BetterChatango counter.
+     * @param {string} gid Target group.
+     * @param {string} text Typed text.
+     * @param {{replyId: ?string, editId: ?string, quote: ?string, style: ?Object}} opts Same options as send.
+     * @returns {number} Body length, 0 for an empty text.
      */
     measure: function (gid, text, opts) {
       if (!text) return 0;
       try { var built = groupBody(gid, text, opts); return built ? built.body.length : 0; } catch (e) { warn(e); return 0; }
     },
     /**
-     * Permet d'envoyer un message privé.
-     * @param {string} user Destinataire.
-     * @param {string} text Texte saisi.
-     * @param {?Object} style Style perso.
-     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array}} Corps construit par BetterChatango analysé comme un MP reçu, null si rien n'est parti.
+     * Sends a private message.
+     * @param {string} user Recipient.
+     * @param {string} text Typed text.
+     * @param {?Object} style Own style.
+     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array}} Body built by BetterChatango parsed like a received PM, null if nothing was sent.
      */
     sendPm: function (user, text, style) {
       try {
         applyStyle(style);
-        // Le premier appel construit le corps sans l'envoyer : seul le second émet la trame.
+        // The first call builds the body without sending it: only the second one emits the frame.
         var body = C.sendMessage(esc(text), true, 'private_message', user);
         if (typeof body !== 'string' || !body) return null;
         C.sendMessage(esc(text), false, 'private_message', user);
-        // BetterChatango n'écrit une balise Premium que pour un compte Premium : chaque balise de ce corps s'affiche.
+        // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
         return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds };
       } catch (e) { warn(e); return null; }
     },
     /**
-     * Permet de lire le style que BetterChatango enverrait sans style perso.
+     * Reads the style that BetterChatango would send without an own style.
      */
     accountStyle: function () {
       var v = accountStyle || readStyle(styleFields());
@@ -777,23 +777,23 @@ var liveBridge = (function () {
     applyStyle: function (style) { try { applyStyle(style); } catch (e) { warn(e); } },
     focus: function (gid) { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } },
     /**
-     * Permet de suivre la conversation affichée, et d'en demander la présence quand elle change de correspondant.
-     * @param {string|boolean} user Correspondant affiché, false hors des MP.
+     * Follows the shown conversation and asks for its presence when the correspondent changes.
+     * @param {string|boolean} user Shown correspondent, false outside PMs.
      */
     focusPm: function (user) {
-      // BetterChatango n'archive un message privé envoyé que pour la conversation qu'il considère ouverte.
+      // BetterChatango only archives a sent private message for the conversation it considers open.
       try { if (C.private) C.private.focus = user || false; } catch (e) { warn(e); }
       if (user && user !== connectTarget) connectPm(user);
     },
     /**
-     * Permet de savoir si le compte est Premium, comme BetterChatango avant d'écrire une émoticône Premium.
-     * @returns {boolean} Statut 200 ou 210 de la trame premium, faux tant que la connexion privée n'est pas ouverte.
+     * Tells whether the account is Premium like BetterChatango before writing a Premium emoticon.
+     * @returns {boolean} Status 200 or 210 of the premium frame, false while the private connection is not open.
      */
     premium: function () { return !!C.private && [200, 210].indexOf(C.private.premium.status) >= 0; },
     /**
-     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme BetterChatango avant de l'ouvrir : la réponse arrive en op pmChecked, avec asked.
-     * @param {string} name Correspondant visé.
-     * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
+     * Checks the correspondent of a new PM with Chatango like BetterChatango before opening it.
+     * @param {string} name Target correspondent. The reply arrives as a pmChecked op with asked.
+     * @returns {boolean} True if the request was sent, false if the private connection is not open.
      */
     checkPm: function (name) {
       var n = lower(name);
@@ -808,9 +808,9 @@ var liveBridge = (function () {
     },
     leave: function (gid) { left[gid] = true; note('Leaving #' + gid); try { C.disconnectFrom(gid); } catch (e) { warn(e); } },
     /**
-     * Permet de relancer une connexion fermée.
-     * @param {string} gid Groupe ou private_message.
-     * @param {boolean=} background Vrai pour un groupe qui n'est pas affiché : le focus de BetterChatango reste sur le groupe affiché.
+     * Restarts a closed connection.
+     * @param {string} gid Group or private_message.
+     * @param {boolean=} background True for a group that is not shown: the BetterChatango focus stays on the shown group.
      */
     reconnect: function (gid, background) {
       try {
@@ -824,17 +824,17 @@ var liveBridge = (function () {
       emit({ op: 'notice', gid: gid, text: failure });
       return 'failed';
     },
-    /* Modération : trames identiques à celles de BetterChatango */
+    /* Moderation: frames identical to the BetterChatango ones */
     deleteMessage: function (gid, id) { return send(gid, 'delmsg:' + id, 'The message could not be deleted.'); },
     deleteAllFrom: function (gid, m) { return send(gid, 'delallmsg:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), 'The messages could not be deleted.'); },
     ban: function (gid, m) { return send(gid, 'block:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), 'The ban could not be sent.'); },
     unban: function (gid, b) { return send(gid, 'removeblock:' + b.unid + ':' + b.ip, 'The unban could not be sent.'); },
     unbanAll: function (gid) { return send(gid, 'unbanall', 'The unban could not be sent.'); },
     /**
-     * Permet de demander une page de bannissements ou de débannissements, comme BetterChatango.
-     * @param {string} gid Groupe visé.
-     * @param {string} kind block ou unblock.
-     * @param {string} ts Horodatage de la dernière ligne chargée, 0 pour la première page.
+     * Requests a page of bans or unbans like BetterChatango.
+     * @param {string} gid Target group.
+     * @param {string} kind block or unblock.
+     * @param {string} ts Timestamp of the last loaded row, 0 for the first page.
      */
     banList: function (gid, kind, ts) { return send(gid, 'blocklist:' + kind + ':' + ts + ':next:' + BAN_PAGE + ':anons:1', 'The ban list could not be loaded.'); },
     searchBans: function (gid, query) {
@@ -843,7 +843,7 @@ var liveBridge = (function () {
       return true;
     },
     clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
-    /* Réglages de groupe : trames relevées dans chadango et chatango-lib */
+    /* Group settings: frames found in chadango and chatango-lib */
     requestSettings: function (gid) {
       ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:50'].forEach(function (f) { send(gid, f, 'Group settings could not be loaded.'); });
     },
@@ -851,9 +851,9 @@ var liveBridge = (function () {
     setAnnouncement: function (gid, enabled, seconds, text, read) {
       var prefix = read.prefix || '<n000/><f x11000="0">';
       var close = (prefix.match(/<[biu]>/g) || []).reverse().join('').replace(/</g, '</');
-      // Mode 3 : annonce activée avec le fond de message du propriétaire, gardé tant que l'interface ne le règle pas.
+      // Mode 3: announcement enabled with the owner's message background, kept as long as the interface does not set it.
       var mode = !enabled ? 0 : read.mode === 3 ? 3 : 1;
-      // Sauts de ligne en \r comme BetterChatango, dont l'éditeur retire les <br/> à la relecture.
+      // Line breaks as \r like BetterChatango, whose editor strips the <br/> tags when reading back.
       var body = prefix + esc(text).replace(/\r?\n/g, '\r') + close;
       var ok = send(gid, 'updateannouncement:' + mode + ':' + seconds + ':' + body, 'The announcement could not be saved.');
       setTimeout(function () { send(gid, 'getannouncement', ''); }, 1000);
@@ -867,7 +867,7 @@ var liveBridge = (function () {
     setRateLimit: function (gid, seconds) { return send(gid, 'setratelimit:' + seconds, 'Slow mode could not be saved.'); },
     setMod: function (gid, name, flags) { return send(gid, 'addmod:' + name + ':' + flags, 'The moderator could not be saved.'); },
     removeMod: function (gid, name) { return send(gid, 'removemod:' + name, 'The moderator could not be removed.'); },
-    /* Messages privés */
+    /* Private messages */
     setStatus: function (status) { return send('private_message', 'idle:' + (status === 'idle' ? 0 : 1), 'Your status could not be changed.'); },
     addFriend: function (name) {
       if (!send('private_message', 'wladd:' + name, 'The friend could not be added.')) return false;
@@ -878,9 +878,9 @@ var liveBridge = (function () {
     block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', 'The block could not be sent.'); },
     unblock: function (name) { return send('private_message', 'unblock:' + name, 'The unblock could not be sent.'); },
     /**
-     * Historique archivé par BetterChatango dans IndexedDB, regroupé par interlocuteur, avec l'état lu de chaque message.
-     * @param {number} perTarget Nombre d'entrées gardées par interlocuteur, les plus récentes.
-     * @returns {Promise<Object>} Par interlocuteur, ses entrées de la plus ancienne à la plus récente (list) et s'il en reste de plus anciennes (more).
+     * History archived by BetterChatango in IndexedDB and grouped by correspondent with the read state of each message.
+     * @param {number} perTarget Number of entries kept per correspondent, the most recent ones.
+     * @returns {Promise<Object>} Per correspondent, its entries from oldest to newest (list) and whether older ones remain (more).
      */
     pmHistory: function (perTarget) {
       return openPmDb().then(function (db) { return new Promise(function (resolve) {
@@ -904,7 +904,7 @@ var liveBridge = (function () {
         } catch (e) { warn(e); resolve({}); }
       }); });
     },
-    /** Enregistrements bruts de l'historique privé, tels que les exporte BetterChatango (exportMessages). */
+    /** Raw private history records as BetterChatango exports them (exportMessages). */
     exportPm: function () {
       return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
         var req = db.transaction(['messages'], 'readonly').objectStore('messages').getAll();
@@ -913,9 +913,9 @@ var liveBridge = (function () {
       }); });
     },
     /**
-     * Permet d'ajouter à l'historique privé les enregistrements valides d'un fichier de BetterChatango, lus, sans écraser une clé présente.
-     * @param {Array} records Contenu du fichier, non fiable.
-     * @returns {Promise} Compte {added, saved, skipped, foreign}, rendu une fois la transaction terminée.
+     * Adds the valid records of a BetterChatango file to the private history as read without overwriting an existing key.
+     * @param {Array} records File content, untrusted.
+     * @returns {Promise} Count {added, saved, skipped, foreign}, returned once the transaction completes.
      */
     importPm: function (records) {
       return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
@@ -924,7 +924,7 @@ var liveBridge = (function () {
         screened.valid.forEach(function (r) {
           var req = store.add(r);
           req.onsuccess = function () { out.added++; };
-          // Clé déjà présente : sans preventDefault, l'échec de add annulerait toute la transaction.
+          // Key already present: without preventDefault, the add failure would abort the whole transaction.
           req.onerror = function (e) { if (req.error.name === 'ConstraintError') { e.preventDefault(); out.saved++; } };
         });
         tx.oncomplete = function () { resolve(out); };
@@ -932,11 +932,11 @@ var liveBridge = (function () {
       }); });
     },
     /**
-     * Permet de lire les entrées archivées d'un membre avant une clé, comme BetterChatango au défilement (loadMessage).
-     * @param {string} target Membre de la conversation.
-     * @param {number} before Clé archiveTs de l'entrée la plus ancienne déjà chargée, exclue.
-     * @param {number} count Nombre d'entrées au plus.
-     * @returns {Promise<{list: Array, more: boolean}>} Entrées de la plus ancienne à la plus récente, et s'il en reste de plus anciennes. Rejetée sans base.
+     * Reads the archived entries of a member before a key like BetterChatango on scroll (loadMessage).
+     * @param {string} target Member of the conversation.
+     * @param {number} before archiveTs key of the oldest entry already loaded, excluded.
+     * @param {number} count Maximum number of entries.
+     * @returns {Promise<{list: Array, more: boolean}>} Entries from oldest to newest, and whether older ones remain. Rejected without a database.
      */
     pmOlder: function (target, before, count) {
       return pmDbOrFail().then(function (db) {
@@ -945,59 +945,59 @@ var liveBridge = (function () {
       }).then(function (page) { return { list: page.list.reverse(), more: page.more }; });
     },
     /**
-     * Permet de chercher un texte dans tout l'historique privé, par la clé primaire de BetterChatango, du plus récent au plus ancien.
-     * @param {string} query Texte cherché, sans casse.
-     * @param {number} limit Nombre de résultats au plus.
-     * @returns {Promise<{list: Array, more: boolean}>} Résultats et si la limite a coupé la liste. Rejetée sans base.
+     * Searches a text in the whole private history by the BetterChatango primary key from newest to oldest.
+     * @param {string} query Searched text, case-insensitive.
+     * @param {number} limit Maximum number of results.
+     * @returns {Promise<{list: Array, more: boolean}>} Results and whether the limit cut the list. Rejected without a database.
      */
     searchPm: function (query, limit) {
       var q = lower(query), me = lower(C.user.name);
       return pmDbOrFail().then(function (db) {
         return cursorPage(db.transaction(['messages'], 'readonly').objectStore('messages').openCursor(null, 'prev'), limit, function (v) {
           var target = lower(v.target), x = target !== me && pmRecordEntry(v);
-          // Clé, référence de modification et médias servent au fil à retrouver le message affiché (dmHitMessage).
+          // Key, edit reference and media let the message log find the shown message (dmHitMessage).
           return x && lower(x.text).indexOf(q) >= 0 ? { target: target, from: x.from, ts: x.ts, archiveTs: x.archiveTs, text: x.text, key: x.key, editId: x.editId, embeds: x.embeds } : null;
         });
       });
     },
     /**
-     * Permet de lire une page de la médiathèque de BetterChatango, comme viewMedia et loadMedia.
-     * @param {string} index Ordre de l'index url ou name.
-     * @param {?{url: string, name: string}} after Dernière entrée de la page précédente, null pour la première.
-     * @param {string} text Recherche dans le nom, vide pour tout lire.
-     * @returns {Promise<{list: Array, more: boolean}>} Jusqu'à 21 entrées, et s'il en reste. Rejetée sans base.
+     * Reads a page of the BetterChatango media library like viewMedia and loadMedia.
+     * @param {string} index Order of the url or name index.
+     * @param {?{url: string, name: string}} after Last entry of the previous page, null for the first one.
+     * @param {string} text Search in the name, empty to read everything.
+     * @returns {Promise<{list: Array, more: boolean}>} Up to 21 entries, and whether more remain. Rejected without a database.
      */
     mediaPage: function (index, after, text) { return readMedia(index, after, text, MEDIA_PAGE); },
     /**
-     * Permet de chercher des médias par nom, comme la complétion de BetterChatango (searchMedia).
-     * @param {string} text Texte que le nom contient.
-     * @param {number} count Nombre de médias au plus.
-     * @returns {Promise<Array>} Entrées {url, name} dans l'ordre des noms. Rejetée sans base.
+     * Searches media by name like the BetterChatango completion (searchMedia).
+     * @param {string} text Text that the name contains.
+     * @param {number} count Maximum number of media.
+     * @returns {Promise<Array>} Entries {url, name} in name order. Rejected without a database.
      */
     searchMedia: function (text, count) { return readMedia('name', null, text, count).then(function (r) { return r.list; }); },
-    /** Permet de savoir si une adresse est dans la médiathèque, comme checkMedia. Rejetée sans base. */
+    /** Tells whether an address is in the media library like checkMedia. Rejected without a database. */
     hasMedia: function (url) { return mediaStore('readonly').then(function (store) { return requestResult(store.get(url)); }).then(function (v) { return !!v; }); },
     /**
-     * Permet d'ajouter un média, comme favoriteMedia (put).
-     * @param {{url: string, name: string}} e Entrée écrite.
+     * Adds a media item like favoriteMedia (put).
+     * @param {{url: string, name: string}} e Entry written.
      */
     addMedia: function (e) {
       return mediaWrite(function (store) { store.put({ url: e.url, name: e.name }); }, 'BetterChatango could not add this image to your media. Reload the page and try again.');
     },
-    /** Permet de retirer un média par son adresse, comme unfavoriteMedia. */
+    /** Removes a media item by its address like unfavoriteMedia. */
     removeMedia: function (url) {
       return mediaWrite(function (store) { store.delete(url); }, 'BetterChatango could not remove this image from your media. Reload the page and try again.');
     },
-    /** Entrées brutes de la médiathèque, telles que les exporte BetterChatango (exportMedia). */
+    /** Raw media library entries as BetterChatango exports them (exportMedia). */
     exportMedia: function () {
       return mediaStore('readonly').then(function (store) {
         return requestResult(store.getAll()).catch(function (e) { warn(e); throw new Error('BetterChatango could not read your media library. Reload the page and try again.'); });
       });
     },
     /**
-     * Permet d'écrire les entrées valides d'un fichier de médiathèque de BetterChatango, par put comme importMedia.
-     * @param {Array} entries Contenu du fichier, non fiable.
-     * @returns {Promise<{added: number, skipped: number}>} Compte rendu une fois la transaction terminée.
+     * Writes the valid entries of a BetterChatango media library file by put like importMedia.
+     * @param {Array} entries File content, untrusted.
+     * @returns {Promise<{added: number, skipped: number}>} Count returned once the transaction completes.
      */
     importMedia: function (entries) {
       var screened = screenMediaEntries(entries);
@@ -1005,8 +1005,8 @@ var liveBridge = (function () {
         .then(function () { return { added: screened.valid.length, skipped: screened.skipped }; });
     },
     /**
-     * Recherche de membres comme le fait BetterChatango, puis demande de leur présence sur la connexion privée.
-     * Filtres : sexe M, F ou les deux ; photo réelle (1), personnage (2) ou les deux (0).
+     * Member search as BetterChatango does it followed by a presence request on the private connection.
+     * Filters: sex M, F or both, real photo (1), character (2) or both (0).
      */
     searchPeople: function (o) {
       return Promise.resolve().then(function () {
@@ -1032,7 +1032,10 @@ var liveBridge = (function () {
         throw new Error('Chatango sent an unexpected reply to the search.');
       });
     },
-    /** Mini profil public (mod1.xml), lu comme BetterChatango : âge depuis la date de naissance, genre, lieu, texte. */
+    /**
+     * Public mini profile (mod1.xml) read like BetterChatango.
+     * Fields: age from the birth date, gender, location and text.
+     */
     fetchProfile: function (name) {
       var n = lower(name);
       if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.reject(new Error('Guests have no profile.'));
@@ -1053,9 +1056,9 @@ var liveBridge = (function () {
       });
     },
     /**
-     * Permet de lire le fond de message Premium d'un membre (msgbg.xml), au plus une fois par délai de cache.
-     * @param {string} name Membre visé.
-     * @returns {Promise<?Object>} Fond lu par parseMsgBg, null pour un invité ou un membre sans fond.
+     * Reads the Premium message background of a member (msgbg.xml) at most once per cache delay.
+     * @param {string} name Target member.
+     * @returns {Promise<?Object>} Background read by parseMsgBg, null for a guest or a member without a background.
      */
     fetchMsgBg: function (name) {
       var n = lower(name);
@@ -1065,33 +1068,33 @@ var liveBridge = (function () {
       });
     },
     /**
-     * Permet de demander à vissle les comptes liés d'un compte, comme l'action who de BetterChatango (inject.js:7452-7477).
-     * @param {string} name Compte visé, jamais un invité.
-     * @returns {Promise<?Array>} Niveaux lus par parseWho, null pour une réponse illisible, rejetée si vissle est injoignable.
+     * Asks vissle for the linked accounts of an account like the BetterChatango who action (inject.js:7452-7477).
+     * @param {string} name Target account, never a guest.
+     * @returns {Promise<?Array>} Levels read by parseWho, null for an unreadable reply, rejected if vissle is unreachable.
      */
     fetchWho: function (name) {
       var n = lower(name);
       if (!ACCOUNT_NAME.test(n)) return Promise.reject(new Error('Guests have no account.'));
-      // Ni cache ni warn : la réponse n'est montrée qu'à l'utilisateur, jamais gardée ni journalisée (ADR-0010).
+      // No cache and no warn: the reply is only shown to the user, never kept or logged (ADR-0010).
       return fetch('https://vissle.me/api/v1/who/' + n).then(function (r) {
         return r.json().then(parseWho, function () { return null; });
       });
     },
     fetchFullProfile: fetchFullProfile,
     /**
-     * Permet de marquer lus les messages archivés d'un membre, comme BetterChatango à l'ouverture d'une conversation.
-     * @param {string} name Membre de la conversation.
+     * Marks the archived messages of a member read like BetterChatango when a conversation opens.
+     * @param {string} name Member of the conversation.
      */
     markPmRead: function (name) {
-      // Transaction créée après la pile en cours : BetterChatango n'archive un MP reçu qu'après l'émission de pm.
+      // Transaction created after the current stack: BetterChatango only archives a received PM after the pm op is emitted.
       return openPmDb().then(function (db) {
         if (db) return markRead(db, targetRange(name));
       }).catch(warn);
     },
     /**
-     * Permet de compter les MP non lus d'un correspondant dans l'historique privé, sans ses modifications, que BetterChatango archive à part.
-     * @param {string} name Correspondant.
-     * @returns {Promise<number>} Entrées non lues.
+     * Counts the unread PMs of a correspondent in the private history without the edits that BetterChatango archives separately.
+     * @param {string} name Correspondent.
+     * @returns {Promise<number>} Unread entries.
      */
     pmUnread: function (name) {
       return openPmDb().then(function (db) { return new Promise(function (resolve, reject) {
@@ -1108,27 +1111,27 @@ var liveBridge = (function () {
         tx.onabort = function () { reject(tx.error); };
       }); });
     },
-    /** Permet de savoir si ce navigateur garde l'historique privé de BetterChatango. */
+    /** Tells whether this browser keeps the BetterChatango private history. */
     pmArchived: function () { return openPmDb().then(function (db) { return !!db; }); },
-    /** Supprime l'historique que BetterChatango garde dans ce navigateur ; Chatango n'en conserve pas. */
+    /** Deletes the history that BetterChatango keeps in this browser. Chatango keeps none. */
     clearPmHistory: function (target) { try { C.private.clearHistory(target); return true; } catch (e) { warn(e); return false; } },
     /**
-     * Permet de retirer un MP de l'historique privé, comme l'entrée remove de BetterChatango, après avoir relu son enregistrement.
-     * @param {string} target Membre de la conversation.
-     * @param {{from: string, archiveTs: number, text: string, key: ?string}} entry Message affiché.
-     * @returns {Promise<boolean>} Vrai à la fin de la transaction qui l'a supprimé, faux si l'enregistrement n'est pas ce message ou sans base.
+     * Removes a PM from the private history like the BetterChatango remove entry after reading its record again.
+     * @param {string} target Member of the conversation.
+     * @param {{from: string, archiveTs: number, text: string, key: ?string}} entry Shown message.
+     * @returns {Promise<boolean>} True at the end of the transaction that deleted it, false if the record is not this message or without a database.
      */
     removePm: function (target, entry) {
       return openPmDb().then(function (db) { return new Promise(function (resolve) {
         if (!db) { resolve(false); return; }
         var removed = false, tx = db.transaction(['messages'], 'readwrite'), store = tx.objectStore('messages');
-        // Clé ts commune à tous les membres : après une collision, saveMessage archive une seconde plus tard et la clé de la trame désigne le MP d'un autre.
+        // ts key shared by all members: after a collision, saveMessage archives one second later and the frame key points to someone else's PM.
         store.get(entry.archiveTs).onsuccess = function (e) {
           var v = e.target.result, x = v && lower(v.target) === target && pmRecordEntry(v);
           if (!x || !isPmOf(x, entry)) return;
           store.delete(entry.archiveTs);
           removed = true;
-          // Original et modifications partagent la clé du MP : un seul enregistrement laissé ferait revenir le message au rechargement.
+          // The original and its edits share the PM key: a single record left behind would bring the message back on reload.
           if (entry.key) store.index('target_ts_idx').openCursor(targetRange(target)).onsuccess = function (ev) {
             var cur = ev.target.result, y = cur && pmRecordEntry(cur.value);
             if (!cur) return;
@@ -1140,16 +1143,16 @@ var liveBridge = (function () {
         tx.onabort = function () { resolve(false); };
       }); }).catch(function (e) { warn(e); return false; });
     },
-    /* Profil : lu dans les champs que BetterChatango remplit à la connexion, enregistré par client.post */
+    /* Profile: read from the fields that BetterChatango fills at sign-in, saved through client.post */
     readProfile: function () {
       var dir = document.querySelector('[data-setting="show_profile"] input');
-      // BetterChatango remplit ce champ en relisant mod2.xml après l'enregistrement, parfois depuis le cache HTTP.
+      // BetterChatango fills this field by reading mod2.xml again after the save, sometimes from the HTTP cache.
       var sent = fresh(fullProfileCache, lower(C.user && C.user.name));
       return {
         loaded: !!(C.user && C.user.avatar && typeof C.user.avatar === 'object' && document.querySelector('[data-text-field="age"]') && dir),
         age: readField('[data-text-field="age"]'), gender: readField('[data-text-field="gender"]'), location: readField('[data-text-field="location"]'),
         about: readField('[data-text-field="about"]'), full: sent ? sent.data : readField('[data-text-field="full"]'), dir: !!(dir && dir.checked),
-        // x0, y0 et ts de la dernière réponse de updateprofile, rangés par BetterChatango (setProfile, inject.js:4875-4878).
+        // x0, y0 and ts of the last updateprofile reply, stored by BetterChatango (setProfile, inject.js:4875-4878).
         crop: C.user && C.user.avatar && typeof C.user.avatar === 'object' ? { x0: +C.user.avatar.x0, y0: +C.user.avatar.y0, ts: +C.user.avatar.ts } : null
       };
     },
@@ -1157,14 +1160,14 @@ var liveBridge = (function () {
       return Promise.resolve().then(function () { return saveProfileNow(p); });
     },
     /**
-     * Permet d'envoyer sa photo de profil comme le formulaire avatar de BetterChatango (client.html:1283-1289), sans progress.
-     * @param {File} file Image choisie.
-     * @returns {Promise} Rejetée avec le texte à afficher sur toute autre réponse que pix.
+     * Uploads one's profile picture like the BetterChatango avatar form (client.html:1283-1289) without progress.
+     * @param {File} file Chosen image.
+     * @returns {Promise} Rejected with the text to show on any reply other than pix.
      */
     uploadAvatar: function (file) {
       return post(CH.path('updateprofile'), profileForm('fullpic', { Filedata: file }), {}).then(function (resp) {
         var kind = String(resp).split(':')[0];
-        // Seule réponse de succès connue : la branche progress de BetterChatango la traite sous ce nom (inject.js:4788).
+        // Only known success reply: the BetterChatango progress branch handles it under this name (inject.js:4788).
         if (kind === 'pix') { bumpAvatar(); return; }
         throw new Error(kind === 'unauthed' ? 'Your Chatango session expired. Reload the page and sign in again.'
           : kind === 'error' ? 'Chatango did not accept this picture. Try a smaller JPG or PNG.'
@@ -1172,8 +1175,8 @@ var liveBridge = (function () {
       }, busyOr('Your picture could not be uploaded. Try again.'));
     },
     /**
-     * Permet d'enregistrer la partie de la photo que montre la miniature, comme le recadrage de BetterChatango (inject.js:1390-1406).
-     * @param {{x0: number, y0: number, ts: number}} box Carré en pixels de full.jpg.
+     * Saves the part of the picture that the thumbnail shows like the BetterChatango cropping (inject.js:1390-1406).
+     * @param {{x0: number, y0: number, ts: number}} box Square in full.jpg pixels.
      */
     saveAvatarCrop: function (box) {
       return post(CH.path('updateprofile'), profileForm('thumb', { x0: Math.round(box.x0), y0: Math.round(box.y0), ts: Math.round(box.ts) }), {}).then(function (resp) {
@@ -1183,9 +1186,9 @@ var liveBridge = (function () {
       }, busyOr('Your crop could not be saved. Try again.'));
     },
     /**
-     * Permet d'enregistrer son fond Premium par le formulaire de fond de BetterChatango (inject.js:4900-4916, client.html:2279-2345).
-     * @param {Object} form Formulaire tel que le renvoie miniStyleForm.
-     * @param {boolean} dir Case « Appear in Meet people », que BetterChatango renvoie avec ce formulaire.
+     * Saves one's Premium background through the BetterChatango background form (inject.js:4900-4916 and client.html:2279-2345).
+     * @param {Object} form Form as returned by miniStyleForm.
+     * @param {boolean} dir "Appear in Meet people" checkbox, which BetterChatango sends with this form.
      */
     saveProfileStyle: function (form, dir) {
       var me = lower(C.user && C.user.name);
@@ -1196,7 +1199,7 @@ var liveBridge = (function () {
       if (dir) fields.dir = 'checked';
       return post(CH.path('updateprofile') + '?css', fields, {}).then(function (resp) {
         var data = profileReply(resp, ['age', 'sex', 'loc']);
-        // custom_profile.css peut revenir du cache HTTP : le cache local sert le fond envoyé.
+        // custom_profile.css can come back from the HTTP cache: the local cache serves the background sent.
         var prev = profileCache[me] ? profileCache[me].data : {};
         profileCache[me] = { at: Date.now(), data: Object.assign({}, prev, { mini: miniStyleOfForm(form) }) };
         return data;
@@ -1204,31 +1207,31 @@ var liveBridge = (function () {
     },
     setting: readSetting,
     /**
-     * Permet de lire la restriction des MP de son compte, un appel au plus par chargement de la page, après l'ouverture de la connexion privée.
-     * @returns {Promise<?string>} restricted, ok ou unknown, null sans appel si check_pmr est coupé ou illisible.
+     * Reads the PM restriction of one's account with at most one call per page load after the private connection opens.
+     * @returns {Promise<?string>} restricted, ok or unknown, null without a call if check_pmr is off or unreadable.
      */
     pmrStatus: function () {
       if (!readSetting('pmrCheck')) return Promise.resolve(null);
       if (!pmrCheck) pmrCheck = (pmOpen() ? Promise.resolve() : new Promise(function (resolve) { pmrConnected = resolve; })).then(function () {
         if (readSetting('pmrCheck')) return fetchPmr();
-        // Réglage coupé en attendant la connexion privée : aucun appel, la demande suivante repart de zéro.
+        // Setting turned off while waiting for the private connection: no call, the next request starts from scratch.
         pmrCheck = null;
         return null;
       });
       return pmrCheck;
     },
     /**
-     * Permet de lire les réglages de démarrage de BetterChatango.
-     * @returns {?Object} Les trois interrupteurs, null si les réglages de BetterChatango sont illisibles.
+     * Reads the BetterChatango startup settings.
+     * @returns {?Object} The three switches, null if the BetterChatango settings are unreadable.
      */
     startupSettings: function () {
       var out = {};
       return ['joinOwned', 'joinRecent', 'joinFavorites'].every(function (k) { out[k] = readSetting(k); return out[k] !== null; }) ? out : null;
     },
     /**
-     * Permet d'enregistrer un interrupteur dans les réglages de BetterChatango, en place puis sous la clé settings.
-     * @param {string} key Clé de SETTINGS.
-     * @param {boolean} value Nouvelle valeur.
+     * Saves a switch in the BetterChatango settings in place and under the settings key.
+     * @param {string} key SETTINGS key.
+     * @param {boolean} value New value.
      */
     setSetting: function (key, value) {
       var p = SETTINGS[key];
@@ -1239,14 +1242,14 @@ var liveBridge = (function () {
       } catch (e) { warn(e); return false; }
     },
     /**
-     * Permet de lire les réglages de son que BetterChatango applique.
-     * @returns {?Object} Interrupteurs et volumes de 0 à 100, null si les réglages de BetterChatango sont illisibles.
+     * Reads the sound settings that BetterChatango applies.
+     * @returns {?Object} Switches and volumes from 0 to 100, null if the BetterChatango settings are unreadable.
      */
     betterChatangoSounds: readSounds,
     /**
-     * Permet d'enregistrer un réglage de son dans les réglages de BetterChatango, relus à chaque son.
-     * @param {string} key Clé de SOUND_KEYS.
-     * @param {boolean|number} value Interrupteur, ou volume de 0 à 100.
+     * Saves a sound setting in the BetterChatango settings that are read again on each sound.
+     * @param {string} key SOUND_KEYS key.
+     * @param {boolean|number} value Switch, or volume from 0 to 100.
      */
     setBetterChatangoSound: function (key, value) {
       if (SOUND_KEYS.indexOf(key) < 0) return false;
@@ -1257,58 +1260,58 @@ var liveBridge = (function () {
       } catch (e) { warn(e); return false; }
     },
     /**
-     * Permet de jouer un son de BetterChatango à son volume réglé, comme BetterChatango.
-     * @param {string} kind mention ou online.
-     * @returns {Promise} Rejetée si le navigateur refuse la lecture.
+     * Plays a BetterChatango sound at its set volume like BetterChatango.
+     * @param {string} kind mention or online.
+     * @returns {Promise} Rejected if the browser refuses playback.
      */
     playBetterChatangoSound: playSound,
     /**
-     * Permet de lire les groupes favoris de BetterChatango.
-     * @returns {?Array<string>} Noms des groupes, null si les réglages de BetterChatango sont illisibles.
+     * Reads the BetterChatango favorite groups.
+     * @returns {?Array<string>} Group names, null if the BetterChatango settings are unreadable.
      */
     favoriteGroups: function () { return readList('favorite'); },
     /**
-     * Permet d'ajouter ou de retirer un groupe des favoris de BetterChatango.
-     * @param {string} gid Groupe visé.
-     * @param {boolean} on Vrai pour l'ajouter.
+     * Adds or removes a group from the BetterChatango favorites.
+     * @param {string} gid Target group.
+     * @param {boolean} on True to add it.
      */
     setFavorite: function (gid, on) { return writeList('favorite', gid, on); },
     /**
-     * Permet de lire les groupes coupés dans BetterChatango, dont il tait les mentions.
-     * @returns {?Array<string>} Noms des groupes, null si les réglages de BetterChatango sont illisibles.
+     * Reads the groups muted in BetterChatango whose mentions it silences.
+     * @returns {?Array<string>} Group names, null if the BetterChatango settings are unreadable.
      */
     mutedGroups: function () { return readList('muted'); },
     /**
-     * Permet de couper ou de rétablir un groupe dans BetterChatango.
-     * @param {string} gid Groupe visé.
-     * @param {boolean} on Vrai pour le couper.
+     * Mutes or unmutes a group in BetterChatango.
+     * @param {string} gid Target group.
+     * @param {boolean} on True to mute it.
      */
     setMuted: function (gid, on) { return writeList('muted', gid, on); },
     /**
-     * Permet de lire les membres ignorés dans BetterChatango, dont il tait les alertes.
-     * @returns {?Array<string>} Noms en minuscules, null si les réglages de BetterChatango sont illisibles.
+     * Reads the members ignored in BetterChatango whose alerts it silences.
+     * @returns {?Array<string>} Lowercase names, null if the BetterChatango settings are unreadable.
      */
     ignoredUsers: function () { return readList('ignored'); },
     /**
-     * Permet d'ignorer un membre dans BetterChatango ou de ne plus l'ignorer.
-     * @param {string} name Membre visé.
-     * @param {boolean} on Vrai pour l'ignorer.
+     * Ignores or stops ignoring a member in BetterChatango.
+     * @param {string} name Target member.
+     * @param {boolean} on True to ignore them.
      */
     setIgnored: function (name, on) { return writeList('ignored', lower(name), on); },
     /**
-     * Permet de lire les hôtes de confiance de BetterChatango, dont il ouvre les liens sans avertir.
-     * @returns {?Array<string>} Hôtes en minuscules, null si les réglages de BetterChatango sont illisibles.
+     * Reads the BetterChatango trusted hosts whose links it opens without a warning.
+     * @returns {?Array<string>} Lowercase hosts, null if the BetterChatango settings are unreadable.
      */
     trustedHosts: function () { var list = readList('trusted'); return list && list.map(lower); },
     /**
-     * Permet d'ajouter un hôte aux hôtes de confiance de BetterChatango ou de l'en retirer.
-     * @param {string} host Hôte en minuscules, sans schéma ni chemin.
-     * @param {boolean} on Vrai pour l'ajouter.
+     * Adds a host to the BetterChatango trusted hosts or removes it.
+     * @param {string} host Lowercase host, without scheme or path.
+     * @param {boolean} on True to add it.
      */
     setTrustedHost: function (host, on) { return writeList('trusted', host, on); },
     /**
-     * Permet de lire l'activité de son propre profil enregistrée par vissle.me.
-     * @param {{page: number, order: string, get: string}} q Curseur, ordre et filtre de la page demandée.
+     * Reads the activity of one's own profile recorded by vissle.me.
+     * @param {{page: number, order: string, get: string}} q Cursor, order and filter of the requested page.
      */
     visitors: function (q) {
       return new Promise(function (resolve, reject) {
@@ -1318,13 +1321,13 @@ var liveBridge = (function () {
       });
     },
     /**
-     * Permet d'envoyer un fichier chez vissle comme la fenêtre Upload de BetterChatango, sans que BetterChatango en publie le lien.
-     * @param {File} file Fichier choisi.
-     * @returns {Promise<string>} Lien https://vissle.me/{chemin}, rejetée avec le texte à afficher sur toute autre réponse.
+     * Uploads a file to vissle like the BetterChatango Upload dialog without BetterChatango posting its link.
+     * @param {File} file Chosen file.
+     * @returns {Promise<string>} Link https://vissle.me/{path}, rejected with the text to show on any other reply.
      */
     uploadFile: function (file) {
       var failed = 'The file could not be uploaded. Try again.';
-      // Jamais progress : cette branche de BetterChatango publie elle-même le lien dans client.focus.
+      // Never progress: this BetterChatango branch posts the link in client.focus itself.
       return post('https://vissle.me/chatango/upload', { filedata: file }, { key: true }).then(function (resp) {
         var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
         if (path) return 'https://vissle.me/' + path[1];
@@ -1337,9 +1340,9 @@ var liveBridge = (function () {
   };
 
   /**
-   * Permet de lire le profil complet d'un membre (mod2.xml), HTML à n'afficher que dans un cadre isolé.
-   * @param {string} name Membre visé.
-   * @returns {Promise<string>} Chaîne vide si le fichier manque, rejetée sur une erreur serveur.
+   * Reads the full profile of a member (mod2.xml) as HTML to show only in an isolated frame.
+   * @param {string} name Target member.
+   * @returns {Promise<string>} Empty string if the file is missing, rejected on a server error.
    */
   function fetchFullProfile(name) {
       var n = lower(name);
@@ -1347,7 +1350,7 @@ var liveBridge = (function () {
       var hit = fresh(fullProfileCache, n);
       if (hit) return Promise.resolve(hit.data);
       return fetch(CH.subdomain.mod2(n)).then(function (r) {
-        // Erreur serveur rejetée : lue comme profil vide, elle effacerait le profil complet au prochain enregistrement.
+        // Server error rejected: read as an empty profile, it would erase the full profile on the next save.
         if (r.status >= 500) throw new Error('Chatango returned HTTP ' + r.status + ' for mod2.xml.');
         return r.ok ? r.text() : '';
       }).then(function (xml) {
@@ -1356,17 +1359,17 @@ var liveBridge = (function () {
       });
   }
   /**
-   * Permet de préparer les champs communs aux formulaires updateprofile de BetterChatango.
-   * @param {string} action update, fullpic ou thumb.
-   * @param {Object} extra Champs propres au formulaire.
+   * Prepares the fields shared by the BetterChatango updateprofile forms.
+   * @param {string} action update, fullpic or thumb.
+   * @param {Object} extra Fields specific to the form.
    */
   function profileForm(action, extra) {
     return Object.assign({ auth: 'token', arch: 'h5', src: 'group', action: action }, extra);
   }
   /**
-   * Permet de valider une réponse de updateprofile puis de la confier à BetterChatango comme il le fait (setProfile).
-   * @param {string} resp Texte renvoyé par Chatango.
-   * @param {string[]} keys Clés dont l'une au moins prouve une réponse de profil.
+   * Validates an updateprofile reply and hands it to BetterChatango the way it does (setProfile).
+   * @param {string} resp Text returned by Chatango.
+   * @param {string[]} keys Keys of which at least one proves a profile reply.
    */
   function profileReply(resp, keys) {
     var data = parseProfileReply(resp);
@@ -1376,20 +1379,20 @@ var liveBridge = (function () {
     return data;
   }
   /**
-   * Permet de traduire l'échec d'un client.post en texte à afficher.
-   * @param {string} failed Texte d'un échec réseau.
+   * Turns a client.post failure into text to show.
+   * @param {string} failed Text of a network failure.
    */
   function busyOr(failed) {
     return function (e) {
       warn(e);
-      // BetterChatango refuse une requête tant qu'une autre est en cours en rejetant avec l'URL de celle-ci, une chaîne.
+      // BetterChatango refuses a request while another one is in progress by rejecting with that request's URL, a string.
       throw new Error(typeof e === 'string' ? 'BetterChatango is busy with another request. Try again in a moment.' : failed);
     };
   }
   function bumpAvatar() { AVATAR_VERSION[lower(C.user && C.user.name)] = Date.now(); }
   function saveProfileNow(p) {
       var me = lower(C.user && C.user.name), sentFull;
-      // Chaîne vide envoyée telle quelle : seul un profil complet inconnu de la page est relu chez Chatango.
+      // Empty string sent as is: only a full profile unknown to the page is read again from Chatango.
       var full = p.full != null ? Promise.resolve(p.full) : fetchFullProfile(me).catch(function () { return null; });
       return full.then(function (fullText) {
         if (fullText === null) throw new Error('Your full profile could not be read. Nothing was saved.');
@@ -1399,14 +1402,14 @@ var liveBridge = (function () {
         return post(CH.path('updateprofile'), fields, {});
       }).then(function (resp) {
         var data = profileReply(resp, ['age', 'sex', 'loc']);
-        // mod1.xml et mod2.xml peuvent revenir du cache HTTP sans la version enregistrée : le cache local sert la version envoyée.
+        // mod1.xml and mod2.xml can come back from the HTTP cache without the saved version: the local cache serves the version sent.
         var prev = profileCache[me] ? profileCache[me].data : {};
         profileCache[me] = { at: Date.now(), data: Object.assign({}, prev, { missing: false, age: String(p.age), gender: GENDERS[p.gender] || '', location: p.location, about: p.about }) };
         fullProfileCache[me] = { at: Date.now(), data: sentFull };
         return data;
       });
   }
-  /** Création de groupe par le formulaire Chatango de BetterChatango (mêmes champs, case « discovery » comprise). */
+  /** Group creation through the BetterChatango Chatango form with the same fields and the "discovery" checkbox. */
   function createGroupNow(o) {
       var me = lower(C.user && C.user.name);
       var fields = { authType: 'cookie', uns: '0', u: o.name, n: o.title, d: o.description, owner: me };

@@ -3,17 +3,17 @@ status: accepted
 date: 2026-10
 ---
 
-# Visiteurs : seulement son propre profil
+# Visitors: own profile only
 
-## Contexte
+## Context
 
-Le tracker vissle (`track1/activity`) n'a pas d'authentification : il répond pour n'importe quel profil. BetterChatango propose déjà la fonction de façon native pour le compte connecté : l'utilisateur installe le tracker par « Add profile tracker », et le panneau « track » de BetterChatango l'affiche. Consulter l'activité du profil d'un autre membre serait de la surveillance de tiers.
+The vissle tracker (`track1/activity`) has no authentication: it answers for any profile. BetterChatango already offers the feature natively for the signed-in account: the user installs the tracker through "Add profile tracker", and BetterChatango's "track" panel shows it. Looking up the activity of another member's profile would be surveillance of third parties.
 
-## Décision
+## Decision
 
-La section Visitors n'affiche que l'activité du profil de l'utilisateur connecté, comme BetterChatango. Le pont du loader ignore tout `profile` envoyé par la page et lit `client.user.name` dans la session BetterChatango. Aucune consultation de l'activité d'un autre profil n'est ajoutée.
+The Visitors section shows only the activity of the signed-in user's profile, like BetterChatango. The loader bridge ignores any `profile` sent by the page and reads `client.user.name` from the BetterChatango session. No lookup of another profile's activity is added.
 
-## Conséquences
+## Consequences
 
-- Même un code page compromis ne peut pas interroger un autre profil par le pont.
-- La section reste vide tant que l'utilisateur n'a pas installé le tracker.
+- Even compromised page code cannot query another profile through the bridge.
+- The section stays empty until the user has installed the tracker.

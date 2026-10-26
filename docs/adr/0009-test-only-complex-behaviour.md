@@ -3,17 +3,17 @@ status: accepted
 date: 2026-10
 ---
 
-# Tests : seulement le comportement complexe
+# Tests: complex behaviour only
 
-## Contexte
+## Context
 
-La règle précédente demandait un cas de test pour chaque correctif. L'utilisateur a choisi de limiter les tests au comportement complexe. Un test qui fige un détail d'interface coûte en maintenance sans protéger de comportement réel.
+The previous rule required a test case for every fix. The user chose to limit tests to complex behaviour. A test that freezes a UI detail costs maintenance without protecting any real behaviour.
 
-## Décision
+## Decision
 
-Un test ne s'écrit que pour un comportement complexe : format exact d'une trame, pagination, présence, fusion de l'historique, démarrage du loader, assainissement du contenu des membres. Chaque nouveau test est vu en échec avant le code qu'il protège. Pas de test par correctif par défaut.
+A test is written only for complex behaviour: exact format of a frame, pagination, presence, history merge, loader startup, sanitizing of member content. Every new test is seen failing before the code it protects. No test per fix by default.
 
-## Conséquences
+## Consequences
 
-- Remplace la règle « un cas de test pour chaque correctif » de l'ancien document de passation.
-- Un correctif simple se vérifie par les suites existantes et par l'utilisateur dans Tampermonkey.
+- Replaces the "one test case for every fix" rule of the former handover document.
+- A simple fix is checked by the existing suites and by the user in Tampermonkey.

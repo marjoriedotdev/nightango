@@ -1,13 +1,13 @@
 var UNSTYLED = { names: false, fonts: false, backgrounds: false };
 
 /**
- * Permet de calculer le style Chatango d'une ligne de message, lisible sur son fond.
- * Un membre au style coupé est rendu comme si les trois réglages étaient coupés pour lui seul, et son emphase retombe (plain).
- * @param {{style: ?Object, unstyled: ?boolean}} u Membre, avec son style et son style coupé.
- * @param {Object} styles Réglages « Chatango styles ».
- * @param {string} theme Thème résolu.
- * @param {boolean} mention Ligne qui mentionne l'utilisateur.
- * @param {?Object} [msgBg] Fond de message Premium lu par parseMsgBg, en live.
+ * Computes the Chatango style of a message row, readable on its background.
+ * A member with a hidden style renders as if the three settings were off for them alone, and their emphasis drops (plain).
+ * @param {{style: ?Object, unstyled: ?boolean}} u Member, with their style and hidden style flag.
+ * @param {Object} styles "Chatango styles" settings.
+ * @param {string} theme Resolved theme.
+ * @param {boolean} mention Row that mentions the user.
+ * @param {?Object} [msgBg] Premium message background read by parseMsgBg, in live.
  */
 function memberStyles(u, styles, theme, mention, msgBg) {
   var style = u.style || {};
@@ -25,7 +25,7 @@ function memberStyles(u, styles, theme, mention, msgBg) {
   if (styles.fonts) {
     if (style.font) out.text = Object.assign({}, out.text, { fontFamily: FONT_STACKS[style.font] || style.font });
     if (style.textColor) out.text = Object.assign({}, out.text, { color: ensureContrast(style.textColor, bg, 4.5) });
-    // Un pourcentage serait calculé sur le parent : la taille multiplie --msg-size, posée sur le même élément.
+    // A percentage would be computed on the parent: the size multiplies --msg-size, set on the same element.
     if (style.fontSize) out.text = Object.assign({}, out.text, { fontSize: 'calc(var(--msg-size, 14px) * ' + style.fontSize / 100 + ')' });
   }
   return out;
@@ -41,10 +41,10 @@ function MessageRow(p) {
   useEffect(function () { if (m.bg && prefs.styles.backgrounds && !u.unstyled && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, u.unstyled, bgUnknown]);
   var bgImage = ms.image && prefs.safety.embedImages && !prefs.safety.proxyMedia ? h(MessageBgImage, ms.image) : null;
   var role = roleOf(g, m.author), myRole = roleOf(g, me);
-  // Chatango ne laisse supprimer et bannir qu'au staff, à partir d'un message reçu du serveur.
+  // Chatango lets only staff delete and ban, from a message received from the server.
   var canDelete = isStaffRole(myRole);
   var canBan = canBanMember(g, me, m.author) && (!LIVE || !!m.unid);
-  // Comme la réponse, la modification attend l'identifiant définitif du message.
+  // Like a reply, an edit waits for the message's final id.
   var canEdit = m.author === me && (!LIVE || liveBridge.delivered(m.id));
   var handle = m.author !== me ? mentionHandle(m.author) : null;
   var showIp = LIVE && m.ip && groupRights(g, me).seeIps;
@@ -88,8 +88,8 @@ function MessageRow(p) {
 }
 
 /**
- * Permet de proposer la copie du texte d'un message, en groupe comme en MP.
- * @param {Object} app Contexte de l'application.
+ * Offers to copy a message's text in a group or a PM.
+ * @param {Object} app Application context.
  * @param {Object} m Message.
  */
 function copyTextItem(app, m) {
@@ -97,19 +97,19 @@ function copyTextItem(app, m) {
 }
 
 /**
- * Bouton « More actions » de la barre d'un message.
- * @param {Array} items Entrées du menu.
- * @param {function(boolean)} onOpenChange Suivi de l'ouverture, qui garde la barre affichée.
+ * "More actions" button of a message toolbar.
+ * @param {Array} items Menu entries.
+ * @param {function(boolean)} onOpenChange Open state tracking, which keeps the toolbar shown.
  */
 function moreActionsButton(items, onOpenChange) {
   return h(MenuButton, { label: 'More actions', size: 28, iconSize: 16, items: items, onOpenChange: onOpenChange });
 }
 
 /**
- * Image du fond de message Premium d'un membre, derrière le texte de la ligne.
- * @param {string} p.src Adresse de msgbg.jpg.
- * @param {number} p.opacity Opacité choisie par le membre, jamais augmentée.
- * @param {string} p.position Coin de l'image en position CSS.
+ * Image of a member's Premium message background behind the row text.
+ * @param {string} p.src Address of msgbg.jpg.
+ * @param {number} p.opacity Opacity chosen by the member, never raised.
+ * @param {string} p.position Image corner as a CSS position.
  */
 function MessageBgImage(p) {
   var st = useState(false), broken = st[0], setBroken = st[1];
@@ -118,33 +118,34 @@ function MessageBgImage(p) {
 }
 
 /**
- * Permet d'obtenir le nom à écrire après @ pour mentionner un membre, ou null pour un anonyme.
- * @param {string} name Nom affiché du membre.
+ * Returns the name to write after @ to mention a member, or null for an anon.
+ * @param {string} name Shown member name.
  */
 function mentionHandle(name) {
-  // Comme BetterChatango : un nom temporaire « #nom » se mentionne sans son #.
+  // Like BetterChatango: a temporary name "#name" is mentioned without its #.
   if (name.charAt(0) === '#') return name.slice(1);
   return name.charAt(0) === '!' ? null : name;
 }
 
 /**
- * Permet d'écrire la citation d'un message au format de BetterChatango, en texte brut, à placer avant le texte saisi.
- * @param {Object} m Message cité, avec du texte et un auteur mentionnable.
+ * Writes a message quote in BetterChatango's plain text format, to place before the typed text.
+ * @param {Object} m Quoted message, with text and a mentionable author.
  */
 function quoteOf(m) {
   return '@' + mentionHandle(m.author) + ': `' + m.text.replace(/`/g, '').replace(/\n/g, ' ').trim() + '` ';
 }
 
 /**
- * Permet d'obtenir l'identifiant que vise la modification d'un message : celui de l'original pour une modification affichée à part.
- * @param {Object} m Message modifié.
+ * Returns the id an edit of a message targets.
+ * For an edit shown separately, it is the id of the original.
+ * @param {Object} m Edited message.
  */
 function editedId(m) { return m.editId || m.id; }
 
 /**
- * Nom de l'auteur d'un message, sans action.
- * @param {string} name Nom du membre.
- * @param {?Object} style Couleur du nom choisie par le membre.
+ * Author name of a message, without action.
+ * @param {string} name Member name.
+ * @param {?Object} style Name color chosen by the member.
  */
 function authorName(name, style) {
   return h('span', { className: 'tc-msg-author', style: style }, name);
@@ -164,22 +165,22 @@ function MessageEmbeds(p) {
 }
 
 /**
- * Permet de construire un lien de média qui passe par l'avertissement de lien.
- * @param {Object} app Contexte de l'application.
- * @param {string} url Adresse ouverte.
- * @param {string} className Classe du lien.
- * @param {*} content Contenu du lien.
+ * Builds a media link that goes through the link warning.
+ * @param {Object} app Application context.
+ * @param {string} url Opened address.
+ * @param {string} className Link class.
+ * @param {*} content Link content.
  */
 function mediaLink(app, url, className, content) {
   return h('a', { className: className, href: url, target: '_blank', rel: 'noopener noreferrer', onClick: warnOnLink(app, url) }, content);
 }
 
 /**
- * Bouton qui charge un média au clic, suivi de l'hôte qui le sert.
- * @param {string} p.icon Icône du média.
- * @param {string} p.label Action du bouton.
- * @param {string} p.url Adresse du média.
- * @param {Function} p.onClick Chargement du média.
+ * Button that loads a media on click, followed by the host that serves it.
+ * @param {string} p.icon Media icon.
+ * @param {string} p.label Button action.
+ * @param {string} p.url Media address.
+ * @param {Function} p.onClick Loads the media.
  */
 function RevealButton(p) {
   var host = httpsHost(p.url);
@@ -203,9 +204,10 @@ function VideoEmbed(p) {
 }
 
 /**
- * Fichier vidéo ou audio d'un hôte quelconque, dont le lecteur n'existe qu'après le clic, sauf hôte de confiance où il ne démarre pas seul.
- * @param {string} p.kind video ou audio.
- * @param {string} p.url Adresse https du fichier.
+ * Video or audio file from any host, whose player exists only after the click.
+ * On a trusted host the player exists right away but does not start on its own.
+ * @param {string} p.kind video or audio.
+ * @param {string} p.url https address of the file.
  */
 function FileEmbed(p) {
   var app = useApp(), safety = app.state.prefs.safety, media = FILE_MEDIA[p.kind];

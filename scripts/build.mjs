@@ -7,7 +7,7 @@ import { transform } from 'esbuild';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
-// L'ordre compte : les fichiers partagent la portée unique de l'IIFE de l'application.
+// Order matters: the files share the single scope of the application IIFE.
 export const APP_SOURCES = [
   'core/globals.js',
   'core/util.js',
@@ -65,29 +65,29 @@ export const APP_SOURCES = [
 ];
 
 /**
- * Permet de lister les sources d'une couche.
- * @param {string} layer Dossier de src.
+ * Lists the sources of a layer.
+ * @param {string} layer Folder of src.
  */
 export function layerSources(layer) {
   return APP_SOURCES.filter((file) => file.startsWith(layer + '/'));
 }
 
 /**
- * Permet de concaténer des sources de l'application.
- * @param {string} root Racine du dépôt.
- * @param {string[]} files Chemins relatifs à src.
+ * Concatenates application sources.
+ * @param {string} root Repository root.
+ * @param {string[]} files Paths relative to src.
  */
 export function concatSources(root, files) {
   return files.map((file) => readFileSync(join(root, 'src', file), 'utf8')).join('\n');
 }
 
-// -- Notes de version ---------------------------------------------------------
+// -- Release notes ------------------------------------------------------------
 
 const CHANGE_TYPES = new Set(['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security']);
 
 /**
- * Permet de lire les notes de version de CHANGELOG.md, la plus récente d'abord.
- * @param {string} text Contenu de CHANGELOG.md.
+ * Reads the release notes of CHANGELOG.md newest first.
+ * @param {string} text Content of CHANGELOG.md.
  */
 function parseChangelog(text) {
   const releases = [];
@@ -117,16 +117,16 @@ function parseChangelog(text) {
   return releases;
 }
 
-// -- Jetons du design system --------------------------------------------------
+// -- Design system tokens -----------------------------------------------------
 
 const OVERRIDE = new Set(['accent-text', 'accent-soft', 'focus-ring']);
 const ACCENT_DEFAULTS = '--accent-text-d: #f27a3f; --accent-text-l: #964c27; ' +
   '--accent-soft-d: rgba(242, 122, 63, 0.12); --accent-soft-l: rgba(242, 122, 63, 0.14);';
 
 /**
- * Permet de déclarer les variables d'un thème.
- * @param {object} tokens Contenu de tokens.json.
- * @param {string} theme dark ou light.
+ * Declares the variables of a theme.
+ * @param {object} tokens Content of tokens.json.
+ * @param {string} theme dark or light.
  */
 function themeBlock(tokens, theme) {
   const valueOf = (v) => (typeof v === 'object' ? v[theme] : v);
@@ -141,12 +141,12 @@ function themeBlock(tokens, theme) {
 }
 
 /**
- * Permet de déclarer les jetons sous une racine, sombre d'abord.
- * @param {object} tokens Contenu de tokens.json.
- * @param {string} root Sélecteur qui porte les jetons.
- * @param {string} auto Sélecteur qui suit le thème clair du système.
- * @param {string} light Sélecteur du thème clair choisi.
- * @param {string} dark Sélecteur du thème sombre choisi.
+ * Declares the tokens under a root with dark first.
+ * @param {object} tokens Content of tokens.json.
+ * @param {string} root Selector that holds the tokens.
+ * @param {string} auto Selector that follows the system light theme.
+ * @param {string} light Selector of the chosen light theme.
+ * @param {string} dark Selector of the chosen dark theme.
  */
 function themeRules(tokens, root, auto, light, dark) {
   const statics = [];
@@ -159,20 +159,20 @@ function themeRules(tokens, root, auto, light, dark) {
 }
 
 /**
- * Permet de produire la feuille des jetons.
- * @param {object} tokens Contenu de tokens.json.
+ * Produces the token stylesheet.
+ * @param {object} tokens Content of tokens.json.
  */
 function tokensCss(tokens) {
   return '/* Torch tokens, dark first: generated from the Torch design system */\n' +
     themeRules(tokens, ':root', ':root:not([data-theme="dark"])', ':root[data-theme="light"]', ':root[data-theme="dark"]');
 }
 
-// -- Polices ------------------------------------------------------------------
+// -- Fonts --------------------------------------------------------------------
 
 const FONTS_DIR = join(ROOT, 'torchds', 'project', 'fonts');
 
 /**
- * Permet de produire la feuille des polices avec les fichiers embarqués.
+ * Produces the font stylesheet with the embedded files.
  */
 function embeddedFontsCss() {
   return readFileSync(join(FONTS_DIR, 'fonts.css'), 'utf8')
@@ -190,19 +190,19 @@ const SHADOW_SELECTORS = [
 const JSON_ESCAPES = { '\\': '\\\\', '"': '\\"', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t' };
 
 /**
- * Permet d'écrire un littéral de chaîne JSON limité à l'ASCII.
- * @param {string} text Texte à encoder.
+ * Writes a JSON string literal limited to ASCII.
+ * @param {string} text Text to encode.
  */
 function jsonString(text) {
-  // Tout caractère hors ASCII imprimable devient une séquence \u : U+2028 et U+2029 casseraient le littéral injecté.
+  // Every character outside printable ASCII becomes a \u sequence: U+2028 and U+2029 would break the injected literal.
   return '"' + text.replace(/[\\"]|[^ -~]/g, (c) => JSON_ESCAPES[c] ?? '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')) + '"';
 }
 
 /**
- * Permet d'adapter une feuille de style au Shadow DOM du userscript.
- * @param {string} tokens Feuille des jetons.
- * @param {string} bundle Feuille des composants du design system.
- * @param {string} app Feuille de l'application.
+ * Adapts a stylesheet to the userscript Shadow DOM.
+ * @param {string} tokens Token stylesheet.
+ * @param {string} bundle Stylesheet of the design system components.
+ * @param {string} app Application stylesheet.
  */
 function skinCss(tokens, bundle, app) {
   const shadowTokens = SHADOW_SELECTORS.reduce((css, [from, to]) => css.replaceAll(from, () => to), tokens);
@@ -225,20 +225,20 @@ const MINIFIED = {
 };
 
 /**
- * Permet d'assembler le userscript.
- * @param {object} source Gabarits et contenus à insérer.
- * @param {{ js: Function, css: Function }} pack Transformation du code et des feuilles.
+ * Assembles the userscript.
+ * @param {object} source Templates and content to insert.
+ * @param {{ js: Function, css: Function }} pack Transform of the code and the stylesheets.
  */
 async function userscript(source, pack) {
   const [css, fontsCss] = await Promise.all([pack.css(source.css), pack.css(source.fontsCss)]);
-  // Le code page devient un littéral de chaîne, exécuté par un <script> en textContent : jamais analysé comme HTML.
+  // The page code becomes a string literal run by a <script> through textContent: never parsed as HTML.
   const page = await pack.js(source.page
     .replaceAll('/*CSS*/', () => jsonString(css))
     .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
     .replaceAll('/*JOURNAL*/', () => source.journalJs)
     .replaceAll('/*BUNDLE*/', () => source.bundleJs)
     .replaceAll('/*APP*/', () => source.appJs));
-  // Tampermonkey lit l'en-tête tel quel : il reste hors de la transformation.
+  // Tampermonkey reads the header as is: it stays out of the transform.
   const header = /^[\s\S]*?\/\/ ==\/UserScript==\r?\n/.exec(source.loader)[0];
   const notice = `/*\nFonts embedded in this script: Geist, Geist Mono and Instrument Serif.\n\n${source.fontsLicense}*/\n`;
   return header + notice + await pack.js(source.loader.slice(header.length).replaceAll('/*PAGE*/', () => jsonString(page)));
@@ -247,17 +247,17 @@ async function userscript(source, pack) {
 // -- Build --------------------------------------------------------------------
 
 /**
- * Permet de lire un fichier texte du dépôt.
- * @param {...string} parts Chemin relatif à la racine.
+ * Reads a text file of the repository.
+ * @param {...string} parts Path relative to the root.
  */
 function read(...parts) {
   return readFileSync(join(ROOT, ...parts), 'utf8');
 }
 
 /**
- * Permet d'écrire un livrable dans dist.
- * @param {string} name Nom du fichier.
- * @param {string} content Contenu du fichier.
+ * Writes a deliverable into dist.
+ * @param {string} name File name.
+ * @param {string} content File content.
  */
 function emit(name, content) {
   const path = join(ROOT, 'dist', name);

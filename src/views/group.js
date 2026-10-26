@@ -1,7 +1,7 @@
-/* ---------- Groupe ---------- */
-// BetterChatango refuse la dixième modification d'un message.
+/* ---------- Group ---------- */
+// BetterChatango rejects the tenth edit of a message.
 var EDIT_MAX = 9;
-// Limite de BetterChatango pour un groupe, comptée sur le corps qu'il construit et non sur le texte saisi.
+// BetterChatango's limit for a group, counted on the body it builds and not on the typed text.
 var GROUP_MESSAGE_MAX = 2900;
 var COMPOSER_MODES = {
   reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply' },
@@ -25,11 +25,11 @@ function GroupView(p) {
   var log = useMessageLog();
   var count = g ? g.messages.length : 0;
   var q = search ? search.trim().toLowerCase() : '';
-  // Saut demandé par la page Mentions : jumpTo, déclarée plus bas, refuse un message que le fil masque.
+  // Jump asked by the Mentions page: jumpTo, declared below, refuses a message the log hides.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m) : null;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
-  // Style comparé en texte : update clone tout l'état, l'objet change à chaque mise à jour.
+  // Style compared as text: update clones the whole state, so the object changes on every update.
   var measured = useMemo(function () {
     return LIVE ? liveBridge.measure(p.gid, typed, { replyId: replyId, editId: editId, quote: quoted, style: s.ownStyle }) : typed.length;
   }, [p.gid, typed, replyId, editId, quoted, JSON.stringify(s.ownStyle)]);
@@ -41,10 +41,10 @@ function GroupView(p) {
   var online = LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length;
   var ann = g.settings.announcement;
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
-  // Le canal d'envoi n'est jamais masqué, même s'il reste dans la liste gardée.
+  // The sending channel is never hidden, even if it stays in the stored list.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
 
-  // Comme BetterChatango : la mention s'ajoute en fin de brouillon.
+  // Like BetterChatango: the mention is added at the end of the draft.
   function mention(handle) {
     setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
     if (inputRef.current) inputRef.current.focus();
@@ -53,20 +53,20 @@ function GroupView(p) {
   function completeMention(e) {
     var el = e.target, c = completion.current;
     if (e.key !== 'Tab' || e.shiftKey || e.nativeEvent.isComposing) { endCompletion(); return; }
-    // Un seul nom : rien à faire défiler, le Tab suivant rend la main à la navigation.
+    // A single name: nothing to cycle through, the next Tab goes back to navigation.
     if (c && c.names.length === 1) { endCompletion(); return; }
     if (!c) {
       var caret = el.selectionEnd, word = el.selectionStart === caret && /(?:^|\s)@([A-Za-z0-9_-]{1,20})$/.exec(el.value.slice(0, caret));
       var names = word ? mentionCandidates(g, me, word[1]) : [];
       if (!names.length) return;
-      // Comme BetterChatango, l'espace qui suit déjà le mot est remplacée avec lui.
+      // Like BetterChatango, the space that already follows the word is replaced with it.
       c = completion.current = { start: caret - word[1].length - 1, end: caret + (el.value.charAt(caret) === ' ' ? 1 : 0), names: names, index: -1 };
     }
     e.preventDefault();
     c.index = (c.index + 1) % c.names.length;
     var inserted = '@' + c.names[c.index] + ' ', next = el.value.slice(0, c.start) + inserted + el.value.slice(c.end);
     c.end = c.start + inserted.length;
-    // Valeur posée sur le champ avant setDraft : React la trouve à jour et laisse le curseur après le nom.
+    // Value set on the field before setDraft: React finds it up to date and leaves the caret after the name.
     el.value = next;
     el.setSelectionRange(c.end, c.end);
     setDraft(next);
@@ -92,9 +92,9 @@ function GroupView(p) {
     app.actions.sendGroup(g.id, text, { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel });
     setMode(null);
   }
-  // Comme dans BetterChatango, un message masqué compte encore dans les non-lus et les mentions.
+  // As in BetterChatango, a hidden message still counts in unreads and mentions.
   function shown(m) { return m.annc ? prefs.announcements : m.kind !== 'msg' || prefs.safety.guestMessages || !isGuest(m.author); }
-  // Les messages d'exemple du prototype n'ont pas de canal.
+  // The prototype's sample messages have no channel.
   function hiddenByChannel(m) { return m.kind === 'msg' && hiddenChans.indexOf(m.channel || 'none') >= 0; }
   function jumpTo(o) {
     if (hiddenByChannel(o)) { app.ui.toast('The original message is in a channel you hide. Show that channel from the channel menu to see it.'); return; }
@@ -172,7 +172,7 @@ function GroupView(p) {
         h('span', { className: 'vsep' }),
         h('p', { className: 'topic' }, g.topic),
         h('span', { className: 'grow only-mobile' }),
-        // Sur mobile, seul le nombre reste visible : le nom accessible garde « online ».
+        // On mobile only the number stays visible: the accessible name keeps "online".
         h('button', { type: 'button', className: 'pillbtn', 'aria-label': waitingCount ? undefined : online + ' online', 'aria-pressed': column.pressed == null ? undefined : String(column.pressed), onClick: column.toggle },
           h(T.Icon, { name: 'users', size: 16 }), waitingCount ? 'Members' : online, waitingCount ? null : h('span', { className: 'hide-mobile' }, ' online')),
         h(T.IconButton, { icon: 'search', label: 'Search in this group', pressed: search != null, onClick: function () { setSearch(search == null ? '' : null); } }),
@@ -203,10 +203,11 @@ function GroupView(p) {
 }
 
 /**
- * Permet de lister les noms qui complètent une mention : ceux qui commencent par la saisie, puis ceux qui la contiennent.
- * @param {Object} g Groupe ouvert.
- * @param {string} me Utilisateur connecté, jamais proposé.
- * @param {string} typed Saisie après @.
+ * Lists the names that complete a mention.
+ * Names that start with the input come first, then names that contain it.
+ * @param {Object} g Open group.
+ * @param {string} me Signed-in user, never offered.
+ * @param {string} typed Input after @.
  */
 function mentionCandidates(g, me, typed) {
   var q = typed.toLowerCase(), seen = Object.create(null), starts = [], contains = [];
@@ -219,15 +220,15 @@ function mentionCandidates(g, me, typed) {
     var at = key.indexOf(q);
     if (at === 0) starts.push(handle); else if (at > 0) contains.push(handle);
   });
-  // Sans doublon à la casse près : le comparateur n'a jamais deux noms égaux.
+  // No case-insensitive duplicates: the comparator never gets two equal names.
   function byName(a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }
   return starts.sort(byName).concat(contains.sort(byName));
 }
 
 /**
- * Permet de demander confirmation avant de quitter un groupe.
- * @param {Object} app Contexte de l'application.
- * @param {string} gid Groupe à quitter.
+ * Asks for confirmation before leaving a group.
+ * @param {Object} app Application context.
+ * @param {string} gid Group to leave.
  */
 function confirmLeave(app, gid) {
   app.ui.confirm({ title: 'Leave #' + gid + '?', body: 'You can join again from Discover at any time.', confirmLabel: 'Leave group', danger: true, onConfirm: function () { app.actions.leaveGroup(gid); } });

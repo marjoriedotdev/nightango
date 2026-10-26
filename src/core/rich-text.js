@@ -1,25 +1,25 @@
 var EMBED_LABEL = { youtube: 'Video', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
 function messagePreview(m) { var e = m.embeds && m.embeds[0]; return m.text || (e ? EMBED_LABEL[e.kind] : ''); }
 /**
- * Permet de lire l'hôte d'une URL https tel que le navigateur le joindra.
- * @param {string} url Adresse lue.
- * @returns {?string} Hôte en minuscules, null pour une URL illisible ou qui n'est pas https.
+ * Returns the host of an https URL as the browser will reach it.
+ * @param {string} url URL read.
+ * @returns {?string} Lowercase host, null for an unreadable URL or one that is not https.
  */
 function httpsHost(url) {
-  // new URL plutôt qu'une regex : l'hôte de https://a.example@b.example/ est b.example.
+  // new URL rather than a regex: the host of https://a.example@b.example/ is b.example.
   try { var u = new URL(url); return u.protocol === 'https:' ? u.host.toLowerCase() : null; } catch (e) { return null; }
 }
 /**
- * Permet de savoir si une URL https vient d'un hôte de confiance, à l'égalité stricte, sans joker ni sous-domaine.
- * @param {string} url Adresse lue.
- * @param {?Array<string>} hosts Hôtes de confiance en minuscules, null si la liste de BetterChatango est illisible.
+ * Tells whether an https URL comes from a trusted host by strict equality with no wildcard or subdomain.
+ * @param {string} url URL read.
+ * @param {?Array<string>} hosts Lowercase trusted hosts, null if the BetterChatango list is unreadable.
  */
 function isTrustedUrl(url, hosts) { var host = httpsHost(url); return !!host && !!hosts && hosts.indexOf(host) >= 0; }
 /**
- * Permet de savoir si un média attend un clic avant tout chargement : jamais pour un hôte de confiance.
- * @param {Object} safety Réglages Safety.
- * @param {string} kind Type du média lu par parseContent.
- * @param {string} url Adresse que le média chargerait.
+ * Tells whether a media item waits for a click before any loading: never for a trusted host.
+ * @param {Object} safety Safety settings.
+ * @param {string} kind Media type read by parseContent.
+ * @param {string} url URL the media would load.
  */
 function waitsForClick(safety, kind, url) { return !isTrustedUrl(url, safety.trustedHosts) && (kind === 'video' || kind === 'audio' || safety.proxyMedia); }
 function warnOnLink(app, url) {
@@ -30,19 +30,19 @@ function warnOnLink(app, url) {
 }
 var CHATANGO_SERVICE_HOSTS = ['www', 'st', 'ust', 'fp', 'm1', 'client'];
 /**
- * Nom du profil désigné par un lien {nom}.chatango.com, ou null.
- * @param {string} url Adresse du lien.
+ * Name of the profile a {name}.chatango.com link points to or null.
+ * @param {string} url Link URL.
  */
 function profileOfLink(url) {
   var name = ((/^https?:\/\/([^\/?#]+)\.chatango\.com(?:[\/?#]|$)/i.exec(url) || [])[1] || '').toLowerCase();
   return ACCOUNT_NAME.test(name) && CHATANGO_SERVICE_HOSTS.indexOf(name) < 0 ? name : null;
 }
 /**
- * Clic sur un lien de profil : propose le profil ou la page, sauf clic modifié, clic milieu ou hôte de confiance.
- * @param {Object} app Contexte de l'application.
- * @param {string} url Adresse du lien.
- * @param {string} name Nom du profil.
- * @param {?string} gid Groupe du message, null en MP.
+ * Click on a profile link: offers the profile or the page except on a modified click, a middle click or a trusted host.
+ * @param {Object} app Application context.
+ * @param {string} url Link URL.
+ * @param {string} name Profile name.
+ * @param {?string} gid Group of the message, null in a PM.
  */
 function onProfileLink(app, url, name, gid) {
   return function (e) {
@@ -54,13 +54,13 @@ function onProfileLink(app, url, name, gid) {
 
 var EMPHASIS = ['b', 'i', 'u', 's'];
 
-// Comme le rendu de BetterChatango : « @nom: `texte` » est une citation, qui ne traverse pas un saut de ligne.
+// Like BetterChatango's rendering: "@name: `text`" is a quote and does not cross a line break.
 var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
 
-/* Texte de message : emphase (segments de parseContent, absents sans emphase), citations, mentions et liens */
+/* Message text: emphasis (parseContent segments, absent without emphasis), quotes, mentions and links */
 function MessageText(p) {
   var app = useApp();
-  // Style coupé (plain) : comme BetterChatango, gras, italique et souligné retombent mais le barré reste.
+  // Hidden style (plain): like BetterChatango, bold, italic and underline drop but strikethrough stays.
   var marks = p.plain ? ['s'] : EMPHASIS;
   function mention(s, key) {
     var name = s.slice(1).toLowerCase();
@@ -90,9 +90,9 @@ function MessageText(p) {
   }));
 }
 
-/* ---------- HTML de profil écrit par les membres ----------
-   Jamais injecté : le texte est relu par le parseur du navigateur, puis seules quelques balises
-   de mise en forme sont reconstruites en éléments React. Scripts, styles libres et attributs disparaissent. */
+/* ---------- Profile HTML written by members ----------
+   Never injected: the text is parsed again by the browser parser, then only a few formatting
+   tags are rebuilt as React elements. Scripts, free styles and attributes are dropped. */
 var RICH_TAGS = { b: 'b', strong: 'b', i: 'i', em: 'i', u: 'u', s: 's', strike: 's', br: 'br', p: 'p', div: 'div', span: 'span', font: 'span', center: 'div', a: 'a', img: 'img' };
 var RICH_DROP = { script: 1, style: 1, iframe: 1, object: 1, embed: 1, noscript: 1, template: 1, svg: 1, math: 1, form: 1, input: 1, button: 1, textarea: 1, select: 1, link: 1, meta: 1, title: 1, head: 1 };
 function richStyle(el, tag, ctx) {
@@ -103,7 +103,7 @@ function richStyle(el, tag, ctx) {
   if (face && /^[\w ,'-]{1,40}$/.test(face)) st.fontFamily = face;
   if (!ctx.inline) {
     var size = el.getAttribute('size'), px = (/font-size\s*:\s*(\d+)px/i.exec(css) || [])[1];
-    // Comme BetterChatango (inject.js:656) : size est en pixels, bornés de 10 à 30, pas l'échelle HTML de 1 à 7.
+    // Like BetterChatango (inject.js:656): size is in pixels, clamped from 10 to 30, not the HTML scale from 1 to 7.
     if (/^\d+$/.test(size || '')) st.fontSize = Math.max(10, Math.min(30, +size));
     else if (px) st.fontSize = Math.max(10, Math.min(30, +px));
     var align = el.getAttribute('align') || (/text-align\s*:\s*(\w+)/i.exec(css) || [])[1];
@@ -146,11 +146,11 @@ function richNodes(node, ctx, key) {
   return out;
 }
 /**
- * Texte de profil Chatango rendu sans jamais injecter de HTML.
- * @param {string} p.html HTML écrit par le membre.
- * @param {boolean} [p.inline] Rendu en ligne sans bloc ni lien ni image.
- * @param {string} [p.bg] Fond sur lequel les couleurs du texte restent lisibles.
- * @param {string} [p.link] Couleur des liens.
+ * Chatango profile text rendered without ever injecting HTML.
+ * @param {string} p.html HTML written by the member.
+ * @param {boolean} [p.inline] Inline rendering with no block, link or image.
+ * @param {string} [p.bg] Background on which the text colors stay readable.
+ * @param {string} [p.link] Link color.
  */
 function RichText(p) {
   var app = useApp(), safety = app.state.prefs.safety;
@@ -169,20 +169,20 @@ function RichText(p) {
 }
 var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
 var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
-// Sans < ni parenthèse : l'URL finit dans un fond CSS, celui du profil complet comme celui de custom_profile.css.
+// No < and no parenthesis: the URL ends up in a CSS background, in the full profile as in custom_profile.css.
 var SAFE_IMAGE_URL = /^https:\/\/[^<>"'\\()\s]+$/;
 /**
- * Permet de construire le document isolé d'un profil complet.
- * @param {string} html HTML écrit par le membre.
- * @param {boolean} allowMedia Autorise les images, dont le fond du membre.
- * @param {?Object} [style] Fond du membre tel que le renvoie miniStyleOf.
+ * Builds the isolated document of a full profile.
+ * @param {string} html HTML written by the member.
+ * @param {boolean} allowMedia Allows images, the member background included.
+ * @param {?Object} [style] Member background as returned by miniStyleOf.
  */
 function fullProfileDoc(html, allowMedia, style) {
   var csp = allowMedia
     ? "default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline' https: http:; font-src https: http: data:; media-src https:"
     : "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:";
   var s = style || {}, bg = HEX_COLOR.test(s.bg) ? s.bg : '#fff', text = HEX_COLOR.test(s.text) ? s.text : '#1f2024';
-  // Valeurs interpolées dans le <style> : une URL avec < ou une parenthèse pourrait fermer le bloc ou la règle.
+  // Values interpolated in the <style>: a URL with < or a parenthesis could close the block or the rule.
   var image = allowMedia && SAFE_IMAGE_URL.test(s.image || '') ? ' url("' + s.image + '") ' + (BACKGROUND_REPEAT.test(s.repeat) ? s.repeat : '') + ' left 0 / contain' : '';
   return '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><meta name="referrer" content="no-referrer"><base target="_blank">' +
     '<style>body{margin:16px;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:' + text + ';background:' + bg + image + ';overflow-wrap:anywhere}img,video{max-width:100%;height:auto}' +

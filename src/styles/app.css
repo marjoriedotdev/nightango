@@ -23,7 +23,7 @@ h1,h2,h3{text-wrap:balance}
 .tnum{font-variant-numeric:tabular-nums}
 
 .shell{display:flex;gap:10px;height:100%;min-height:0;padding:10px max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px))}
-/* Ciel derrière les panneaux : le texte reste toujours sur une surface pleine. */
+/* Sky behind the panels: text always stays on a solid surface. */
 .shell,.settings{position:relative;isolation:isolate;background:linear-gradient(180deg,var(--sky-top),var(--sky-bottom))}
 .shell::before,.settings::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:var(--stars)}
 .sidebar{width:var(--size-sidebar);flex:none;display:flex;flex-direction:column;background:var(--sidebar);border:1px solid var(--border);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel);overflow:hidden;min-height:0}
@@ -42,7 +42,7 @@ h1,h2,h3{text-wrap:balance}
 .brand-mark{position:relative;display:inline-flex;flex:none}
 .brand-mark .tc-moon{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--moon-ink) 45%,transparent))}
 .moon-south .tc-moon{transform:scaleX(-1)}
-/* Vue du sud, la lune est tournée d'un demi-tour : la phase s'inverse en miroir, les mers se retournent aussi de haut en bas. */
+/* Seen from the south the moon is turned half a turn: the phase is mirrored and the seas also flip top to bottom. */
 .moon-south .tc-moon-face{transform:scaleY(-1);transform-origin:10px 10px}
 .brand-name{flex:1;font-family:var(--font-display);font-size:28px;line-height:28px;font-weight:400;color:var(--text)}
 .searchbtn{width:100%;height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:7px;background:var(--subtle);border:1px solid var(--border);color:var(--text-3);font-size:13px;cursor:pointer}
@@ -63,7 +63,7 @@ h1,h2,h3{text-wrap:balance}
 .main>.topbar{background:linear-gradient(180deg,color-mix(in srgb,var(--sky-top) 55%,var(--bg)),var(--bg))}
 .topbar h1,.topbar h2{margin:0;font-family:var(--font-display);font-size:23px;line-height:28px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar .namebtn{font-weight:400}
-/* Le titre ne rogne pas : le contour de focus du bouton profil le déborde, seul le nom passe en points de suspension. */
+/* The title does not clip: the focus outline of the profile button overflows it, only the name gets an ellipsis. */
 .topbar .dm-title{min-width:0;overflow:visible}
 .dm-title .person-tag{max-width:100%}
 .dm-title .namebtn{overflow:hidden;text-overflow:ellipsis}
@@ -75,12 +75,12 @@ h1,h2,h3{text-wrap:balance}
 .pillbtn[aria-pressed="true"]{background:var(--selected);color:var(--text)}
 .grow{flex:1}
 
-/* Fil en column-reverse : l'origine du défilement est en bas, scrollTop vaut 0 en bas et devient négatif en remontant.
-   L'historique ajouté en haut et les images qui se chargent ne déplacent pas la vue sans qu'on écrive scrollTop, qu'iOS ignore pendant l'inertie. */
+/* Message log in column-reverse: the scroll origin is at the bottom, scrollTop is 0 at the bottom and goes negative when scrolling up.
+   History added at the top and images that load do not move the view, with no need to write scrollTop, which iOS ignores during momentum scrolling. */
 .log{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;position:relative;display:flex;flex-direction:column-reverse}
 .log-inner{flex-shrink:0;display:flex;flex-direction:column;justify-content:flex-end;min-height:100%}
 .ev{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 20px 8px 68px;color:var(--text-3);font-size:12.5px;white-space:pre-line}
-/* Sentinelle hors de l'ancrage natif : prise pour ancre, elle ferait suivre la vue jusqu'en haut à chaque page et relancerait le chargement. */
+/* Sentinel kept out of native scroll anchoring: taken as the anchor, it would drag the view to the top on every page and trigger loading again. */
 .history-more{min-height:34px;overflow-anchor:none}
 .ev .embeds{flex-basis:100%;margin-top:0}
 .linkbtn{border:0;background:none;padding:0;color:var(--text-2);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:inherit}
@@ -386,7 +386,7 @@ h1,h2,h3{text-wrap:balance}
 .namebtn{padding:0;border:0;background:none;color:var(--text);font:inherit;font-weight:600;text-decoration:none}
 button.person-tag,button.namebtn,button.tc-mention{cursor:pointer}
 button.person-tag:hover .namebtn,button.tc-mention:hover{text-decoration:underline;text-underline-offset:2px}
-/* La couleur de nom choisie par le membre est en style inline, seul !important la remplace au survol. */
+/* The name color the member chose is an inline style, only !important overrides it on hover. */
 .namebtn-mention:hover{color:var(--accent-text)!important}
 button.tc-mention{border:0;font-family:inherit;font-size:inherit;line-height:inherit}
 .tc-msg-reply-author .namebtn{font-weight:inherit;color:inherit}

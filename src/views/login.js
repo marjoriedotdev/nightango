@@ -1,4 +1,4 @@
-/* ---------- Connexion ---------- */
+/* ---------- Sign-in ---------- */
 function Login() {
   var app = useApp();
   var a = useState('orrin'), user = a[0], setUser = a[1];

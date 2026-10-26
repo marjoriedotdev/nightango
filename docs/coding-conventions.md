@@ -1,71 +1,71 @@
-# Conventions de code
+# Coding conventions
 
 ## JavaScript
 
-- Identifiants de code en anglais (variables, fonctions, fichiers, clés d'état). Seuls les commentaires sont en français.
-- Tout le code de `src/` est en ES5 : `var`, fonctions, pas de flèches ni de classes.
-- Les éléments se créent par `h = React.createElement`. Pas de JSX, pas de bundler.
-- Les composants du design system s'appellent par `T.<Composant>` (namespace `window.Torch`).
-- Un nouveau fichier s'ajoute à `APP_SOURCES` dans `scripts/build.mjs`, à sa place dans l'ordre de concaténation (voir `docs/architecture.md`).
-- Le code propre au live se garde par `if (LIVE)`. Le prototype et le live partagent tout le reste.
-- Les scripts Node (`scripts/`, `tests/run.mjs`) sont en JavaScript moderne (modules ES).
+- Code identifiers in English (variables, functions, files, state keys). Comments, JSDoc and docs are in English too.
+- All code in `src/` is ES5: `var`, functions, no arrow functions and no classes.
+- Elements are created with `h = React.createElement`. No JSX, no bundler.
+- Design system components are called as `T.<Component>` (namespace `window.Torch`).
+- A new file is added to `APP_SOURCES` in `scripts/build.mjs`, at its place in the concatenation order (see `docs/architecture.md`).
+- Live-only code is guarded by `if (LIVE)`. The prototype and live share everything else.
+- Node scripts (`scripts/`, `tests/run.mjs`) are in modern JavaScript (ES modules).
 
-## Partage
+## Sharing
 
-- Zéro duplication dès le deuxième usage : une constante, un helper ou un petit composant que le changement copierait d'un fichier à l'autre se partage tout de suite, dans `src/core/` ou dans le fichier du domaine concerné.
-- Une duplication déjà présente, repérée au passage, se signale en suivi au lieu d'être corrigée dans le même changement.
+- Zero duplication from the second use: a constant, a helper or a small component that the change would copy from one file to another is shared right away, in `src/core/` or in the file of the domain concerned.
+- Existing duplication spotted along the way is reported as a follow-up instead of being fixed in the same change.
 
-## Commentaires
+## Comments
 
-- Un commentaire n'existe que pour un piège qui ferait « corriger » le code par erreur. Exemple : `// Masquage en style inline : la feuille de BetterChatango peut annuler l'attribut hidden.`
-- Commentaires en français. Un `//` tient sur une ligne.
-- Les fonctions des scripts Node ont un JSDoc multiligne : résumé `Permet de <verbe> <objet>.` et un `@param` par paramètre.
-- Sections en bandeaux `// -- Nom ----` jusqu'à la colonne 80.
-- Pas d'em-dash ni de point-virgule dans le texte des commentaires.
+- A comment exists only for a trap that would make someone "fix" the code by mistake. Example: `// Inline style hiding: BetterChatango's sheet can override the hidden attribute.`
+- Comments in English. A `//` comment fits on one line.
+- Functions in Node scripts have a multiline JSDoc: a one-sentence summary and one `@param` per parameter. The summary is a third-person verb phrase (`Sends <object>.`, `Returns <object>.`, `Shows <object>.`) or a noun phrase for a concept (`<Concept name>.`). No comma in a summary.
+- Sections use `// -- Name ----` banners up to column 80.
+- No em-dash and no semicolon in comment text.
 
-## Textes
+## Text
 
-- Textes d'interface et logs en anglais.
-- Les logs de la console commencent par `[torch-skin]`.
-- Le ton suit la charte du design system (`torchds/project/README.md`, section Content fundamentals) : sentence case, boutons qui commencent par un verbe, erreurs qui disent quoi faire.
-- Une action non disponible en live le dit clairement ou disparaît. Jamais de faux succès.
+- UI text and logs in English.
+- Console logs start with `[torch-skin]`.
+- The tone follows the design system guidelines (`torchds/project/README.md`, section Content fundamentals): sentence case, buttons that start with a verb, errors that say what to do.
+- An action that is not available in live says so clearly or disappears. Never a fake success.
 
-## État
+## State
 
-- L'état de `Root` reste sérialisable en JSON : `update` le clone par `JSON.parse(JSON.stringify(...))`. Pas de fonction, de `Date`, de `Map` ni de nœud DOM dans l'état.
-- Les données propres au compte vont dans `torch-skin:<pseudo>`, les préférences dans `torch-prototype-prefs`.
+- The state of `Root` stays JSON-serializable: `update` clones it with `JSON.parse(JSON.stringify(...))`. No function, `Date`, `Map` or DOM node in the state.
+- Account-specific data goes into `torch-skin:<username>`, preferences into `torch-prototype-prefs`.
 
 ## Guards
 
-- Pas de guard spéculatif. Le chemin natif s'écrit d'abord, un guard ne s'ajoute qu'après un problème observé.
-- Les états d'interface (chargement, vide, erreur) font partie de la spec et ne sont pas des guards.
+- No speculative guard. The native path is written first, a guard is added only after an observed problem.
+- UI states (loading, empty, error) are part of the spec and are not guards.
 
 ## Tests
 
-- Les suites sont des scripts jsdom dans `tests/`, lancés par `pnpm test`.
-- Politique : seulement le comportement complexe ([ADR-0009](adr/0009-test-only-complex-behaviour.md)). Exemples : format exact des trames, pagination, présence, fusion de l'historique, démarrage du loader.
-- Chaque nouveau test est vu en échec avant le correctif ou la fonctionnalité qu'il protège.
-- `live_ui` échoue sur tout warning React non filtré. Seuls `act(`, `ReactDOM.render`, `useLayoutEffect` et les logs `[torch-skin]` sont tolérés.
-- Une suite signale un échec par une ligne `FAIL`, `CRASH` ou `ERRORS:` non vide, même quand elle sort en 0.
+- Suites are jsdom scripts in `tests/`, run by `pnpm test`.
+- Policy: complex behaviour only ([ADR-0009](adr/0009-test-only-complex-behaviour.md)). Examples: exact frame format, pagination, presence, history merge, loader startup.
+- Every new test is seen failing before the fix or the feature it protects.
+- `live_ui` fails on any unfiltered React warning. Only `act(`, `ReactDOM.render`, `useLayoutEffect` and `[torch-skin]` logs are tolerated.
+- A suite reports a failure with a `FAIL`, `CRASH` or non-empty `ERRORS:` line, even when it exits with 0.
 
 ## Design system
 
-- `torchds/project/components/bundle.js` et `bundle.css` sont maintenus à la main.
-- La doc des composants (`README.md`, `preview.html`) se régénère par `pnpm build:ds`. Ne l'édite pas à la main.
-- Un écran se construit avec les jetons et les composants `Torch`, jamais avec des valeurs codées en dur.
+- `torchds/project/components/bundle.js` and `bundle.css` are maintained by hand.
+- The component docs (`README.md`, `preview.html`) are regenerated by `pnpm build:ds`. Do not edit them by hand.
+- A screen is built with the `Torch` tokens and components, never with hard-coded values.
 
 ## Commits
 
-- Conventional Commits, sujet seul sur une ligne : `type(scope): sujet`, sans body.
-- Un commit par changement logique.
+- Conventional Commits: a one-line subject `type(scope): subject`, then a body that says what changed and why, wrapped at 72 columns.
+- One commit per logical change.
 
-## Ce qu'il ne faut jamais faire
+## What never to do
 
-- Lire, stocker, journaliser ou transmettre le mot de passe, ou appeler une fonction de BetterChatango qui l'ajoute à une requête ([ADR-0001](adr/0001-password-never-read.md)).
-- Envoyer une trame Chatango sans source dans BetterChatango ou dans une bibliothèque de référence ([ADR-0002](adr/0002-no-invented-frames.md)).
-- Faire, depuis le code applicatif, un appel HTTP vers Chatango ou vissle hors de la liste fermée de `docs/betterchatango-protocol.md` (section Appels HTTP autorisés).
-- Ajouter une ressource chargée par le loader ou l'interface (script, feuille, police, iframe) hors de la liste de la même section sans validation de l'utilisateur.
-- Injecter du HTML ou du CSS écrit par un membre ([ADR-0004](adr/0004-member-html-never-injected.md)).
-- Consulter l'activité d'un autre profil que celui de l'utilisateur connecté ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
-- Ajouter une dépendance sans validation explicite de l'utilisateur.
-- Charger un média ou l'oEmbed YouTube avant le clic quand les réglages de médias le demandent.
+- Read, store, log or transmit the password, or call a BetterChatango function that adds it to a request ([ADR-0001](adr/0001-password-never-read.md)).
+- Send a Chatango frame without a source in BetterChatango or in a reference library ([ADR-0002](adr/0002-no-invented-frames.md)).
+- Make, from the app code, an HTTP call to Chatango or vissle outside the closed list in `docs/betterchatango-protocol.md` (section Allowed HTTP calls).
+- Add a resource loaded by the loader or the interface (script, stylesheet, font, iframe) outside the list in the same section without the user's approval.
+- Inject HTML or CSS written by a member ([ADR-0004](adr/0004-member-html-never-injected.md)).
+- Look up the activity of any profile other than the signed-in user's ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
+- Add a dependency without the user's explicit approval.
+- Load a media file or the YouTube oEmbed before the click when the media settings ask for it.

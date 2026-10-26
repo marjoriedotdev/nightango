@@ -62,7 +62,7 @@ select.tc-input{padding:0 10px}
 .tc-avatar-square{border-radius:var(--radius-md)}
 .tc-avatar-img{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;object-fit:cover}
 .tc-avatar-img-wait{opacity:0}
-/* Présence en phases de lune : la forme porte l'état (pleine, croissant, nouvelle lune), pas seulement la couleur. */
+/* Presence as moon phases: the shape carries the state (full, crescent, new moon), not only the color. */
 .tc-presence{position:absolute;right:-2px;bottom:-2px;border-radius:50%;border:2px solid var(--presence-ring,var(--bg));background:var(--presence-ring,var(--bg))}
 .tc-presence-online{background:var(--status-online);box-shadow:0 0 6px color-mix(in srgb,var(--status-online) 55%,transparent)}
 .tc-presence-idle{box-shadow:inset calc((var(--dot,11px) - 4px) * -.42) 0 0 0 var(--status-idle)}

@@ -1,20 +1,20 @@
-/* ---------- Coque de l'application ---------- */
+/* ---------- Application shell ---------- */
 function MobileNavButton() {
   var app = useApp();
   return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', onClick: app.ui.openNav });
 }
 
 /**
- * En-tête titré d'une page principale, avec le bouton de navigation mobile.
- * @param {string} title Titre de la page.
+ * Titled header of a main page with the mobile navigation button.
+ * @param {string} title Page title.
  */
 function pageHeader(title) {
   return h('header', { className: 'topbar' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, title));
 }
 
 /**
- * En-tête titré d'une colonne de droite.
- * @param {string} title Titre de la colonne.
+ * Titled header of a right column.
+ * @param {string} title Column title.
  */
 function columnHeader(title) {
   return h('header', { className: 'topbar col-head' }, h('h2', { className: 'grow' }, title));
@@ -35,7 +35,7 @@ function Shell() {
     main);
 }
 
-// La lune de ce soir, ou la phase fixe choisie dans Appearance (rang dans Torch.moonNames).
+// Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames).
 function BrandMark() {
   var moon = useApp().state.prefs.sky.moon;
   return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true, phase: moon === 'auto' ? undefined : moon / 8 }));

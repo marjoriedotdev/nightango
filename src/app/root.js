@@ -1,14 +1,14 @@
-/* ---------- Racine ---------- */
+/* ---------- Root ---------- */
 var THREAD_MAX = 500;
 var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
-// Délais des tentatives qui suivent une coupure : un redémarrage de Chatango fait échouer une relance immédiate.
+// Delays of the attempts that follow a connection loss: a Chatango restart makes an immediate retry fail.
 var RECONNECT_DELAYS = [3000, 10000, 30000];
 
 function Root(props) {
   var st = useState(function () { return props.boot && props.boot.auth ? props.boot : initialState(); }), state = st[0], setState = st[1];
   var stateRef = useRef(state); stateRef.current = state;
-  // Seule source des non-lus MP : la base de BetterChatango en live, une archive en mémoire dans le prototype ou quand cette base manque.
+  // Only source of PM unreads: the BetterChatango database in live, an in-memory archive in the prototype or when that database is missing.
   var pmArchive = useRef(null);
   if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
   var update = useCallback(function (fn) { setState(function (prev) { var d = JSON.parse(JSON.stringify(prev)); fn(d); return d; }); }, []);
@@ -33,7 +33,7 @@ function Root(props) {
     if (hot && hot.snapshot) hot.snapshot(function () { return { state: stateRef.current }; });
   }, []);
 
-  /* Thème, accent et préférences d'affichage appliqués à la racine */
+  /* Theme, accent and display preferences applied to the root */
   useEffect(function () {
     var root = ROOT_EL;
     if (prefs.theme === 'dark' || prefs.theme === 'light') root.setAttribute('data-theme', prefs.theme);
@@ -60,7 +60,7 @@ function Root(props) {
     return function () { if (mq.removeEventListener) mq.removeEventListener('change', onChange); };
   }, []);
 
-  /* Passage à idle des membres inactifs depuis IDLE_DELAY */
+  /* Switch to idle for members inactive for IDLE_DELAY */
   useEffect(function () {
     if (!state.users) return;
     var next = Infinity;
@@ -72,7 +72,7 @@ function Root(props) {
     return function () { clearTimeout(timer); };
   }, [state.users]);
 
-  /* Titre de l'onglet */
+  /* Tab title */
   useEffect(function () {
     if (!state.auth.loggedIn) { document.title = 'Nightango'; return; }
     var n = unreadDmCount(state);
@@ -80,7 +80,7 @@ function Root(props) {
     document.title = (prefs.tabTitle && n ? '(' + n + ') ' : '') + (prefs.privacy.usernameInTitle ? state.me + ' | ' : '') + 'Nightango';
   });
 
-  /* Raccourcis clavier globaux */
+  /* Global keyboard shortcuts */
   useEffect(function () {
     function onKey(e) {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K') && stateRef.current.auth.loggedIn) { e.preventDefault(); setPalette(true); }
@@ -99,7 +99,7 @@ function Root(props) {
   function nav(route) {
     update(function (d) {
       var cur = d.route;
-      // Le retour au fil ne refait pas le saut vers le message ouvert depuis Mentions ou la recherche des MP.
+      // Going back to the message log does not jump again to the message opened from Mentions or the PM search.
       if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; delete cur.seek; }
       var r = Object.assign({}, route);
       if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = Date.now(); g.unread = 0; g.mentions = 0; }
@@ -114,7 +114,7 @@ function Root(props) {
     }
   }
 
-  /* Notifications d'un événement entrant, après la mise à jour de l'état */
+  /* Notifications of an incoming event, after the state update */
   function notify(kind, info) {
     var p = stateRef.current.prefs, n = p.notify[kind];
     if (!n) return;
@@ -122,24 +122,24 @@ function Root(props) {
     if (n.sound && (!p.soundFocusOnly || focused)) beep(p.volume);
     if (n.app && info.toast) toast(info.toast, info.action ? { action: info.action, icon: info.icon, clamp: kind === 'pm' } : { icon: info.icon, clamp: kind === 'pm' });
     if (n.desktop && !focused) {
-      try { if (window.Notification && window.Notification.permission === 'granted') new window.Notification('Nightango', { body: info.toast }); } catch (e) { /* notifications système indisponibles */ }
+      try { if (window.Notification && window.Notification.permission === 'granted') new window.Notification('Nightango', { body: info.toast }); } catch (e) { /* system notifications unavailable */ }
     }
   }
 
   function trimThread(g) {
     if (g.messages.length <= THREAD_MAX) return;
     g.messages.splice(0, g.messages.length - THREAD_MAX);
-    // Le compteur get_more de BetterChatango ignore la coupe : une reprise sauterait les messages retirés.
+    // The BetterChatango get_more counter ignores the trim: resuming would skip the removed messages.
     g.historyCapped = true;
   }
   /**
-   * Permet de relever pour la page Mentions un message de groupe qui mentionne l'utilisateur, le plus récent en tête.
-   * @param {Object} d État en cours de modification.
-   * @param {string} gid Groupe du message.
-   * @param {Object} m Message reçu.
+   * Records for the Mentions page a group message that mentions the user with the newest first.
+   * @param {Object} d State being modified.
+   * @param {string} gid Group of the message.
+   * @param {Object} m Received message.
    */
   function logMention(d, gid, m) {
-    // Une modification affichée à part rejoint son original quand il arrive : seul l'original entre dans la liste.
+    // An edit shown on its own joins its original when the original arrives: only the original enters the list.
     if (m.kind !== 'msg' || m.editId || m.author === d.me || userOf(d, m.author).ignored || !mentionsMe(d.me, m.text)) return;
     if (d.mentionLog.some(function (x) { return x.gid === gid && x.id === m.id; })) return;
     d.mentionLog.push({ gid: gid, id: m.id, author: m.author, text: messagePreview(m), ts: m.ts });
@@ -147,22 +147,22 @@ function Root(props) {
     d.mentionLog.splice(MENTION_MAX);
   }
   /**
-   * Permet de retirer de la page Mentions les messages d'un groupe.
-   * @param {Object} d État en cours de modification.
-   * @param {string} gid Groupe visé.
-   * @param {?string[]} ids Messages retirés, null pour tout le groupe.
+   * Removes the messages of a group from the Mentions page.
+   * @param {Object} d State being modified.
+   * @param {string} gid Target group.
+   * @param {?string[]} ids Removed messages, null for the whole group.
    */
   function dropMentions(d, gid, ids) {
     d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && ids.indexOf(x.id) < 0); });
   }
   /**
-   * Permet de poser le monde d'exemple du prototype, ses mentions relevées comme celles de l'historique en live.
-   * @param {Object} d État en cours de modification.
-   * @param {string} me Nom de l'utilisateur.
+   * Sets the sample world of the prototype with its mentions recorded like those of the live history.
+   * @param {Object} d State being modified.
+   * @param {string} me User name.
    */
   /**
-   * Permet de créer le monde d'exemple du prototype, avec l'archive des MP qui porte ses non-lus.
-   * @param {string} me Compte connecté.
+   * Creates the sample world of the prototype with the PM archive that holds its unreads.
+   * @param {string} me Signed-in account.
    */
   function sampleWorld(me) {
     var world = seedWorld(me);
@@ -176,12 +176,12 @@ function Root(props) {
   function receiveGroup(gid, msg) {
     var s0 = stateRef.current, me = s0.me;
     var mention = msg.kind === 'msg' && mentionsMe(me, msg.text);
-    // Comme dans BetterChatango, la mention d'un groupe coupé ou d'un auteur ignoré n'alerte pas, et les compteurs changent quand même.
+    // Like in BetterChatango, a mention in a muted group or from an ignored author does not alert, and the counters still change.
     var quiet = !!(s0.groups[gid] && s0.groups[gid].muted) || !!userOf(s0, msg.author).ignored;
     var focused = s0.route.view === 'group' && s0.route.id === gid && document.visibilityState === 'visible';
     update(function (d) {
       var g = d.groups[gid]; if (!g) return;
-      // La réponse est résolue sur l'état à jour : l'identifiant définitif de l'original peut arriver juste avant.
+      // The reply is resolved on the up-to-date state: the final id of the original can arrive just before.
       if (LIVE && msg.replyId) withReply(g, msg);
       g.messages.push(msg);
       trimThread(g);
@@ -206,10 +206,10 @@ function Root(props) {
     if (!focused && !userOf(s0, from).ignored) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
   }
   /**
-   * Permet d'annoncer le basculement d'un membre, en prototype comme en live.
-   * @param {string} name Membre visé.
-   * @param {string} key Marque basculée (friend, ignored, blocked ou unstyled).
-   * @param {boolean} was Marque avant le basculement.
+   * Announces the toggle of a member mark in the prototype as in live.
+   * @param {string} name Target member.
+   * @param {string} key Toggled mark (friend, ignored, blocked or unstyled).
+   * @param {boolean} was Mark before the toggle.
    */
   function toggleUserText(name, key, was) {
     return {
@@ -220,9 +220,9 @@ function Root(props) {
     }[key];
   }
   /**
-   * Permet d'enlever du fil un MP retiré de ce navigateur, puis de le dire.
-   * @param {string} name Correspondant.
-   * @param {string} id Identifiant du message dans l'état.
+   * Removes from the message log a PM removed from this browser and says so.
+   * @param {string} name Correspondent.
+   * @param {string} id Message id in the state.
    */
   function dropDmMessage(name, id) {
     update(function (d) { var c = d.dms[name]; c.messages = c.messages.filter(function (x) { return x.id !== id; }); });
@@ -230,7 +230,7 @@ function Root(props) {
   }
 
   var mediaLib = LIVE ? liveBridge : sampleMedia;
-  // Les étoiles et l'onglet Media relisent la médiathèque quand ce compteur change.
+  // The stars and the Media tab read the media library again when this counter changes.
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
   var actions = {
@@ -265,24 +265,24 @@ function Root(props) {
       setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
     },
     openDm: function (name, tab) { update(function (d) { pmConversation(d, name); }); nav({ view: 'dm', id: name, tab: tab }); },
-    loadProfile: function () { /* prototype : profils déjà présents dans les données d'exemple */ },
-    loadProfiles: function () { /* idem */ },
+    loadProfile: function () { /* prototype: profiles already present in the sample data */ },
+    loadProfiles: function () { /* same */ },
     searchPeople: function (f) {
-      // Prototype : recherche parmi les membres d'exemple qui ne sont pas encore amis.
+      // Prototype: search among the sample members who are not friends yet.
       var s0 = stateRef.current, q = String(f.query || '').toLowerCase();
       var list = Object.keys(s0.users).filter(function (n) { var u = s0.users[n]; return !u.friend && (!q || n.indexOf(q) >= 0 || String(u.location || '').toLowerCase().indexOf(q) >= 0) && (!f.online || u.status !== 'offline'); });
       update(function (d) { d.meet = { results: list, loading: false, error: null, done: true, filters: f }; });
     },
     /**
-     * Permet de charger l'activité de son propre profil enregistrée par vissle.me.
-     * @param {string} get Filtre vissle (all, log, like, dislike, msg ou refer).
-     * @param {boolean} more Vrai pour ajouter la page suivante aux lignes déjà affichées.
+     * Loads the activity of the user's own profile recorded by vissle.me.
+     * @param {string} get vissle filter (all, log, like, dislike, msg or refer).
+     * @param {boolean} more True to append the next page to the rows already shown.
      */
     loadVisitors: function (get, more) {
       var req = uid(), q = { page: more ? stateRef.current.visitors.next : 1, order: 'desc', get: get };
       update(function (d) { d.visitors = Object.assign({ rows: [], next: null }, more ? d.visitors : null, { get: get, loading: true, error: null, req: req }); });
-      // Seule la dernière demande s'applique : un changement de filtre rend les réponses précédentes obsolètes.
-      // React peut appliquer la réponse à un état qui n'a pas encore la demande ci-dessus, puis la rejouer dans l'ordre.
+      // Only the last request applies: a filter change makes the previous responses obsolete.
+      // React can apply the response to a state that does not have the request above yet, then replay it in order.
       (LIVE ? liveBridge.visitors(q) : Promise.resolve(sampleVisits(q))).then(function (items) {
         var pg = visitorPage(items, get);
         update(function (d) { if (d.visitors && d.visitors.req === req) d.visitors = { get: get, rows: (more ? d.visitors.rows : []).concat(pg.rows), next: pg.next, loading: false, error: null, req: req }; });
@@ -298,13 +298,13 @@ function Root(props) {
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
     /**
-     * Permet de retirer un MP de sa conversation.
-     * @param {string} name Correspondant.
-     * @param {Object} m Message retiré.
+     * Removes a PM from its conversation.
+     * @param {string} name Correspondent.
+     * @param {Object} m Removed message.
      */
     removeDmMessage: function (name, m) { dropDmMessage(name, m.id); },
     deleteAllDms: function () { update(function (d) { d.dms = {}; }); },
-    /** Messages d'exemple au format de l'historique privé de BetterChatango, clé ts en secondes. */
+    /** Sample messages in the BetterChatango private history format with the ts key in seconds. */
     exportDms: function () {
       var s0 = stateRef.current, out = [];
       Object.keys(s0.dms).forEach(function (t) {
@@ -317,8 +317,8 @@ function Root(props) {
       return Promise.resolve(out.sort(function (a, b) { return a.ts - b.ts; }));
     },
     /**
-     * Permet d'ajouter aux conversations les enregistrements valides d'un historique privé, comme l'import live.
-     * @param {Array} records Contenu du fichier, non fiable.
+     * Adds the valid records of a private history to the conversations like the live import.
+     * @param {Array} records File content, untrusted.
      */
     importDms: function (records) {
       var s0 = stateRef.current, screened = screenPmRecords(records, s0.me), keys = {}, added = [];
@@ -337,9 +337,9 @@ function Root(props) {
     searchMedia: function (text, count) { return mediaLib.searchMedia(text, count); },
     hasMedia: function (url) { return mediaLib.hasMedia(url); },
     /**
-     * Permet d'ajouter une image à la médiathèque, sous le nom que lui donne BetterChatango, ou de l'en retirer.
-     * @param {string} url Adresse de l'image.
-     * @param {boolean} saved L'image est déjà dans la médiathèque.
+     * Adds an image to the media library under the name BetterChatango gives it or removes it.
+     * @param {string} url Image URL.
+     * @param {boolean} saved The image is already in the media library.
      */
     toggleMedia: function (url, saved) {
       (saved ? mediaLib.removeMedia(url) : mediaLib.addMedia({ url: url, name: mediaName(url) })).then(function () {
@@ -361,10 +361,10 @@ function Root(props) {
     },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
     /**
-     * Permet d'ajouter un hôte de confiance, sans doublon, ou de le retirer.
-     * @param {string} host Hôte en minuscules, sans schéma ni chemin.
-     * @param {boolean} on Vrai pour l'ajouter.
-     * @returns {boolean} Vrai si la liste est enregistrée.
+     * Adds a trusted host without duplicates or removes it.
+     * @param {string} host Lowercase host without scheme or path.
+     * @param {boolean} on True to add it.
+     * @returns {boolean} True if the list is saved.
      */
     setTrustedHost: function (host, on) {
       update(function (d) { var l = d.prefs.safety.trustedHosts, i = l.indexOf(host); if (!on && i >= 0) l.splice(i, 1); else if (on && i < 0) l.push(host); });
@@ -450,7 +450,7 @@ function Root(props) {
         Object.keys(labels).forEach(function (k) { if (JSON.stringify(old[k]) !== JSON.stringify(draft[k])) g.audit.push({ id: uid(), at: now, actor: me, text: labels[k] }); });
         Object.keys(Object.assign({}, old.staff, draft.staff)).forEach(function (n) {
           if (old.staff[n] !== draft.staff[n]) g.audit.push({ id: uid(), at: now, actor: me, text: draft.staff[n] ? 'Made ' + n + ' ' + ROLE_LONG[draft.staff[n]].toLowerCase() : 'Removed ' + n + ' from staff' });
-          // Comme le journal Chatango (emod) : droits changés sans changement de rôle.
+          // Like the Chatango log (emod): permissions changed without a role change.
           else if (draft.staff[n] && old.modFlags[n] !== draft.modFlags[n]) g.audit.push({ id: uid(), at: now, actor: me, text: "Changed " + n + "'s permissions" });
         });
         if (old.announcement.text !== draft.announcement.text || (!old.announcement.enabled && draft.announcement.enabled)) g.dismissedAnnouncement = false;
@@ -460,7 +460,7 @@ function Root(props) {
     }
   };
 
-  /* Simulateur d'activité */
+  /* Activity simulator */
   useEffect(function () {
     if (LIVE || !state.auth.loggedIn || !prefs.simulate) return;
     var timer = null, alive = true;
@@ -512,12 +512,12 @@ function Root(props) {
     return function () { alive = false; clearTimeout(timer); };
   }, [state.auth.loggedIn, prefs.simulate]);
 
-  /* ---------- Mode live : actions transmises à Chatango par le client BetterChatango ---------- */
+  /* ---------- Live mode: actions passed to Chatango by the BetterChatango client ---------- */
   var localRef = useRef(blankLocal());
   var profilePending = useRef({}), msgBgPending = useRef({});
-  // Nom vérifié par New private message : son refus s'affiche dans la fenêtre, pas en toast.
+  // Name checked by New private message: its refusal shows in the dialog, not as a toast.
   var offlineCount = useRef(0);
-  // Reconnexions automatiques en cours, par connexion : tentatives faites et minuteur de la suivante.
+  // Automatic reconnections in progress, by connection: attempts made and timer of the next one.
   var retries = useRef({});
   function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
   function lastMessageOf(g, name) {
@@ -527,8 +527,8 @@ function Root(props) {
   function wordList(v) { return String(v || '').split(/[,\n]/).map(function (x) { return x.trim(); }).filter(Boolean).join(','); }
 
   /**
-   * Envoie uniquement ce que l'utilisateur a changé par rapport à la version qu'il a ouverte,
-   * appliqué sur l'état serveur courant : les changements d'un autre modérateur entre-temps sont préservés.
+   * Sends only what the user changed compared with the version they opened
+   * applied on the current server state: changes made by another moderator in the meantime are kept.
    */
   function saveLiveSettings(g, draft, base) {
     var F = GROUP_FLAG, sent = 0, failed = 0;
@@ -550,7 +550,7 @@ function Root(props) {
     if (add || rem) count(liveBridge.setFlags(g.id, add, rem));
     var a0 = base.announcement, a1 = draft.announcement;
     if (g.live.annc && (a0.enabled !== a1.enabled || a0.text !== a1.text || a0.interval !== a1.interval)) {
-      // Intervalle inchangé : on renvoie la valeur exacte en secondes plutôt que l'arrondi affiché.
+      // Interval unchanged: send back the exact value in seconds rather than the rounded value shown.
       var seconds = a1.interval === a0.interval && a0.intervalSec ? a0.intervalSec : a1.interval * 60;
       count(liveBridge.setAnnouncement(g.id, a1.enabled, seconds, a1.text, g.live.annc));
     }
@@ -565,11 +565,11 @@ function Root(props) {
     return sent;
   }
   /**
-   * Permet de basculer un drapeau de groupe tenu par une liste de BetterChatango, sans rien changer si BetterChatango ne l'enregistre pas.
-   * @param {string} gid Groupe visé.
-   * @param {string} key favorite ou muted.
-   * @param {function(string, boolean): boolean} save Écriture du pont.
-   * @param {string} failure Toast affiché si BetterChatango n'enregistre pas.
+   * Toggles a group flag held by a BetterChatango list without changing anything if BetterChatango does not save it.
+   * @param {string} gid Target group.
+   * @param {string} key favorite or muted.
+   * @param {function(string, boolean): boolean} save Bridge write.
+   * @param {string} failure Toast shown if BetterChatango does not save.
    */
   function toggleBetterChatangoList(gid, key, save, failure) {
     var on = !stateRef.current.groups[gid][key];
@@ -577,12 +577,12 @@ function Root(props) {
     update(function (d) { d.groups[gid][key] = on; });
   }
   /**
-   * Permet d'envoyer un message de groupe construit par BetterChatango avec le style perso, puis d'en garder le style.
-   * @param {string} gid Groupe visé.
-   * @param {string} text Texte saisi.
-   * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string}} opts Réponse, original modifié ou citation, et canal.
-   * @param {?string} failure Toast affiché si rien n'est parti, null quand l'appelant l'annonce lui-même.
-   * @returns {boolean} Vrai si le pont a émis la trame.
+   * Sends a group message built by BetterChatango with the own style and keeps its style.
+   * @param {string} gid Target group.
+   * @param {string} text Typed text.
+   * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string}} opts Reply, edited original or quote, and channel.
+   * @param {?string} failure Toast shown if nothing was sent, null when the caller announces it itself.
+   * @returns {boolean} True if the bridge emitted the frame.
    */
   function sendStyled(gid, text, opts, failure) {
     var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
@@ -590,9 +590,9 @@ function Root(props) {
     return !!style;
   }
   /**
-   * Permet de noter le fichier en cours d'envoi vers un groupe ou un MP.
-   * @param {{kind: string, id: string}} to Destination de l'envoi.
-   * @param {?string} name Nom du fichier, null une fois l'envoi fini.
+   * Records the file being sent to a group or a PM.
+   * @param {{kind: string, id: string}} to Destination of the send.
+   * @param {?string} name File name, null once the send is done.
    */
   function setUpload(to, name) {
     setUploads(function (u) { var o = Object.assign({}, u); if (name) o[uploadKey(to)] = name; else delete o[uploadKey(to)]; return o; });
@@ -607,7 +607,7 @@ function Root(props) {
       if (replyId && !liveBridge.delivered(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
       return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. BetterChatango rejected it.');
     };
-    // Modifier une modification affichée à part vise son original, seul message visible chez les autres membres.
+    // Editing an edit shown on its own targets its original, the only message visible to other members.
     actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. BetterChatango rejected it.'); };
     actions.sendDm = function (name, text, opts) {
       var me = stateRef.current.me;
@@ -618,9 +618,9 @@ function Root(props) {
       return true;
     };
     /**
-     * Permet d'envoyer un fichier par vissle, puis d'en publier le lien dans le groupe ou le MP choisi, jamais dans client.focus.
-     * @param {{kind: string, id: string, channel: ?string}} to Destination figée au choix du fichier.
-     * @param {File} file Fichier choisi.
+     * Uploads a file through vissle and posts its link in the chosen group or PM and never in client.focus.
+     * @param {{kind: string, id: string, channel: ?string}} to Destination fixed when the file is chosen.
+     * @param {File} file Chosen file.
      */
     actions.uploadFile = function (to, file) {
       setUpload(to, file.name);
@@ -666,7 +666,7 @@ function Root(props) {
     };
     actions.loadProfile = function (name) {
       var pending = profilePending.current;
-      // true marque un profil en file d'attente de loadProfiles : il n'a pas encore de requête à partager.
+      // true marks a profile queued by loadProfiles: it has no request to share yet.
       if (pending[name] && pending[name] !== true) return pending[name];
       var run = liveBridge.fetchProfile(name).then(function (pr) {
         update(function (d) {
@@ -675,15 +675,15 @@ function Root(props) {
           if (!pr.missing) { u.age = pr.age; u.gender = pr.gender; u.location = pr.location; u.aboutHtml = pr.about; u.premium = pr.premium; u.miniStyle = pr.mini; }
         });
       }, function () {
-        // La fiche reste avec ce que l'on sait déjà : seule une ouverture explicite le redemande.
+        // The card keeps what is already known: only an explicit opening requests it again.
         update(function (d) { ensureLiveUser(d, name).profileFailed = true; });
       }).then(function () { delete pending[name]; });
       pending[name] = run;
       return run;
     };
     /**
-     * Permet de lire le fond de message Premium d'un membre, gardé dans l'état jusqu'à ce qu'il change.
-     * @param {string} name Membre visé.
+     * Reads the Premium message background of a member and keeps it in the state until it changes.
+     * @param {string} name Target member.
      */
     actions.loadMsgBg = function (name) {
       var pending = msgBgPending.current;
@@ -694,7 +694,7 @@ function Root(props) {
         update(function (d) { ensureLiveUser(d, name).msgBg = bg; });
       });
     };
-    /** Mini profils d'une liste de résultats, quatre requêtes à la fois pour ménager Chatango. */
+    /** Mini profiles of a result list with four requests at a time to spare Chatango. */
     actions.loadProfiles = function (names) {
       var pending = profilePending.current;
       var queue = names.filter(function (n) { var u = stateRef.current.users[n]; return ACCOUNT_NAME.test(n) && !(u && (u.profileLoaded || u.profileFailed)) && !pending[n]; });
@@ -707,9 +707,9 @@ function Root(props) {
       for (var k = 0; k < 4; k++) next();
     };
     /**
-     * Permet de vérifier auprès de Chatango le correspondant d'un nouveau MP, comme BetterChatango avant de l'ouvrir.
-     * @param {string} name Correspondant visé.
-     * @returns {boolean} Vrai si la demande est partie, faux si la connexion privée n'est pas ouverte.
+     * Checks the correspondent of a new PM with Chatango like BetterChatango does before opening it.
+     * @param {string} name Target correspondent.
+     * @returns {boolean} True if the request was sent, false if the private connection is not open.
      */
     actions.checkPm = function (name) { return liveBridge.checkPm(name); };
     actions.searchPeople = function (f, more) {
@@ -728,14 +728,14 @@ function Root(props) {
       });
     };
     /**
-     * Permet de charger les messages privés archivés avant le plus ancien message chargé d'une conversation.
-     * @param {string} name Membre de la conversation.
+     * Loads the private messages archived before the oldest loaded message of a conversation.
+     * @param {string} name Conversation member.
      */
     actions.loadOlderDm = function (name) {
       var keys = stateRef.current.dms[name].messages.map(function (m) { return m.archiveTs; }).filter(Boolean);
       update(function (d) { Object.assign(d.dms[name], { loadingOlder: true, olderFailed: false }); });
       liveBridge.pmOlder(name, Math.min.apply(null, keys), 50).then(function (page) {
-        // Une page plus ancienne ne change aucun compteur de non-lus.
+        // An older page changes no unread counter.
         update(function (d) { var c = d.dms[name]; mergePmHistory(c, page.list, pmAuthor(d)); c.olderMore = page.more; c.loadingOlder = false; });
       }, function (e) {
         warn(e);
@@ -745,7 +745,7 @@ function Root(props) {
     };
     actions.loadMore = function (gid) {
       var result = liveBridge.loadMore(gid);
-      // Échec : le pont l'annonce et la sentinelle reste en place pour réessayer.
+      // Failure: the bridge announces it and the sentinel stays in place to retry.
       if (result === 'failed') return;
       update(function (d) { var g = d.groups[gid]; if (!g) return; if (result === 'sent') g.loadingMore = true; else g.historyDone = true; });
     };
@@ -792,7 +792,7 @@ function Root(props) {
     actions.deleteMessage = function (gid, mid) {
       if (!liveBridge.delivered(mid)) { toast('This message is still being delivered. Try again in a moment.'); return; }
       var m = findMsg(stateRef.current.groups[gid], mid);
-      // Comme BetterChatango : l'original, puis chacune de ses modifications dont Chatango a donné l'identifiant définitif.
+      // Like BetterChatango: the original, then each of its edits whose final id Chatango has given.
       [mid].concat((m && m.editIds) || []).filter(liveBridge.delivered).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
     };
     actions.deleteAllFrom = function (gid, name, msg) {
@@ -802,7 +802,7 @@ function Root(props) {
     };
     actions.ban = function (gid, name, reason, opts) {
       var g = stateRef.current.groups[gid], m = opts && opts.msg && opts.msg.unid ? opts.msg : null;
-      // Les invités et anonymes peuvent partager un nom : on ne les bannit qu'à partir du message choisi.
+      // Guests and anons can share a name: they are only banned from the chosen message.
       if (!m && /^[!#]/.test(name)) { toast('Ban guests from one of their messages.'); return false; }
       m = m || (g && lastMessageOf(g, name));
       if (!m) { toast('No recent message from ' + name + ' in #' + gid + '. Chatango bans someone from one of their messages.'); return false; }
@@ -821,14 +821,14 @@ function Root(props) {
     actions.clearGroup = function (gid) { liveBridge.clearAll(gid); };
     actions.requestGroupSettings = function (gid) { liveBridge.requestSettings(gid); };
     actions.requestBans = function (gid) {
-      // La réponse à la première page remplace la liste, même si une page suivante était attendue.
+      // The response to the first page replaces the list, even if a next page was awaited.
       groupUpdate(gid, function (g) { g.live.banPage.loading = false; g.live.banSearch = null; });
       liveBridge.banList(gid, 'block', '0');
     };
     actions.requestUnbans = function (gid) { liveBridge.banList(gid, 'unblock', '0'); };
     actions.moreBans = function (gid, kind) {
       var rows = banListOf(stateRef.current.groups[gid], kind).rows, last = rows[rows.length - 1];
-      // Une ligne ajoutée en direct n'a pas d'horodatage de Chatango : la page repart alors de la plus récente.
+      // A row added live has no Chatango timestamp: the page then starts again from the newest.
       if (liveBridge.banList(gid, kind, last && last.ts || '0')) groupUpdate(gid, function (g) { banListOf(g, kind).page.loading = true; });
     };
     actions.searchBans = function (gid, query) {
@@ -858,38 +858,38 @@ function Root(props) {
     return u;
   }
   /**
-   * Permet d'ajouter un membre que l'état ne connaît pas encore, hors ligne par défaut tant que son statut est inconnu.
-   * @param {Object} d État en cours de modification.
-   * @param {string} name Membre visé.
+   * Adds a member the state does not know yet as offline by default while their status is unknown.
+   * @param {Object} d State being modified.
+   * @param {string} name Target member.
    */
   function ensureUnseenUser(d, name) {
     if (!d.users[name]) ensureLiveUser(d, name).status = 'offline';
   }
   /**
-   * Permet de compter en ligne un membre présent dans un groupe, sauf un ami dont la connexion privée donne la présence.
-   * @param {Object} d État en cours de modification.
-   * @param {string} name Membre visé.
+   * Counts as online a member present in a group except a friend whose presence comes from the private connection.
+   * @param {Object} d State being modified.
+   * @param {string} name Target member.
    */
   function ensurePresentUser(d, name) {
     var u = ensureLiveUser(d, name);
     if (u.status === 'offline' && !u.friend) u.status = 'online';
   }
   /**
-   * Permet d'appliquer à un membre une présence reçue du pont.
-   * @param {Object} u Membre dans l'état.
-   * @param {{status: string, lastOn: number, idleSince: number}} x Présence reçue.
+   * Applies a presence received from the bridge to a member.
+   * @param {Object} u Member in the state.
+   * @param {{status: string, lastOn: number, idleSince: number}} x Received presence.
    */
   function applyPresence(u, x) {
-    // Avant IDLE_DELAY, un membre inactif reste affiché online : idleSince seul garde l'inactivité.
+    // Before IDLE_DELAY, an idle member stays shown as online: only idleSince keeps the inactivity.
     u.idleSince = x.status === 'idle' ? x.idleSince || u.idleSince || Date.now() : 0;
     u.status = x.status === 'idle' && Date.now() - u.idleSince < IDLE_DELAY ? 'online' : x.status;
     if (x.lastOn) u.lastOn = x.lastOn;
   }
   /**
-   * Permet de fusionner le style d'un message dans celui du membre.
-   * @param {Object} u Membre dans l'état.
-   * @param {?Object} style Style lu dans le message.
-   * @param {number} ts Horodatage du message en millisecondes.
+   * Merges the style of a message into the member's style.
+   * @param {Object} u Member in the state.
+   * @param {?Object} style Style read in the message.
+   * @param {number} ts Message timestamp in milliseconds.
    */
   function mergeStyle(u, style, ts) {
     if (!style || ts <= u.styleTs) return;
@@ -899,12 +899,12 @@ function Root(props) {
   function setOwnStyle(style) {
     update(function (d) {
       var u = ensureLiveUser(d, d.me);
-      // Fusion sans mergeStyle : l'horloge locale peut retarder sur l'horodatage serveur des messages reçus.
+      // Merged without mergeStyle: the local clock can lag behind the server timestamp of received messages.
       u.style = Object.assign({}, u.style, style);
       u.styleTs = Math.max(u.styleTs || 0, Date.now());
     });
   }
-  /** Traduit l'état Chatango d'un groupe (drapeaux, modérateurs, annonce) dans le modèle de l'interface. */
+  /** Translates the Chatango state of a group (flags, moderators, announcement) into the interface model. */
   function deriveLive(g) {
     var L = g.live, F = GROUP_FLAG, f = L.flags, s = g.settings, staff = {};
     if (L.owner) staff[L.owner] = 'owner';
@@ -930,10 +930,10 @@ function Root(props) {
   }
   function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
   /**
-   * Permet d'appliquer une modification de groupe à l'original en gardant son compte et ses identifiants.
-   * @param {Object} o Message original.
-   * @param {{id: string, text: string, parts: ?Array, embeds: ?Array}} m Message de modification.
-   * @param {boolean=} keepText Vrai pour compter la modification sans remplacer le texte.
+   * Applies a group edit to the original while keeping its count and its ids.
+   * @param {Object} o Original message.
+   * @param {{id: string, text: string, parts: ?Array, embeds: ?Array}} m Edit message.
+   * @param {boolean=} keepText True to count the edit without replacing the text.
    */
   function applyGroupEdit(o, m, keepText) {
     o.editCount = (o.editCount || 0) + 1;
@@ -941,9 +941,9 @@ function Root(props) {
     if (!keepText) applyEdit(o, m);
   }
   /**
-   * Permet de reprendre dans un original arrivé après elles ses modifications affichées à part, la plus récente en dernier.
-   * @param {Object} g Groupe dans l'état.
-   * @param {Object} o Message original, pas encore dans le fil.
+   * Folds into an original that arrived after them its edits shown on their own with the newest last.
+   * @param {Object} g Group in the state.
+   * @param {Object} o Original message, not in the message log yet.
    */
   function mergeEdits(g, o) {
     var edits = g.messages.filter(function (x) { return x.editId === o.id && x.author === o.author; });
@@ -952,12 +952,12 @@ function Root(props) {
     g.messages = g.messages.filter(function (x) { return edits.indexOf(x) < 0; });
   }
   /**
-   * Permet de verser une page de bannissements ou de débannissements dans sa liste.
-   * @param {{rows: Array, page: Object}} list Liste lue par banListOf, mise à jour en place.
-   * @param {{list: Array, more: boolean}} op Page reçue du pont.
+   * Adds a page of bans or unbans to its list.
+   * @param {{rows: Array, page: Object}} list List read by banListOf, updated in place.
+   * @param {{list: Array, more: boolean}} op Page received from the bridge.
    */
   function receiveBanPage(list, op) {
-    // Seule la page suivante demandée par Nightango s'ajoute : un rechargement de BetterChatango repart de la première page.
+    // Only the next page requested by Nightango is appended: a BetterChatango reload starts again from the first page.
     var next = list.page.loading, known = {};
     if (!next) list.rows.splice(0);
     list.rows.forEach(function (b) { known[banKey(b)] = true; });
@@ -968,13 +968,13 @@ function Root(props) {
     list.page.loading = false;
   }
   /**
-   * Permet de garder le style de l'auteur de chaque entrée fusionnée de l'historique privé.
-   * @param {Object} d État en cours de modification.
+   * Keeps the author's style of each merged private history entry.
+   * @param {Object} d State being modified.
    */
   function pmAuthor(d) { return function (x) { mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts); }; }
   /**
-   * Permet de fusionner l'historique privé de BetterChatango aux conversations, à chaque OK et après un import, sans doublon.
-   * @param {boolean=} imported Vrai après un import, qui peut avoir ajouté des entrées plus anciennes que celles chargées.
+   * Merges the BetterChatango private history into the conversations on each OK and after an import without duplicates.
+   * @param {boolean=} imported True after an import, which may have added entries older than the loaded ones.
    */
   function loadPmHistory(imported) {
     liveBridge.pmHistory(100).then(function (hist) {
@@ -985,19 +985,19 @@ function Root(props) {
         names.forEach(function (t) {
           ensureLiveUser(d, t);
           var c = pmConversation(d, t, { closed: localRef.current.hidden.indexOf(t) >= 0 });
-          // Fixé au premier OK : à une reconnexion, les 100 dernières entrées ne disent rien des pages plus anciennes déjà chargées. Un import, lui, peut en ajouter.
+          // Set on the first OK: on a reconnection, the last 100 entries say nothing about the older pages already loaded. An import, however, can add some.
           if (c.olderMore == null || (imported && hist[t].more)) c.olderMore = hist[t].more;
           mergePmHistory(c, hist[t].list, pmAuthor(d));
         });
       });
-      // La conversation ouverte sous les yeux de l'utilisateur passe lue, les autres reprennent les non-lus de l'archive.
+      // The conversation open in front of the user becomes read, the others take the unreads from the archive.
       names.forEach(function (t) { if (isDmInView(stateRef.current, t)) readPm(pmArchive.current, update, t); });
       syncPmUnread(pmArchive.current, update, names.filter(function (t) { return !isDmInView(stateRef.current, t); }));
     });
   }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
   /**
-   * Permet de relancer les connexions fermées, chacune suivie de ses tentatives automatiques si elle échoue.
+   * Restarts the closed connections with automatic attempts for each one that fails.
    */
   function reconnectClosed() {
     var s0 = stateRef.current, held = s0.session && SESSION_RANK[s0.session.reason] >= SESSION_RANK.kicked;
@@ -1007,12 +1007,12 @@ function Root(props) {
     gids.forEach(function (gid) { stopRetry(gid); retries.current[gid] = { tries: 0, timer: null }; reconnectAuto(gid); });
   }
 
-  // -- Reconnexion automatique --------------------------------------------------
+  // -- Automatic reconnection ---------------------------------------------------
   /**
-   * Permet de lire l'état d'une connexion suivie : la connexion privée, ou un groupe rejoint.
-   * @param {Object} s État de l'application.
-   * @param {string} gid Groupe ou private_message.
-   * @returns {?string} open, connecting ou closed, null pour un groupe quitté ou inconnu.
+   * Returns the state of a tracked connection: the private connection or a joined group.
+   * @param {Object} s Application state.
+   * @param {string} gid Group or private_message.
+   * @returns {?string} open, connecting or closed, null for a left or unknown group.
    */
   function connOf(s, gid) {
     if (gid === 'private_message') return s.pmConn || null;
@@ -1020,13 +1020,13 @@ function Root(props) {
     return g && g.joined ? g.conn : null;
   }
   /**
-   * Permet de savoir si une relance automatique a un sens : page visible, réseau présent, session ni coupée ailleurs, ni expirée, ni hors ligne.
-   * @param {Object} s État de l'application.
+   * Tells whether an automatic retry makes sense: visible page, network present, session neither kicked elsewhere, expired nor offline.
+   * @param {Object} s Application state.
    */
   function canRetry(s) { return (!s.session || s.session.reason === 'lost') && document.visibilityState === 'visible' && navigator.onLine; }
   /**
-   * Permet de relancer une connexion sans déplacer le focus de BetterChatango quand son groupe n'est pas affiché.
-   * @param {string} gid Groupe ou private_message.
+   * Restarts a connection without moving the BetterChatango focus when its group is not shown.
+   * @param {string} gid Group or private_message.
    */
   function reconnectAuto(gid) {
     var r = stateRef.current.route;
@@ -1037,9 +1037,9 @@ function Root(props) {
     if (r) { clearTimeout(r.timer); delete retries.current[gid]; }
   }
   /**
-   * Permet de programmer la tentative suivante d'une connexion coupée, jusqu'à épuiser RECONNECT_DELAYS.
-   * @param {string} gid Groupe ou private_message.
-   * @param {boolean} fresh Vrai pour une coupure, faux après une tentative en échec.
+   * Schedules the next attempt of a lost connection until RECONNECT_DELAYS runs out.
+   * @param {string} gid Group or private_message.
+   * @param {boolean} fresh True for a connection loss, false after a failed attempt.
    */
   function scheduleRetry(gid, fresh) {
     var prev = retries.current[gid], tries = fresh ? 0 : prev.tries;
@@ -1050,7 +1050,7 @@ function Root(props) {
     liveBridge.note('Reconnecting to ' + liveBridge.connName(gid) + ' in ' + delay / 1000 + ' s, attempt ' + (tries + 1) + ' of ' + RECONNECT_DELAYS.length);
     retries.current[gid] = { tries: tries + 1, timer: setTimeout(function () {
       var s0 = stateRef.current, conn = connOf(s0, gid);
-      // Tentative déjà lancée par ailleurs (Reconnect, retour du réseau) : son échec reprend la suite.
+      // Attempt already started elsewhere (Reconnect, network back): its failure resumes the sequence.
       if (conn === 'connecting') return;
       if (conn !== 'closed' || !canRetry(s0)) { stopRetry(gid); return; }
       reconnectAuto(gid);
@@ -1062,7 +1062,7 @@ function Root(props) {
       case 'login': {
         var stored = storageGet(skinKey(op.me)) || {}, raw = JSON.stringify(stored);
         var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
-        // Listes d'avant la synchronisation avec BetterChatango : versées dans les siennes, retirées du stockage local une fois toutes acceptées.
+        // Lists from before the sync with BetterChatango: moved into its own lists, removed from local storage once all are accepted.
         Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
         if (JSON.stringify(stored) !== raw) storageSet(skinKey(op.me), stored);
         localRef.current = Object.assign(blankLocal(), stored);
@@ -1072,7 +1072,7 @@ function Root(props) {
           Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
           d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
         });
-        // Un compte sans groupe rejoint ne reçoit aucune trame de groupe.
+        // An account with no joined group receives no group frame.
         setTimeout(function () { update(function (d) { d.groupsSeen = true; }); }, 10000);
         break;
       }
@@ -1083,7 +1083,7 @@ function Root(props) {
           d.groupsSeen = true;
           if (op.ready) { g.inited = true; g.membersLoaded = true; }
           if (op.title) { g.title = op.title; g.topic = op.title; }
-          // Rejoindre rappelle renderGroup avec recent: true, owned ne revient donc jamais à faux.
+          // Joining calls renderGroup again with recent: true, so owned never goes back to false.
           if (op.owned) g.owned = true;
           g.joined = !op.hidden;
           if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: Date.now() }; }
@@ -1094,7 +1094,7 @@ function Root(props) {
       case 'msg': {
         var m = Object.assign({}, op.msg), style = m.style; delete m.style;
         if (m.editId) {
-          // Modification : appliquée à l'original s'il est chargé, sinon affichée comme un message modifié qui garde sa référence.
+          // Edit: applied to the original if it is loaded, otherwise shown as an edited message that keeps its reference.
           update(function (d) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, m.author), o = editTarget(g, m);
@@ -1118,7 +1118,7 @@ function Root(props) {
           mergeStyle(u, hs, hm.ts);
           if (g.messages.some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return;
           var o = editTarget(g, hm);
-          // Historique reçu du plus récent au plus ancien : comme BetterChatango, un original déjà modifié garde son texte.
+          // History received from newest to oldest: like BetterChatango, an original already edited keeps its text.
           if (o) { applyGroupEdit(o, hm, o.edited); return; }
           if (hm.editId) hm.edited = true;
           else { delete hm.editId; mergeEdits(g, hm); }
@@ -1138,7 +1138,7 @@ function Root(props) {
         d.mentionLog.forEach(function (x) { if (x.gid === op.gid && x.id === op.tmp) x.id = op.id; });
       }); break;
       case 'del': groupUpdate(op.gid, function (g, d) {
-        // Une modification affichée à part disparaît avec son original, même quand celui-ci n'est pas chargé.
+        // An edit shown on its own disappears with its original, even when the original is not loaded.
         g.messages = g.messages.filter(function (x) { return !(x.editId && op.ids.indexOf(x.editId) >= 0); });
         g.messages.forEach(function (x) { if (op.ids.indexOf(x.id) >= 0) x.deleted = { by: 'staff' }; });
         dropMentions(d, op.gid, op.ids);
@@ -1201,11 +1201,11 @@ function Root(props) {
         if (s && s.ban && gone(s.ban)) s.ban = null;
         if (g.live.unbanPage.loaded) g.live.unbans = op.list.concat(g.live.unbans.filter(function (b) { return !gone(b); }));
       }); break;
-      // Une réponse arrivée après le délai d'attente reste valable, mais pas après Clear search.
+      // A response that arrives after the timeout stays valid, but not after Clear search.
       case 'banSearch': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
       case 'banSearchRefused': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
       case 'banSearchTimeout': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s && s.status === 'pending') s.status = 'timeout'; }); break;
-      // BetterChatango ne fait que journaliser allunblocked : la liste des débannissements est redemandée à son prochain affichage.
+      // BetterChatango only logs allunblocked: the unban list is requested again the next time it is shown.
       case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
       case 'modlog': groupUpdate(op.gid, function (g) {
         var known = {}, list = (g.live.modlog || []).slice();
@@ -1215,7 +1215,7 @@ function Root(props) {
         g.live.modlog = list;
       }); break;
       case 'conn':
-        // Seule une connexion ouverte qui se ferme lance la chaîne : un échec au démarrage ou un groupe quitté n'en lancent pas.
+        // Only an open connection that closes starts the sequence: a failure at startup or a left group does not.
         var was = connOf(stateRef.current, op.gid);
         if (op.state === 'open') stopRetry(op.gid);
         else if (op.state === 'closed' && (was === 'open' || was === 'connecting' && retries.current[op.gid])) scheduleRetry(op.gid, was === 'open');
@@ -1223,7 +1223,7 @@ function Root(props) {
           if (op.gid === 'private_message') d.pmConn = op.state;
           if (!d.auth.loggedIn) return;
           var g = d.groups[op.gid];
-          // Une demande d'historique en cours ne reçoit plus de réponse sur un socket fermé.
+          // A pending history request gets no response on a closed socket.
           if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; } }
           d.session = sessionAfterConn(d, op);
         }); break;
@@ -1236,17 +1236,17 @@ function Root(props) {
         update(function (d) {
           if (!d.auth.loggedIn) return;
           var open = d.pmConn === 'open' || Object.keys(d.groups).some(function (k) { return d.groups[k].joined && d.groups[k].conn === 'open'; });
-          // Coupure brève : les sockets restés ouverts ne changent pas d'état, aucune trame conn ne lèverait la fenêtre.
+          // Short loss: the sockets that stayed open do not change state, no conn frame would lift the overlay.
           if (d.session && d.session.reason === 'offline' && open) d.session = null;
         });
         break;
-      // BetterChatango adresse ses notices au groupe qu'il croit ouvert : un toast évite de les écrire dans le mauvais fil.
+      // BetterChatango addresses its notices to the group it believes is open: a toast avoids writing them in the wrong message log.
       case 'notice': toast(op.text, { icon: 'info' }); break;
       case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { icon: 'info', action: { label: op.button, run: op.action } } : { icon: 'info' }); break;
       case 'pm': {
         var s0 = stateRef.current;
         var focused = isDmInView(s0, op.from);
-        // Comme dans BetterChatango, le MP d'un membre ignoré est reçu et archivé, sans alerte.
+        // Like in BetterChatango, the PM of an ignored member is received and archived without an alert.
         var ignored = !!userOf(s0, op.from).ignored;
         var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
         update(function (d) {
@@ -1255,11 +1255,11 @@ function Root(props) {
           receivePm(d, op);
         });
         pmArchive.current.record(op.from, op, true);
-        // Lecture créée après la pile en cours : BetterChatango n'archive un MP reçu qu'après l'émission de pm.
+        // Read created after the current stack: BetterChatango archives a received PM only after pm is emitted.
         if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
         if (edit) break;
         if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
-        // Les msgoff arrivent en rafale juste après la connexion : une seule notification pour toute la rafale.
+        // msgoff frames arrive in a burst right after the connection: a single notification for the whole burst.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
           offlineCount.current = 0;
@@ -1326,12 +1326,12 @@ function Root(props) {
       default: break;
     }
   }
-  /* Conversations masquées, canaux masqués, membres au style coupé et style perso, conservés par compte dans ce navigateur */
+  /* Closed conversations, hidden channels, members with a hidden style and own style, kept by account in this browser */
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn || !state.me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
-    // Favoris, sourdines et membres ignorés locaux que BetterChatango n'a pas encore acceptés : gardés pour la prochaine connexion.
+    // Local favorites, mutes and ignored members that BetterChatango has not accepted yet: kept for the next sign-in.
     o.fav = prev.fav;
     o.muted = prev.muted;
     o.ignored = prev.ignored;
@@ -1341,7 +1341,7 @@ function Root(props) {
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
     prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
     Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
-    // Fusion avec le stockage : le pont y pose aussi le drapeau de migration des non-lus.
+    // Merged with the storage: the bridge also sets the unread migration flag there.
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
   });
   useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(handleLiveOp); }, []);

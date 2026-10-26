@@ -1,6 +1,6 @@
 /**
- * Page Staff and roles, en live comme en prototype : le propriétaire, puis chaque modérateur avec ses droits Chatango.
- * @param {{g: Object, draft: Object, edit: Function, myRole: ?string, perms: Object}} p Groupe, brouillon des réglages, modification du brouillon, rôle et droits de l'utilisateur.
+ * Staff and roles page in live and in the prototype: the owner then each moderator with their Chatango permissions.
+ * @param {{g: Object, draft: Object, edit: Function, myRole: ?string, perms: Object}} p Group, settings draft, draft edit, role and permissions of the user.
  */
 function GSStaff(p) {
   var app = useApp(), g = p.g, draft = p.draft;

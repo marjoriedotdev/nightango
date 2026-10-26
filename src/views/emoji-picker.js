@@ -1,18 +1,19 @@
-/* ---------- Sélecteur d'émoticônes et de médias des composeurs ---------- */
+/* ---------- Composer emoticon and media picker ---------- */
 var EMOJI_SECTIONS = [{ title: 'Classic', premium: false }, { title: 'Premium', premium: true }];
 var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'media', label: 'Media' }];
 
 /**
- * Permet d'ouvrir le sélecteur d'un composeur, onglets Emoji et Media, et d'insérer le raccourci ou l'adresse choisis dans son champ.
- * @param {Object} inputRef Référence du champ du composeur.
- * @param {function(string)} setValue Écrit le texte du champ.
- * @returns {{onEmoji: Function, picker: ?Object}} Action du bouton Emoji et sélecteur à rendre à côté du composeur.
+ * Opens a composer's picker and inserts the chosen shortcut or address into its field.
+ * The picker has an Emoji tab and a Media tab.
+ * @param {Object} inputRef Ref of the composer field.
+ * @param {function(string)} setValue Writes the field text.
+ * @returns {{onEmoji: Function, picker: ?Object}} Emoji button action and picker to render next to the composer.
  */
 function useEmojiPicker(inputRef, setValue) {
   var st = useState(false), open = st[0], setOpen = st[1];
   var tb = useState('emoji'), tab = tb[0], setTab = tb[1];
   var anchorRef = useRef(null), caret = useRef(null);
-  // Le champ contrôlé ne reçoit sa nouvelle valeur qu'au commit : le curseur se place après.
+  // The controlled field gets its new value only at commit: the caret is placed after that.
   useLayoutEffect(function () {
     var at = caret.current;
     if (at == null) return;
@@ -38,8 +39,9 @@ function useEmojiPicker(inputRef, setValue) {
 }
 
 /**
- * Sélecteur des composeurs : émoticônes de BetterChatango par leur emoji, rangées en Classic et Premium comme dans son sélecteur, et médiathèque de BetterChatango.
- * @param {{anchorRef: Object, premium: boolean, tab: string, onTab: function(string), onPick: function(string), onClose: function(Event)}} p Bouton Emoji, section Premium affichée, onglet ouvert et son changement, choix d'un raccourci ou d'une adresse et fermeture.
+ * Composer picker.
+ * It shows BetterChatango's emoticons by their emoji, sorted into Classic and Premium as in its picker, and BetterChatango's media library.
+ * @param {{anchorRef: Object, premium: boolean, tab: string, onTab: function(string), onPick: function(string), onClose: function(Event)}} p Emoji button, Premium section shown, open tab and its change, choice of a shortcut or an address, and closing.
  */
 function EmojiPicker(p) {
   var ref = useRef(null);

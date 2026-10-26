@@ -3,18 +3,18 @@ status: accepted
 date: 2026-10
 ---
 
-# Non-lus des MP lus dans l'historique privé
+# PM unreads read from the private history
 
-## Contexte
+## Context
 
-Deux compteurs de non-lus coexistaient pour une conversation : le drapeau `unread` de chaque entrée de la base d'historique de BetterChatango, et `unread` dans l'état de `Root`. Le second montait de 1 à chaque MP reçu, revenait à 0 à la lecture et se recalait à chaque `OK` sur les entrées que ne couvrait aucun message affiché. Sept endroits de `app/root.js` l'écrivaient, et le correctif `1d1022d` (non-lus gardés au rechargement) a dû toucher huit fichiers pour garder les deux d'accord.
+Two unread counters coexisted for a conversation: the `unread` flag of each entry in BetterChatango's history database, and `unread` in the `Root` state. The second went up by 1 on each PM received, went back to 0 on read and was reset on each `OK` from the entries that no displayed message covered. Seven places in `app/root.js` wrote it, and the fix `1d1022d` (unreads kept on reload) had to touch eight files to keep both in agreement.
 
-## Décision
+## Decision
 
-Décision du propriétaire du 2026-10-24 (revue d'architecture, candidat 01) : la base d'historique de BetterChatango est la seule source des non-lus. Le compte d'une conversation est le nombre de ses entrées non lues, sans les modifications de MP, que BetterChatango archive à part. L'état n'en garde qu'une copie pour le rendu, que seul `app/pm.js` écrit, toujours en la relisant dans l'archive après une écriture, jamais par incrément. Le prototype, et le live dans un navigateur sans base, utilisent une archive en mémoire de même interface.
+Owner decision of 2026-10-24 (architecture review, candidate 01): BetterChatango's history database is the only source of unreads. A conversation's count is the number of its unread entries, without PM edits, which BetterChatango archives separately. The state keeps only a copy for rendering, written only by `app/pm.js`, always by reading it back from the archive after a write, never by increment. The prototype, and live in a browser without a database, use an in-memory archive with the same interface.
 
-## Conséquences
+## Consequences
 
-- Un badge apparaît quelques millisecondes après l'archivage du MP par BetterChatango, et disparaît de même après la lecture.
-- Sans base (navigation privée, quota), les non-lus ne survivent pas au rechargement, comme l'historique lui-même. Un bandeau le dit en tête de Chats.
-- Réintroduire un compteur incrémenté dans l'état, ou en garder un ailleurs, rouvre cette décision.
+- A badge appears a few milliseconds after BetterChatango archives the PM, and disappears the same way after the read.
+- Without a database (private browsing, quota), unreads do not survive a reload, like the history itself. A banner says so at the top of Chats.
+- Reintroducing an incremented counter in the state, or keeping one elsewhere, reopens this decision.

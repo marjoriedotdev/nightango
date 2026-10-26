@@ -4,12 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SUITES = ['smoke', 'live_ui', 'pm', 'markup', 'loader', 'live_login', 'avatar', 'moon', 'check_ds'];
-// Certaines suites sortent en 0 malgré un échec : seule leur sortie le signale.
+// Some suites exit with 0 despite a failure: only their output reports it.
 const FAILURE = /^(FAIL|CRASH)|^ERRORS:(?! none$)/m;
 
 /**
- * Permet d'exécuter une suite et de juger son résultat.
- * @param {string} suite Nom du fichier de test sans extension.
+ * Runs a suite and judges its result.
+ * @param {string} suite Test file name without extension.
  */
 function run(suite) {
   const result = spawnSync(process.execPath, [join('tests', suite + '.js'), '.'], { cwd: ROOT, encoding: 'utf8' });

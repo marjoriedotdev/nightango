@@ -36,8 +36,8 @@ function ProfilePage() {
 }
 
 /**
- * Visibilité de son profil dans Meet people.
- * @param {{meet: boolean, disabled: boolean, onChange: Function}} p Profil listé dans Meet people, interrupteur bloqué, reçoit la nouvelle valeur.
+ * Visibility of the user's own profile in Meet people.
+ * @param {{meet: boolean, disabled: boolean, onChange: Function}} p Profile listed in Meet people, switch locked, receives the new value.
  */
 function VisibilitySection(p) {
   return h(T.SettingsSection, { title: 'Visibility' },
@@ -45,11 +45,11 @@ function VisibilitySection(p) {
 }
 
 /**
- * Aperçu de son mini profil sur son fond Premium, bio rendue sans jamais injecter de HTML.
- * @param {string} p.name Nom de l'utilisateur connecté.
- * @param {string} p.meta Âge, genre et lieu déjà composés.
- * @param {string} p.about Bio du brouillon.
- * @param {?Object} p.mini Fond tel que le renvoie miniStyleOf.
+ * Preview of the user's own mini profile on its Premium background with the bio rendered without ever injecting HTML.
+ * @param {string} p.name Name of the signed-in user.
+ * @param {string} p.meta Age, gender and location already joined.
+ * @param {string} p.about Draft bio.
+ * @param {?Object} p.mini Background as miniStyleOf returns it.
  */
 function ProfilePreviewCard(p) {
   var mini = p.mini, cover = useMiniCover(mini), bg = mini ? mini.bg : 'var(--subtle)';
@@ -64,22 +64,22 @@ function ProfilePreviewCard(p) {
       mini ? coverReveal(cover, mini) : null));
 }
 
-// Motifs de BetterChatango recopiés tels quels, point de vissle.me non échappé compris (inject.js:1472, 1490).
+// BetterChatango patterns copied as is, including the unescaped dot of vissle.me (inject.js:1472, 1490).
 var VISSLE_TRACKER = /<script src="(?:https:)?\/\/vissle.me\/profile\/(\d+)"><\/script>/;
 var VISSLE_TRACKER_LINE = /(\n)?(<script src="(?:https:)?\/\/vissle.me\/profile\/\d+"><\/script>)/;
-// Barre oblique échappée : le prototype inline ce code dans une balise script que la fin de balise fermerait.
+// Escaped slash: the prototype inlines this code in a script tag that the closing tag would end.
 var VISSLE_TRACKER_ADD = '\n<script src="//vissle.me/profile/512"><\/script>';
 /**
- * Permet de lire le tracker vissle d'une bio avec le motif de BetterChatango.
- * @param {string} bio Bio du mini profil.
- * @returns {?number} Le n du tracker, null sans tracker.
+ * Reads the vissle tracker of a bio with the BetterChatango pattern.
+ * @param {string} bio Mini profile bio.
+ * @returns {?number} The tracker n, null without a tracker.
  */
 function vissleTrackerOf(bio) { var m = VISSLE_TRACKER.exec(bio); return m ? +m[1] : null; }
 
 var VISIT_FILTERS = [{ value: 'all', label: 'All' }, { value: 'log', label: 'Visits' }, { value: 'like', label: 'Likes' }, { value: 'dislike', label: 'Dislikes' }, { value: 'msg', label: 'Comments' }, { value: 'refer', label: 'Referrals' }];
 /**
- * Permet d'afficher une ligne d'activité vissle.
- * @param {object} r Ligne produite par visitorPage.
+ * Shows a vissle activity row.
+ * @param {object} r Row produced by visitorPage.
  */
 function visitorRow(r) {
   return h(ActivityRow, { key: r.key, sub: r.msg, at: r.ts },
@@ -89,11 +89,11 @@ function visitorRow(r) {
 }
 
 /**
- * Activité de son propre profil enregistrée par vissle.me, et tracker vissle de la bio.
- * @param {string} p.bio Bio enregistrée, qui donne le statut du tracker.
- * @param {string} p.draft Bio du brouillon, que les boutons du tracker modifient.
- * @param {Function} p.onDraft Reçoit la nouvelle bio du brouillon.
- * @param {boolean} [p.disabled] Boutons du tracker désactivés.
+ * Activity of the user's own profile recorded by vissle.me and the vissle tracker of the bio.
+ * @param {string} p.bio Saved bio, which gives the tracker status.
+ * @param {string} p.draft Draft bio, which the tracker buttons edit.
+ * @param {Function} p.onDraft Receives the new draft bio.
+ * @param {boolean} [p.disabled] Tracker buttons disabled.
  */
 function VisitorsSection(p) {
   var app = useApp(), v = app.state.visitors;
@@ -103,7 +103,7 @@ function VisitorsSection(p) {
   var inviteInList = !tracked && !rows.length && !loading && !(v && v.error);
   function toggleTracker() {
     if (drafted) { p.onDraft(p.draft.replace(VISSLE_TRACKER_LINE, '')); return; }
-    // Règle de BetterChatango : la bio balise comprise reste strictement sous 2000 caractères.
+    // BetterChatango rule: the bio, tag included, stays strictly under 2000 characters.
     var over = p.draft.length - (2000 - VISSLE_TRACKER_ADD.length) + 1;
     if (over > 0) { app.ui.toast('Remove ' + over + (over === 1 ? ' character' : ' characters') + ' from your bio to make room for the tracker.'); return; }
     p.onDraft(p.draft + VISSLE_TRACKER_ADD);

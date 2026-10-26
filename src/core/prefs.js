@@ -16,6 +16,6 @@ function defaultPrefs() {
     simulate: true
   };
 }
-// En live, ces préférences sont des réglages de BetterChatango, qui font foi : relues à la connexion, écrites chez lui avant de basculer.
+// In live, these preferences are BetterChatango settings, which are authoritative: read again at sign-in, written to BetterChatango before switching.
 var BETTER_CHATANGO_PREFS = { 'safety.guestMessages': 'guestMessages', announcements: 'announcements' };
 var BETTER_CHATANGO_SAVE_FAILED = 'BetterChatango could not save this setting. Reload the page and try again.';

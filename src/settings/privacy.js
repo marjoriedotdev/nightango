@@ -19,7 +19,7 @@ function BrowserTabSection() {
 }
 
 /**
- * Export et import de l'historique privé, au format de fichier de BetterChatango (exportMessages et importMessages).
+ * Export and import of the private history in the BetterChatango file format (exportMessages and importMessages).
  */
 function PmHistoryRows() {
   var app = useApp(), toast = app.ui.toast;
@@ -45,8 +45,8 @@ function PmHistoryRows() {
 var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
 
 /**
- * Réglages de démarrage de BetterChatango.
- * @param {{value: Object, onChange: function}} p value porte les trois interrupteurs, onChange reçoit la clé et la nouvelle valeur.
+ * BetterChatango startup settings.
+ * @param {{value: Object, onChange: function}} p value holds the three switches, onChange receives the key and the new value.
  */
 function StartupSection(p) {
   return h(T.SettingsSection, { title: 'On startup', description: 'BetterChatango applies these the next time it loads.' },
@@ -56,9 +56,9 @@ function StartupSection(p) {
 }
 
 /**
- * Permet de lire un hôte saisi seul, sans schéma, chemin ni identifiant, tel que new URL le rendrait.
- * @param {string} text Saisie de l'utilisateur.
- * @returns {?string} Hôte en minuscules, null si la saisie n'est pas un hôte seul.
+ * Reads a host typed alone (no scheme or path or user info) as new URL would return it.
+ * @param {string} text User input.
+ * @returns {?string} Lowercase host, null if the input is not a host alone.
  */
 function typedHost(text) {
   var v = text.trim().toLowerCase();
@@ -66,12 +66,12 @@ function typedHost(text) {
 }
 
 /**
- * Lignes d'une liste de Safety, chacune avec son bouton, ou le texte de la liste vide.
- * @param {Array<string>} list Valeurs listées.
- * @param {Function} content Contenu de la ligne d'une valeur.
- * @param {string} action Texte du bouton.
- * @param {Function} run Action du bouton sur une valeur.
- * @param {string} empty Texte de la liste vide.
+ * Rows of a Safety list with a button each or the empty list text.
+ * @param {Array<string>} list Listed values.
+ * @param {Function} content Row content for a value.
+ * @param {string} action Button text.
+ * @param {Function} run Button action on a value.
+ * @param {string} empty Text of the empty list.
  */
 function safetyRows(list, content, action, run, empty) {
   return list.length ? list.map(function (x) {
@@ -81,8 +81,8 @@ function safetyRows(list, content, action, run, empty) {
 }
 
 /**
- * Hôtes de confiance : ajout d'un hôte saisi et liste avec retrait.
- * @param {{hosts: Array<string>}} p Hôtes de confiance en minuscules.
+ * Trusted hosts: adding a typed host and a list with removal.
+ * @param {{hosts: Array<string>}} p Lowercase trusted hosts.
  */
 function TrustedSites(p) {
   var app = useApp();

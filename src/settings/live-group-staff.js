@@ -1,4 +1,4 @@
-/* Libellés du journal Chatango, d'après les modèles de chadango (models/modaction.go). */
+/* Labels of the Chatango moderation log, based on the chadango models (models/modaction.go). */
 var MODLOG_TEXT = {
   amod: 'made *t* a moderator', aadm: 'made *t* an admin', rmod: 'removed *t* as a moderator', radm: 'removed *t* as an admin',
   emod: "changed *t*'s permissions", chrl: 'changed the slow mode', anon: 'changed whether anons can post', prxy: 'changed proxy and VPN blocking',

@@ -45,11 +45,11 @@ function GSMediaLive(p) {
 var BAN_SEARCH_ERRORS = { 1: 'That search is too long.', 2: "That's not a valid username.", 4: "That's not a valid IP address." };
 
 /**
- * Permet d'afficher un bannissement : membre, auteur, date, autres noms et IP selon le droit.
- * @param {Object} g Groupe.
- * @param {Object} x Bannissement lu par le pont.
- * @param {boolean} showIp L'utilisateur peut voir les IP.
- * @param {*} action Bouton de la ligne.
+ * Shows a ban: member and author and date plus other names and the IP depending on the permission.
+ * @param {Object} g Group.
+ * @param {Object} x Ban read by the bridge.
+ * @param {boolean} showIp The user can see IPs.
+ * @param {*} action Button of the row.
  */
 function banRow(g, x, showIp, action) {
   return h('div', { key: banKey(x), className: 'lrow' },
@@ -67,8 +67,8 @@ var BAN_LIST_TEXT = {
 };
 
 /**
- * Liste de bannissements ou de débannissements chargée par pages au défilement.
- * @param {{g: Object, kind: string, hideGuests: boolean, showIp: boolean, scrollRef: Object, action: ?Function}} p Groupe, liste, filtre des invités, droit de voir les IP, zone qui défile et bouton de chaque ligne.
+ * List of bans or unbans loaded page by page on scroll.
+ * @param {{g: Object, kind: string, hideGuests: boolean, showIp: boolean, scrollRef: Object, action: ?Function}} p Group, list, guest filter, permission to see IPs, scrolling area and button of each row.
  */
 function BanPages(p) {
   var app = useApp(), list = banListOf(p.g, p.kind), page = list.page, text = BAN_LIST_TEXT[p.kind];
@@ -130,6 +130,6 @@ function GSBansLive(p) {
         h('div', { className: 'tc-section-pad' }, h(T.Button, { size: 'sm', onClick: function () { setQuery(''); app.actions.clearBanSearch(g.id); } }, 'Clear search')))
         : h(Frag, null,
           h(T.SettingRow, { title: 'Hide guests', control: h(T.Switch, { checked: hideGuests, onChange: function (e) { setHideGuests(e.target.checked); } }) }),
-          // Une liste par onglet : la sentinelle et sa page suivante repartent de zéro à chaque changement.
+          // One list per tab: the sentinel and its next page start over on every switch.
           h(BanPages, { key: tab, g: g, kind: tab, hideGuests: hideGuests, showIp: showIp, scrollRef: p.scrollRef, action: tab === 'block' ? unbanButton : null }))));
 }

@@ -1,11 +1,11 @@
-/* ---------- Découvrir ---------- */
+/* ---------- Discover ---------- */
 function parseGroupName(v) {
   return String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^client\.chatango\.com\/q\?/, '').replace(/\.chatango\.com.*$/, '').replace(/\/.*$/, '').replace(/^#/, '');
 }
 /**
- * Permet de refuser, dans le prototype, un groupe absent des données d'exemple.
- * @param {Object} s État de l'application.
- * @param {string} id Nom du groupe lu par parseGroupName.
+ * Rejects a group missing from the sample data in the prototype.
+ * @param {Object} s Application state.
+ * @param {string} id Group name read by parseGroupName.
  */
 function unknownGroupError(s, id) { return s.groups[id] || LIVE ? '' : 'No group named ' + id + '. Check the spelling.'; }
 function GroupJoinButton(p) {

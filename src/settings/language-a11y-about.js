@@ -13,7 +13,7 @@ function AccessibilityPage() {
 function WhatsNewPage() {
   return h(Page, { title: "What's new", lede: 'Changes in each version of Nightango, newest first.' },
     RELEASE_NOTES.map(function (r) {
-      // Date du changelog lue en heure locale : new Date('YYYY-MM-DD') la lirait en UTC et reculerait d'un jour à l'ouest.
+      // Changelog date read in local time: new Date('YYYY-MM-DD') would read it as UTC and move back one day west of UTC.
       var d = r.date.split('-');
       return h(T.SettingsSection, { key: r.version, title: r.version, description: new Date(+d[0], d[1] - 1, +d[2]).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) },
         r.groups.map(function (g) {
@@ -30,9 +30,9 @@ function journalStamp(ts) {
   return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
 }
 /**
- * Permet de mettre le journal de diagnostic en texte, une ligne par événement, l'heure locale et son décalage en tête.
- * @param {Array<{t: number, k: string, m: string}>} list Événements, du plus ancien au plus récent.
- * @returns {string} Texte à copier ou télécharger.
+ * Turns the diagnostic journal into text with one line per event under a header with the local time and its offset.
+ * @param {Array<{t: number, k: string, m: string}>} list Events, oldest to newest.
+ * @returns {string} Text to copy or download.
  */
 function journalText(list) {
   var offset = -new Date().getTimezoneOffset(), abs = Math.abs(offset);

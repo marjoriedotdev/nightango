@@ -1,22 +1,22 @@
-# Fond Premium répété dans le mini profil
+# Repeated Premium background in the mini profile
 
-Dans le mini profil (fiche About), l'image de fond Premium s'affiche en bandeau de 120 px (`object-fit: cover`) au-dessus du texte, qui reste sur la couleur de fond unie. Sa répétition (`background-repeat` de `custom_profile.css`) n'est pas reproduite, et l'image n'est pas placée derrière le texte. Les cartes Meet n'affichent que la couleur.
+In the mini profile (About card), the Premium background image shows as a 120 px banner (`object-fit: cover`) above the text, which stays on the plain background color. Its repeat (`background-repeat` in `custom_profile.css`) is not reproduced, and the image is not placed behind the text. Meet cards show only the color.
 
-## Pourquoi c'est hors périmètre
+## Why this is out of scope
 
-Le CSS du membre n'est jamais injecté ([ADR-0004](../docs/adr/0004-member-html-never-injected.md)), et l'image doit partir sans referrer. Dans le Shadow DOM de l'application, un fond CSS (`background-image`) suit la politique referrer de la page st.chatango.com, que Nightango ne contrôle pas : poser une `<meta name="referrer">` sur la page changerait le referrer de toutes les requêtes de BetterChatango et de Chatango.
+The member's CSS is never injected ([ADR-0004](../docs/adr/0004-member-html-never-injected.md)), and the image must be loaded without a referrer. In the application's Shadow DOM, a CSS background (`background-image`) follows the referrer policy of the st.chatango.com page, which Nightango does not control: setting a `<meta name="referrer">` on the page would change the referrer of every BetterChatango and Chatango request.
 
-Les techniques qui respecteraient la contrainte coûtent plus qu'elles ne rapportent pour une fiche de quelques lignes :
+The techniques that would respect the constraint cost more than they bring for a card of a few lines:
 
-- une grille de `<img referrerPolicy="no-referrer">` en tuiles, dimensionnée sur `naturalWidth` / `naturalHeight`, derrière un voile de la couleur de fond pour garder le contraste ;
-- un `<canvas>` avec `createPattern`, à redimensionner et à adapter au DPR.
+- a grid of tiled `<img referrerPolicy="no-referrer">`, sized from `naturalWidth` / `naturalHeight`, behind a veil of the background color to keep the contrast
+- a `<canvas>` with `createPattern`, to resize and adapt to the DPR.
 
-Le fond complet, répétition comprise, est reproduit là où il a sa place : le profil complet, dans l'iframe isolée qui porte sa propre politique `no-referrer` (#7).
+The full background, repeat included, is reproduced where it belongs: the full profile, in the isolated iframe that carries its own `no-referrer` policy (#7).
 
-## Ce qui rouvrirait la question
+## What would reopen the question
 
-Un moyen natif d'appliquer `no-referrer` à un fond CSS dans un shadow root, sans toucher à la page.
+A native way to apply `no-referrer` to a CSS background in a shadow root, without touching the page.
 
 ## Prior requests
 
-- #8 : « feat(profile): répétition du fond Premium sans referrer »
+- #8: "feat(profile): repeat the Premium background without a referrer"

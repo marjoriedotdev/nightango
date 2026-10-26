@@ -1,14 +1,14 @@
-/* ---------- Pont vers le client BetterChatango réel (mode injecté uniquement) ---------- */
+/* ---------- Bridge to the real BetterChatango client (injected mode only) ---------- */
 var LIVE = !!window.__TORCH_LIVE__;
-// Posé par le code page avant BetterChatango (loader/skin-journal.js) : absent du prototype et des suites qui ne lisent que le pont.
+// Set by the page code before BetterChatango (loader/skin-journal.js): absent from the prototype and from the suites that only read the bridge.
 var JOURNAL = window.__TORCH_JOURNAL__ || null;
 
-// Hors de l'état React : posée par le pont après un envoi ou un recadrage, elle contourne le cache HTTP des photos.
+// Outside React state: set by the bridge after an upload or a crop, it bypasses the HTTP cache of the pictures.
 var AVATAR_VERSION = {};
 /**
- * Permet de construire l'URL d'une photo de profil Chatango.
- * @param {string} name Nom du compte.
- * @param {string} file Fichier sans extension : thumb, thumb_m ou full.
+ * Builds the URL of a Chatango profile picture.
+ * @param {string} name Account name.
+ * @param {string} file File without extension: thumb, thumb_m or full.
  */
 function profileImgSrc(name, file) {
   if (!LIVE) return null;
@@ -18,32 +18,32 @@ function profileImgSrc(name, file) {
   return 'https://ust.chatango.com/profileimg/' + path + '/' + file + '.jpg' + (AVATAR_VERSION[n] ? '?v=' + AVATAR_VERSION[n] : '');
 }
 /**
- * Permet de construire l'URL de la miniature de profil Chatango.
- * @param {string} name Nom du compte.
- * @param {number} [size] Taille d'affichage en pixels.
+ * Builds the URL of the Chatango profile thumbnail.
+ * @param {string} name Account name.
+ * @param {number} [size] Display size in pixels.
  */
 function avatarSrc(name, size) { return profileImgSrc(name, (size || 36) <= 24 ? 'thumb' : 'thumb_m'); }
 
 /**
- * Permet de nommer la clé de stockage local des données propres à un compte.
- * @param {string} me Pseudo en minuscules.
+ * Names the local storage key for the data of one account.
+ * @param {string} me Lowercase username.
  */
 function skinKey(me) { return 'torch-skin:' + me; }
 
 var ACCOUNT_NAME = /^[a-z0-9_-]{1,20}$/;
 /**
- * Permet de savoir si le mini profil d'un compte est encore attendu.
- * @param {string} name Nom du membre.
- * @param {Object} u Membre dans l'état.
+ * Tells whether the mini profile of an account is still pending.
+ * @param {string} name Member name.
+ * @param {Object} u Member in the state.
  */
 function isProfilePending(name, u) { return LIVE && ACCOUNT_NAME.test(name) && !u.profileLoaded && !u.profileFailed; }
 
 var VISIT_LABEL = { log: 'visited', like: 'liked profile', dislike: 'disliked profile', msg: 'commented on', refer: 'referred by' };
 var VISIT_PAGE = 16;
 /**
- * Permet de découper une page d'activité vissle.
- * @param {Array} items Éléments renvoyés par vissle, le seizième signale une page suivante.
- * @param {string} get Filtre demandé, qui sert d'action quand vissle l'omet.
+ * Splits a page of vissle activity.
+ * @param {Array} items Items returned by vissle, the sixteenth signals a next page.
+ * @param {string} get Requested filter, used as the action when vissle omits it.
  */
 function visitorPage(items, get) {
   var shown = items.slice(0, VISIT_PAGE - 1);
@@ -56,14 +56,14 @@ function visitorPage(items, get) {
   };
 }
 
-/* Bits Chatango, relevés dans le client BetterChatango (chatango.flags) et recoupés avec chadango et chatango-lib. */
+/* Chatango bits, read in the BetterChatango client (chatango.flags) and cross-checked with chadango and chatango-lib. */
 var GROUP_FLAG = { NOANONS: 4, NOCOUNTER: 16, NOIMAGES: 32, NOLINKS: 64, NOVIDEOS: 128, CHANNELSDISABLED: 8192, NLP_SINGLEMSG: 16384, NLP_MSGQUEUE: 32768, BROADCAST_MODE: 65536, IS_CLOSED: 262144, NLP_NGRAM: 2097152, NO_PROXIES: 4194304 };
 var CHANNEL_FLAG = { red: 256, blue: 2048, mod: 32768 };
 var MSG_FLAG = { PREMIUM: 4, BG_ON: 8 };
-// Polices Chatango dans l'ordre de leur numéro (0 à 8), celui des balises <f x…="n"> et <g x…="n">.
+// Chatango fonts in the order of their number (0 to 8), the one used in the <f x…="n"> and <g x…="n"> tags.
 var FONT_FACES = ['Arial', 'Comic Sans MS', 'Georgia', 'Lucida Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times New Roman', 'Courier New'];
 
-// Émoticônes de BetterChatango dans l'ordre de client.html : nom de la balise sm://, raccourcis de data-entity (le premier est celui que BetterChatango insère), emoji système.
+// BetterChatango emoticons in the order of client.html: sm:// tag name, data-entity shortcuts (the first is the one BetterChatango inserts), system emoji.
 var EMOTICONS = [
   { name: 'smile', keys: [':)', ':-)', '=]'], premium: false, emoji: '🙂' },
   { name: 'sad', keys: [':('], premium: false, emoji: '🙁' },
@@ -126,14 +126,14 @@ var EMOTICONS = [
   { name: 'zombie', keys: ['*zombie*'], premium: true, emoji: '🧟' },
   { name: 'mummy', keys: ['*mummy*'], premium: true, emoji: '🤕' }, // approximation
   { name: 'troll', keys: ['*troll*'], premium: true, emoji: '👹' }, // approximation
-  // Drapeau paramétré sans emoji : il s'affiche en texte.
+  // Parameterized flag without an emoji: it shows as text.
   { name: 'stripes', keys: ['*stripes*?red,orange,yellow,green,blue,indigo,purple:33:1', '*team*'], premium: true, emoji: null },
   { name: 'sun', keys: ['*sun*'], premium: true, emoji: '☀️' },
   { name: 'rain', keys: ['*rain*'], premium: true, emoji: '🌧️' },
   { name: 'poop', keys: ['*poop*'], premium: true, emoji: '💩' },
   { name: 'hic', keys: ['*hic*'], premium: true, emoji: '🥴' } // approximation
 ];
-// Sans prototype : le nom vient du membre, constructor ou __proto__ ne doivent rien trouver.
+// No prototype: the name comes from the member, constructor or __proto__ must find nothing.
 var EMOTICON_BY_NAME = EMOTICONS.reduce(function (o, e) { o[e.name] = e; return o; }, Object.create(null));
 
 function channelOf(flags) { return flags & CHANNEL_FLAG.mod ? 'mod' : flags & CHANNEL_FLAG.blue ? 'blue' : flags & CHANNEL_FLAG.red ? 'red' : 'none'; }
