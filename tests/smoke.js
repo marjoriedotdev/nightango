@@ -60,20 +60,13 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   await wait(50);
   step('dm send', $$('.thread .tc-msg-text').some(x => x.textContent === 'ping'));
   click(byText('.tc-nav', 'Discover groups')); await wait(80);
-  step('discover', !!byText('h2', 'Popular right now'));
   type($('#join'), 'https://nihongo.chatango.com/'); click(byText('button[type=submit]', 'Join')); await wait(100);
   step('join by link', !!byText('h1', 'nihongo'));
-  click(byText('.tc-nav', 'Discover groups')); await wait(50);
-  type($('#join'), 'nosuchgroup'); click(byText('button[type=submit]', 'Join')); await wait(50);
-  step('join error + create offer', !!byText('button', 'Create nosuchgroup'));
-  click(byText('button', 'Create nosuchgroup')); await wait(50);
-  click(byText('.dialog button', 'Create group')); await wait(100);
-  step('create group', !!byText('h1', 'nosuchgroup'));
   key(d, 'k', { ctrlKey: true }); await wait(50);
   step('palette', !!$('.pal-input'));
   type($('.pal-input'), 'appear'); await wait(30); key($('.pal-input'), 'Enter'); await wait(80);
   step('palette to appearance', !!byText('h1', 'Appearance'));
-  for (const pg of ['Profile', 'Privacy', 'Safety', 'Password and email', 'Chatango Premium', 'Notifications', 'Language', 'Accessibility', "What's new", 'About Nightango', 'Appearance']) {
+  for (const pg of ['Profile', 'Privacy', 'Safety', 'Password and email', 'Chatango Premium', 'Notifications', 'Accessibility', "What's new", 'About Nightango', 'Appearance']) {
     click(byText('.snav .tc-nav', pg)); await wait(40);
     step('settings ' + pg, !!byText('h1', pg));
   }

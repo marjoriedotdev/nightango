@@ -36,15 +36,15 @@ src/
     emoji-picker (sélecteur d'émoticônes et de médias des composeurs), attach (envoi de fichier des composeurs),
     media (médiathèque de BetterChatango : onglet Media, étoile des images de message, complétion :nom),
     commands (/join, /leave, /chat et /help des composeurs),
-    discover, palette (Ctrl K), live-joined, session (fenêtre de session coupée)
+    discover, palette (Ctrl K), live-joined (groupes rejoints, possédés et récents), session (fenêtre de session coupée)
   settings/   réglages
-    shell, profile (Visitors et tracker vissle compris), appearance, notifications, privacy (et Safety, compte),
-    language-a11y-about (et Diagnostics), premium
-    group-view, group-pages                                             réglages de groupe du prototype
+    shell, profile (Visitors et tracker vissle compris), appearance, notifications, privacy (et Safety),
+    language-a11y-about (et Diagnostics)
+    group-view, group-pages                                             réglages de groupe du prototype, Overview commun au live
     group-staff                                                         pages Staff and roles, Members et Invites, communes au live et au prototype
     markup-toolbar                                                      barre de mise en forme de la bio et du profil complet
     avatar-crop                                                         recadrage de sa photo de profil (live)
-    live-group-view, live-group-pages, live-group-staff, live-account   variantes live
+    live-group-view, live-group-pages, live-group-staff, live-account   variantes live (live-account : pages Password and email et Chatango Premium communes au prototype)
   app/        racine
     sound.js
     state.js         préférences persistées

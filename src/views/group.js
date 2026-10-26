@@ -39,7 +39,6 @@ function GroupView(p) {
   var rights = groupRights(g, me);
   var canClose = rights.closeGroup, canBroadcast = rights.broadcast;
   var online = LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length;
-  var typing = (s.typing[g.id] || []).filter(function (n) { return n !== me; });
   var ann = g.settings.announcement;
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
   // Le canal d'envoi n'est jamais masqué, même s'il reste dans la liste gardée.
@@ -197,7 +196,6 @@ function GroupView(p) {
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: count + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn && g.conn !== 'open' ? h(ConnectionBanner, { name: '#' + g.id, conn: g.conn, onReconnect: function () { app.actions.reconnect(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onMouseDown: endCompletion, onBlur: endCompletion },
-        h('p', { className: 'typing', 'aria-live': 'polite' }, typing.length ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, typing.join(', ')), typing.length > 1 ? ' are typing' : ' is typing') : null),
         composer,
         h('p', { className: 'tc-sr', 'aria-live': 'polite' }, completed))),
     column.open ? h(MembersPanel, { g: g }) : null,

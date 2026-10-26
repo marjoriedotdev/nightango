@@ -200,7 +200,6 @@ function Root(props) {
       receivePm(d, m);
       var c = d.dms[from];
       if (focused) c.lastReadTs = Date.now();
-      c.seenTs = Date.now();
     });
     pmArchive.current.record(from, m, !focused);
     syncPmUnread(pmArchive.current, update, [from]);
@@ -229,13 +228,6 @@ function Root(props) {
     update(function (d) { var c = d.dms[name]; c.messages = c.messages.filter(function (x) { return x.id !== id; }); });
     toast('Message removed from this browser.');
   }
-  function setTyping(key, name, on) {
-    update(function (d) {
-      var list = (d.typing[key] || []).filter(function (n) { return n !== name; });
-      if (on) list.push(name);
-      d.typing[key] = list;
-    });
-  }
 
   var mediaLib = LIVE ? liveBridge : sampleMedia;
   // Les étoiles et l'onglet Media relisent la médiathèque quand ce compteur change.
@@ -262,18 +254,15 @@ function Root(props) {
       var m = /@([a-z0-9_-]+)/i.exec(text);
       if (m && g && g.members.indexOf(m[1].toLowerCase()) >= 0 && m[1].toLowerCase() !== me && userOf(stateRef.current, m[1].toLowerCase()).status !== 'offline') {
         var who = m[1].toLowerCase();
-        setTimeout(function () { setTyping(gid, who, true); }, 1200);
-        setTimeout(function () { setTyping(gid, who, false); receiveGroup(gid, { id: uid(), kind: 'msg', author: who, text: '@' + me + ' ' + pick(['On it.', 'Sure, give me a minute.', 'Thanks, checking now.', 'Good point.']), ts: Date.now() }); }, 3400);
+        setTimeout(function () { receiveGroup(gid, { id: uid(), kind: 'msg', author: who, text: '@' + me + ' ' + pick(['On it.', 'Sure, give me a minute.', 'Thanks, checking now.', 'Good point.']), ts: Date.now() }); }, 3400);
       }
     },
     sendDm: function (name, text) {
       var me = stateRef.current.me;
-      update(function (d) { var c = d.dms[name]; c.messages.push({ id: uid(), from: me, text: text, ts: Date.now() }); c.seenTs = null; });
+      update(function (d) { d.dms[name].messages.push({ id: uid(), from: me, text: text, ts: Date.now() }); });
       var u = userOf(stateRef.current, name);
       if (u.status === 'offline' || u.blocked) return;
-      var delay = 1500 + Math.random() * 1500;
-      setTimeout(function () { update(function (d) { if (d.dms[name]) d.dms[name].seenTs = Date.now(); }); setTyping('dm:' + name, name, true); }, 900);
-      setTimeout(function () { setTyping('dm:' + name, name, false); receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 900 + delay);
+      setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
     },
     openDm: function (name, tab) { update(function (d) { pmConversation(d, name); }); nav({ view: 'dm', id: name, tab: tab }); },
     loadProfile: function () { /* prototype : profils déjà présents dans les données d'exemple */ },
@@ -395,15 +384,14 @@ function Root(props) {
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
     },
-    createGroup: function (name, title, desc, listed) {
+    createGroup: function (name, title, desc) {
       var me = stateRef.current.me, now = Date.now();
       update(function (d) {
         var staff = {}; staff[me] = 'owner';
         d.groups[name] = {
           id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: now,
           members: [me], guests: 0, closed: false, dismissedAnnouncement: false, bans: [],
-          discover: listed ? { topic: 'Other', desc: desc || title } : null,
-          settings: mkSettings({ overview: { title: title, description: desc, showInDiscovery: listed, membersPublic: true, nsfw: false }, staff: staff }),
+          settings: mkSettings({ overview: { title: title, description: desc }, staff: staff }),
           audit: [{ id: uid(), at: now, actor: me, text: 'Created the group' }],
           messages: [{ id: uid(), kind: 'system', text: 'You created #' + name + '. Share ' + name + '.chatango.com to invite people.', ts: now }]
         };
@@ -422,17 +410,17 @@ function Root(props) {
         if (author && author !== me) g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Deleted a message from ' + author });
         dropMentions(d, gid, [mid]);
       });
-      toast('Message deleted.', { action: { label: 'Undo', run: function () { update(function (d) { d.groups[gid].messages.forEach(function (m) { if (m.id === mid) { m.deleted = null; logMention(d, gid, m); } }); }); } } });
+      toast('Message deleted.');
     },
-    ban: function (gid, name, reason) {
+    ban: function (gid, name) {
       var me = stateRef.current.me, now = Date.now();
       update(function (d) {
         var g = d.groups[gid];
-        g.bans.unshift({ name: name, by: me, at: now, reason: reason || 'Spam', ip: (40 + Math.floor(Math.random() * 180)) + '.' + Math.floor(Math.random() * 255) + '.x.x' });
+        g.bans.unshift({ name: name, by: me, at: now, ip: (40 + Math.floor(Math.random() * 180)) + '.' + Math.floor(Math.random() * 255) + '.x.x' });
         g.members = g.members.filter(function (n) { return n !== name; });
         if (g.settings.staff[name]) delete g.settings.staff[name];
         g.messages.push({ id: uid(), kind: 'ban', user: name, ts: now });
-        g.audit.push({ id: uid(), at: now, actor: me, text: 'Banned ' + name + ' for ' + String(reason || 'spam').toLowerCase() });
+        g.audit.push({ id: uid(), at: now, actor: me, text: 'Banned ' + name });
       });
       toast(name + ' was banned from #' + gid + '.', { action: { label: 'Undo', run: function () { actions.unban(gid, name, true); } } });
     },
@@ -456,7 +444,7 @@ function Root(props) {
     },
     saveGroupSettings: function (gid, draft) {
       var me = stateRef.current.me, old = stateRef.current.groups[gid].settings, now = Date.now();
-      var labels = { overview: 'Updated group info', announcement: 'Updated the announcement', automod: 'Changed AutoMod settings', media: 'Changed media and link rules' };
+      var labels = { announcement: 'Updated the announcement', automod: 'Changed AutoMod settings', media: 'Changed media and link rules' };
       update(function (d) {
         var g = d.groups[gid];
         Object.keys(labels).forEach(function (k) { if (JSON.stringify(old[k]) !== JSON.stringify(draft[k])) g.audit.push({ id: uid(), at: now, actor: me, text: labels[k] }); });
@@ -466,8 +454,6 @@ function Root(props) {
           else if (draft.staff[n] && old.modFlags[n] !== draft.modFlags[n]) g.audit.push({ id: uid(), at: now, actor: me, text: "Changed " + n + "'s permissions" });
         });
         if (old.announcement.text !== draft.announcement.text || (!old.announcement.enabled && draft.announcement.enabled)) g.dismissedAnnouncement = false;
-        if (old.overview.title !== draft.overview.title) g.title = draft.overview.title;
-        if (g.discover) g.discover.desc = draft.overview.description || g.discover.desc;
         g.settings = JSON.parse(JSON.stringify(draft));
       });
       toast('Changes to #' + gid + ' saved.', { icon: 'check' });
@@ -489,8 +475,7 @@ function Root(props) {
         if (authors.length) {
           var author = pick(authors);
           var text = Math.random() < 0.12 ? pick(MENTION_LINES).replace('%me', me) : pick(LINES[gid] || LINES.generic);
-          setTyping(gid, author, true);
-          setTimeout(function () { if (!alive) return; setTyping(gid, author, false); receiveGroup(gid, { id: uid(), kind: 'msg', author: author, text: text, ts: Date.now() }); }, 1600);
+          setTimeout(function () { if (!alive) return; receiveGroup(gid, { id: uid(), kind: 'msg', author: author, text: text, ts: Date.now() }); }, 1600);
         }
       } else if (r < 0.74 && joined.length) {
         var gid2 = pick(joined), g2 = s0.groups[gid2];
@@ -507,8 +492,7 @@ function Root(props) {
         var senders = ['kestrel', 'sable', 'quill'].filter(function (n) { var u = userOf(s0, n); return !u.blocked && u.status !== 'offline'; });
         if (senders.length) {
           var from = pick(senders);
-          setTyping('dm:' + from, from, true);
-          setTimeout(function () { if (!alive) return; setTyping('dm:' + from, from, false); receiveDm(from, pick(DM_LINES[from] || DM_LINES.default)); }, 1800);
+          setTimeout(function () { if (!alive) return; receiveDm(from, pick(DM_LINES[from] || DM_LINES.default)); }, 1800);
         }
       } else if (r < 0.92) {
         var friends = Object.keys(s0.users).filter(function (n) { return s0.users[n].friend && n !== me; });
@@ -616,7 +600,6 @@ function Root(props) {
 
   if (LIVE) {
     actions.logout = function () { location.reload(); };
-    actions.resetDemo = function () { toast('Not available in the test build.'); };
     actions.setStatus = function (st2) { if (liveBridge.setStatus(st2)) update(function (d) { d.meStatus = st2; }); };
     actions.sendGroup = function (gid, text, opts) {
       opts = opts || {};

@@ -136,8 +136,7 @@ function ProfilePageLive() {
               : draft.full === null ? null
                 : draft.full ? h(Frag, null, h(FullProfileFrame, { name: s.me, html: draft.full, media: media.on }), media.button ? h('div', null, media.button) : null)
                   : h('p', { className: 'muted', style: { margin: 0 } }, "You haven't written a full profile."))),
-        h(T.SettingsSection, { title: 'Visibility' },
-          h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other Chatango users find you by age and location.', control: h(T.Switch, { checked: !!draft.dir, disabled: locked, onChange: function (e) { set('dir', e.target.checked); } }) })),
+        h(VisibilitySection, { meet: draft.dir, disabled: locked, onChange: function (v) { set('dir', v); } }),
         h(VisitorsSection, { bio: base.about, draft: draft.about, onDraft: function (v) { set('about', v); }, disabled: locked })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
@@ -194,7 +193,7 @@ var PMR_STATUS = {
 function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === null ? null : { pmrCheck: v }; }
 
 function PrivacyPageLive() {
-  var app = useApp(), pr = usePref();
+  var app = useApp();
   var st = useBetterChatangoSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
   var pc = useBetterChatangoSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
   var checking = !!(pmr && pmr.pmrCheck);
@@ -211,18 +210,17 @@ function PrivacyPageLive() {
         asLabel: false, title: 'Delete saved conversations', description: 'BetterChatango keeps a copy of your private messages in this browser. Chatango does not store them.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message BetterChatango saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
-    h(T.SettingsSection, { title: 'Browser tab' },
-      h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
+    h(BrowserTabSection, null),
     startup ? h(StartupSection, { value: startup, onChange: setStartupSetting }) : null);
 }
 
-function AccountPageLive() {
+function AccountPage() {
   return h(Page, { title: 'Password and email', lede: 'Sign-in details for your Chatango account.' },
     h(T.Banner, { icon: 'lock', title: 'Managed on chatango.com', action: chatangoLink('Open chatango.com') },
       'Nightango never handles your password, so it cannot change it, change your email or delete your account. Do it on chatango.com.'));
 }
 
-function PremiumPageLive() {
+function PremiumPage() {
   return h(Page, { title: 'Chatango Premium', lede: 'Custom backgrounds, media and badges for your account.' },
     h(T.Banner, { icon: 'info', title: 'Not available in Nightango', action: chatangoLink('Open chatango.com') },
       'Nightango does not take payments. Buy or gift Premium on chatango.com.'));

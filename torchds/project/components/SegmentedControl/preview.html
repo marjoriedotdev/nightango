@@ -12,8 +12,8 @@
 <script>
 var T = window.Torch, h = React.createElement;
 function Demo() {
-  var s = React.useState('standard');
-  return h(T.SegmentedControl, { label: 'Protection level', options: [{ value: 'off', label: 'Off' }, { value: 'standard', label: 'Standard' }, { value: 'strict', label: 'Strict' }, { value: 'custom', label: 'Custom' }], value: s[0], onChange: s[1] });
+  var s = React.useState('collapse');
+  return h(T.SegmentedControl, { label: 'Messages from ignored users', options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }], value: s[0], onChange: s[1] });
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
 </script>

@@ -224,7 +224,6 @@ function WhoDialog(p) {
 
 function BanDialog(p) {
   var app = useApp();
-  var st = useState('Spam'), reason = st[0], setReason = st[1];
   var dl = useState(false), wipe = dl[0], setWipe = dl[1];
   if (LIVE) {
     return h(Dialog, {
@@ -234,13 +233,8 @@ function BanDialog(p) {
   }
   return h(Dialog, {
     title: 'Ban ' + p.name + ' from #' + p.gid + '?', description: 'They are removed from the group and cannot rejoin from this IP until unbanned.', onClose: p.onClose,
-    footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { app.actions.ban(p.gid, p.name, reason); p.onClose(); } }, 'Ban')]
-  },
-    h('div', { className: 'dialog-body' },
-      h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'ban-reason' }, 'Reason'),
-        h('select', { id: 'ban-reason', className: 'tc-input', value: reason, onChange: function (e) { setReason(e.target.value); } },
-          ['Spam', 'Harassment', 'Ban evasion', 'Off-topic flooding', 'Other'].map(function (r) { return h('option', { key: r }, r); })),
-        h('span', { className: 'tc-hint' }, 'Shown to other staff in the audit log.'))));
+    footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { app.actions.ban(p.gid, p.name); p.onClose(); } }, 'Ban')]
+  });
 }
 
 /**

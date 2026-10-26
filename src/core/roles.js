@@ -7,11 +7,11 @@ var PERMS = [
   { key: 'broadcast', group: 'Moderation', title: 'Post in broadcast mode', desc: 'Keep posting while the group is limited to staff.' },
   { key: 'bypass', group: 'Moderation', title: 'Bypass AutoMod and rate limits', desc: 'Messages are never filtered or slowed down.' },
   { key: 'bannedWords', group: 'Moderation', title: 'Edit banned words', desc: 'Add or remove words that are blocked in the group.' },
-  { key: 'automod', group: 'Moderation', title: 'Configure AutoMod', desc: 'Change filters and the protection level.' },
+  { key: 'automod', group: 'Moderation', title: 'Configure AutoMod', desc: 'Change the nonsense and repeated message filters.' },
   { key: 'unbanAll', group: 'Moderation', title: 'Unban everyone', desc: 'Lift every ban at once from the Bans page.' },
-  { key: 'editGroup', group: 'Administration', title: 'Edit group info', desc: 'Name, title, description and icon.' },
+  { key: 'editGroup', group: 'Administration', title: 'Edit group info', desc: 'Title and description.' },
   { key: 'editAnnouncement', group: 'Administration', title: 'Edit the announcement', desc: 'Text, style and how often it is posted.' },
-  { key: 'editRestrictions', group: 'Administration', title: 'Edit restrictions', desc: 'Media, links, proxies and verified email rules.' },
+  { key: 'editRestrictions', group: 'Administration', title: 'Edit restrictions', desc: 'Media, links and proxy rules.' },
   { key: 'manageMods', group: 'Administration', title: 'Manage moderators', desc: 'Add and remove moderators and their permissions.' },
   { key: 'closeGroup', group: 'Administration', title: 'Close the group', desc: 'Stop everyone from posting until it reopens.' }
 ];
@@ -43,9 +43,9 @@ function permsToFlags(perms, base) {
 function roleOfFlags(flags) { return flags & ADMIN_MASK ? 'admin' : 'mod'; }
 function mkSettings(over) {
   var s = Object.assign({
-    overview: { title: '', description: '', showInDiscovery: true, membersPublic: true, nsfw: false },
+    overview: { title: '', description: '' },
     announcement: { enabled: false, text: '', broadcast: false, interval: 0 },
-    automod: { level: 'standard', filters: { nonsense: true, nonsenseMode: 'Basic', repeat: true, flood: true, caps: false, links: true, emoji: false, mentions: true }, proxies: true, advancedProxy: false, verifiedEmail: false },
+    automod: { filters: { nonsense: true, nonsenseMode: 'Basic', repeat: true }, proxies: true },
     media: { links: true, images: true, videos: true },
     staff: {}
   }, over || {});
@@ -54,8 +54,3 @@ function mkSettings(over) {
   Object.keys(s.staff).forEach(function (n) { if (s.staff[n] !== 'owner') s.modFlags[n] = permsToFlags(defaultRoles()[s.staff[n]], 0); });
   return s;
 }
-var AUTOMOD_PRESETS = {
-  off: { nonsense: false, nonsenseMode: 'Basic', repeat: false, flood: false, caps: false, links: false, emoji: false, mentions: false },
-  standard: { nonsense: true, nonsenseMode: 'Basic', repeat: true, flood: true, caps: false, links: true, emoji: false, mentions: true },
-  strict: { nonsense: true, nonsenseMode: 'Advanced', repeat: true, flood: true, caps: true, links: true, emoji: true, mentions: true }
-};

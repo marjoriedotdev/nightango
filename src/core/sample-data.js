@@ -40,7 +40,7 @@ function seedWorld(me) {
   function group(id, o) {
     return Object.assign({
       id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: now,
-      members: [], guests: 0, messages: [], closed: false, discover: null, bans: [], audit: [], dismissedAnnouncement: false
+      members: [], guests: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false
     }, o);
   }
   var groups = {};
@@ -48,20 +48,19 @@ function seedWorld(me) {
   groups.community = group('community', {
     title: 'Official BetterChatango community', topic: 'Official BetterChatango community. Bug reports go to #betterchatangodev.', joined: true, favorite: true,
     members: ['ember', 'sable', 'vantage', me, 'kestrel', 'marrow', 'nightowl', 'quill', 'drift', 'halcyon', 'petrichor', 'rook', 'tallow'], guests: 12,
-    discover: { official: true, topic: 'Tech', desc: 'Official BetterChatango community.' },
     settings: mkSettings({
-      overview: { title: 'Official BetterChatango community', description: 'Help, feedback and announcements for BetterChatango. Be kind, no spam.', showInDiscovery: true, membersPublic: true, nsfw: false },
+      overview: { title: 'Official BetterChatango community', description: 'Help, feedback and announcements for BetterChatango. Be kind, no spam.' },
       announcement: { enabled: true, text: 'Server s12 drops connections today. If you get disconnected, reconnect twice.', broadcast: false, interval: 0 },
       staff: (function () { var s = { ember: 'owner', sable: 'mod', vantage: 'mod' }; s[me] = 'admin'; return s; })()
     }),
     bans: [
-      { name: 'spamking', by: 'sable', at: t(60 * 26), reason: 'Link spam', ip: '84.12.x.x' },
-      { name: '!anon4821', by: 'vantage', at: t(60 * 50), reason: 'Ban evasion', ip: '91.207.x.x' }
+      { name: 'spamking', by: 'sable', at: t(60 * 26), ip: '84.12.x.x' },
+      { name: '!anon4821', by: 'vantage', at: t(60 * 50), ip: '91.207.x.x' }
     ],
     audit: [
-      { id: uid(), at: t(60 * 50), actor: 'vantage', text: 'Banned !anon4821 for ban evasion' },
-      { id: uid(), at: t(60 * 30), actor: 'ember', text: 'Set AutoMod to Standard' },
-      { id: uid(), at: t(60 * 26), actor: 'sable', text: 'Banned spamking for link spam' },
+      { id: uid(), at: t(60 * 50), actor: 'vantage', text: 'Banned !anon4821' },
+      { id: uid(), at: t(60 * 30), actor: 'ember', text: 'Changed AutoMod settings' },
+      { id: uid(), at: t(60 * 26), actor: 'sable', text: 'Banned spamking' },
       { id: uid(), at: t(25), actor: 'sable', text: 'Updated the announcement' }
     ],
     messages: [
@@ -79,8 +78,7 @@ function seedWorld(me) {
   groups.betterchatangodev = group('betterchatangodev', {
     title: 'Bug reports and development', topic: 'Bug reports and development. One issue per message.', joined: true, favorite: true,
     members: ['ember', 'vantage', 'nightowl', 'quill', me, 'rook'], guests: 2, unread: 4, mentions: 2, lastReadTs: t(30),
-    discover: { official: true, topic: 'Tech', desc: 'Bug reports and development.' },
-    settings: mkSettings({ overview: { title: 'Bug reports and development', description: 'Report bugs with steps to reproduce.', showInDiscovery: true, membersPublic: true, nsfw: false }, staff: { ember: 'owner', vantage: 'mod' } }),
+    settings: mkSettings({ overview: { title: 'Bug reports and development', description: 'Report bugs with steps to reproduce.' }, staff: { ember: 'owner', vantage: 'mod' } }),
     messages: [
       msg('ember', 'Weekly triage starts in ten minutes.', 60 * 3),
       msg('ember', 'Pushed the theme importer fix to main.', 25),
@@ -92,41 +90,37 @@ function seedWorld(me) {
   groups.trade = group('trade', {
     title: 'Premium and account trades', topic: 'Premium and account trades. Use the Mod channel for disputes.', joined: true,
     members: ['kestrel', 'marrow', 'drift', me, 'tallow'], guests: 9, unread: 3, lastReadTs: t(45),
-    discover: { official: true, topic: 'Trade', desc: 'Premium and account trades.' },
     settings: mkSettings({ staff: { ember: 'owner' } }),
     messages: [msg('kestrel', 'Selling a 6 month Premium gift, PM me.', 40), msg('drift', 'Looking for an old 4 letter name.', 30), msg('tallow', 'Price check on a 3 letter username?', 20)]
   });
   groups.retrogaming = group('retrogaming', {
     title: 'Retro gaming', topic: 'Consoles from the 80s to the 2000s. Speedrun night on Fridays.', joined: true,
     members: ['quill', 'halcyon', 'pixelmint', me, 'rook'], guests: 30,
-    discover: { topic: 'Gaming', desc: 'Consoles from the 80s to the 2000s, emulation help and weekly speedrun nights.' },
     settings: mkSettings({ staff: { halcyon: 'owner' } }),
     messages: [msg('halcyon', 'Speedrun night is Friday at 21:00.', 60 * 5), msg('quill', 'Just finished a Dreamcast restore.', 60 * 2)]
   });
   groups.bots = group('bots', {
     title: 'Verified bots and their docs', topic: 'Verified bots. Type !help for commands.', joined: true,
     members: ['rook', me, 'drift'], guests: 4,
-    discover: { official: true, topic: 'Tech', desc: 'Verified bots and their docs.' },
     settings: mkSettings({ staff: { ember: 'owner' } }),
     messages: [msg('rook', '!help', 60 * 6), msg('rook', 'Commands: !weather, !define, !roll', 60 * 6)]
   });
   groups.artcorner = group('artcorner', {
     title: 'Art corner', topic: 'Share work in progress. Credit other artists.', joined: true, muted: true, unread: 6,
     members: ['pixelmint', 'nightowl', me], guests: 3,
-    discover: { topic: 'Art', desc: 'Share work in progress and get feedback.' },
     settings: mkSettings({ staff: { pixelmint: 'owner' } }),
     messages: [msg('pixelmint', 'New palette challenge is up.', 60 * 4)]
   });
   [
-    ['pixelforge', 'Pixel art feedback', 'Art', 'Pixel art feedback, palettes and a monthly prompt. Share work in progress.', 31],
-    ['lofilounge', 'Lo-fi lounge', 'Music', 'Music sharing, mostly chill and electronic. One link per message, please.', 88],
-    ['nihongo', 'Japanese practice', 'Languages', 'Japanese practice for every level. Native speakers drop in most evenings.', 19],
-    ['nightdrive', 'Night drive', 'Music', 'Synthwave, retro aesthetics and late night conversation.', 42],
-    ['homelab', 'Home lab', 'Tech', 'Self-hosting, home servers and networking. Questions welcome.', 27]
+    ['pixelforge', 'Pixel art feedback', 'Pixel art feedback, palettes and a monthly prompt. Share work in progress.', 31],
+    ['lofilounge', 'Lo-fi lounge', 'Music sharing, mostly chill and electronic. One link per message, please.', 88],
+    ['nihongo', 'Japanese practice', 'Japanese practice for every level. Native speakers drop in most evenings.', 19],
+    ['nightdrive', 'Night drive', 'Synthwave, retro aesthetics and late night conversation.', 42],
+    ['homelab', 'Home lab', 'Self-hosting, home servers and networking. Questions welcome.', 27]
   ].forEach(function (r) {
     groups[r[0]] = group(r[0], {
-      title: r[1], topic: r[3], discover: { topic: r[2], desc: r[3] }, guests: r[4],
-      members: ['rook', 'drift', 'tallow', 'pixelmint'].slice(0, 2 + (r[4] % 3)),
+      title: r[1], topic: r[2], guests: r[3],
+      members: ['rook', 'drift', 'tallow', 'pixelmint'].slice(0, 2 + (r[3] % 3)),
       settings: mkSettings({ staff: { rook: 'owner' } }),
       messages: [msg('rook', 'Welcome. Read the topic before posting.', 60 * 8), msg('drift', pick(LINES.generic), 60 * 2)]
     });
@@ -141,10 +135,9 @@ function seedWorld(me) {
     pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60) }
   };
   return {
-    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, typing: {}, mentionLog: [], mediaRev: 0,
-    meStatus: 'online', awayText: '',
-    profile: { visibility: { age: true, gender: false, location: true, meet: false, fullPage: true }, colors: { bg: '#1b1c20', text: '#e6e6e6', link: '#f27a3f' } },
-    account: { email: 'orrin@example.com', verified: true },
+    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0,
+    meStatus: 'online',
+    profile: { visibility: { meet: false } },
     route: { view: 'group', id: 'community', markerTs: now },
     sections: { favorites: true, groups: true, dms: true }
   };

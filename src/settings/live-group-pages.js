@@ -1,21 +1,3 @@
-function GSOverviewLive(p) {
-  var app = useApp(), g = p.g, o = g.settings.overview, owner = p.myRole === 'owner';
-  return h(Page, { title: 'Overview', lede: 'How #' + g.id + ' appears on Chatango.' },
-    g.closed ? h(T.Banner, { tone: 'warning', icon: 'lock', action: p.perms.closeGroup ? h(T.Button, { size: 'sm', onClick: function () { app.actions.setClosed(g.id, false); } }, 'Reopen') : null }, 'This group is closed. Nobody can post.') : null,
-    h(T.SettingsSection, { title: 'Information', padded: true },
-      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
-        h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 } },
-          h(T.Avatar, { name: g.id, square: true, size: 56 }),
-          h('span', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { style: { fontWeight: 600 } }, o.title || g.id), h('span', { className: 'muted', style: { fontSize: 13 } }, g.id + '.chatango.com'))),
-        h(T.TextField, { id: 'gs-title', label: 'Title', value: o.title, disabled: true }),
-        h(T.TextField, { id: 'gs-desc', label: 'Description', multiline: true, rows: 4, value: o.description, disabled: true, hint: "Nightango can't change the title, description or icon yet. Edit them on chatango.com." }))),
-    owner ? h(T.SettingsSection, { title: 'Messages' },
-      h(T.SettingRow, {
-        asLabel: false, title: 'Clear all messages', description: 'Removes every message in #' + g.id + ' for everyone. This cannot be undone.',
-        control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Clear all messages in #' + g.id + '?', body: 'Every message is removed for everyone. This cannot be undone.', confirmLabel: 'Clear all', danger: true, onConfirm: function () { app.actions.clearGroup(g.id); } }); } }, 'Clear all')
-      })) : null);
-}
-
 function GSAnnouncementLive(p) {
   var a = p.draft.announcement, loaded = !!p.g.live.annc, owner = p.myRole === 'owner';
   var canEdit = loaded && (owner || p.perms.editAnnouncement), canBroadcast = owner || p.perms.editRestrictions;
@@ -33,21 +15,13 @@ function GSAnnouncementLive(p) {
 }
 
 function GSAutoModLive(p) {
-  var am = p.draft.automod, f = am.filters, owner = p.myRole === 'owner';
+  var am = p.draft.automod, owner = p.myRole === 'owner';
   var canNlp = owner || p.perms.automod, canBw = owner || p.perms.bannedWords, canRes = owner || p.perms.editRestrictions;
-  function setF(k, v) { p.edit(function (d) { d.automod.filters[k] = v; }); }
   var slowOptions = withCurrent([[0, 'Off'], [5, '5 seconds'], [10, '10 seconds'], [30, '30 seconds'], [60, '1 minute']], am.slowMode, function (v) { return v + ' seconds'; });
   return h(Page, { title: 'AutoMod', lede: 'Filters Chatango applies before messages reach #' + p.g.id + '. Staff with the bypass permission are not filtered.' },
-    h(T.SettingsSection, { title: 'Message filters' },
-      h(T.SettingRow, {
-        asLabel: false, title: 'Nonsense detection', description: 'Hides keyboard mashing and random characters. Advanced also catches subtler nonsense.',
-        control: h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
-          h('select', { className: 'tc-input', style: { width: 'auto', height: 32 }, 'aria-label': 'Nonsense detection sensitivity', disabled: !canNlp || !f.nonsense, value: f.nonsenseMode, onChange: function (e) { setF('nonsenseMode', e.target.value); } }, h('option', null, 'Basic'), h('option', null, 'Advanced')),
-          h(T.Switch, { label: 'Nonsense detection', checked: !!f.nonsense, disabled: !canNlp, onChange: function (e) { setF('nonsense', e.target.checked); } }))
-      }),
-      h(T.SettingRow, { title: 'Repeated messages', description: 'Blocks the same message sent several times in a row.', control: h(T.Switch, { checked: !!f.repeat, disabled: !canNlp, onChange: function (e) { setF('repeat', e.target.checked); } }) })),
+    h(AutoModFilters, { filters: am.filters, disabled: !canNlp, onChange: function (k, v) { p.edit(function (d) { d.automod.filters[k] = v; }); } }),
     h(T.SettingsSection, { title: 'Who can post' },
-      h(T.SettingRow, { title: 'Block proxies and VPNs', description: 'Members connecting through a known proxy or VPN can read but not post.', control: h(T.Switch, { checked: !!am.proxies, disabled: !canRes, onChange: function (e) { var v = e.target.checked; p.edit(function (d) { d.automod.proxies = v; }); } }) }),
+      h(ProxiesRow, { on: am.proxies, disabled: !canRes, onChange: function (v) { p.edit(function (d) { d.automod.proxies = v; }); } }),
       h(T.SettingRow, {
         asLabel: false, title: 'Slow mode', description: 'Minimum time between two messages from the same member.',
         control: am.slowMode == null ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Loading') : liveSelect('slow', 'Slow mode', am.slowMode, slowOptions, function (v) { p.edit(function (d) { d.automod.slowMode = v; }); }, !canRes)

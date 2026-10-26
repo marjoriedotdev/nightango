@@ -1,25 +1,16 @@
 function ProfilePage() {
   if (LIVE) return h(ProfilePageLive, null);
   var app = useApp(), s = app.state, me = userOf(s, s.me);
-  function snapshot() { return { age: me.age || '', gender: me.gender || 'Not specified', location: me.location || '', about: me.about || '', visibility: Object.assign({}, s.profile.visibility), colors: Object.assign({}, s.profile.colors) }; }
+  function snapshot() { return { age: me.age || '', gender: me.gender || 'Not specified', location: me.location || '', about: me.about || '', meet: !!s.profile.visibility.meet }; }
   var st = useState(snapshot), draft = st[0], setDraft = st[1];
   var bioInput = useRef(null), bioMarkup = useMarkupToolbar(bioInput, 'pf-bio');
   var dirty = JSON.stringify(draft) !== JSON.stringify(snapshot());
   function set(k, v) { setDraft(function (d) { var n = JSON.parse(JSON.stringify(d)); setIn(n, k, v); return n; }); }
   var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
-  var vis = [['age', 'Show my age', 'Displayed next to your name on your profile.'], ['gender', 'Show my gender', 'Hidden when set to Not specified.'], ['location', 'Show my location', 'Displayed next to your name on your profile.'], ['meet', 'Appear in Meet people', 'Lets other Chatango users find you by age and location.'], ['fullPage', 'Public full profile page', 'Your page on chatango.com. When off, only your mini profile is visible.']];
-  var meta = [draft.visibility.age && draft.age ? draft.age : null, draft.visibility.gender ? genderShort(draft.gender) : null, draft.visibility.location && draft.location ? draft.location : null].filter(Boolean).join(' · ');
+  var meta = [draft.age, genderShort(draft.gender), draft.location].filter(Boolean).join(' · ');
   return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only BetterChatango users.', wide: true },
     h('div', { className: 'split' },
       h('div', { className: 'grow' },
-        h(T.SettingsSection, { title: 'Profile picture', padded: true },
-          h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 } },
-            h(T.Avatar, { name: s.me, size: 72 }),
-            h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
-              h('div', { className: 'btnrow' },
-                h(T.Button, { icon: 'upload', onClick: function () { app.ui.toast('Uploading a picture is not part of this prototype.'); } }, 'Upload image'),
-                h(T.Button, { variant: 'ghost', onClick: function () { app.ui.toast('Uploading a picture is not part of this prototype.'); } }, 'Remove')),
-              h('span', { className: 'tc-hint' }, "JPG, PNG or GIF. You'll crop it to a square after upload.")))),
         h(T.SettingsSection, { title: 'About you', padded: true },
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
             h('div', { className: 'grid3' },
@@ -28,27 +19,29 @@ function ProfilePage() {
                 h('select', { id: 'pf-gender', className: 'tc-input', value: draft.gender, onChange: function (e) { set('gender', e.target.value); } }, ['Not specified', 'Male', 'Female'].map(function (g) { return h('option', { key: g }, g); }))),
               h(T.TextField, { id: 'pf-loc', label: 'Location', value: draft.location, onChange: function (e) { set('location', e.target.value); } })),
             h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, inputRef: bioInput, toolbar: bioMarkup.toolbar, onKeyDown: bioMarkup.onKeyDown, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }))),
-        h(T.SettingsSection, { title: 'Visibility' }, vis.map(function (v) {
-          return h(T.SettingRow, { key: v[0], title: v[1], description: v[2], control: h(T.Switch, { checked: !!draft.visibility[v[0]], onChange: function (e) { set('visibility.' + v[0], e.target.checked); } }) });
-        })),
-        h(T.SettingsSection, { title: 'Full profile page', description: 'Colors of your page on chatango.com. Nightango shows profiles in its own theme.', padded: true },
-          h('div', { className: 'grid3' }, [['bg', 'Background'], ['text', 'Text'], ['link', 'Links']].map(function (c) {
-            return h(ColorField, { key: c[0], id: 'pf-c-' + c[0], label: c[1], value: draft.colors[c[0]], onChange: function (v) { set('colors.' + c[0], v); } });
-          }))),
+        h(VisibilitySection, { meet: draft.meet, onChange: function (v) { set('meet', v); } }),
         h(VisitorsSection, { bio: me.about || '', draft: draft.about, onDraft: function (v) { set('about', v); } })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
-        h(ProfilePreviewCard, { name: s.me, meta: meta, about: draft.about, mini: miniStyleOf(s.prefs, { miniStyle: draft.colors }, app.theme) }),
+        h(ProfilePreviewCard, { name: s.me, meta: meta, about: draft.about, mini: miniStyleOf(s.prefs, me, app.theme) }),
         h('p', { className: 'muted', style: { margin: 0, fontSize: 12.5 } }, 'How other members see you when they open your profile from a group or a private message.'))),
     dirty ? h(T.SaveBar, {
       onDiscard: function () { setDraft(snapshot()); },
       onSave: function () {
         if (ageErr) { app.ui.toast('Fix the age before saving.'); return; }
-        if (LIVE) { app.ui.toast('Saving your profile to Chatango is not wired in this test build yet.'); return; }
-        app.update(function (d) { var u = d.users[d.me]; u.age = draft.age === '' ? '' : +draft.age; u.gender = draft.gender; u.location = draft.location; u.about = draft.about; u.aboutHtml = draft.about; d.profile.visibility = draft.visibility; d.profile.colors = draft.colors; });
-        app.ui.toast('Profile saved to Chatango.', { icon: 'check' });
+        app.update(function (d) { var u = d.users[d.me]; u.age = draft.age === '' ? '' : +draft.age; u.gender = draft.gender; u.location = draft.location; u.about = draft.about; u.aboutHtml = draft.about; d.profile.visibility.meet = draft.meet; });
+        app.ui.toast('Profile saved.', { icon: 'check' });
       }, saveLabel: 'Save profile'
     }, 'Unsaved changes to your Chatango profile') : null);
+}
+
+/**
+ * Visibilité de son profil dans Meet people.
+ * @param {{meet: boolean, disabled: boolean, onChange: Function}} p Profil listé dans Meet people, interrupteur bloqué, reçoit la nouvelle valeur.
+ */
+function VisibilitySection(p) {
+  return h(T.SettingsSection, { title: 'Visibility' },
+    h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other Chatango users find you by age and location.', control: h(T.Switch, { checked: !!p.meet, disabled: p.disabled, onChange: function (e) { p.onChange(e.target.checked); } }) }));
 }
 
 /**

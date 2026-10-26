@@ -786,10 +786,6 @@ var liveBridge = (function () {
       if (user && user !== connectTarget) connectPm(user);
     },
     /**
-     * Permet de lire le MP que BetterChatango considère ouvert, dont il joue lui-même le son.
-     * @returns {string|boolean|undefined} Membre de client.private.focus, false ou undefined sans MP ouvert pour BetterChatango.
-     */
-    /**
      * Permet de savoir si le compte est Premium, comme BetterChatango avant d'écrire une émoticône Premium.
      * @returns {boolean} Statut 200 ou 210 de la trame premium, faux tant que la connexion privée n'est pas ouverte.
      */

@@ -48,7 +48,6 @@ export const APP_SOURCES = [
   'settings/notifications.js',
   'settings/privacy.js',
   'settings/language-a11y-about.js',
-  'settings/premium.js',
   'settings/group-view.js',
   'settings/group-pages.js',
   'settings/group-staff.js',

@@ -55,7 +55,7 @@ function GroupSettingsViewLive(p) {
     else app.nav({ view: 'group', id: g.id });
   }
   var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: owner || perms.manageMods, scrollRef: scrollRef };
-  var map = { overview: GSOverviewLive, announcement: GSAnnouncementLive, automod: GSAutoModLive, media: GSMediaLive, bans: GSBansLive, audit: GSAuditLive, roles: GSStaff, members: GSMembers, invites: GSInvites };
+  var map = { overview: GSOverview, announcement: GSAnnouncementLive, automod: GSAutoModLive, media: GSMediaLive, bans: GSBansLive, audit: GSAuditLive, roles: GSStaff, members: GSMembers, invites: GSInvites };
   return h(SettingsShell, {
     navLabel: 'Group settings', sections: sections, page: page, onBack: leave, scrollRef: scrollRef,
     onPage: function (pg) { app.nav({ view: 'gsettings', id: g.id, page: pg }); },

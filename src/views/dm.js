@@ -38,7 +38,7 @@ function DMView(p) {
         }))),
     h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
       LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
-        shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, tab === 'requests' ? 'No message requests.' : q ? 'No conversation matches.' : 'No conversations yet.'),
+        shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
         term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
   var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column, seek: p.seek })
@@ -142,7 +142,7 @@ function dmHitMessage(c, hit) {
  * @param {{id: string, tab: ?string, column: Object, seek: ?Object}} p Correspondant, onglet de la liste, colonne du profil (useRightColumn) et résultat de recherche à montrer.
  */
 function DmThread(p) {
-  var app = useApp(), s = app.state, me = s.me, id = p.id, convo = s.dms[id];
+  var app = useApp(), s = app.state, id = p.id, convo = s.dms[id];
   var asked = useRef(false);
   var len = convo.messages.length;
   var log = useMessageLog();
@@ -162,7 +162,6 @@ function DmThread(p) {
   }, [p.seek, len, convo.loadingOlder]);
 
   var u = userOf(s, id);
-  var typing = (s.typing['dm:' + id] || []).length > 0;
   var rows = [], prev = null, lastDay = null;
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts);
@@ -177,8 +176,6 @@ function DmThread(p) {
       // Après un échec de lecture, la sentinelle ne relance la lecture qu'au défilement suivant.
       retry: convo.olderFailed ? function () { app.update(function (d) { d.dms[id].olderFailed = false; }); } : null
     };
-  var lastMsg = convo.messages[convo.messages.length - 1];
-  if (lastMsg && lastMsg.from === me && convo.seenTs && s.prefs.privacy.showIdle) rows.push(h('p', { key: 'seen', className: 'seen' }, 'Seen ' + fmtTime(convo.seenTs, s.prefs.h24)));
   var bottom;
   if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
   else bottom = h(DmComposer, { id: id });
@@ -194,9 +191,7 @@ function DmThread(p) {
       })),
     h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: len, newBelow: 'follow', older: older }),
     pmConnBanner(app),
-    h('div', { className: 'composer-wrap' },
-      h('p', { className: 'typing', 'aria-live': 'polite' }, typing ? h(Frag, null, h('span', { className: 'dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', null, id), ' is typing') : null),
-      bottom));
+    h('div', { className: 'composer-wrap' }, bottom));
 }
 
 /**
@@ -255,13 +250,13 @@ function personStatus(s, name, gid) {
   return [name === s.me ? statusLabel(s.meStatus) : presenceText(u), u.friend ? 'Friend' : null, role ? ROLE_LONG[role] + ' in #' + gid : null].filter(Boolean).join(' · ');
 }
 /**
- * Permet d'écrire l'ASL d'une personne, sans l'âge de son propre compte quand le profil le masque.
+ * Permet d'écrire l'ASL d'une personne.
  * @param {Object} s État de l'application.
  * @param {string} name Nom du membre.
  */
 function personAsl(s, name) {
-  var u = userOf(s, name), age = name === s.me && !s.profile.visibility.age ? null : u.age;
-  return [age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
+  var u = userOf(s, name);
+  return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
 /**
  * Permet de dater l'inactivité ou la dernière connexion d'un ami.
@@ -328,7 +323,7 @@ function convActions(app, name) {
   return [
     { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },
     { label: 'Delete conversation…', short: 'Delete', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Delete this conversation?', body: LIVE ? keptCopyText(name, true) : 'Messages with ' + name + ' are removed from your account. ' + name + ' keeps their copy.', confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
+      app.ui.confirm({ title: 'Delete this conversation?', body: keptCopyText(name, LIVE), confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
     } }
   ];
 }

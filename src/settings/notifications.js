@@ -7,17 +7,11 @@ function NotificationsPage() {
     ['mentions', 'Mentions', 'Someone writes @' + app.state.me + ' in a group'],
     ['pm', 'Private messages', 'A new private message arrives'],
     ['friendOn', 'Friend comes online', 'Someone on your friends list connects'],
-    ['friendOff', 'Friend goes offline', 'Someone on your friends list disconnects'],
-    ['gift', 'Premium gift', 'Someone gifts you Chatango Premium'],
-    ['account', 'Account changes', 'Your email changes or you create a group'],
-    ['updates', 'BetterChatango updates', 'A new version of the client is available']
+    ['friendOff', 'Friend goes offline', 'Someone on your friends list disconnects']
   ];
-  var cols = [['app', 'In app'], ['sound', 'Sound'], ['desktop', 'Desktop'], ['email', 'Email']];
-  // En live, BetterChatango joue lui-même les sons et rien n'envoie d'e-mail : ces colonnes et événements sont retirés.
-  if (LIVE) {
-    rows = rows.filter(function (r) { return ['mentions', 'pm', 'friendOn', 'friendOff'].indexOf(r[0]) >= 0; });
-    cols = cols.filter(function (c) { return c[0] === 'app' || c[0] === 'desktop'; });
-  }
+  var cols = [['app', 'In app'], ['sound', 'Sound'], ['desktop', 'Desktop']];
+  // En live, BetterChatango joue lui-même les sons : la colonne est retirée.
+  if (LIVE) cols = cols.filter(function (c) { return c[0] !== 'sound'; });
   function ask() {
     try {
       window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.'); }, function () { app.ui.toast('The browser refused the request.'); });
@@ -34,10 +28,7 @@ function NotificationsPage() {
             return h('tr', { key: r[0] },
               h('th', { scope: 'row' }, h('span', { style: { display: 'block', fontWeight: 500, color: 'var(--text)' } }, r[1]), h('span', { style: { display: 'block', fontSize: 12.5, color: 'var(--text-3)' } }, r[2])),
               cols.map(function (c) {
-                var v = prefs.notify[r[0]][c[0]];
-                return h('td', { key: c[0] }, v === null || v === undefined
-                  ? h(Frag, null, h('span', { className: 'na', 'aria-hidden': 'true' }), h('span', { className: 'tc-sr' }, r[1] + ', ' + c[1] + ' not available'))
-                  : h(T.Checkbox, { ariaLabel: r[1] + ', ' + c[1], checked: !!v, onChange: function (e) { pr.set('notify.' + r[0] + '.' + c[0], e.target.checked); } }));
+                return h('td', { key: c[0] }, h(T.Checkbox, { ariaLabel: r[1] + ', ' + c[1], checked: !!prefs.notify[r[0]][c[0]], onChange: function (e) { pr.set('notify.' + r[0] + '.' + c[0], e.target.checked); } }));
               }));
           }))))),
     LIVE ? h(BetterChatangoSoundsSection) : h(T.SettingsSection, { title: 'Sound' },
@@ -49,8 +40,7 @@ function NotificationsPage() {
     h(T.SettingsSection, { title: 'In the app' },
       h(T.SettingRow, { title: 'Show mentions in the tab title', description: 'Adds a counter to the browser tab, for example (2) Nightango.', control: pr.sw('tabTitle') }),
       h(T.SettingRow, { title: 'Mark new messages', description: "Draws a line above the first message you haven't read.", control: pr.sw('markNew') }),
-      h(T.SettingRow, { title: 'Preview private messages', description: 'Shows the text in the alert instead of only the sender.', control: pr.sw('pmPreview') }),
-      h(T.SettingRow, { title: 'Highlight new features', description: 'Marks settings and tools added in recent updates.', control: pr.sw('featureHints') })));
+      h(T.SettingRow, { title: 'Preview private messages', description: 'Shows the text in the alert instead of only the sender.', control: pr.sw('pmPreview') })));
 }
 
 function VolumeControl(p) {

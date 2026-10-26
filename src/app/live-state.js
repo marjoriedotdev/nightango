@@ -23,9 +23,7 @@ function sessionAfterConn(d, op) {
 function liveWorld(me) {
   var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
   return {
-    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, typing: {}, mentionLog: [], mediaRev: 0, meStatus: 'online', awayText: '',
-    profile: { visibility: { age: true, gender: false, location: true, meet: false, fullPage: true }, colors: { bg: '#1b1c20', text: '#e6e6e6', link: '#f27a3f' } },
-    account: { email: '', verified: false },
+    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0, meStatus: 'online',
     route: { view: 'discover' }, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
     groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false
@@ -45,9 +43,9 @@ function liveGroup(id, title) {
   var t = title || id;
   return {
     id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: Date.now(),
-    members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, discover: null, bans: [], audit: [], dismissedAnnouncement: false,
+    members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
     live: { flags: 0, mods: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
-    settings: mkSettings({ overview: { title: t, description: '', showInDiscovery: true, membersPublic: true, nsfw: false }, staff: {} })
+    settings: mkSettings({ overview: { title: t, description: '' }, staff: {} })
   };
 }

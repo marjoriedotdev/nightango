@@ -2,6 +2,18 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.21.0] - 2026-10-26
+
+### Changed
+
+- Group settings show the group title and description as text.
+- Reduce motion now only mentions transitions.
+- In Staff and roles, the descriptions of Configure AutoMod, Edit group info and Edit restrictions list only what these permissions cover.
+
+### Removed
+
+- The "Highlight new features" switch: it had no effect.
+
 ## [0.20.2] - 2026-10-26
 
 ### Fixed

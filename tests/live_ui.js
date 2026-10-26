@@ -1148,7 +1148,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Notifications')); await wait(50);
   const soundRow = title => { const r = $$('section[aria-label="Sounds"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title); return r && { on: r.querySelector('[role=switch]').checked, range: r.querySelector('input[type=range]').disabled ? 'off' : r.querySelector('input[type=range]').value, value: r.textContent.match(/\d+%/)[0], play: !r.querySelector('button[aria-label="Play test sound"]').disabled }; };
   const sounds = { mention: soundRow('Mention sound'), online: soundRow('Friend online sound') };
-  step('notifications: no email or sound columns', !byText('th', 'Email') && !byText('th', 'Sound') && !byText('.tc-banner', 'BetterChatango plays alert sounds')
+  step('notifications: no sound column', !byText('th', 'Sound') && !byText('.tc-banner', 'BetterChatango plays alert sounds')
     && JSON.stringify(sounds) === JSON.stringify({ mention: { on: true, range: '30', value: '30%', play: true }, online: { on: false, range: 'off', value: '45%', play: false } }), sounds);
   click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow() && !!pmrView().status);
   pmrSeen.push(pmrView());
