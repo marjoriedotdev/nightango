@@ -1,4 +1,4 @@
-/* ---------- Réglages du compte en mode live ---------- */
+/* ---------- Account settings in live mode ---------- */
 var GENDER_LABEL = { M: 'Male', F: 'Female' };
 var GENDER_CODE = { Male: 'M', Female: 'F' };
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
@@ -6,15 +6,15 @@ var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', 
 var AVATAR_TYPES = 'image/jpeg,image/png,image/gif';
 var BANNER_TYPES = '.png, .apng, .jpg, .jpeg, .gif, .bmp, .webp';
 /**
- * Permet de lire le fond Premium de son compte pour le formulaire.
- * @param {Object} u Compte connecté dans l'état.
- * @returns {?Object|boolean} Formulaire de miniStyleForm, false sans Premium, null tant que mod1.xml n'est pas lu.
+ * Reads the Premium background of the user's own account for the form.
+ * @param {Object} u Signed-in account in the state.
+ * @returns {?Object|boolean} Form from miniStyleForm, false without Premium, null while mod1.xml is not read.
  */
 function ownMiniStyle(u) { return !u.profileLoaded ? null : u.premium ? miniStyleForm(u.miniStyle) : false; }
 
 function ProfilePageLive() {
   var app = useApp(), s = app.state, me = userOf(s, s.me);
-  // Champ vide : profil complet vide ou pas encore relu par BetterChatango, null jusqu'à la lecture de mod2.xml.
+  // Empty field: full profile empty or not yet read back by BetterChatango, null until mod2.xml is read.
   function load() { var r = liveBridge.readProfile(); return { loaded: r.loaded, age: r.age, gender: GENDER_LABEL[r.gender] || 'Not specified', location: r.location, about: r.about, dir: r.dir, full: r.full || null, style: ownMiniStyle(me) }; }
   function fields(x) { return { age: x.age, gender: x.gender, location: x.location, about: x.about, dir: x.dir, full: x.full }; }
   function editable(x) { return Object.assign(fields(x), { style: x.style }); }
@@ -41,7 +41,7 @@ function ProfilePageLive() {
     }, function () { setFullFailed(true); });
   }
   useEffect(function () { if (base.full === null) fetchFull(); app.actions.loadProfile(s.me); }, []);
-  // Le fond Premium arrive avec mod1.xml, après l'ouverture de la page.
+  // The Premium background arrives with mod1.xml, after the page opens.
   var knownStyle = ownMiniStyle(me);
   useEffect(function () {
     if (knownStyle === null || base.style !== null) return;
@@ -56,7 +56,7 @@ function ProfilePageLive() {
     var sent = draft, profileDirty = JSON.stringify(fields(sent)) !== JSON.stringify(fields(base));
     var styleDirty = !!sent.style && JSON.stringify(sent.style) !== JSON.stringify(base.style);
     setSaving(true);
-    // BetterChatango n'accepte qu'une requête à la fois : le fond part après le profil.
+    // BetterChatango accepts only one request at a time: the background is sent after the profile.
     (profileDirty ? liveBridge.saveProfile({ age: sent.age, gender: GENDER_CODE[sent.gender] || '?', location: sent.location, about: sent.about, dir: sent.dir, full: sent.full }).then(function () {
       setBase(function (x) { return Object.assign({}, x, fields(sent)); });
       app.update(function (d) { var u = d.users[d.me]; if (u) { u.age = sent.age === '' ? '' : +sent.age; u.location = sent.location; u.about = sent.about; u.aboutHtml = sent.about; u.gender = sent.gender; } });
@@ -74,7 +74,7 @@ function ProfilePageLive() {
       app.ui.toast(e && e.message ? e.message : 'Chatango did not save your profile.');
     });
   }
-  // Nouveau rendu de toute l'application : les avatars relisent la version posée par le pont.
+  // Re-renders the whole application: the avatars read again the version the bridge set.
   function avatarsChanged() { app.update(function () {}); }
   function pickAvatar(e) {
     var file = e.target.files && e.target.files[0];
@@ -136,8 +136,7 @@ function ProfilePageLive() {
               : draft.full === null ? null
                 : draft.full ? h(Frag, null, h(FullProfileFrame, { name: s.me, html: draft.full, media: media.on }), media.button ? h('div', null, media.button) : null)
                   : h('p', { className: 'muted', style: { margin: 0 } }, "You haven't written a full profile."))),
-        h(T.SettingsSection, { title: 'Visibility' },
-          h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other Chatango users find you by age and location.', control: h(T.Switch, { checked: !!draft.dir, disabled: locked, onChange: function (e) { set('dir', e.target.checked); } }) })),
+        h(VisibilitySection, { meet: draft.dir, disabled: locked, onChange: function (v) { set('dir', v); } }),
         h(VisitorsSection, { bio: base.about, draft: draft.about, onDraft: function (v) { set('about', v); }, disabled: locked })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
@@ -148,14 +147,14 @@ function ProfilePageLive() {
 }
 
 /**
- * Fond Premium de son mini profil : couleurs, image et répétition, comme le formulaire de fond de BetterChatango.
- * @param {?Object|boolean} p.style Formulaire du brouillon, false sans Premium, null tant que mod1.xml n'est pas lu.
- * @param {boolean} p.failed Lecture de mod1.xml échouée.
- * @param {boolean} p.locked Champs désactivés.
- * @param {?string} p.uploading Envoi en cours (avatar ou banner).
- * @param {string} p.imageErr Erreur du lien de l'image.
- * @param {Function} p.onChange Reçoit le nom du champ et sa valeur.
- * @param {Function} p.onUpload Ouvre le sélecteur de l'image envoyée chez vissle.
+ * Premium background of the user's own mini profile: colors plus image and tiling as in the BetterChatango background form.
+ * @param {?Object|boolean} p.style Draft form, false without Premium, null while mod1.xml is not read.
+ * @param {boolean} p.failed Reading mod1.xml failed.
+ * @param {boolean} p.locked Fields disabled.
+ * @param {?string} p.uploading Upload in progress (avatar or banner).
+ * @param {string} p.imageErr Error of the image link.
+ * @param {Function} p.onChange Receives the field name and its value.
+ * @param {Function} p.onUpload Opens the picker for the image uploaded to vissle.
  */
 function MiniBackgroundSection(p) {
   var st = p.style;
@@ -175,7 +174,7 @@ function MiniBackgroundSection(p) {
             h(T.Checkbox, { label: 'Tile across', checked: st.tileAcross, onChange: function (e) { p.onChange('tileAcross', e.target.checked); } }))));
 }
 
-// L'interface ne change que si BetterChatango a enregistré la valeur, sinon un toast le dit.
+// The interface changes only if BetterChatango saved the value, otherwise a toast says so.
 function useBetterChatangoSettings(read, write) {
   var app = useApp();
   var st = useState(read), value = st[0], setValue = st[1];
@@ -194,11 +193,11 @@ var PMR_STATUS = {
 function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === null ? null : { pmrCheck: v }; }
 
 function PrivacyPageLive() {
-  var app = useApp(), pr = usePref();
+  var app = useApp();
   var st = useBetterChatangoSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
   var pc = useBetterChatangoSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
   var checking = !!(pmr && pmr.pmrCheck);
-  // Aussi réglage coupé : pmrStatus répond alors null, ce qui retire l'état et le bandeau des MP.
+  // Also runs when the setting is turned off: pmrStatus then returns null, which removes the status and the PM banner.
   useEffect(function () { app.actions.checkPmr(); }, [checking]);
   return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
@@ -211,18 +210,17 @@ function PrivacyPageLive() {
         asLabel: false, title: 'Delete saved conversations', description: 'BetterChatango keeps a copy of your private messages in this browser. Chatango does not store them.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message BetterChatango saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
-    h(T.SettingsSection, { title: 'Browser tab' },
-      h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
+    h(BrowserTabSection, null),
     startup ? h(StartupSection, { value: startup, onChange: setStartupSetting }) : null);
 }
 
-function AccountPageLive() {
+function AccountPage() {
   return h(Page, { title: 'Password and email', lede: 'Sign-in details for your Chatango account.' },
     h(T.Banner, { icon: 'lock', title: 'Managed on chatango.com', action: chatangoLink('Open chatango.com') },
       'Nightango never handles your password, so it cannot change it, change your email or delete your account. Do it on chatango.com.'));
 }
 
-function PremiumPageLive() {
+function PremiumPage() {
   return h(Page, { title: 'Chatango Premium', lede: 'Custom backgrounds, media and badges for your account.' },
     h(T.Banner, { icon: 'info', title: 'Not available in Nightango', action: chatangoLink('Open chatango.com') },
       'Nightango does not take payments. Buy or gift Premium on chatango.com.'));

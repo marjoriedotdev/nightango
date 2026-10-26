@@ -1,6 +1,6 @@
 /**
- * Liste des membres d'un groupe.
- * @param {{g: Object}} p Groupe affiché.
+ * Member list of a group.
+ * @param {{g: Object}} p Shown group.
  */
 function MembersList(p) {
   var app = useApp(), s = app.state, g = p.g;
@@ -14,7 +14,7 @@ function MembersList(p) {
     return h('button', { key: n, type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, g.id); } },
       h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
       h('span', { className: 'grow', style: u.status === 'offline' && !isMe ? { color: 'var(--text-3)' } : null }, n),
-      presenceSr(status), youBadge(isMe), roleBadge(roleOf(g, n)));
+      presenceSr(status), youBadge(isMe), developerBadge(n), roleBadge(roleOf(g, n)));
   }
   return LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
     : h('div', { className: 'members-list' },
@@ -27,8 +27,8 @@ function MembersList(p) {
 }
 
 /**
- * Colonne des membres d'un groupe.
- * @param {{g: Object}} p Groupe affiché.
+ * Member column of a group.
+ * @param {{g: Object}} p Shown group.
  */
 function MembersPanel(p) {
   return h('aside', { className: 'col members', 'aria-label': 'Members of ' + p.g.id },
@@ -37,8 +37,8 @@ function MembersPanel(p) {
 }
 
 /**
- * Feuille plein écran qui montre la description et les membres d'un groupe.
- * @param {{g: Object, onClose: Function}} p Groupe affiché et fermeture de la feuille.
+ * Full-screen sheet that shows a group's description and members.
+ * @param {{g: Object, onClose: Function}} p Shown group and closing of the sheet.
  */
 function GroupInfoSheet(p) {
   var g = p.g;
@@ -52,9 +52,9 @@ function GroupInfoSheet(p) {
       h(MembersList, { g: g })));
 }
 
-/* ---------- Profil d'un membre ---------- */
+/* ---------- Member profile ---------- */
 /**
- * Permet de suivre la demande d'ami envoyée depuis un formulaire jusqu'à la réponse de Chatango.
+ * Tracks the friend request sent from a form until Chatango answers.
  */
 function useFriendRequest() {
   var app = useApp();
@@ -66,18 +66,18 @@ function useFriendRequest() {
 }
 
 /**
- * Permet de demander confirmation avant de retirer un ami.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Ami à retirer.
+ * Asks for confirmation before removing a friend.
+ * @param {Object} app Application context.
+ * @param {string} name Friend to remove.
  */
 function confirmRemoveFriend(app, name) {
   app.ui.confirm({ title: 'Remove ' + name + ' from friends?', body: "You'll stop seeing when " + name + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
 }
 
 /**
- * Permet de proposer l'alerte de connexion d'un ami en entrée de menu ou de liste.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Ami suivi.
+ * Offers a friend's online alert as a menu or list entry.
+ * @param {Object} app Application context.
+ * @param {string} name Followed friend.
  */
 function notifyOnlineItem(app, name) {
   var notify = isNotifyingOnline(app.state, name);
@@ -85,38 +85,38 @@ function notifyOnlineItem(app, name) {
 }
 
 /**
- * Permet de proposer l'ouverture de la fenêtre de profil d'un membre.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Nom du membre.
- * @param {?string} gid Groupe d'où le profil est ouvert.
+ * Offers to open a member's profile dialog.
+ * @param {Object} app Application context.
+ * @param {string} name Member name.
+ * @param {?string} gid Group the profile is opened from.
  */
 function viewProfileItem(app, name, gid) {
   return { label: 'View profile', icon: 'user', onSelect: function () { app.ui.openProfile(name, gid); } };
 }
 
 /**
- * Permet de proposer en live les comptes que vissle lie à un compte, jamais à un invité.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Nom du membre.
+ * Offers in live the accounts vissle links to an account, never to a guest.
+ * @param {Object} app Application context.
+ * @param {string} name Member name.
  */
 function whoItem(app, name) {
   return LIVE && ACCOUNT_NAME.test(name) ? { id: 'who', label: 'Who is this', icon: 'users', onSelect: function () { app.ui.openWho(name); } } : null;
 }
 
 /**
- * Permet de proposer d'ignorer un membre ou de ne plus l'ignorer.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Nom du membre.
+ * Offers to ignore a member or to stop ignoring them.
+ * @param {Object} app Application context.
+ * @param {string} name Member name.
  */
 function ignoreItem(app, name) {
   return { id: 'ignore', label: userOf(app.state, name).ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } };
 }
 
 /**
- * Permet de proposer de couper le style d'un membre ou de le rétablir.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Nom du membre.
- * @param {boolean} [named] Libellé qui nomme le membre, pour le menu d'un message.
+ * Offers to hide a member's style or to show it again.
+ * @param {Object} app Application context.
+ * @param {string} name Member name.
+ * @param {boolean} [named] Label that names the member, for a message menu.
  */
 function styleItem(app, name, named) {
   var label = (userOf(app.state, name).unstyled ? 'Show ' : 'Hide ') + (named ? name + "'s style" : 'style');
@@ -124,21 +124,21 @@ function styleItem(app, name, named) {
 }
 
 /**
- * Permet de proposer le bannissement d'un membre d'un groupe.
- * @param {Object} app Contexte de l'application.
- * @param {string} name Nom du membre.
- * @param {string} gid Groupe.
- * @param {Object} [msg] Message d'où part le bannissement.
+ * Offers to ban a member from a group.
+ * @param {Object} app Application context.
+ * @param {string} name Member name.
+ * @param {string} gid Group.
+ * @param {Object} [msg] Message the ban starts from.
  */
 function banItem(app, name, gid, msg) {
   return { id: 'ban', label: 'Ban from #' + gid + '…', icon: 'ban', danger: true, closes: true, onSelect: function () { app.ui.ban(name, gid, msg); } };
 }
 
 /**
- * Permet de lister les actions sur une personne, communes à la fenêtre de profil, au panneau et au menu d'un MP.
- * Une entrée marquée closes ferme la fenêtre de profil qui l'affiche, buttonLabel est son libellé en bouton.
- * @param {string} name Nom du membre.
- * @param {?string} gid Groupe d'où le profil est ouvert.
+ * Lists the actions on a person shared by the profile dialog, the panel and a PM menu.
+ * An entry marked closes closes the profile dialog that shows it, and buttonLabel is its label as a button.
+ * @param {string} name Member name.
+ * @param {?string} gid Group the profile is opened from.
  */
 function useProfileActions(name, gid) {
   var app = useApp(), s = app.state, u = userOf(s, name), busy = !!s.friendAdds[name];
@@ -165,8 +165,8 @@ function useProfileActions(name, gid) {
 }
 
 /**
- * Fenêtre de profil d'un membre.
- * @param {{name: string, gid: ?string, onClose: Function, onDone: ?Function}} p Membre, groupe d'où le profil est ouvert, fermeture de la fenêtre et fermeture qui suit une action menée ailleurs, la fermeture par défaut.
+ * Member profile dialog.
+ * @param {{name: string, gid: ?string, onClose: Function, onDone: ?Function}} p Member, group the profile is opened from, dialog closing, and closing after an action carried out elsewhere (defaults to the dialog closing).
  */
 function ProfileDialog(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), isMe = name === s.me;
@@ -179,7 +179,7 @@ function ProfileDialog(p) {
   var mini = miniStyleOf(s.prefs, u, app.theme);
   function go(route) { done(); app.nav(route); }
   return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: 'profile-dialog', style: mini ? miniSkin(mini) : null },
-    // Focus initial sur le nom : sur le premier bouton, placé sous la bio, la fenêtre s'ouvrirait défilée.
+    // Initial focus on the name: on the first button, placed under the bio, the dialog would open scrolled.
     h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', focusHeading: true, size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
@@ -189,9 +189,9 @@ function ProfileDialog(p) {
 }
 
 /**
- * Comptes que vissle lie à un compte, demandés à l'ouverture et oubliés à la fermeture (ADR-0010).
- * Chaque compte a sa carte de mini profil, et sa fiche s'ouvre par-dessus la liste.
- * @param {{name: string, onClose: Function, onDone: Function}} p Compte visé, fermeture de la fenêtre et fermeture qui suit une action de la fiche menée ailleurs.
+ * Accounts vissle links to an account, requested on open and forgotten on close (ADR-0010).
+ * Each account has its mini profile card, and its profile opens over the list.
+ * @param {{name: string, onClose: Function, onDone: Function}} p Target account, dialog closing, and closing after a profile action carried out elsewhere.
  */
 function WhoDialog(p) {
   var app = useApp(), s = app.state;
@@ -209,7 +209,7 @@ function WhoDialog(p) {
   useProfiles(accounts);
   function row(name) {
     var n = lower(name);
-    // Un nom qui n'est pas un compte n'a ni photo ni fiche : rendu en texte seul.
+    // A name that is not an account has no photo and no profile: rendered as plain text.
     return ACCOUNT_NAME.test(n) ? personCard(s, n, app.theme, function () { setOpen(n); }) : h('p', { key: name, className: 'about who-text' }, name);
   }
   var lead = !res ? h('p', { className: 'startup' }, h(T.Spinner, null), 'Asking vissle')
@@ -224,7 +224,6 @@ function WhoDialog(p) {
 
 function BanDialog(p) {
   var app = useApp();
-  var st = useState('Spam'), reason = st[0], setReason = st[1];
   var dl = useState(false), wipe = dl[0], setWipe = dl[1];
   if (LIVE) {
     return h(Dialog, {
@@ -234,40 +233,36 @@ function BanDialog(p) {
   }
   return h(Dialog, {
     title: 'Ban ' + p.name + ' from #' + p.gid + '?', description: 'They are removed from the group and cannot rejoin from this IP until unbanned.', onClose: p.onClose,
-    footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { app.actions.ban(p.gid, p.name, reason); p.onClose(); } }, 'Ban')]
-  },
-    h('div', { className: 'dialog-body' },
-      h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'ban-reason' }, 'Reason'),
-        h('select', { id: 'ban-reason', className: 'tc-input', value: reason, onChange: function (e) { setReason(e.target.value); } },
-          ['Spam', 'Harassment', 'Ban evasion', 'Off-topic flooding', 'Other'].map(function (r) { return h('option', { key: r }, r); })),
-        h('span', { className: 'tc-hint' }, 'Shown to other staff in the audit log.'))));
+    footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { app.actions.ban(p.gid, p.name); p.onClose(); } }, 'Ban')]
+  });
 }
 
 /**
- * Bouton qui ouvre une adresse dans un nouvel onglet puis ferme la fenêtre.
- * @param {string} url Adresse à ouvrir.
- * @param {string} variant Variante du bouton.
- * @param {Function} onClose Fermeture de la fenêtre.
+ * Button that opens an address in a new tab and closes the dialog.
+ * @param {string} url Address to open.
+ * @param {string} variant Button variant.
+ * @param {Function} onClose Dialog closing.
  */
 function openLinkButton(url, variant, onClose) {
   return h('a', { key: 'o', className: 'tc-btn tc-btn-' + variant, href: url, target: '_blank', rel: 'noopener noreferrer', onClick: onClose, style: { textDecoration: 'none' } }, 'Open link', h(T.Icon, { name: 'external', size: 14 }));
 }
 /**
- * Adresse complète d'un lien, en tête de sa fenêtre.
- * @param {string} url Adresse du lien.
+ * Full address of a link at the top of its dialog.
+ * @param {string} url Link address.
  */
 function linkAddress(url) {
   return h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 12.5, overflowWrap: 'anywhere', color: 'var(--text-body)' } }, url);
 }
 
 /**
- * Avertissement avant un lien externe, qui propose de faire confiance à son hôte, ou de ne plus avertir si la liste de BetterChatango est illisible.
- * @param {{url: string, onClose: Function}} p Adresse du lien et fermeture de la fenêtre.
+ * Warning before an external link.
+ * It offers to trust the link's host, or to stop warning if BetterChatango's list is unreadable.
+ * @param {{url: string, onClose: Function}} p Link address and dialog closing.
  */
 function LinkDialog(p) {
   var app = useApp(), hosts = app.state.prefs.safety.trustedHosts, host = httpsHost(p.url);
   var t = useState(false), trust = t[0], setTrust = t[1];
-  // Seul un lien https propose sa confiance : isTrustedUrl ignore les autres.
+  // Only an https link offers trust: isTrustedUrl ignores the others.
   var choice = !hosts ? h(T.Checkbox, { label: "Don't warn me again", onChange: function (e) { var v = e.target.checked; app.update(function (d) { d.prefs.safety.warnLinks = !v; }); } })
     : host ? h(T.Checkbox, { label: 'Trust ' + host, checked: trust, onChange: function (e) { setTrust(e.target.checked); } }) : null;
   return h(Dialog, {

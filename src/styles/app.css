@@ -23,7 +23,7 @@ h1,h2,h3{text-wrap:balance}
 .tnum{font-variant-numeric:tabular-nums}
 
 .shell{display:flex;gap:10px;height:100%;min-height:0;padding:10px max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px))}
-/* Ciel derrière les panneaux : le texte reste toujours sur une surface pleine. */
+/* Sky behind the panels: text always stays on a solid surface. */
 .shell,.settings{position:relative;isolation:isolate;background:linear-gradient(180deg,var(--sky-top),var(--sky-bottom))}
 .shell::before,.settings::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:var(--stars)}
 .sidebar{width:var(--size-sidebar);flex:none;display:flex;flex-direction:column;background:var(--sidebar);border:1px solid var(--border);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel);overflow:hidden;min-height:0}
@@ -42,7 +42,7 @@ h1,h2,h3{text-wrap:balance}
 .brand-mark{position:relative;display:inline-flex;flex:none}
 .brand-mark .tc-moon{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--moon-ink) 45%,transparent))}
 .moon-south .tc-moon{transform:scaleX(-1)}
-/* Vue du sud, la lune est tournée d'un demi-tour : la phase s'inverse en miroir, les mers se retournent aussi de haut en bas. */
+/* Seen from the south the moon is turned half a turn: the phase is mirrored and the seas also flip top to bottom. */
 .moon-south .tc-moon-face{transform:scaleY(-1);transform-origin:10px 10px}
 .brand-name{flex:1;font-family:var(--font-display);font-size:28px;line-height:28px;font-weight:400;color:var(--text)}
 .searchbtn{width:100%;height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:7px;background:var(--subtle);border:1px solid var(--border);color:var(--text-3);font-size:13px;cursor:pointer}
@@ -63,7 +63,7 @@ h1,h2,h3{text-wrap:balance}
 .main>.topbar{background:linear-gradient(180deg,color-mix(in srgb,var(--sky-top) 55%,var(--bg)),var(--bg))}
 .topbar h1,.topbar h2{margin:0;font-family:var(--font-display);font-size:23px;line-height:28px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar .namebtn{font-weight:400}
-/* Le titre ne rogne pas : le contour de focus du bouton profil le déborde, seul le nom passe en points de suspension. */
+/* The title does not clip: the focus outline of the profile button overflows it, only the name gets an ellipsis. */
 .topbar .dm-title{min-width:0;overflow:visible}
 .dm-title .person-tag{max-width:100%}
 .dm-title .namebtn{overflow:hidden;text-overflow:ellipsis}
@@ -75,12 +75,12 @@ h1,h2,h3{text-wrap:balance}
 .pillbtn[aria-pressed="true"]{background:var(--selected);color:var(--text)}
 .grow{flex:1}
 
-/* Fil en column-reverse : l'origine du défilement est en bas, scrollTop vaut 0 en bas et devient négatif en remontant.
-   L'historique ajouté en haut et les images qui se chargent ne déplacent pas la vue sans qu'on écrive scrollTop, qu'iOS ignore pendant l'inertie. */
+/* Message log in column-reverse: the scroll origin is at the bottom, scrollTop is 0 at the bottom and goes negative when scrolling up.
+   History added at the top and images that load do not move the view, with no need to write scrollTop, which iOS ignores during momentum scrolling. */
 .log{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;position:relative;display:flex;flex-direction:column-reverse}
 .log-inner{flex-shrink:0;display:flex;flex-direction:column;justify-content:flex-end;min-height:100%}
 .ev{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 20px 8px 68px;color:var(--text-3);font-size:12.5px;white-space:pre-line}
-/* Sentinelle hors de l'ancrage natif : prise pour ancre, elle ferait suivre la vue jusqu'en haut à chaque page et relancerait le chargement. */
+/* Sentinel kept out of native scroll anchoring: taken as the anchor, it would drag the view to the top on every page and trigger loading again. */
 .history-more{min-height:34px;overflow-anchor:none}
 .ev .embeds{flex-basis:100%;margin-top:0}
 .linkbtn{border:0;background:none;padding:0;color:var(--text-2);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:inherit}
@@ -110,12 +110,6 @@ h1,h2,h3{text-wrap:balance}
 .chan-trigger{height:28px;border:1px solid var(--border-strong);font-size:12px}
 .ignored-row{display:flex;align-items:center;gap:8px;padding:4px 20px 4px 68px;color:var(--text-3);font-size:12.5px}
 .jump{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:5;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:1px solid var(--border-strong);border-radius:16px;background:var(--raised);color:var(--text);font-size:13px;font-weight:500;box-shadow:var(--shadow-floating);cursor:pointer}
-.typing{height:18px;margin:0 0 6px;display:flex;align-items:center;gap:6px;color:var(--text-3);font-size:12px}
-.typing b{color:var(--text-2);font-weight:600}
-.dots{display:inline-flex;gap:3px}
-.dots i{width:4px;height:4px;border-radius:50%;background:var(--text-3);animation:blink 1.2s infinite}
-.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
-@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
 .composer-wrap{flex:none;position:relative;padding:0 20px 16px;padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
 .notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--subtle);border:1px solid var(--border);color:var(--text-2);font-size:13px}
 .notice .grow{min-width:200px}
@@ -248,7 +242,6 @@ h1,h2,h3{text-wrap:balance}
 .tc-seg button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 24px;text-align:center;color:var(--text-3)}
 .empty h2{margin:0;color:var(--text);font-family:var(--font-display);font-size:26px;line-height:30px;font-weight:400}
-.seen{margin:6px 20px 0 68px;font-size:12px;color:var(--text-3)}
 .skel-row{display:flex;align-items:center;gap:12px;padding:10px}
 .skel-lines{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .navlist .skel-row{gap:10px;height:var(--size-control-md);padding:0 10px}
@@ -281,7 +274,6 @@ h1,h2,h3{text-wrap:balance}
 .matrix th[scope="row"]{padding-left:20px;text-align:left;font-weight:400}
 .matrix td{text-align:center;width:84px}
 .matrix tr:last-child th,.matrix tr:last-child td{border-bottom:0}
-.na{display:inline-block;width:10px;height:2px;border-radius:1px;background:var(--control);vertical-align:middle}
 .pick{display:block;padding:10px;border:1px solid var(--border-strong);border-radius:10px;background:none;text-align:left;cursor:pointer;width:100%}
 .pick:hover{border-color:var(--control-strong)}
 .pick[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -295,7 +287,6 @@ h1,h2,h3{text-wrap:balance}
 .color-in{width:32px;height:32px;padding:0;border:1px solid var(--control);border-radius:50%;background:none;cursor:pointer}
 .range-row{display:flex;align-items:center;gap:12px;flex:0 1 280px}
 .range-row input[type="range"]{flex:1;accent-color:var(--accent)}
-.preview-msgs{margin:0 20px;padding:12px 0;border-bottom:1px solid var(--divider)}
 .list{display:flex;flex-direction:column}
 .lrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 20px;border-top:1px solid var(--divider)}
 .lrow .grow{min-width:180px}
@@ -317,17 +308,9 @@ h1,h2,h3{text-wrap:balance}
 .card{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--panel)}
 .card:hover{border-color:var(--control)}
 .card.row{flex-direction:row;align-items:center;padding:12px 14px}
-.card p{margin:0;flex:1;font-size:13.5px;color:var(--text-body)}
-.card-head{display:flex;align-items:center;gap:12px;min-width:0}
 .card-title{display:flex;flex-direction:column;line-height:1.3;min-width:0;flex:1}
 .card-title strong{font-weight:600;color:var(--text)}
 .card-title span{font-size:12.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-foot{display:flex;align-items:center;gap:8px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--border-strong);background:none;color:var(--text-2);font-size:13px;font-weight:500;cursor:pointer}
-.chip:hover{color:var(--text);border-color:var(--control-strong)}
-.chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
-.online-dot{width:7px;height:7px;border-radius:50%;background:var(--status-online);display:inline-block}
 .page-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px}
 .page-head>div{flex:1 1 320px}
 .roles{display:flex;flex-direction:column;padding:6px}
@@ -336,39 +319,13 @@ h1,h2,h3{text-wrap:balance}
 .role-btn[aria-current="true"]{background:var(--selected)}
 .role-ico{width:28px;height:28px;border-radius:7px;background:var(--selected);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;flex:none}
 .role-btn[aria-current="true"] .role-ico{background:var(--raised)}
-.plan{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border:1px solid var(--border-strong);border-radius:10px;background:none;text-align:left;cursor:pointer;color:var(--text)}
-.plan:hover{border-color:var(--control-strong)}
-.plan[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.plan .price{font:600 17px var(--font-sans);font-variant-numeric:tabular-nums;min-width:84px}
-.radio{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--control-strong);flex:none;display:inline-flex;align-items:center;justify-content:center}
-[aria-checked="true"]>.radio{border-color:var(--accent)}
-[aria-checked="true"]>.radio::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
-.steps{display:flex;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--text-3)}
-.steps b{color:var(--text);font-weight:600}
-.recipients{display:flex;flex-wrap:wrap;gap:6px}
-.rchip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 4px 0 10px;border-radius:14px;background:var(--selected);color:var(--text);font-size:13px}
-.summary{display:flex;flex-direction:column;gap:8px;padding:4px 20px 18px}
-.summary div{display:flex;justify-content:space-between;gap:12px}
-.summary .total{padding-top:10px;border-top:1px solid var(--divider);font-weight:600;color:var(--text)}
 
 .login{min-height:100%;display:flex;flex-wrap:wrap;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-.login-aside{flex:1 1 440px;display:flex;flex-direction:column;justify-content:space-between;gap:48px;padding:48px max(24px,4vw);background:var(--sidebar);border-right:1px solid var(--border)}
-.login-brand{display:flex;align-items:center;gap:10px}
-.login-mark{width:32px;height:32px;border-radius:8px;background:var(--accent);color:var(--on-accent);display:inline-flex;align-items:center;justify-content:center;flex:none}
-.login-brand-name{font-weight:600;font-size:17px;letter-spacing:-.01em}
-.login-aside h1{margin:0 0 14px;font-size:34px;line-height:40px;font-weight:600;letter-spacing:-.02em;max-width:440px}
-.login-aside ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;max-width:440px}
-.login-aside li{display:flex;gap:12px;align-items:flex-start}
-.login-aside li svg{margin-top:3px;color:var(--accent-text)}
-.login-aside li strong{display:block;font-weight:600}
-.login-aside li span{color:var(--text-2);font-size:13.5px}
 .login-main{flex:999 1 480px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px}
 .login-form{width:100%;max-width:380px;display:flex;flex-direction:column;gap:16px}
 .login-form h2{margin:0 0 4px;font-size:22px;font-weight:600;letter-spacing:-.01em}
 .login-form p{margin:0}
 .login-foot{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin-top:40px;font-size:12.5px;color:var(--text-3)}
-.login-foot select{background:transparent;border:0;color:var(--text-2);cursor:pointer}
-.formerr{padding:10px 12px;border-radius:8px;background:var(--subtle);border:1px solid var(--danger);color:var(--text-body);font-size:13px}
 
 @media (max-width:860px){
   .shell,.settings{gap:0;padding:0 env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
@@ -429,7 +386,7 @@ h1,h2,h3{text-wrap:balance}
 .namebtn{padding:0;border:0;background:none;color:var(--text);font:inherit;font-weight:600;text-decoration:none}
 button.person-tag,button.namebtn,button.tc-mention{cursor:pointer}
 button.person-tag:hover .namebtn,button.tc-mention:hover{text-decoration:underline;text-underline-offset:2px}
-/* La couleur de nom choisie par le membre est en style inline, seul !important la remplace au survol. */
+/* The name color the member chose is an inline style, only !important overrides it on hover. */
 .namebtn-mention:hover{color:var(--accent-text)!important}
 button.tc-mention{border:0;font-family:inherit;font-size:inherit;line-height:inherit}
 .tc-msg-reply-author .namebtn{font-weight:inherit;color:inherit}

@@ -1,214 +1,212 @@
 # Nightango
 
-Nightango habille BetterChatango, client Chatango tiers, d'une interface refaite, sans changer ce que BetterChatango envoie à Chatango. Ce glossaire fixe le vocabulaire du code, des docs et des issues.
+Nightango dresses BetterChatango, a third-party Chatango client, in a rebuilt interface, without changing what BetterChatango sends to Chatango. This glossary fixes the vocabulary of the code, the docs and the issues.
 
-## Produits et acteurs
+## Products and actors
 
 **Chatango**:
-Service de discussion en ligne (groupes, messages privés, profils) sur lequel tout repose.
+Online chat service (groups, private messages, profiles) that everything relies on.
 
 **BetterChatango**:
-Client web tiers pour Chatango, édité par vissle, qui tient la session et les connexions. Son code, ses écrans et sa globale `torch` gardent son nom interne, Torch. Dans les textes d'interface, « BetterChatango » ne désigne que ce que fait BetterChatango : la connexion, l'historique des MP, la médiathèque, ses réglages.
-_Avoid_: Torch, Torch Client (nom interne, sauf pour citer son code ou ses écrans)
+Third-party web client for Chatango, published by vissle, that holds the session and the connections. Its code, its screens and its `torch` global keep its internal name, Torch. In interface text, "BetterChatango" only names what BetterChatango does: sign-in, PM history, the media library, its settings.
+_Avoid_: Torch, Torch Client (internal name, except to cite its code or its screens)
 
 **vissle**:
-Éditeur de BetterChatango (vissle.me), qui héberge aussi le tracker de profil.
+Publisher of BetterChatango (vissle.me), which also hosts the profile tracker.
 
 **Nightango**:
-Ce projet : un skin pour BetterChatango, sous forme de userscript Tampermonkey qui démarre BetterChatango puis affiche par-dessus une interface refaite, branchée sur BetterChatango. Nom affiché depuis la 0.18.0. Les identifiants techniques gardent `torch-skin` : namespace du userscript, hôte `#torch-skin`, globales `__TORCH_*__`, événements du pont, clés de stockage, préfixe des logs, livrable.
-_Avoid_: Torch Skin (ancien nom), thème
+This project: a skin for BetterChatango, shipped as a Tampermonkey userscript that starts BetterChatango and then shows a rebuilt interface on top of it, wired to BetterChatango. Display name since 0.18.0. Technical identifiers keep `torch-skin`: userscript namespace, `#torch-skin` host, `__TORCH_*__` globals, bridge events, storage keys, log prefix, deliverable.
+_Avoid_: Torch Skin (former name), theme
 
-**Client officiel**:
-Le client web de Chatango lui-même, utilisé comme source pour les formats et les textes.
+**Official client**:
+Chatango's own web client, used as a source for formats and text.
 
-**Bibliothèque de référence**:
-Projet tiers maintenu qui implémente le protocole Chatango et sert de source pour une trame : chadango, chatango-lib ou ch.py.
+**Reference library**:
+Maintained third-party project that implements the Chatango protocol and serves as the source for a frame: chadango, chatango-lib or ch.py.
 
 ## Architecture
 
-**Pont**:
-Couche qui traduit les trames et les objets de BetterChatango en opérations pour l'interface, et les actions de l'interface en appels à BetterChatango.
-_Avoid_: adaptateur, wrapper
+**Bridge**:
+Layer that translates BetterChatango's frames and objects into operations for the interface, and the interface's actions into calls to BetterChatango.
+_Avoid_: adapter, wrapper
 
-**Pont vissle**:
-Relais du bac à sable qui interroge le tracker vissle pour le compte de la page.
+**vissle bridge**:
+Sandbox relay that queries the vissle tracker on behalf of the page.
 
-**Trame**:
-Message texte du protocole Chatango sur une connexion, aux champs séparés par `:`.
-_Avoid_: commande, paquet, frame (en prose française)
+**Frame**:
+Text message of the Chatango protocol on a connection, with fields separated by `:`.
+_Avoid_: command, packet
 
-**Table d'événements**:
-Table de BetterChatango qui associe un nom de trame entrante à son gestionnaire, une pour les groupes et une pour les messages privés.
+**Event table**:
+BetterChatango table that maps an incoming frame name to its handler, one for groups and one for private messages.
 
-**Connexion privée**:
-Connexion de Chatango qui porte les MP, la liste d'amis et la présence, distincte des connexions de groupe.
+**Private connection**:
+Chatango connection that carries PMs, the friend list and presence, separate from group connections.
 
 **Live**:
-Mode où l'interface est branchée sur le client BetterChatango vivant et agit sur le vrai compte.
+Mode where the interface is wired to the running BetterChatango client and acts on the real account.
 
 **Prototype**:
-Mode hébergé où la même interface tourne sur des données simulées.
-_Avoid_: démo, maquette
+Hosted mode where the same interface runs on simulated data.
+_Avoid_: demo, mockup
 
-**Bac à sable**:
-Contexte isolé où Tampermonkey exécute le userscript, avec ses privilèges mais sans accès à BetterChatango.
-_Avoid_: sandbox (en prose française)
+**Sandbox**:
+Isolated context where Tampermonkey runs the userscript, with its privileges but without access to BetterChatango.
 
 **Page**:
-Contexte de st.chatango.com où vivent BetterChatango et l'interface, sans les privilèges du userscript.
+st.chatango.com context where BetterChatango and the interface live, without the userscript's privileges.
 
 **Loader**:
-Partie du userscript qui tourne dans le bac à sable et injecte le code page.
+Part of the userscript that runs in the sandbox and injects the page code.
 
-**Code page**:
-Partie du userscript injectée dans la page, qui démarre BetterChatango et monte l'interface.
+**Page code**:
+Part of the userscript injected into the page, which starts BetterChatango and mounts the interface.
 
 **Not wired**:
-État d'une fonction de l'interface sans trame sourcée, affichée comme indisponible en live.
+State of an interface feature without a sourced frame, shown as unavailable in live.
 
-**Livrable**:
-Le userscript minifié que l'utilisateur installe dans Tampermonkey, au nom fixe d'une version à l'autre.
+**Deliverable**:
+The minified userscript the user installs in Tampermonkey, with the same file name from one version to the next.
 
 **Design system**:
-Jetons, composants et charte de Nightango (torchds, namespace `window.Torch`), dont l'interface est construite.
+Nightango's tokens, components and guidelines (torchds, namespace `window.Torch`), from which the interface is built.
 
-## Groupes
+## Groups
 
-**Groupe**:
-Salon de discussion public de Chatango, identifié par son nom.
-_Avoid_: salon, room, chat room
+**Group**:
+Public Chatango chat room, identified by its name.
+_Avoid_: room, chat room
 
-**Canal**:
-Marquage d'un message de groupe : rouge, bleu, ou Staff (réservé aux modérateurs qui en ont le droit).
+**Channel**:
+Marking on a group message: red, blue, or Staff (reserved for moderators who have the right).
 
-**Annonce**:
-Message d'un groupe republié à intervalle régulier.
+**Announcement**:
+Group message republished at a regular interval.
 
-**Modérateur**:
-Membre à qui le propriétaire d'un groupe a donné des droits de modération, choisis un par un.
-_Avoid_: mod (en prose), staff
+**Moderator**:
+Member to whom a group owner gave moderation rights, chosen one by one.
+_Avoid_: mod (in prose), staff
 
-**Mode lent**:
-Délai minimal imposé entre deux messages d'un même membre dans un groupe.
-_Avoid_: rate limit (en prose)
+**Slow mode**:
+Minimum delay enforced between two messages from the same member in a group.
+_Avoid_: rate limit (in prose)
 
-**Mots bannis**:
-Liste de mots, partiels ou entiers, refusés dans les messages d'un groupe.
+**Banned words**:
+List of words, partial or whole, refused in a group's messages.
 
-**Bannissement**:
-Blocage d'un membre ou d'un invité dans un groupe, à partir d'un de ses messages.
-_Avoid_: ban, blocage (réservé aux MP)
+**Ban**:
+Block of a member or a guest in a group, made from one of their messages.
+_Avoid_: block (reserved for PMs)
 
-## Messages privés
+## Private messages
 
-**MP**:
-Conversation privée entre deux comptes Chatango.
-_Avoid_: DM, PM, message direct (en prose française). L'interface dit « Chats ».
+**PM**:
+Private conversation between two Chatango accounts.
+_Avoid_: DM, direct message. The interface says "Chats".
 
 **msgoff**:
-MP reçu pendant que le destinataire était hors ligne, livré une seule fois à sa reconnexion.
+PM received while the recipient was offline, delivered once when they reconnect.
 
-**Historique privé**:
-Copie locale des MP que BetterChatango garde dans le navigateur. Chatango n'en garde aucune.
+**Private history**:
+Local copy of PMs that BetterChatango keeps in the browser. Chatango keeps none.
 
-**Conversation fermée**:
-MP retiré de la liste avec son historique gardé, qui revient à un MP entrant ou à une réouverture.
-_Avoid_: conversation masquée, archivée
+**Closed conversation**:
+PM removed from the list with its history kept, which comes back on an incoming PM or when reopened.
+_Avoid_: hidden conversation, archived conversation
 
-**Conversation supprimée**:
-MP fermé dont l'historique privé a aussi été effacé de ce navigateur.
+**Deleted conversation**:
+Closed PM whose private history was also erased from this browser.
 
-**Non-lu**:
-MP reçu que l'utilisateur n'a pas encore lu, tel que l'historique privé le marque. Une modification de MP n'en est pas un.
-_Avoid_: unread (en prose française)
+**Unread**:
+Received PM that the user has not read yet, as the private history marks it. A PM edit is not one.
 
-**Ami**:
-Compte que l'utilisateur suit dans sa liste d'amis pour voir sa présence.
+**Friend**:
+Account the user follows in their friend list to see its presence.
 _Avoid_: contact, watch list
 
-**Blocage**:
-Refus des MP d'un compte, côté messages privés.
+**Block**:
+Refusal of an account's PMs, on the private message side.
 
-## Médias
+## Media
 
-**Médiathèque**:
-Images favorites que BetterChatango garde dans ce navigateur, communes à tous ses comptes, insérées dans un message par leur adresse. L'interface dit « Media ».
-_Avoid_: favoris (réservé aux groupes), galerie
+**Media library**:
+Favorite images that BetterChatango keeps in this browser, shared by all its accounts, inserted into a message by their address. The interface says "Media".
+_Avoid_: favorites (reserved for groups), gallery
 
-**Hôte de confiance**:
-Hôte exact choisi par l'utilisateur, dont les liens s'ouvrent sans avertissement et dont les images, vidéos et audios se chargent sans clic. En live, la liste est celle de BetterChatango (`safety.whitelist.domain`). L'interface dit « Trusted sites ».
-_Avoid_: domaine de confiance, liste blanche (ambigu avec la liste de domaines que le serveur de BetterChatango envoie)
+**Trusted host**:
+Exact host chosen by the user, whose links open without a warning and whose images, videos and audio load without a click. In live, the list is BetterChatango's (`safety.whitelist.domain`). The interface says "Trusted sites".
+_Avoid_: trusted domain, whitelist (ambiguous with the domain list that the BetterChatango server sends)
 
-## Présence
+## Presence
 
-**Présence**:
-État d'un compte : en ligne, inactif ou hors ligne. Une connexion depuis l'application mobile compte comme en ligne.
-_Avoid_: statut (réservé au texte de statut)
+**Presence**:
+State of an account: online, idle or offline. A connection from the mobile app counts as online.
+_Avoid_: status (reserved for the status text)
 
-**Inactif**:
-Compte en ligne dont le dernier signe d'activité date de plusieurs minutes.
+**Idle**:
+Online account whose last sign of activity is several minutes old.
 _Avoid_: away, absent
 
-**Dernière connexion**:
-Moment où un compte hors ligne a été vu en ligne pour la dernière fois, affiché « Last online ».
+**Last online**:
+Moment an offline account was last seen online, shown as "Last online".
 _Avoid_: last seen
 
-## Profils
+## Profiles
 
-**Mini profil**:
-Fiche publique courte d'un membre : âge, genre, lieu, bio et fin du Premium.
-_Avoid_: carte, aperçu de profil
+**Mini profile**:
+Short public card of a member: age, gender, location, bio and Premium end date.
+_Avoid_: card, profile preview
 
-**Profil complet**:
-Page libre d'un membre, écrite en HTML, affichée isolée.
-_Avoid_: grand profil, page perso
+**Full profile**:
+Free-form page of a member, written in HTML, shown isolated.
+_Avoid_: big profile, personal page
 
 **ASL**:
-Âge, genre et lieu d'un membre, tels que le mini profil les donne et que Meet people les filtre.
+Age, gender and location of a member, as the mini profile gives them and as Meet people filters them.
 
 **Premium**:
-Abonnement payant de Chatango, actif jusqu'à une date de fin publiée dans le mini profil.
+Paid Chatango subscription, active until an end date published in the mini profile.
 
-**Fond Premium**:
-Couleurs et image de fond qu'un membre Premium attache à son mini profil.
-_Avoid_: fond de mini, thème de profil
+**Premium background**:
+Colors and background image that a Premium member attaches to their mini profile.
+_Avoid_: mini background, profile theme
 
-**Fond de message**:
-Couleur et image de fond qu'un membre Premium attache à ses messages de groupe. Nightango affiche la couleur et l'image sous « Message backgrounds ».
+**Message background**:
+Background color and image that a Premium member attaches to their group messages. Nightango shows the color and the image under "Message backgrounds".
 
-**Tracker vissle**:
-Service de vissle que l'utilisateur installe sur son profil pour journaliser l'activité qu'il reçoit.
+**vissle tracker**:
+vissle service that the user installs on their profile to log the activity it receives.
 
 **Visitors**:
-Section qui affiche l'activité du profil de l'utilisateur connecté : visites, likes, dislikes, commentaires et parrainages.
-_Avoid_: visites (pour la section entière), stats
+Section that shows the activity on the signed-in user's profile: visits, likes, dislikes, comments and referrals.
+_Avoid_: visits (for the whole section), stats
 
 **Meet people**:
-Recherche de membres de Chatango filtrée par âge, genre, photo et présence.
-_Avoid_: découverte (réservé à Discover, la liste de groupes à rejoindre)
+Search for Chatango members filtered by age, gender, photo and presence.
+_Avoid_: discovery (reserved for Discover, the list of groups to join)
 
-**Comptes liés**:
-Autres comptes que vissle rapproche d'un compte, rangés par niveau de rapprochement (Definite à Weak), selon une méthode que le code de BetterChatango ne dit pas. Demandés au clic sur « Who is this », montrés à l'utilisateur seul, sans être gardés.
-_Avoid_: alts, multicomptes, doubles comptes
+**Linked accounts**:
+Other accounts that vissle matches to an account, sorted by match level (Definite to Weak), using a method that BetterChatango's code does not reveal. Requested on a click on "Who is this", shown to the user only, never kept.
+_Avoid_: alts, multi-accounts, duplicate accounts
 
 ## Style
 
-**Style de message**:
-Police, taille, couleurs du texte et du nom, gras, italique et souligné d'un message.
+**Message style**:
+Font, size, text and name colors, bold, italic and underline of a message.
 
-**Style du compte**:
-Style de message enregistré chez Chatango pour le compte.
+**Account style**:
+Message style saved on Chatango for the account.
 
-**Style perso**:
-Style de message choisi dans Nightango, gardé dans ce navigateur seulement et appliqué à chaque envoi. Il peut aussi barrer le texte, en MP seulement.
-_Avoid_: style local, thème de message
+**Own style**:
+Message style chosen in Nightango, kept in this browser only and applied to every message sent. It can also strike through the text, in PMs only.
+_Avoid_: local style, message theme
 
-**Style coupé**:
-Style de message et fond de message d'un membre que l'utilisateur a choisi de ne plus afficher, en groupe comme en MP. Gardé avec les données du compte dans ce navigateur.
-_Avoid_: style masqué, style bloqué
+**Hidden style**:
+Message style and message background of a member that the user chose to stop showing, in groups as in PMs. Kept with the account data in this browser.
+_Avoid_: muted style, blocked style
 
 ## Session
 
-**Session coupée**:
-Perte de la session BetterChatango qui bloque l'interface : connecté ailleurs, session expirée, hors ligne ou connexion perdue.
-_Avoid_: déconnexion (ambigu avec la fermeture d'un seul groupe)
+**Session loss**:
+Loss of the BetterChatango session that blocks the interface: signed in elsewhere, session expired, offline or connection lost.
+_Avoid_: disconnection (ambiguous with closing a single group)

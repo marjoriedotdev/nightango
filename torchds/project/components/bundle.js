@@ -130,7 +130,7 @@
       props.error ? h('span', { id: hintId, className: 'tc-error' }, props.error) : props.hint ? h('span', { id: hintId, className: 'tc-hint' }, props.hint) : null);
   }
 
-  // Un seul arrêt de tabulation pour toute la barre, les flèches passent d'un bouton à l'autre (pattern WAI-ARIA Toolbar).
+  // A single Tab stop for the whole bar, the arrows move from one button to the next (WAI-ARIA Toolbar pattern).
   function Toolbar(props) {
     var ref = React.useRef(null), current = React.useRef(0);
     function items() { return Array.prototype.filter.call(ref.current.querySelectorAll('button'), function (b) { return !b.matches(':disabled'); }); }
@@ -196,9 +196,9 @@
     return (s.slice(0, 2) || '?').toUpperCase();
   }
 
-  // Images en échec mémorisées pour toute la page : un compte sans photo n'est demandé qu'une fois.
+  // Failed images remembered for the whole page: an account without a picture is requested only once.
   var brokenAvatars = Object.create(null);
-  // Images déjà chargées : affichées sans fondu au montage suivant.
+  // Images already loaded: shown without a fade on the next mount.
   var loadedAvatars = Object.create(null);
 
   function Avatar(props) {
@@ -249,12 +249,12 @@
       props.reply.onJump
         ? h('button', { type: 'button', className: 'tc-msg-reply-text tc-msg-reply-jump', title: 'Go to the original message', onClick: props.reply.onJump }, props.reply.text)
         : h('span', { className: 'tc-msg-reply-text' }, props.reply.text)) : null;
-    // Fond en style inline : il doit passer devant le fond du membre, lui aussi inline.
+    // Background as an inline style: it must win over the member background, which is inline too.
     var highlight = props.highlight ? { background: 'var(--selected)' } : null;
     var bg = props.background && !highlight ? h('div', { className: 'tc-msg-bg', 'aria-hidden': 'true' }, props.background) : null;
     function row(base, style) { return { className: cx(base, mention, bg && 'tc-msg-layered', props.className), style: Object.assign({}, style, props.style, highlight), 'data-msg-id': props.msgId }; }
     if (props.compact) {
-      // Base de 8em : sur un écran étroit, le texte passe à la ligne au lieu de s'écraser à côté du rôle et du canal.
+      // 8em basis: on a narrow screen the text wraps to the next line instead of squeezing next to the role and the channel.
       return h('article', row('cmsg'),
         bg, time, author, props.meta, h('div', { style: { flex: '1 1 8em', minWidth: 0 } }, reply, body), actions);
     }
@@ -270,7 +270,7 @@
       actions);
   }
 
-  // Nouvelle lune de référence du 6 janvier 2000 à 18:14 UTC et mois synodique moyen : quelques heures d'écart au plus.
+  // Reference new moon of 6 January 2000 at 18:14 UTC and mean synodic month: a few hours off at most.
   var SYNODIC_DAYS = 29.530588853, NEW_MOON_REF = Date.UTC(2000, 0, 6, 18, 14);
   var MOON_NAMES = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
   function moonPhase(date) {
@@ -289,15 +289,15 @@
       'A' + (Math.abs(k) * r).toFixed(3) + ' ' + r + ' 0 0 ' + edge + ' ' + r + ' 0Z';
   }
 
-  // Mers de la face visible, nord en haut : [cx, cy, rx, ry, rotation].
+  // Seas of the near side, north up: [cx, cy, rx, ry, rotation].
   var MARIA = [[4.6, 9.6, 2.6, 4.6, 12], [7.4, 5.8, 2.6, 2.1, 0], [9.5, 3.4, 4, 0.8, 0], [11.9, 6.6, 1.6, 1.5, 0], [13.3, 9.6, 2.1, 1.6, 20], [10.2, 9.4, 1.2, 0.9, 0],
     [16.7, 7.8, 1.1, 0.95, 0], [15.4, 12.3, 1.3, 1.9, -15], [13.4, 13.2, 0.9, 0.9, 0], [8.6, 13.6, 1.9, 1.4, 0], [5.6, 13.8, 1, 1, 0]];
-  // Cratères clairs : Tycho et Copernic.
+  // Bright craters: Tycho and Copernicus.
   var CRATERS = [[9.2, 16.8, 0.55], [8.2, 9.6, 0.45]];
   function Moon(props) {
     var size = props.size || 16, m = props.phase == null ? moonPhase(props.date) : moonInfo(props.phase), lit = moonPath(m.phase, 10);
     var label = props.label === true ? m.name + ', ' + Math.round(m.lit * 100) + '% lit' : props.label;
-    // Les deux-points de useId ne passent pas dans url(#…).
+    // The colons of useId do not work inside url(#…).
     var id = 'tc-moon-' + React.useId().replace(/[^\w-]/g, '');
     return h('svg', { className: cx('tc-moon', props.className), width: size, height: size, viewBox: '0 0 20 20', style: props.style,
       role: label ? 'img' : undefined, 'aria-label': label || undefined, 'aria-hidden': label ? undefined : 'true' },
@@ -319,7 +319,7 @@
 
   function DayDivider(props) {
     var d = props.date == null ? null : new Date(props.date);
-    // La lune de la nuit de ce jour, prise à 22 h locales.
+    // The moon of that day's night, taken at 22:00 local time.
     var night = d && new Date(d.getFullYear(), d.getMonth(), d.getDate(), 22);
     return h('div', { className: 'tc-day', role: 'separator' }, night ? h(Moon, { date: night, size: 12 }) : null, props.children);
   }
@@ -371,7 +371,7 @@
     function send() {
       var text = value.trim();
       if (!text || blocked) return;
-      // Vidé avant onSend : la vue peut y remettre un brouillon mis de côté.
+      // Cleared before onSend: the view can put back a draft it set aside.
       setValue('');
       if (props.onSend) props.onSend(text);
     }
@@ -382,7 +382,7 @@
       el.style.height = Math.min(el.scrollHeight, 160) + 'px';
     }, [value]);
     var ctx = props.context;
-    // Clé en texte : la vue recrée l'objet du contexte à chaque rendu, le curseur sauterait à chaque frappe.
+    // Text key: the view recreates the context object on every render, the cursor would jump on every keystroke.
     React.useEffect(function () {
       var el = ref.current;
       if (!ctx || !el) return;
@@ -390,7 +390,7 @@
       el.setSelectionRange(el.value.length, el.value.length);
     }, [ctx ? [ctx.verb, ctx.author, ctx.text].join('\n') : '']);
     function focusInput(e) {
-      // Les menus et fenêtres rendus en portail remontent leurs événements React jusqu'ici sans être dans le composeur.
+      // Menus and dialogs rendered in a portal bubble their React events up to here without being inside the composer.
       if (!e.currentTarget.contains(e.target) || e.target.closest('button,a,input,select,textarea,[role=menu],[role=menuitem]')) return;
       e.preventDefault();
       ref.current.focus();

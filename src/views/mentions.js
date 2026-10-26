@@ -1,14 +1,15 @@
 /* ---------- Mentions ---------- */
 /**
- * Permet de dater un message hors de son fil : l'heure, précédée du jour hors aujourd'hui.
- * @param {number} ts Horodatage du message.
- * @param {boolean} h24 Format 24 heures.
+ * Dates a message outside its log with the time, preceded by the day unless it is today.
+ * @param {number} ts Message timestamp.
+ * @param {boolean} h24 24-hour format.
  */
 function entryTime(ts, h24) { return (dayKey(ts) === dayKey(Date.now()) ? '' : dayLabel(ts) + ', ') + fmtTime(ts, h24); }
 
 /**
- * Message hors de son fil, qui l'ouvre au clic : mention de la page Mentions ou résultat de la recherche des MP.
- * @param {{name: string, ts: number, meta: ?string, text: *, onClick: Function}} p Membre affiché, horodatage, ligne de contexte facultative, texte et ouverture.
+ * Message outside its log that opens the log on click.
+ * It is a mention on the Mentions page or a PM search result.
+ * @param {{name: string, ts: number, meta: ?string, text: *, onClick: Function}} p Shown member, timestamp, optional context line, text and opening.
  */
 function MessageEntry(p) {
   var h24 = useApp().state.prefs.h24;

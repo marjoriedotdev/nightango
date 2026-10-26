@@ -1,34 +1,34 @@
-# Modifier le titre, la description ou l'icône d'un groupe
+# Editing a group's title, description or icon
 
-Nightango ne modifie ni le titre, ni la description, ni l'icône d'un groupe. Les réglages de groupe les affichent en lecture seule.
+Nightango does not edit a group's title, description or icon. The group settings show them read-only.
 
-## Pourquoi c'est hors périmètre
+## Why this is out of scope
 
-Aucune voie d'écriture ne respecte à la fois [ADR-0001](../docs/adr/0001-password-never-read.md) (le mot de passe n'est jamais transmis) et [ADR-0002](../docs/adr/0002-no-invented-frames.md) (aucune trame inventée).
+No write path respects both [ADR-0001](../docs/adr/0001-password-never-read.md) (the password is never transmitted) and [ADR-0002](../docs/adr/0002-no-invented-frames.md) (no invented frame).
 
-**Titre et description.** Aucune trame socket d'écriture n'existe dans BetterChatango, chadango, chatango-lib ni ch.py. Le côté lecture est connu (`updgroupinfo:{titre}:{desc}`, reçu par BetterChatango et chadango). Le serveur sait modifier un groupe (modaction `egrp`, « edited group », dans chadango), mais la seule écriture trouvée est un POST HTTP du fork megach (GPL, hors bibliothèques de référence) :
+**Title and description.** No socket write frame exists in BetterChatango, chadango, chatango-lib or ch.py. The read side is known (`updgroupinfo:{title}:{desc}`, received by BetterChatango and chadango). The server can edit a group (modaction `egrp`, "edited group", in chadango), but the only write found is an HTTP POST from the megach fork (GPL, not a reference library):
 
 ```
 POST http://chatango.com/updategroupprofile
-erase=0&l=1&d={desc}&n={titre}&u={groupe}&lo={login}&p={mot de passe}&origin=st.chatango.com
+erase=0&l=1&d={desc}&n={title}&u={group}&lo={login}&p={password}&origin=st.chatango.com
 ```
 
-Il exige le mot de passe (`p`) : exclu par ADR-0001. BetterChatango ne l'appelle pas (son bouton Save de la section Information n'a pas de gestionnaire), et `client.post` de BetterChatango refuse cet endpoint (hors de sa liste blanche). Aucune variante au jeton ou au cookie n'a été trouvée.
+It requires the password (`p`): excluded by ADR-0001. BetterChatango does not call it (its Save button in the Information section has no handler), and BetterChatango's `client.post` rejects this endpoint (not in its whitelist). No token or cookie variant was found.
 
-**Icône.** Ce que BetterChatango appelle icône de groupe n'est pas une fonction Chatango : c'est une fonction vissle, réservée aux groupes enregistrés chez vissle, envoyée vers `vissle.me/chatango/updateavatar` et `updateprofile` avec la clé de session vissle (`{ key: true }`), et affichée seulement dans BetterChatango. L'endpoint ne figure pas dans la liste fermée des appels autorisés, où l'option `key` ne vaut que pour l'envoi de fichiers (`vissle.me/chatango/upload`, #96).
+**Icon.** What BetterChatango calls a group icon is not a Chatango feature: it is a vissle feature, reserved for groups registered with vissle, sent to `vissle.me/chatango/updateavatar` and `updateprofile` with the vissle session key (`{ key: true }`), and shown only in BetterChatango. The endpoint is not in the closed list of allowed calls, where the `key` option applies only to file uploads (`vissle.me/chatango/upload`, #96).
 
-## Ce qui rouvrirait la question
+## What would reopen the question
 
-Une trame ou un appel sans mot de passe, trouvé dans le code de BetterChatango ou d'une bibliothèque de référence (chadango, chatango-lib, ch.py).
+A frame or a call without the password, found in the code of BetterChatango or of a reference library (chadango, chatango-lib, ch.py).
 
-## Sources consultées (2026-10-22)
+## Sources consulted (2026-10-22)
 
-- `reference/torch/inject.js` et `client.html` (copie du 2026-10-19).
-- chadango @ d53b02a : `group.go` (`updgroupinfo`), `models/modaction.go` (`egrp`).
-- chatango-lib @ 49a6dfa, ch.py @ b3c64da : rien.
-- LinkkG/megach @ 6aace67 : `update_info` (`updategroupprofile`, avec mot de passe).
-- `gh search code` et recherche web : `updategroupprofile`, `updgroupinfo`, `ownr_msg`.
+- `reference/torch/inject.js` and `client.html` (copy from 2026-10-19).
+- chadango @ d53b02a: `group.go` (`updgroupinfo`), `models/modaction.go` (`egrp`).
+- chatango-lib @ 49a6dfa, ch.py @ b3c64da: nothing.
+- LinkkG/megach @ 6aace67: `update_info` (`updategroupprofile`, with password).
+- `gh search code` and web search: `updategroupprofile`, `updgroupinfo`, `ownr_msg`.
 
 ## Prior requests
 
-- #5 : « feat(group): modifier titre, description et icône du groupe »
+- #5: "feat(group): edit the group's title, description and icon"

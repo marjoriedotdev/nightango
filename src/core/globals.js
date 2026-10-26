@@ -1,5 +1,5 @@
 var React = window.React, ReactDOM = window.ReactDOM, h = React.createElement;
-// En mode live, chaque avatar reçoit la photo Chatango du compte ou du groupe qu'il représente.
+// In live mode, each avatar gets the Chatango picture of the account or group it represents.
 var T = Object.assign({}, window.Torch, {
   Avatar: function (p) { return h(window.Torch.Avatar, p.src !== undefined ? p : Object.assign({}, p, { src: avatarSrc(p.name, p.size) })); }
 });

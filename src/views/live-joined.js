@@ -1,4 +1,4 @@
-function LiveGroupSection(p) {
+function GroupSection(p) {
   var s = useApp().state;
   return h('section', { 'aria-labelledby': p.id, style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },
     h('h2', { id: p.id, className: 'tc-section-title' }, p.title),
@@ -7,7 +7,7 @@ function LiveGroupSection(p) {
         h('span', { className: 'card-title' }, h('strong', null, k), h('span', null, s.groups[k].title)), h(GroupJoinButton, { group: s.groups[k] }));
     })) : h('p', { className: 'muted', style: { margin: 0 } }, p.empty));
 }
-function LiveJoined() {
+function JoinedGroups() {
   var s = useApp().state;
   var names = Object.keys(s.groups);
   var joined = names.filter(function (k) { return s.groups[k].joined; });
@@ -15,7 +15,7 @@ function LiveJoined() {
   var owned = rest.filter(function (k) { return s.groups[k].owned; });
   var recent = rest.filter(function (k) { return !s.groups[k].owned; });
   return h(Frag, null,
-    h(LiveGroupSection, { id: 'lj-h', title: 'Joined groups', names: joined, empty: 'Connecting to your groups. They appear here as BetterChatango joins them.' }),
-    owned.length ? h(LiveGroupSection, { id: 'lo-h', title: 'Groups you own', names: owned }) : null,
-    recent.length ? h(LiveGroupSection, { id: 'lr-h', title: 'Recent groups', names: recent }) : null);
+    h(GroupSection, { id: 'lj-h', title: 'Joined groups', names: joined, empty: LIVE ? 'Connecting to your groups. They appear here as BetterChatango joins them.' : 'You have not joined any group yet.' }),
+    owned.length ? h(GroupSection, { id: 'lo-h', title: 'Groups you own', names: owned }) : null,
+    recent.length ? h(GroupSection, { id: 'lr-h', title: 'Recent groups', names: recent }) : null);
 }

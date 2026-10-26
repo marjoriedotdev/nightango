@@ -1,7 +1,8 @@
 /**
- * Bloc « About » : texte Chatango mis en forme en live, texte simple dans le prototype.
- * @param {Object} u Membre dans l'état.
- * @param {boolean} [skinned] Fond du membre déjà porté par le conteneur.
+ * "About" block.
+ * It shows formatted Chatango text in live and plain text in the prototype.
+ * @param {Object} u Member in the state.
+ * @param {boolean} [skinned] Member background already carried by the container.
  */
 function profileAbout(u, skinned) {
   if (u.profileMissing) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'This account has no public profile.'));
@@ -12,8 +13,8 @@ function profileAbout(u, skinned) {
 }
 
 /**
- * Permet de suivre l'affichage de l'image de fond Premium selon les réglages de médias et les hôtes de confiance.
- * @param {?Object} mini Fond du membre tel que le renvoie miniStyleOf.
+ * Tracks whether the Premium background image shows under the media settings and trusted hosts.
+ * @param {?Object} mini Member background as returned by miniStyleOf.
  */
 function useMiniCover(mini) {
   var safety = useApp().state.prefs.safety;
@@ -23,17 +24,17 @@ function useMiniCover(mini) {
 }
 
 /**
- * Bouton qui charge l'image de fond Premium retenue par les réglages de médias.
- * @param {Object} cover Image de fond telle que la renvoie useMiniCover.
- * @param {Object} mini Fond du membre tel que le renvoie miniStyleOf.
+ * Button that loads the Premium background image held back by the media settings.
+ * @param {Object} cover Background image as returned by useMiniCover.
+ * @param {Object} mini Member background as returned by miniStyleOf.
  */
 function coverReveal(cover, mini) {
   return cover.image && !cover.shown ? h('button', { type: 'button', className: 'linkbtn', style: { color: mini.link }, onClick: cover.reveal }, 'Show background') : null;
 }
 
 /**
- * Permet de reprendre les jetons de couleur d'un conteneur sur le fond Premium d'un membre.
- * @param {Object} mini Fond du membre tel que le renvoie miniStyleOf.
+ * Remaps a container's color tokens onto a member's Premium background.
+ * @param {Object} mini Member background as returned by miniStyleOf.
  */
 function miniSkin(mini) {
   var soft = ensureContrast(rgbToHex(mix(hexToRgb(mini.text), hexToRgb(mini.bg), 0.3)), mini.bg, 4.5);
@@ -44,9 +45,9 @@ function miniSkin(mini) {
 }
 
 /**
- * Bloc « About » d'un mini profil Chatango.
- * @param {Object} p.u Membre dans l'état.
- * @param {boolean} [p.skinned] Fond du membre déjà porté par le conteneur.
+ * "About" block of a Chatango mini profile.
+ * @param {Object} p.u Member in the state.
+ * @param {boolean} [p.skinned] Member background already carried by the container.
  */
 function RichAbout(p) {
   var app = useApp(), mini = miniStyleOf(app.state.prefs, p.u, app.theme), cover = useMiniCover(mini);
@@ -58,11 +59,11 @@ function RichAbout(p) {
 }
 
 /**
- * Avatar d'une fiche de profil qui ouvre la photo complète.
- * @param {string} p.name Nom du membre.
- * @param {number} p.size Taille de l'avatar.
- * @param {string} p.status Présence affichée.
- * @param {string} p.ring Couleur du fond derrière l'avatar.
+ * Avatar of a profile card that opens the full photo.
+ * @param {string} p.name Member name.
+ * @param {number} p.size Avatar size.
+ * @param {string} p.status Shown presence.
+ * @param {string} p.ring Background color behind the avatar.
  */
 function ProfilePhoto(p) {
   var a = useState(false), hasPhoto = a[0], setHasPhoto = a[1];
@@ -75,9 +76,9 @@ function ProfilePhoto(p) {
 }
 
 /**
- * Visionneuse plein écran de la photo de profil.
- * @param {string} p.name Nom du membre.
- * @param {Function} p.onClose Fermeture de la visionneuse.
+ * Full-screen profile picture viewer.
+ * @param {string} p.name Member name.
+ * @param {Function} p.onClose Closes the viewer.
  */
 function PhotoViewer(p) {
   var ref = useRef(null), thumb = avatarSrc(p.name, 96);
@@ -86,7 +87,7 @@ function PhotoViewer(p) {
   useEffect(function () {
     var prev = ref.current.getRootNode().activeElement;
     ref.current.querySelector('button').focus();
-    // Écoute en capture : Escape et Tab s'arrêtent avant la fenêtre de profil ouverte dessous.
+    // Capture listener: Escape and Tab stop before the profile dialog open underneath.
     function onKey(e) {
       if (e.key !== 'Escape' && e.key !== 'Tab') return;
       e.stopPropagation();
@@ -106,9 +107,9 @@ function PhotoViewer(p) {
 }
 
 /**
- * ASL d'une fiche de profil, ou son squelette tant que le mini profil est attendu.
- * @param {Object} s État de l'application.
- * @param {string} name Nom du membre.
+ * ASL of a profile card, or its skeleton while the mini profile is pending.
+ * @param {Object} s Application state.
+ * @param {string} name Member name.
  */
 function profileMeta(s, name) {
   var asl = personAsl(s, name);
@@ -117,16 +118,17 @@ function profileMeta(s, name) {
 }
 
 /**
- * Résumé d'un profil commun à la fenêtre et au panneau : photo, nom, statut, ASL, About, profil complet et groupes en commun.
- * @param {string} p.name Nom du membre.
- * @param {?string} p.gid Groupe d'où le profil est ouvert.
- * @param {string} p.heading Balise de titre du nom.
- * @param {number} p.size Taille de la photo.
- * @param {string} p.ring Couleur du fond derrière la photo.
- * @param {?Object} p.skin Fond Premium porté par le conteneur, tel que le renvoie miniStyleOf.
- * @param {boolean} [p.guest] Invité sans compte Chatango.
- * @param {Function} p.nav Navigation vers un groupe en commun.
- * @param {boolean} [p.focusHeading] Le nom reçoit le focus d'ouverture d'une fenêtre.
+ * Profile summary shared by the dialog and the panel.
+ * It holds the photo, name, status, ASL, About, full profile and groups in common.
+ * @param {string} p.name Member name.
+ * @param {?string} p.gid Group the profile is opened from.
+ * @param {string} p.heading Heading tag of the name.
+ * @param {number} p.size Photo size.
+ * @param {string} p.ring Background color behind the photo.
+ * @param {?Object} p.skin Premium background carried by the container, as returned by miniStyleOf.
+ * @param {boolean} [p.guest] Guest without a Chatango account.
+ * @param {Function} p.nav Navigation to a group in common.
+ * @param {boolean} [p.focusHeading] The name gets the focus when a dialog opens.
  */
 function ProfileSummary(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), cover = useMiniCover(p.skin);
@@ -135,9 +137,10 @@ function ProfileSummary(p) {
   return h(Frag, null,
     cover.shown ? h('div', { className: 'profile-cover' }, h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer' })) : null,
     h('div', { className: 'profile-card' },
-      // Clé sur le nom : le panneau garde son instance d'une conversation à l'autre.
+      // Key on the name: the panel keeps its instance from one conversation to the next.
       h(ProfilePhoto, { key: name, name: name, size: p.size, status: name === s.me ? s.meStatus : u.status, ring: p.ring }),
       h(p.heading, p.focusHeading ? { className: 'profile-name', tabIndex: -1, 'data-autofocus': true } : { className: 'profile-name' }, name),
+      developerBadge(name),
       h('span', { className: 'muted profile-line' }, personStatus(s, name, p.gid)),
       profileMeta(s, name),
       p.skin ? coverReveal(cover, p.skin) : null),
@@ -148,8 +151,8 @@ function ProfileSummary(p) {
 }
 
 /**
- * Permet de retenir les images d'un profil complet tant que les réglages de médias le demandent.
- * @returns {{on: boolean, button: ?Object}} Images autorisées et bouton qui les charge.
+ * Holds back the images of a full profile while the media settings ask for it.
+ * @returns {{on: boolean, button: ?Object}} Whether images are allowed, and the button that loads them.
  */
 function useFullProfileMedia() {
   var safety = useApp().state.prefs.safety;
@@ -158,17 +161,17 @@ function useFullProfileMedia() {
 }
 
 /**
- * Profil complet affiché dans un cadre isolé sans script, sur le fond Premium du membre.
- * @param {string} p.name Membre dont c'est le profil.
- * @param {string} p.html HTML écrit par le membre.
- * @param {boolean} p.media Images autorisées, telles que les donne useFullProfileMedia.
+ * Full profile shown in an isolated frame without scripts on the member's Premium background.
+ * @param {string} p.name Member whose profile it is.
+ * @param {string} p.html HTML written by the member.
+ * @param {boolean} p.media Whether images are allowed, as given by useFullProfileMedia.
  */
 function FullProfileFrame(p) {
   var app = useApp(), mini = miniStyleOf(app.state.prefs, userOf(app.state, p.name), app.theme);
   return h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(p.html, p.media, mini) });
 }
 
-/** Profil complet : page HTML du membre, affichée dans un cadre isolé sans script. */
+/** Full profile: the member's HTML page shown in an isolated frame without scripts. */
 function FullProfileDialog(p) {
   var app = useApp(), s = app.state, u = userOf(s, p.name), media = useFullProfileMedia();
   var a = useState(LIVE ? null : ''), html = a[0], setHtml = a[1];
@@ -178,7 +181,7 @@ function FullProfileDialog(p) {
     if (isProfilePending(p.name, u)) app.actions.loadProfile(p.name);
     liveBridge.fetchFullProfile(p.name).then(setHtml, function () { setErr('Chatango did not return this profile.'); });
   }, [p.name]);
-  // Prototype : page d'exemple construite à partir des données de démonstration, échappée.
+  // Prototype: escaped sample page built from the simulated data.
   var sample = '<h2>' + String(p.name).replace(/[<>&"]/g, '') + '</h2><p>' + String(u.about || 'No full profile yet.').replace(/[<>&"]/g, '') + '</p>';
   var content = LIVE ? html : sample;
   return h(Dialog, {

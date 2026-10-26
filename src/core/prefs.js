@@ -3,22 +3,19 @@ function defaultPrefs() {
     theme: 'system', accent: '#f27a3f', density: 'comfortable', textSize: 14, h24: true, announcements: true,
     styles: { names: true, fonts: true, backgrounds: false, profileBackgrounds: true },
     notify: {
-      mentions: { app: true, sound: true, desktop: true, email: null },
-      pm: { app: true, sound: true, desktop: true, email: false },
-      friendOn: { app: true, sound: false, desktop: false, email: null },
-      friendOff: { app: false, sound: false, desktop: false, email: null },
-      gift: { app: null, sound: null, desktop: null, email: true },
-      account: { app: null, sound: null, desktop: null, email: true },
-      updates: { app: true, sound: null, desktop: null, email: null }
+      mentions: { app: true, sound: true, desktop: true },
+      pm: { app: true, sound: true, desktop: true },
+      friendOn: { app: true, sound: false, desktop: false },
+      friendOff: { app: false, sound: false, desktop: false }
     },
-    volume: 70, soundFocusOnly: true, tabTitle: true, markNew: true, pmPreview: true, featureHints: true,
-    privacy: { showIdle: true, joinOwned: true, joinRecent: true, joinFavorites: true, meet: false, usernameInTitle: false },
+    volume: 70, soundFocusOnly: true, tabTitle: true, markNew: true, pmPreview: true,
+    privacy: { joinOwned: true, joinRecent: true, joinFavorites: true, usernameInTitle: false },
     safety: { embedImages: true, embedVideos: true, proxyMedia: true, warnLinks: true, trustedHosts: [], showGuests: true, guestMessages: true, syncBlocked: true, ignoreMode: 'collapse' },
     a11y: { reduceMotion: false, underlineLinks: false },
     sky: { calm: false, south: false, moon: 'auto' },
-    language: 'en-US', simulate: true
+    simulate: true
   };
 }
-// En live, ces préférences sont des réglages de BetterChatango, qui font foi : relues à la connexion, écrites chez lui avant de basculer.
+// In live, these preferences are BetterChatango settings, which are authoritative: read again at sign-in, written to BetterChatango before switching.
 var BETTER_CHATANGO_PREFS = { 'safety.guestMessages': 'guestMessages', announcements: 'announcements' };
 var BETTER_CHATANGO_SAVE_FAILED = 'BetterChatango could not save this setting. Reload the page and try again.';

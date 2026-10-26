@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues in the private repository `marjoriedotdev/nightango`. Use the `gh` CLI for all operations.
+Issues and specs for this repo live as GitHub issues in the public repository `marjoriedotdev/nightango`. Use the `gh` CLI for all operations.
 
 ## Conventions
 

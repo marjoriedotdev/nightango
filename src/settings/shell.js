@@ -1,8 +1,7 @@
-/* ---------- Réglages utilisateur ---------- */
+/* ---------- User settings ---------- */
 var SETTINGS_NAV = [
   { title: 'Account', items: [['profile', 'Profile'], ['privacy', 'Privacy'], ['safety', 'Safety'], ['account', 'Password and email'], ['premium', 'Chatango Premium']] },
-  // BetterChatango ne traduit rien, la page Language serait sans effet en live
-  { title: 'App', items: [['appearance', 'Appearance'], ['notifications', 'Notifications'], ['language', 'Language'], ['accessibility', 'Accessibility']].filter(function (it) { return !LIVE || it[0] !== 'language'; }) },
+  { title: 'App', items: [['appearance', 'Appearance'], ['notifications', 'Notifications'], ['accessibility', 'Accessibility']] },
   { title: 'Support', items: [['whatsnew', "What's new"], ['diagnostics', 'Diagnostics'], ['about', 'About Nightango']].filter(function (it) { return JOURNAL || it[0] !== 'diagnostics'; }) }
 ];
 
@@ -25,12 +24,12 @@ function usePref() {
 }
 
 /**
- * Permet d'enregistrer un réglage dans ceux de BetterChatango, avec un toast si BetterChatango ne l'enregistre pas.
- * @param {Object} app Contexte de l'application.
- * @param {Function} write Écriture du pont, vraie si BetterChatango a enregistré la valeur.
- * @param {string} key Clé du réglage dans le pont.
- * @param {boolean|number} value Nouvelle valeur.
- * @returns {boolean} Vrai si BetterChatango l'a enregistré.
+ * Saves a setting into the BetterChatango settings with a toast if BetterChatango does not save it.
+ * @param {Object} app Application context.
+ * @param {Function} write Bridge write, true if BetterChatango saved the value.
+ * @param {string} key Setting key in the bridge.
+ * @param {boolean|number} value New value.
+ * @returns {boolean} True if BetterChatango saved it.
  */
 function saveBetterChatangoSetting(app, write, key, value) {
   if (write(key, value)) return true;
@@ -62,10 +61,10 @@ function SettingsShell(p) {
 }
 
 /**
- * Permet de garder la page demandée si la navigation la liste, sinon la page de repli.
- * @param {Array} sections Sections de la navigation, au format de SETTINGS_NAV.
- * @param {string} page Page demandée par la route.
- * @param {string} [fallback] Page de repli, la première listée par défaut.
+ * Keeps the requested page if the navigation lists it or else returns the fallback page.
+ * @param {Array} sections Navigation sections in the SETTINGS_NAV format.
+ * @param {string} page Page requested by the route.
+ * @param {string} [fallback] Fallback page, the first listed one by default.
  */
 function listedPage(sections, page, fallback) {
   var ids = [].concat.apply([], sections.map(function (sec) { return sec.items.map(function (it) { return it[0]; }); }));
@@ -81,8 +80,8 @@ function Page(p) {
 }
 
 /**
- * Ligne d'activité : qui a fait quoi, et quand.
- * @param {{first: boolean, lead: *, sub: ?string, at: ?number}} p Première ligne de la section, icône avant le texte, ligne secondaire, date de l'action.
+ * Activity row: who did what and when.
+ * @param {{first: boolean, lead: *, sub: ?string, at: ?number}} p First row of the section, icon before the text, secondary line, date of the action.
  */
 function ActivityRow(p) {
   return h('div', { className: 'lrow', style: p.first ? { borderTop: 0 } : null },
@@ -93,7 +92,7 @@ function ActivityRow(p) {
 
 function SettingsView(p) {
   var app = useApp();
-  var map = { profile: ProfilePage, privacy: PrivacyPage, safety: SafetyPage, account: AccountPage, premium: PremiumPage, appearance: AppearancePage, notifications: NotificationsPage, language: LanguagePage, accessibility: AccessibilityPage, whatsnew: WhatsNewPage, diagnostics: DiagnosticsPage, about: AboutPage };
+  var map = { profile: ProfilePage, privacy: PrivacyPage, safety: SafetyPage, account: AccountPage, premium: PremiumPage, appearance: AppearancePage, notifications: NotificationsPage, accessibility: AccessibilityPage, whatsnew: WhatsNewPage, diagnostics: DiagnosticsPage, about: AboutPage };
   var page = listedPage(SETTINGS_NAV, p.page, 'appearance'), Comp = map[page];
   return h(SettingsShell, {
     navLabel: 'Settings', sections: SETTINGS_NAV, page: page,

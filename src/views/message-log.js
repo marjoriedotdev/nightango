@@ -1,18 +1,18 @@
-/* ---------- Fil de messages ---------- */
-// Distance au bas d'un fil sous laquelle il reste collé en bas.
+/* ---------- Message log ---------- */
+// Distance from the bottom of a log under which it stays stuck to the bottom.
 var LOG_BOTTOM_SLACK = 48;
 
 /**
- * Permet à une vue de piloter son fil de messages (MessageLog) : saut vers un message chargé et retour en bas.
- * @returns {{targetId: ?string, jumpTo: function(string), follow: Function, toBottom: Function, view: Object}} Message visé, saut vers un message,
- *   fil gardé en bas au prochain changement, retour immédiat en bas, et état réservé à MessageLog.
+ * Lets a view drive its message log (MessageLog) with a jump to a loaded message and a return to the bottom.
+ * @returns {{targetId: ?string, jumpTo: function(string), follow: Function, toBottom: Function, view: Object}} Target message, jump to a message,
+ *   log kept at the bottom on the next change, immediate return to the bottom, and state reserved for MessageLog.
  */
 function useMessageLog() {
   var reduceMotion = useApp().state.prefs.a11y.reduceMotion;
   var logRef = useRef(null), atBottom = useRef(true);
   var a = useState(null), target = a[0], setTarget = a[1];
   var b = useState(false), below = b[0], setBelow = b[1];
-  // Après le rendu qui pose la cible : la ligne visée n'existe qu'à ce moment, par exemple une fois la recherche du groupe fermée.
+  // After the render that sets the target: the target row only exists at that point, for example once the group search is closed.
   useEffect(function () {
     if (!target) return;
     var row = logRef.current.querySelector('[data-msg-id=' + JSON.stringify(target.id) + ']');
@@ -33,11 +33,12 @@ function useMessageLog() {
 }
 
 /**
- * Fil de messages d'un groupe ou d'un MP : il suit le bas tant que le lecteur y est, garde la lecture en place ailleurs et charge les pages plus anciennes en tête.
- * @param {{log: Object, label: string, rows: Array, firstTs: ?number, changeKey: *, newBelow: string, older: ?Object}} p Pilote (useMessageLog), nom accessible,
- *   lignes, horodatage du premier message chargé, valeur dont le changement replace le fil, réaction à un changement sous un lecteur remonté
- *   (follow : retour en bas, notify : bouton New messages) et tête du fil : null, {status: 'pending'} au premier chargement,
- *   {status: 'start', text} au début de l'historique, ou {status: 'more', loading, ready, load, retry} avec retry appelé à chaque défilement s'il est donné.
+ * Message log of a group or a PM.
+ * It follows the bottom while the reader is there, keeps the reading position elsewhere and loads older pages at the top.
+ * @param {{log: Object, label: string, rows: Array, firstTs: ?number, changeKey: *, newBelow: string, older: ?Object}} p Driver (useMessageLog), accessible name,
+ *   rows, timestamp of the first loaded message, value whose change repositions the log, reaction to a change below a scrolled-up reader
+ *   (follow: back to the bottom, notify: New messages button) and log head: null, {status: 'pending'} on the first load,
+ *   {status: 'start', text} at the start of the history, or {status: 'more', loading, ready, load, retry} with retry called on every scroll if given.
  */
 function MessageLog(p) {
   var v = p.log.view, older = p.older, more = !!older && older.status === 'more';
@@ -45,7 +46,7 @@ function MessageLog(p) {
   useInfiniteScroll(v.ref, sentinelRef, more && older.ready && !p.log.targetId, function () { older.load(); }, '200px 0px 0px 0px');
   useLayoutEffect(function () {
     var el = v.ref.current;
-    // L'historique ajouté en tête ne déplace pas la vue (.log en column-reverse) : rien à restaurer.
+    // History added at the top does not move the view (.log in column-reverse): nothing to restore.
     var olderAdded = p.firstTs < seenFirstTs.current;
     seenFirstTs.current = p.firstTs;
     if (v.atBottom.current || !olderAdded && p.newBelow === 'follow') el.scrollTop = 0;
@@ -53,7 +54,7 @@ function MessageLog(p) {
   }, [p.changeKey]);
   useLogAnchor(v.ref);
   function onScroll() {
-    // .log en column-reverse : scrollTop vaut 0 en bas et devient négatif en remontant.
+    // .log in column-reverse: scrollTop is 0 at the bottom and goes negative when scrolling up.
     v.atBottom.current = v.ref.current.scrollTop > -LOG_BOTTOM_SLACK;
     if (v.atBottom.current && v.below) v.setBelow(false);
     if (older && older.retry) older.retry();
@@ -68,20 +69,20 @@ function MessageLog(p) {
 }
 
 /**
- * Permet de garder la lecture en place dans un fil quand le contenu sous la vue change, là où le navigateur ne le fait pas.
- * Le fil est en column-reverse : ce qui change au-dessus de la vue ne la déplace déjà pas.
- * @param {Object} logRef Référence du fil (.log), dont l'élément ne change pas tant que le composant est monté.
+ * Keeps the reading position in a log when the content below the view changes, where the browser does not.
+ * The log is in column-reverse: changes above the view already do not move it.
+ * @param {Object} logRef Ref of the log (.log), whose element does not change while the component is mounted.
  */
 function useLogAnchor(logRef) {
   useEffect(function () {
     var el = logRef.current;
-    // Safari avant 27 n'a pas d'ancrage natif du défilement. Ailleurs, corriger ici doublerait le décalage.
+    // Safari before 27 has no native scroll anchoring. Elsewhere, correcting here would double the offset.
     if (!el || window.CSS.supports('overflow-anchor', 'auto')) return;
     var anchor = null, anchorTop = 0;
     function pick() {
       var top = el.getBoundingClientRect().top, rows = el.firstChild.children, lo = 0, hi = rows.length - 1;
       while (lo < hi) { var mid = (lo + hi) >> 1; if (rows[mid].getBoundingClientRect().bottom > top) hi = mid; else lo = mid + 1; }
-      // Comme l'ancrage natif exclut la sentinelle (overflow-anchor: none), l'ancre manuelle l'exclut aussi.
+      // As native anchoring excludes the sentinel (overflow-anchor: none), the manual anchor excludes it too.
       if (rows[lo] && rows[lo].classList.contains('history-more')) lo++;
       anchor = rows[lo] || null;
       anchorTop = anchor ? anchor.getBoundingClientRect().top : 0;

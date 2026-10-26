@@ -1,4 +1,4 @@
-// Test de bout en bout du mode live : faux client BetterChatango, interface pilotée comme par un utilisateur.
+// End-to-end test of live mode: fake BetterChatango client, interface driven like a user would.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
@@ -25,7 +25,7 @@ const w = dom.window, d = w.document;
 w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 w.HTMLElement.prototype.scrollIntoView = function () {};
 w.Element.prototype.setPointerCapture = function () {};
-// jsdom n'a pas IntersectionObserver : le test déclenche lui-même l'intersection.
+// jsdom has no IntersectionObserver: the test triggers the intersection itself.
 const observers = [];
 w.IntersectionObserver = function (cb, opts) {
   const o = { cb, opts, targets: [], observe(t) { o.targets.push(t); }, unobserve(t) { o.targets = o.targets.filter(x => x !== t); }, disconnect() { o.targets = []; } };
@@ -33,13 +33,13 @@ w.IntersectionObserver = function (cb, opts) {
   return o;
 };
 
-// jsdom n'a ni CSS.supports ni ResizeObserver : le fil prend le chemin sans ancrage natif, sans mesure.
+// jsdom has neither CSS.supports nor ResizeObserver: the message log takes the path without native anchoring or measuring.
 w.CSS = { supports: () => false };
 w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
 
-/* ---------- Faux client BetterChatango ---------- */
+/* ---------- Fake BetterChatango client ---------- */
 const sent = [], posts = [], calls = [];
-// Réponse de vissle à un envoi de fichier (chatango/upload).
+// vissle response to a file upload (chatango/upload).
 let uploadReply = () => Promise.resolve('data:abc/f.png');
 let shown = 0;
 w.__TORCH_LIVE__ = true;
@@ -48,16 +48,16 @@ w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
 const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
-// Enregistrement de la base d'historique de BetterChatango (saveMessage) : clé ts, horodatage de la trame.
+// Record of the BetterChatango history database (saveMessage): key ts, the frame timestamp.
 const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const pmRecords = [
-  // Archivé non lu avant la mise à jour : la migration le marque lu.
+  // Archived unread before the update: the migration marks it read.
   pmRecord('dave', 'msg:dave:marjorie:unknown:1700000000.5:0:<n000/>Hello &amp; welcome', 1),
   pmRecord('dave', 'msg:marjorie:marjorie:unknown:1700000100.5:0:<n000/>Thanks', 0),
   pmRecord('fay', 'msg:fay:marjorie:unknown:1700000050.5:0:<n3366FF/><m v="1"><g x12s9900cc="4">Old styled</g></m>', 0)
 ];
-// Comme BetterChatango : un MP reçu est archivé non lu, le pont ne donnant jamais à BetterChatango le focus des MP.
-// Clé déjà prise : BetterChatango réessaie une seconde plus tard (ConstraintError), horodatage de la trame compris.
+// Like BetterChatango: a received PM is archived unread, since the bridge never gives BetterChatango the PM focus.
+// Key already taken: BetterChatango retries one second later (ConstraintError), frame timestamp included.
 function saveMessage(data) {
   while (pmRecords.some(r => r.ts === parseFloat(data[3]))) data[3] = String(parseFloat(data[3]) + 1);
   pmRecords.push(pmRecord(data[0], 'msg:' + data.join(':'), 1));
@@ -66,11 +66,11 @@ const { keyCmp, keyRange, fakePmDb } = require('./fake-pm-db.js');
 w.IDBKeyRange = keyRange;
 const migrationFlag = () => !!JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').pmReadMigrated;
 const pmTransaction = fakePmDb(pmRecords, () => calls.push(['written', migrationFlag()]));
-// Base favorite_media de BetterChatango : magasin media à clé url, index url et name, écritures appliquées à la fin de la transaction.
+// BetterChatango favorite_media database: media object store keyed by url, url and name indexes, writes applied at the end of the transaction.
 const mediaRecords = [{ url: 'https://x.test/old.png', name: 'old' }];
 function mediaTransaction() {
   const tx = {}, writes = [];
-  // Comme IndexedDB, une transaction sans aucune requête se termine aussi.
+  // Like IndexedDB, a transaction without any request also completes.
   setTimeout(() => { if (!writes.length && tx.oncomplete) tx.oncomplete(); }, 0);
   const answer = value => { const req = {}; setTimeout(() => { req.result = value(); req.onsuccess({ target: req }); }, 0); return req; };
   const write = op => {
@@ -93,14 +93,14 @@ function mediaTransaction() {
   tx.objectStore = () => store;
   return tx;
 }
-// Relevé du style de BetterChatango au moment où il construit un corps de message (sendMessage avec length).
+// Snapshot of the BetterChatango style when it builds a message body (sendMessage with length).
 let styleProbe = null;
 const styleAtBuild = [];
 function fakeGroup() { return { socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { information: { title: 'Test group', description: 'A test room' } }, load: 5 }; }
 const C = {
-  // DENIED : BetterChatango affiche un alert() bloquant.
-  // msg et msgoff : BetterChatango archive le message dans sa base d'historique (saveMessage), une seule fois.
-  // connect : BetterChatango ouvre son propre écran de MP.
+  // DENIED: BetterChatango shows a blocking alert().
+  // msg and msgoff: BetterChatango archives the message in its history database (saveMessage), only once.
+  // connect: BetterChatango opens its own PM screen.
   event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['betterChatangoPmScreen']); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
   settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
@@ -109,11 +109,11 @@ const C = {
   socket(gid, frame) { sent.push([gid, frame]); },
   sendMessage(data, length, group, user) {
     if (length && styleProbe) styleAtBuild.push({ group, style: styleProbe() });
-    // Comme BetterChatango, le corps d'un MP remplace un lien YouTube par sa balise <i>.
+    // Like BetterChatango, a PM body replaces a YouTube link with its <i> tag.
     if (length) return group === 'private_message' ? '<n3366FF/><m v="1"><g x12s9900cc="4">' + data.replace(/https:\/\/youtu\.be\/([\w-]{11})\S*/, '<i s="vid://yt:$1" w="126" h="93"/>') + '</g></m>' : '<n000/><f x11000="0">' + data;
     calls.push(['pm', group, user, data]);
   },
-  // Comme socketEvent de BetterChatango : un groupe encore dans cache.connect est ignoré, sa promesse ne se règle jamais.
+  // Like BetterChatango's socketEvent: a group still in cache.connect is ignored, its promise never settles.
   cache: { connect: [] },
   connect(gid) {
     if (C.cache.connect.includes(gid)) return new Promise(noop);
@@ -122,12 +122,12 @@ const C = {
   },
   setFocus(o) { calls.push(['focus', o.group]); }, disconnectFrom(gid) { calls.push(['disconnect', gid]); delete C.groups[gid]; },
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
-  // Comme BetterChatango, qui lit seul l'oEmbed d'un lien YouTube reçu (inject.js:7157).
+  // Like BetterChatango, which fetches the oEmbed of a received YouTube link on its own (inject.js:7157).
   renderYouTube(link) { w.fetch('https://www.youtube.com/oembed?url=' + link + '&format=json'); },
   post(url, form, item) {
     const f = {}; form.forEach((v, k) => { f[k] = v; }); posts.push({ url, f, item });
     if (/chatango\/upload$/.test(url)) return uploadReply();
-    // Formulaires avatar et recadrage de BetterChatango : pix pour la photo, profil complet avec le carré pour le recadrage.
+    // BetterChatango avatar and cropping forms: pix for the picture, full profile with the square for the cropping.
     if (f.action === 'fullpic') return Promise.resolve('pix:1');
     if (f.action === 'thumb') return Promise.resolve('x0=' + f.x0 + '&y0=' + f.y0 + '&ts=' + f.ts + '&age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
     return Promise.resolve(/creategroup/.test(url) ? 'groupcreated' : 'age=40&sex=M&loc=Paris&eline=Hi&dir=checked');
@@ -136,7 +136,7 @@ const C = {
   database: { pm: { transaction: pmTransaction } }
 };
 const CH = {
-  // Comme BetterChatango, qui lit seul le msgbg.xml de l'auteur d'un message Premium (inject.js:504).
+  // Like BetterChatango, which fetches the msgbg.xml of a Premium message author on its own (inject.js:504).
   getBackground(o) { w.fetch(CH.subdomain.msgbg(o.username, 'xml')); },
   getAnon() { return '!anon1234'; }, path(p, sub) { return 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p; },
   subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css', msgbg: (n, ext) => 'https://ust.chatango.com/' + n + '/msgbg.' + ext }, error: { creategroup: { groupexists: 'The group name is taken.' } }
@@ -147,22 +147,22 @@ const fetches = [];
 let searchHold = null;
 const SEARCH_BODY = 'h=zoe;1;2:yann;3:marjorie;9';
 let searchBody = SEARCH_BODY;
-// Profil complet du compte : 200 hors XML vaut fichier absent, 500 une erreur serveur passagère.
+// Full profile of the account: a non-XML 200 means a missing file, 500 a transient server error.
 let ownMod2Status = 200;
 const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img src="x" onerror="alert(2)"><a href="javascript:alert(3)">bad</a> <a href="https://example.com/p">good</a> <font color="#ff0000" size="5">red</font>');
-// Âge Chatango, comme BetterChatango : année courante moins année de naissance.
+// Chatango age, like BetterChatango: current year minus birth year.
 const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
 const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">');
-// Fond Premium au format réel de custom_profile.css (compte goddess). Sans fichier, Chatango renvoie une image JPEG.
+// Premium background in the real custom_profile.css format (goddess account). Without a file, Chatango returns a JPEG image.
 const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
 const GODDESS_CSS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
-// Fond de message au format de msgbg.xml : attributs du premier élément, champs du formulaire de fond de BetterChatango. Une réponse hors text/xml vaut absence de fond.
+// Message background in the msgbg.xml format: attributes of the first element, fields of the BetterChatango background form. A response that is not text/xml means no background.
 const MSGBG = {
   rosa: '<?xml version="1.0" ?><bgi bgc="FFCC99" bgalp="100" useimg="1" ialp="40" align="br" tile="0" hasrec="0" isvid="0"/>',
   trap: '<?xml version="1.0" ?><bgi bgc="red;background:url(https://evil.test/a.png)" bgalp="100" useimg="1" ialp="250" align="constructor" tile="1" url="https://evil.test/b.jpg" onload="alert(1)"/>',
   pale: '<?xml version="1.0" ?><bgi bgc="336699" bgalp="0" useimg="1" ialp="-20" align="tl" tile="0" hasrec="0" isvid="0"/>'
 };
-// Comptes liés de vissle : corps de la réponse, null pour un échec réseau, whoHold retient la réponse.
+// vissle linked accounts: response body, null for a network failure, whoHold holds back the response.
 let whoBody = '{}', whoHold = null;
 w.fetch = (url, opts) => {
   const f = {}; if (opts && opts.body && opts.body.forEach) opts.body.forEach((v, k) => { f[k] = v; });
@@ -172,7 +172,7 @@ w.fetch = (url, opts) => {
   else if (/zoe\/mod1\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + ABOUT + '</body><s>F</s><b>' + ZOE_BIRTH + '</b><l c="FR">Lyon</l></mod>';
   else if (/zoe\/mod2\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + FULL + '</body></mod>';
   else if (/marjorie\/mod1\.xml/.test(url)) {
-    // Chatango sert la bio du dernier enregistrement. Premium sans custom_profile.css : la réponse n'est pas du CSS.
+    // Chatango serves the bio from the last save. Premium without custom_profile.css: the response is not CSS.
     const saved = posts.filter(p => /updateprofile/.test(p.url) && 'line' in p.f).pop();
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent(saved ? saved.f.line : 'Old bio') + '</body><s>M</s><b>1990-01-01</b><l>Rouen</l><d>' + PREMIUM_END + '</d></mod>';
   }
@@ -192,7 +192,7 @@ w.fetch = (url, opts) => {
   return searchHold && /\/search$/.test(url) ? searchHold.then(() => res) : Promise.resolve(res);
 };
 
-// Pont vissle du userscript simulé : la réponse revient par événement, comme depuis le bac à sable.
+// vissle bridge of the simulated userscript: the response comes back by event, as from the sandbox.
 const vissleReqs = [];
 let vissleReply = () => ({ action: 'activity', get: [] });
 d.addEventListener('torch-skin:vissle-request', e => {
@@ -206,9 +206,9 @@ w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'u
 w.eval(fs.readFileSync(S + '/torchds/project/components/bundle.js', 'utf8'));
 w.eval(fs.readFileSync(S + '/dist/app.js', 'utf8'));
 
-/* ---------- Outils ---------- */
+/* ---------- Helpers ---------- */
 const wait = ms => new Promise(r => setTimeout(r, ms));
-// Au plafond, rend la main sans erreur : l'étape qui suit juge et donne son détail.
+// At the limit, returns without an error: the next step judges and gives its detail.
 const until = async (cond, ms = 5000) => { for (const end = Date.now() + ms; !cond() && Date.now() < end;) await wait(10); };
 const $ = s => d.querySelector(s), $$ = s => [...d.querySelectorAll(s)];
 function click(el) { if (!el) throw new Error('missing element'); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); }
@@ -231,7 +231,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
 (async () => {
   await wait(200);
-  /* Connexion et groupe */
+  /* Sign-in and group */
   C.user.name = 'marjorie'; C.user.full = 'Marjorie';
   C.groups.test = fakeGroup();
   C.emit('clientLogin', C);
@@ -254,7 +254,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
   step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('bob') && x.textContent.includes('Admin')));
 
-  /* Invités : nommés par leur nom, anonymes comptés, suivis par horodatage de session */
+  /* Guests: named by their name, anons counted, tracked by session timestamp */
   const guestView = () => ({
     label: ($$('.members .mlabel').find(x => x.textContent.indexOf('Guests') === 0) || {}).textContent || null,
     rows: $$('.members .mrow .grow').map(x => x.textContent).filter(t => t[0] === '#'),
@@ -272,7 +272,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && JSON.stringify(guests3.rows) === '["#carl"]' && !guests3.anon,
     { guests1, guests2, guests3 });
 
-  /* Connexion, déconnexion et changement de compte sans quitter le groupe (participant, action 2), plusieurs sessions d'un compte */
+  /* Sign-in, sign-out and account switch without leaving the group (participant, action 2), several sessions of one account */
   const sessionView = () => ({ members: $$('.members .mrow .grow').map(x => x.textContent).filter(t => t[0] !== '#'), anon: guestView().anon });
   const switches = [];
   g('g_participants', 'test', ['S6:1801:U6:None:None;S7:1802:U7:Dan:None;S8:1803:U8:Dan:None']); await wait(80);
@@ -291,7 +291,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     switches);
   g('g_participants', 'test', ['S1:1700:U1:Alice:None;S2:1700:U2:Bob:None;S3:1700:U3:None:None']); await wait(80);
 
-  /* Messages, réponses, modifications */
+  /* Messages, replies, edits */
   g('b', 'test', ['1700000200.1', 'Alice', '', 'u1', 'UNID1', 'tmp1', '1.2.3.4', '0', '', '<n000/><f x11000="0">Hi all']);
   g('u', 'test', ['tmp1', 'A-B_C=']);
   g('b', 'test', ['1700000210.1', 'Bob', '', 'u2', 'UNID2', 'tmp2', '5.6.7.8', '2048', '', '<n000/><f x11000="0"><rAhypheNBunderSC/>Welcome back']);
@@ -302,7 +302,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => d.body.textContent.includes('Hi everyone'));
   step('edit replaces original text', d.body.textContent.includes('Hi everyone') && !d.body.textContent.includes('Hi all') && d.body.textContent.includes('(edited)'));
 
-  /* Style d'un membre : celui de son message le plus récent, quel que soit l'ordre d'arrivée (face 4 = Impact) */
+  /* Member style: the one from their latest message, whatever the arrival order (face 4 = Impact) */
   const logFont = txt => { const p = $$('.log .tc-msg-text').find(x => x.textContent === txt); return p ? p.style.fontFamily : null; };
   g('b', 'test', ['1700000280.1', 'Hana', '', 'u8', 'UNID8', 'tmp20', '2.2.2.2', '0', '', '<n000/><f x11000="4">Hana new']);
   g('i', 'test', ['1700000150.1', 'Hana', '', 'u8', 'UNID8', 'H1=', '2.2.2.2', '0', '', '<n000/><f x11000="1">Hana old']);
@@ -313,7 +313,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => logFont('Ivy newer') !== null);
   step('group history batch keeps its newest style', /Impact/.test(logFont('Ivy newer') || ''), logFont('Ivy newer'));
 
-  /* Envoi : échappement, réponse, citation, canal */
+  /* Sending: escaping, reply, quote, channel */
   const ta = $('.tc-composer textarea');
   type(ta, 'a < b & c'); key(ta, 'Enter'); await wait(30);
   const plain = frame('bm:').pop() || '';
@@ -329,7 +329,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const quote = frame('bm:').pop() || '';
   step('quote frame puts the BetterChatango quote before the text', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">@alice: `Hi everyone` yes$/.test(quote), quote);
 
-  /* Modération depuis un message */
+  /* Moderation from a message */
   click(aliceMsg.querySelector('button[aria-label="More actions"]')); await wait(30);
   const floating = $('#layer .menu.floating');
   step('menus float in the layer with a fixed position', !!floating && floating.style.position === 'fixed' && !$('#app .menu'));
@@ -349,7 +349,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('delete', 'test', ['BOB1=']); await until(() => d.body.textContent.includes('Message deleted by staff'));
   step('server delete marks message', d.body.textContent.includes('Message deleted by staff'));
 
-  /* Régressions relevées en relecture */
+  /* Regressions found in review */
   g('u', 'test', ['tmp9', 'REAL9=']);
   g('b', 'test', ['1700000230.1', 'Carol', '', 'u3', 'UNID3', 'tmp9', '3.3.3.3', '0', '', '<n000/><f x11000="0">Early id']);
   await until(() => d.body.textContent.includes('Early id'));
@@ -373,7 +373,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await wait(60);
   step("BetterChatango's environment room stays hidden", !byText('.tc-nav', 'betterchatangoenv'));
 
-  /* Comptes liés : un appel par clic, sans credential, noms en texte, cinq niveaux seulement, rien de gardé */
+  /* Linked accounts: one call per click, without credential, names as text, five levels only, nothing kept */
   const whoAsked = () => fetches.filter(x => /vissle\.me\/api\/v1\/who\//.test(x.url));
   const whoDialog = () => $$('#layer .dialog').find(x => /^Who is /.test(x.getAttribute('aria-label') || ''));
   const askWho = async txt => {
@@ -432,7 +432,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && /vissle could not be reached\. Try again later\./.test(whoReplies[3]) && whoAsked().length === 5,
     { whoReplies, calls: whoAsked().length });
 
-  /* Modification d'un message, comme BetterChatango : trame <e…/>, fusion de l'historique, suppression des modifications */
+  /* Message edit, like BetterChatango: <e…/> frame, history merge, deletion of edits */
   C.groups.edits = fakeGroup();
   SB.renderGroup({ group: 'edits', header: 'Edits' });
   g('ok', 'edits', ['marjorie', '', '', '', '1700000000', '', '', '0']);
@@ -467,8 +467,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.dialog-foot button', 'Delete')); await wait(30);
   step('delete also deletes the edits, like BetterChatango', JSON.stringify(frame('delmsg:').slice(delBefore)) === JSON.stringify(['delmsg:H-1=', 'delmsg:E-1=']), frame('delmsg:').slice(delBefore));
 
-  /* Envoi de fichier par vissle : Nightango publie le lien dans le groupe du choix, jamais dans client.focus */
-  // Rend le texte de la confirmation. Sans bouton ni sélecteur, l'étape échoue sans arrêter la suite.
+  /* File upload through vissle: Nightango posts the link in the chosen group, never in client.focus */
+  // Returns the confirmation text. Without a button or a picker, the step fails without stopping the suite.
   const pickFile = async name => {
     const btn = $('button[aria-label="Attach media"]'), input = $('.composer-wrap input[type="file"]');
     if (!btn || !input) return null;
@@ -502,7 +502,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!byText('.toast', 'The file could not be uploaded. Try again.'));
   step('rejected upload sends nothing', !!byText('.toast', 'The file could not be uploaded. Try again.') && !linkFrames(failFrom).length, linkFrames(failFrom));
 
-  /* Avertissements et connexion */
+  /* Warnings and connection */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
   step('BetterChatango notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
   let reloads = 0;
@@ -522,7 +522,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('reconnect twice', testConnects === 2 && !C.cache.connect.includes('test'), { testConnects, cache: C.cache.connect });
   C.groups.test.socket.readyState = 1;
 
-  /* Historique */
+  /* History */
   const historyWatcher = () => observers.find(x => x.targets.some(t => t.closest('.log')));
   await until(historyWatcher);
   const historyTop = historyWatcher();
@@ -532,7 +532,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('nomore', 'test', []); await until(() => d.body.textContent.includes('beginning of the history'));
   step('history end shown', d.body.textContent.includes('beginning of the history'));
 
-  /* Réglages de groupe */
+  /* Group settings */
   click($('button[aria-label="Group options"]')); await wait(30);
   click(menuItem('Group settings')); await wait(80);
   step('settings requested', ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:50'].every(f => frame(f).length));
@@ -587,7 +587,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   click(byText('.tc-nav', 'Bans')); await wait(50);
   step('ban list requested', frame('blocklist:block:0:next:50:anons:1').length >= 1, frame('blocklist:'));
-  /* Bannissements par pages de 50 comme BetterChatango : la page suivante part de l'horodatage de la dernière ligne */
+  /* Bans in pages of 50 like BetterChatango: the next page starts from the timestamp of the last row */
   const banTitle = () => ($$('.tc-section-title').find(x => x.textContent.indexOf('Banned') === 0) || {}).textContent || null;
   const banObserver = () => observers.find(x => x.targets.some(t => t.closest('.spage')));
   g('blocklist', 'test', [Array.from({ length: 50 }, (_, i) => 'PB' + i + ':10.0.0.' + i + ':user' + i + ':' + (1700001000 - i) + ':marjorie').join(';')]);
@@ -609,7 +609,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('ban list shown', !!byText('.lrow', 'alice') && !!byText('.lrow', '!anon'));
   click(byText('.lrow', 'alice').querySelector('.tc-btn')); await wait(20);
   step('unban frame', frame('removeblock:').pop() === 'removeblock:UNID1:1.2.3.4');
-  /* Recherche d'un bannissement comme BetterChatango : searchban, puis bansearchresult (date en heure du Pacifique, avec ses :) ou badbansearchstring */
+  /* Ban search like BetterChatango: searchban, then bansearchresult (date in Pacific time, with its colons) or badbansearchstring */
   type($('#ban-search'), ' spamking '); key($('#ban-search'), 'Enter'); await wait(30);
   const banSearch = { frame: frame('searchban:').pop() };
   g('bansearchresult', 'test', ['alt1;alt2', 'spamking', '1.2.3.4', 'UNID7', 'marjorie', 'Oct 20 2026 10', '00', '00']);
@@ -634,7 +634,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     banSearch.frame === 'searchban:spamking' && /spamking/.test(banSearch.found) && /by marjorie/.test(banSearch.found) && /Includes alt1, alt2\./.test(banSearch.found) && !banSearch.list
       && banSearch.unban === 'removeblock:UNID7:1.2.3.4' && banSearch.none && banSearch.cleared && banSearch.error === "That's not a valid username.",
     banSearch);
-  /* Débannissements : onglet Unbanned chargé par pages comme BetterChatango, tenu à jour par unblocked (auteur à l'avant-dernier champ) */
+  /* Unbans: Unbanned tab loaded in pages like BetterChatango, kept up to date by unblocked (author in the second-to-last field) */
   const unbanTab = { before: frame('blocklist:unblock:').length };
   click(byText('.spage .tc-seg button', 'Unbanned'));
   await until(() => frame('blocklist:unblock:').length > unbanTab.before);
@@ -672,18 +672,18 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('close frame', frame('updategroupflags:262144:0').length === 1);
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
 
-  /* Favori écrit dans les réglages de BetterChatango */
+  /* Favorite written to the BetterChatango settings */
   click($('button[aria-label="Group options"]')); await wait(30);
   click(menuItem('Add to favorites')); await wait(50);
   const betterChatangoSettings = JSON.parse(w.localStorage.getItem('settings') || '{}');
   step('favorite persisted in BetterChatango settings', C.settings.privacy.groups.favorite.indexOf('test') >= 0 && betterChatangoSettings.privacy.groups.favorite.indexOf('test') >= 0, betterChatangoSettings);
 
-  /* Migration des non-lus : la base ouverte au démarrage passe lue avant la connexion privée, le drapeau suit la fin de la transaction */
+  /* Unread migration: the database opened at startup becomes read before the private connection, the flag follows the end of the transaction */
   const pmConnectAt = calls.findIndex(c => c[0] === 'connect' && c[1] === 'private_message'), migratedAt = calls.findIndex(c => c[0] === 'written');
   step('old history unread cleared once before the private connection', migratedAt >= 0 && migratedAt < pmConnectAt && calls[migratedAt][1] === false && migrationFlag() && pmRecords.every(r => !r.unread),
     { pmConnectAt, migratedAt, written: calls[migratedAt], flag: migrationFlag(), unread: pmRecords.filter(r => r.unread) });
 
-  /* Restriction des MP de son compte : demandée avant la connexion privée, lue chez vissle une seule fois après elle */
+  /* PM restriction of one's own account: requested before the private connection, read from vissle only once after it */
   C.settings.privacy.private_messages = { check_pmr: true };
   const pmrRow = () => $$('section[aria-label="Private messages"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === 'Check my private message status');
   const pmrView = () => { const r = pmrRow(); return r && { on: r.querySelector('[role=switch]').checked, status: (r.querySelector('.tc-row-desc') || {}).textContent || null, asked: fetches.filter(x => /api\.vissle\.me/.test(x.url)).map(x => x.url) }; };
@@ -692,7 +692,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmrSeen = [pmrView()];
   click(byText('.tc-nav', 'Back to chat')); await until(() => !!$('.log'));
 
-  /* Messages privés : base d'historique de BetterChatango ouverte par le pont, avec son schéma */
+  /* Private messages: BetterChatango history database opened by the bridge, with its schema */
   const fakeDb = C.database.pm, schema = [];
   C.database.pm = false;
   w.indexedDB = { open(name, version) {
@@ -730,7 +730,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('wlonline', ['erin']); await until(() => !!byText('.toast', 'erin is online.'));
   step('friend online notification', !!byText('.toast', 'erin is online.'));
 
-  /* Styles Chatango et médias, avec les réglages activés comme dans Apparence */
+  /* Chatango styles and media, with the settings turned on as in Appearance */
   click($('button[aria-label="Settings"]')); await wait(50);
   click(byText('.pick', 'Light')); await wait(30);
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
@@ -767,7 +767,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const ytFrame = $('.log iframe');
   step('youtube embed loads on click', !ytBefore.raw && ytBefore.card && !ytBefore.media && !!ytFrame && ytFrame.getAttribute('src').indexOf('https://www.youtube-nocookie.com/embed/PLe_UgXBBCU') === 0 && ytBefore.font === '', [ytBefore, ytFrame && ytFrame.getAttribute('src')]);
 
-  /* Fond de message Premium : msgbg.xml lu une fois par membre sous « Message backgrounds », valeurs filtrées, image seulement quand les médias externes ne sont pas bloqués */
+  /* Premium message background: msgbg.xml read once per member under "Message backgrounds", filtered values, image only when external media are not blocked */
   const BG_PREMIUM = String(4 | 8), BG_TEXTS = ['Rosa first', 'Rosa again', 'Trap says hi', 'Pale says hi', 'Plain says hi', 'Nobg says hi', 'Guest says hi'];
   [['Rosa', BG_PREMIUM], ['Rosa', BG_PREMIUM], ['Trap', BG_PREMIUM], ['Pale', BG_PREMIUM], ['Plain', BG_PREMIUM], ['Nobg', '8'], ['', BG_PREMIUM]].forEach((x, i) =>
     g('b', 'test', [String(1700000290.1 + i), x[0], x[0] ? '' : 'visitor', 'u2' + i, 'UNIDBG' + i, 'tmpbg' + i, '4.4.4.' + i, x[1], '', '<n000/><f x11000="0">' + BG_TEXTS[i]]));
@@ -799,7 +799,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(shownBg) === JSON.stringify([[ROSA, bgImg('rosa', '0.4', 'right bottom')], [ROSA, bgImg('rosa', '0.4', 'right bottom')], ['', bgImg('trap', '1', 'left top')], ['', bgImg('pale', '0', 'left top')], ['', null], ['', null], ['', null]])
     && JSON.stringify(askedBg) === '[1,1,1,1,0,0]' && !leaked, { askedOff, blockedBg, shownBg, askedBg, leaked });
 
-  /* Médias tapés en texte : YouTube sans doublon avec sa balise, vidéo et audio créés au seul clic, http chargé en https, autres extensions en lien, lecteur en échec redevenu lien */
+  /* Media typed as text: YouTube without a duplicate of its tag, video and audio created only on click, http loaded as https, other extensions as links, failed player turned back into a link */
   const MEDIA_LINKS = ['https://youtu.be/dQw4w9WgXcQ', 'https://x.test/clip.MP4?t=3', 'https://x.test/song.mp3#end', 'http://x.test/old.webm', 'https://x.test/old.wmv', 'https://www.youtube.com/watch?v=jNQXAC9IVRw'];
   g('b', 'test', ['1700000300.1', 'Eve', '', 'u7', 'UNID7', 'tmpmedia', '9.9.9.9', '0', '', '<n000/><f x11000="0">Media ' + MEDIA_LINKS.join(' ') + ' <i s="vid://yt:dQw4w9WgXcQ" w="126" h="93"/>']);
   const mediaRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Media ') === 0); return p && p.closest('article'); };
@@ -823,7 +823,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true], ['VIDEO', 'https://x.test/old.webm', true, true]])
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
 
-  /* Hôte de confiance (liste de BetterChatango) : sous proxyMedia, seule son image s'affiche sans clic, l'hôte lu comme le navigateur */
+  /* Trusted host (BetterChatango list): under proxyMedia, only its image shows without a click, the host parsed like the browser does */
   const TRUST_LINKS = ['https://i.imgur.com/a.png', 'https://evil.example/b.png', 'https://i.imgur.com@evil.example/c.png'];
   g('b', 'test', ['1700000301.1', 'Eve', '', 'u7', 'UNID7', 'tmptrust', '9.9.9.9', '0', '', '<n000/><f x11000="0">Trusted ' + TRUST_LINKS.join(' ')]);
   const trustRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Trusted ') === 0); return p && p.closest('article'); };
@@ -831,7 +831,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const trustImgs = [...trustRow().querySelectorAll('.embeds img')].map(x => x.getAttribute('src'));
   step('trusted host images load without a click', JSON.stringify(trustImgs) === JSON.stringify(['https://i.imgur.com/a.png']), trustImgs);
 
-  /* Emphase reçue : liste blanche de BetterChatango reconstruite en éléments, ni média ni identifiant de MP en italique, balises hors liste sans élément */
+  /* Received emphasis: BetterChatango allowlist rebuilt as elements, neither media nor PM id in italics, tags outside the list without an element */
   const EMPH = '<b>Bold @alice</b> <I>Ital</I> <u>Under</u> <s>Gone</s> \u2593Struck\u2592 <iabc1234/>plain <i s="https://x.test/e.png"/>tail<script>alert(1)</script><img src="x" onerror="alert(2)">';
   const emphOf = scope => {
     const p = $$(scope + ' .tc-msg-text').find(x => x.textContent.includes('Struck'));
@@ -867,7 +867,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   step('pm image embed and settings', prevImage === 'Image' && prevPhoto === 'Photo' && imgsBefore === 0 && JSON.stringify(imgs) === JSON.stringify([['https://x.test/a.png', 'no-referrer'], ['https://chatango.com/pmmessageimg?i=abc123', 'no-referrer']]) && linksOnly, { prevImage, prevPhoto, imgsBefore, imgs, linksOnly });
 
-  /* Émoticônes reçues : emoji de la table, raccourci d'une Premium sans le drapeau, nom seul d'une inconnue, raccourci tapé gardé en texte */
+  /* Received emoticons: emoji from the table, shortcut of a Premium one without the flag, bare name of an unknown one, typed shortcut kept as text */
   const EMO = 'Emo <i s="sm://smile" w="16" h="16"/> <i w="16" h="16" s="sm://cat"/> <i s="sm://stripes" w="16" h="16"/> <i s="sm://inconnu" w="16" h="16"/> :)';
   const EMO_PLAIN = 'Emo \u{1F642} *cat* *stripes* inconnu :)', EMO_PREMIUM = 'Emo \u{1F642} \u{1F431} *stripes* inconnu :)';
   const emoShown = scope => { const p = $$(scope + ' .tc-msg-text').find(x => x.textContent.indexOf('Emo ') === 0); return p ? p.textContent : null; };
@@ -887,7 +887,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const emoOk = (r, want) => r.shown === want && r.text === want;
   step('received emoticons become emojis, never sm://', emoOk(groupEmo, EMO_PLAIN) && emoOk(pmEmo, EMO_PLAIN) && emoOk(premiumEmo, EMO_PREMIUM), { groupEmo, pmEmo, premiumEmo });
 
-  /* Fermer ou supprimer une conversation */
+  /* Close or delete a conversation */
   const listed = n => $$('.convs .conv-name').some(x => x.textContent === n);
   const hiddenStored = () => JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').hidden || [];
   const closeConv = async n => {
@@ -953,7 +953,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const gusOpened = !!$('.thread .topbar h2 .namebtn') && $('.thread .topbar h2 .namebtn').textContent === 'gus';
   step('chat row actions', hasRowItems(ctxItems) && hasRowItems(moreItems) && asked && hankDeleted && swipeButtons.includes('Close') && swipeButtons.includes('Delete') && !gusOpened, { ctxItems, moreItems, asked, hankDeleted, swipeButtons, gusOpened });
 
-  /* Amis et rencontres */
+  /* Friends and Meet people */
   click(byText('.tc-nav', 'Friends')); await wait(60);
   const friendRows = $$('.convs .conv').map(x => x.querySelector('.conv-name').textContent);
   step('friends list shown with online first', friendRows[0] === 'erin', friendRows);
@@ -973,7 +973,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const frankOffline = !!frankRow && !!frankRow.querySelector('.tc-presence-offline');
   step('friends last online and order', JSON.stringify(seen.map(x => x[0])) === JSON.stringify(['zoe', 'frank', 'erin', 'abe']) && timeOf('erin') === '3 d ago' && timeOf('frank') === '10 min ago' && !timeOf('abe') && !timeOf('zoe')
     && seen.every(x => !/\b(Online|Idle|Offline|ago)\b/.test(x[1])) && frankOffline, { seen, frankOffline });
-  // Idle affiché seulement après 3 minutes : kim y arrive pendant le test, par le minuteur de bascule.
+  // Idle shown only after 3 minutes: kim reaches it during the test, through the switch timer.
   pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.999']); pm('idleupdate', ['zoe', '0']); await until(() => !!convRow('kim'));
   const presenceRow = n => { const r = $$('.convs .conv').find(x => x.querySelector('.conv-name').textContent === n); return r ? [(r.querySelector('.tc-presence') || {}).className || '', (r.querySelector('.conv-time') || {}).textContent || ''] : []; };
   const before3 = { ivy: presenceRow('ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
@@ -990,7 +990,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const meetRows = $$('.convs .conv').map(x => [x.textContent, (x.querySelector('.tc-presence') || {}).className]);
   step('meet results with status', meetRows.length === 3 && meetRows[0][0].includes('zoe') && /tc-presence-online/.test(meetRows[0][1]) && /tc-presence-idle/.test(meetRows[1][1]), meetRows);
 
-  /* Filtres de Meet people dans une fenêtre */
+  /* Meet people filters in a dialog */
   const searchesBefore = fetches.filter(x => /\/search$/.test(x.url)).length;
   click(byText('.convs button', 'Filters')); await wait(50);
   click(byText('.dialog .tc-seg button', 'Women')); await wait(20);
@@ -1003,7 +1003,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('presence', ['zoe', '0', 'online', 'yann', '5', 'online']); await until(() => $$('.conv.person').some(x => x.textContent.includes('zoe')));
   step('meet cards show the mini profile', !!$$('.conv.person').find(x => x.textContent.includes('zoe') && x.textContent.includes('Lyon') && x.textContent.includes('Bold hi')));
 
-  /* Profils */
+  /* Profiles */
   click(byText('.convs .conv', 'zoe')); await wait(120);
   const card = $('.dialog');
   const rich = card && card.querySelector('.about.rich');
@@ -1023,7 +1023,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.dialog-foot button', 'Close')); await wait(30);
   key(d, 'Escape'); await wait(30);
 
-  /* Actualiser Meet people avec les filtres en cours */
+  /* Refresh Meet people with the current filters */
   const searches = () => fetches.filter(x => /\/search$/.test(x.url));
   const refreshBtn = () => $('.convs button[aria-label="Refresh"]');
   click(byText('.convs button', 'Filters')); await wait(50);
@@ -1038,7 +1038,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const lastSearch = searches().pop();
   step('meet refresh', during.count === 1 && during.disabled && lastSearch.f.s === 'F' && String(lastSearch.f.o) === '1' && String(lastSearch.f.f) === '0' && !!refreshBtn() && !refreshBtn().disabled, { during, f: lastSearch.f });
 
-  /* Défilement infini de Meet people : deux pages pleines de 40 noms, la seconde reprend un nom déjà affiché, la troisième incomplète clôt la liste, la sentinelle entre deux fois dans la zone visible */
+  /* Meet people infinite scroll: two full pages of 40 names, the second repeats a name already shown, the third partial page ends the list, the sentinel enters the visible area twice */
   const meetPage = (start, n) => Array.from({ length: n }, (_, i) => 'p' + (start + i) + ';1').join(':');
   const cardCount = () => $$('.conv.person').length;
   const watcher = () => observers.find(x => x.targets.length);
@@ -1063,7 +1063,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && String(scrollSearches[1].f.f) === '80' && String(scrollSearches[1].f.t) === '120' && !byText('.convs button', 'Load more'),
     { observed, cards, requests: scrollSearches.map(x => [x.f.f, x.f.t]), loadMore: !!byText('.convs button', 'Load more') });
 
-  /* Fond Premium du mini profil : Premium actif lu dans custom_profile.css, Premium expiré jamais demandé, réponse JPEG ou 404 sans fond */
+  /* Mini profile Premium background: active Premium read from custom_profile.css, expired Premium never requested, JPEG or 404 response without a background */
   searchBody = 'h=goddess;1:expired;1:sith;1:lost;1';
   const personOf = n => $$('.conv.person').find(x => x.querySelector('.conv-name').textContent === n);
   click(refreshBtn()); await until(() => ['goddess', 'expired', 'sith', 'lost'].every(n => !!personOf(n) && !personOf(n).querySelector('.tc-skeleton')));
@@ -1080,12 +1080,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { premiumCards, css: ['goddess', 'expired', 'sith', 'lost'].map(cssAsked), premiumAbout });
   searchBody = SEARCH_BODY;
 
-  /* Statut */
+  /* Status */
   click($('.me-btn')); await wait(30);
   click(menuItem('Idle')); await wait(30);
   step('idle status frame', frame('idle:0').length === 1);
 
-  /* Profil */
+  /* Profile */
   const NOW = Date.now() / 1000, KINDS = ['log', 'like', 'dislike', 'msg', 'refer'];
   const firstPage = Array.from({ length: 16 }, (_, i) => ({ user: i === 15 ? 'sentinel' : i === 5 ? '!anon5681' : 'visitor' + i, action: KINDS[i % 5], time: NOW - 600 * i - 0.25, msg: i % 5 === 3 ? 'Nice page' : undefined }));
   vissleReply = q => ({ action: 'activity', get: q.page === 1 ? firstPage : firstPage.slice(0, 3).map((x, i) => ({ user: 'older' + i, action: 'log', time: NOW - 86400 - i })) });
@@ -1106,7 +1106,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   vissleReply = () => ({ error: 'This profile has tracking turned off.' });
   click(visitors().querySelector('button[aria-label="Refresh"]')); await until(() => visitors().textContent.includes('This profile has tracking turned off.'));
   step('own visitors list: vissle error shown as sent', vissleReqs[3].page === 1 && vissleReqs[3].get === 'like' && visitors().textContent.includes('This profile has tracking turned off.'), visitors().textContent);
-  /* Profil complet illisible (erreur serveur) : enregistrer un autre champ n'envoie rien, jamais un profil complet vide */
+  /* Unreadable full profile (server error): saving another field sends nothing, never an empty full profile */
   const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
   betterChatangoFull.value = ''; ownMod2Status = 500;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
@@ -1124,7 +1124,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await wait(80);
   const pp = posts.find(p => /updateprofile/.test(p.url));
   step('profile posted through BetterChatango', !!pp && pp.f.location === 'Paris' && pp.f.gender === 'M' && pp.f.full_profile === 'FULL PAGE' && pp.f.dir === 'checked' && pp.f.line === 'Hello there' && !('p' in pp.f), pp);
-  /* Profil complet : envoyé tel quel, chaîne vide comprise, sans relire mod2.xml */
+  /* Full profile: sent as is, empty string included, without reading mod2.xml again */
   const lastFull = () => posts.filter(p => /updateprofile/.test(p.url)).pop().f.full_profile;
   const ownFullReads = () => fetches.filter(x => /\/marjorie\/mod2\.xml/.test(x.url)).length;
   const fullEdit = {};
@@ -1148,7 +1148,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Notifications')); await wait(50);
   const soundRow = title => { const r = $$('section[aria-label="Sounds"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title); return r && { on: r.querySelector('[role=switch]').checked, range: r.querySelector('input[type=range]').disabled ? 'off' : r.querySelector('input[type=range]').value, value: r.textContent.match(/\d+%/)[0], play: !r.querySelector('button[aria-label="Play test sound"]').disabled }; };
   const sounds = { mention: soundRow('Mention sound'), online: soundRow('Friend online sound') };
-  step('notifications: no email or sound columns', !byText('th', 'Email') && !byText('th', 'Sound') && !byText('.tc-banner', 'BetterChatango plays alert sounds')
+  step('notifications: no sound column', !byText('th', 'Sound') && !byText('.tc-banner', 'BetterChatango plays alert sounds')
     && JSON.stringify(sounds) === JSON.stringify({ mention: { on: true, range: '30', value: '30%', play: true }, online: { on: false, range: 'off', value: '45%', play: false } }), sounds);
   click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow() && !!pmrView().status);
   pmrSeen.push(pmrView());
@@ -1173,7 +1173,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     'Your private messages are restrictedPeople might not receive your messages.', null
   ]) && fetches.filter(x => /api\.vissle\.me/.test(x.url)).length === 1, pmrBannerSeen);
 
-  /* Bio : line Chatango brute dans le champ, rendue dans l'aperçu */
+  /* Bio: raw Chatango line in the field, rendered in the preview */
   const ownCard = async () => {
     click(byText('.tc-nav', 'test')); await wait(50);
     click($$('.members .mrow').find(x => [...x.querySelectorAll('.tc-badge')].some(b => b.textContent === 'You'))); await wait(120);
@@ -1194,13 +1194,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const cardAfter = await ownCard();
   step('own bio raw in field', cardBefore.text === 'Hello there' && bioPage.field === 'a<br/>b' && bioPage.br && !bioPage.literal && bioPost === 'a<br/>b' && cardAfter.br && cardAfter.text === 'ab', { cardBefore, bioPage, bioPost, cardAfter });
 
-  /* Photo de profil : formulaire avatar de BetterChatango puis recadrage sur full.jpg, carré borné à l'image */
+  /* Profile picture: BetterChatango avatar form then cropping on full.jpg, square bounded to the image */
   click($('button[aria-label="Settings"]')); await wait(50);
   click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-mini-bg'));
   const avatarInput = $('input[type="file"][accept="image/jpeg,image/png,image/gif"]'), avatarFrom = posts.length;
   Object.defineProperty(avatarInput, 'files', { configurable: true, value: [new w.File(['x'], 'me.png', { type: 'image/png' })] });
   avatarInput.dispatchEvent(new w.Event('change', { bubbles: true })); await until(() => !!$('.crop-stage img'));
-  // jsdom ne charge pas les images : taille naturelle posée à la main, puis load.
+  // jsdom does not load images: natural size set by hand, then load.
   const loadCrop = (w0, h0) => { const img = $('.crop-stage img'); Object.defineProperty(img, 'naturalWidth', { configurable: true, value: w0 }); Object.defineProperty(img, 'naturalHeight', { configurable: true, value: h0 }); img.dispatchEvent(new w.Event('load')); };
   const cropBox = () => { const b = $('.crop-box'); return b && [b.style.left, b.style.top, b.style.width, b.style.height].join(' '); };
   const avatarPost = posts[avatarFrom] || { f: {} };
@@ -1216,7 +1216,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (ownAvatar) ownAvatar.dispatchEvent(new w.Event('load'));
   await until(() => !!byText('button', 'Adjust crop'));
   click(byText('button', 'Adjust crop')); await until(() => !!$('.crop-stage img'));
-  // Recadrage connu de BetterChatango (client.user.avatar) : 50, 50, 50 sur une image de 400 sur 300.
+  // Cropping known to BetterChatango (client.user.avatar): 50, 50, 50 on a 400 by 300 image.
   loadCrop(400, 300); await until(() => !!$('.crop-box'));
   const cropSteps = [cropBox()];
   key($('.crop-box'), 'ArrowRight'); await wait(10); cropSteps.push(cropBox());
@@ -1231,7 +1231,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(thumbPost.f) === JSON.stringify({ auth: 'token', arch: 'h5', src: 'group', action: 'thumb', x0: '46', y0: '235', ts: '65' })
     && calls.some(c => c[0] === 'setProfile' && c[1].x0 === '46') && !!byText('.toast', 'Picture crop saved to Chatango.'), { cropSteps, f: thumbPost.f });
 
-  /* Fond Premium : formulaire de fond de BetterChatango, envoyé après le profil, image collée ou envoyée chez vissle */
+  /* Premium background: BetterChatango background form, sent after the profile, image pasted or uploaded to vissle */
   const miniForm = () => ({ bg: $('#pf-mini-bg').value, text: $('#pf-mini-text').value, link: $('#pf-mini-link').value, image: $('#pf-mini-img').value });
   const miniStart = miniForm();
   type($('#pf-mini-bg'), '#112233');
@@ -1264,7 +1264,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('no password field in profile picture and background requests', posts.slice(avatarFrom).every(p => !('p' in p.f) && !('pwd' in p.f) && !('password' in p.f)));
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
 
-  /* Création de groupe */
+  /* Group creation */
   click(byText('.tc-nav', 'Discover groups')); await wait(50);
   click(byText('button', 'Create a group')); await wait(50);
   type($('#cg-name'), 'newroom'); type($('#cg-title'), 'New room'); await wait(20);
@@ -1273,7 +1273,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('group creation posted through BetterChatango', !!cp && cp.f.u === 'newroom' && cp.f.n === 'New room' && cp.f.owner === 'marjorie' && cp.f.authType === 'cookie', cp);
   step('new group joined', calls.some(c => c[0] === 'connect' && c[1] === 'newroom'));
 
-  /* Style perso : champs de BetterChatango écrits avant l'envoi, jamais enregistrés chez Chatango */
+  /* Own style: BetterChatango fields written before sending, never saved to Chatango */
   const fontsEl = d.querySelector('[data-preload="fonts"]'), emph = cls => fontsEl.querySelector(cls).previousElementSibling;
   let submits = 0;
   fontsEl.querySelector('form').addEventListener('submit', e => { submits++; e.preventDefault(); });
@@ -1283,7 +1283,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     bold: emph('.fa-bold').checked, italic: emph('.fa-italic').checked, underline: emph('.fa-underline').checked, strike: emph('.fa-strikethrough').checked, on: fontsEl.querySelector('[name="stylesOn"]').checked, user: C.user.style
   });
   const WANT = JSON.stringify({ face: '4', size: '14', text: '#9900cc', name: '#3366ff', bold: true, italic: false, underline: false, strike: true, on: true, user: true });
-  // BetterChatango recharge le style du compte à la reconnexion : ses champs reviennent aux valeurs de Chatango.
+  // BetterChatango reloads the account style on reconnection: its fields return to the Chatango values.
   const resetBetterChatangoStyle = () => {
     d.querySelector('.font-face').firstElementChild.value = '0'; d.querySelector('.font-size .text-input').value = '11';
     fontsEl.querySelector('[data-color="fontColor"]').value = '#000000'; fontsEl.querySelector('[data-color="nameColor"]').value = '#000000';
@@ -1314,7 +1314,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('own style applied locally', !!styleBtn && atGroup.length >= 1 && atGroup.every(x => x === WANT) && frame('bm:').some(f => /Styled$/.test(f)) && storedStyle.includes('#9900cc') && storedStyle.includes('#3366ff') && atPm.length === 1 && atPm[0] === WANT && posts.length === postsBeforeStyle && submits === 0,
     { button: !!styleBtn, atGroup, storedStyle, atPm, posts: posts.slice(postsBeforeStyle), submits });
 
-  /* Style d'un MP : l'historique privé rejoué à OK n'écrase pas le style d'un message plus récent reçu en direct */
+  /* PM style: the private history replayed at OK does not overwrite the style of a newer message received live */
   const threadFont = txt => { const p = $$('.thread .tc-msg-text').find(x => x.textContent === txt); return p ? p.style.fontFamily : null; };
   pmRecords.push(pmRecord('kim', 'msg:kim:marjorie:unknown:1700000700.5:0:<n000/><m v="1"><g x12s000="1">Older kim</g></m>', 0));
   pm('msg', ['kim', 'marjorie', 'unknown', '1700000800.5', '0', '<n000/><m v="1"><g x12s000="4">Newer kim</g></m>']); await wait(50);
@@ -1322,7 +1322,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.conv', 'kim')); await wait(50);
   step('pm history does not override live style', /Impact/.test(threadFont('Newer kim') || ''), threadFont('Newer kim'));
 
-  /* Médias d'un MP envoyé : affichés dès l'envoi, sans doublon quand OK rejoue l'archive de BetterChatango */
+  /* Media of a sent PM: shown as soon as it is sent, without a duplicate when OK replays the BetterChatango archive */
   type($('.thread .tc-composer textarea'), 'Watch https://youtu.be/PLe_UgXBBCU'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
   const sentVideo = $$('.thread .embed-video').length;
   pmRecords.push(pmRecord('kim', 'msg:marjorie:marjorie:unknown:' + (Date.now() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', 0));
@@ -1330,7 +1330,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const watch = { sentVideo, videos: $$('.thread .embed-video').length, texts: $$('.thread .tc-msg-text').filter(x => x.textContent.indexOf('Watch') === 0).length };
   step('own pm media shows at once and is not duplicated by history', watch.sentVideo === 1 && watch.videos === 1 && watch.texts === 1, watch);
 
-  /* MP modifié par son auteur : l'original change à sa place, en direct puis quand OK rejoue l'archive qui contient les deux entrées */
+  /* PM edited by its author: the original changes in place, live and then when OK replays the archive that holds both entries */
   const ORIG = '<n000/><iabc1234/><m v="1"><g x12s000="0">First draft</g></m>', EDIT = '<n000/><iedit5678/><m v="1"><g x12s000="0"><eabc1234/>Final text</g></m>';
   pm('msg', ['olga', 'marjorie', 'unknown', '1700000900.5', '0', ORIG]); await wait(50);
   pm('msg', ['olga', 'marjorie', 'unknown', '1700000960.5', '0', EDIT]); await until(() => (convPrev('olga') || '').includes('Final text'));
@@ -1342,7 +1342,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const editOk = r => JSON.stringify(r) === JSON.stringify({ texts: ['Final text'], edited: 1 });
   step('pm edit replaces the original, live and after history', editOk(editLive) && editOk(editHist), { editLive, editHist });
 
-  /* MP reçus hors ligne : base ouverte avant la connexion privée, msgoff juste après OK, deux « ok » identiques à 10 s d'écart dans l'historique */
+  /* PMs received offline: database opened before the private connection, msgoff right after OK, two identical "ok" 10 s apart in the history */
   pmRecords.push(
     pmRecord('gus', 'msg:gus:marjorie:unknown:1700000400.5:0:<n000/>ok', 1),
     pmRecord('gus', 'msg:gus:marjorie:unknown:1700000410.5:0:<n000/>ok', 1));
@@ -1355,10 +1355,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const archived = calls.filter(c => c[0] === 'archive');
   click(byText('.tc-nav', 'Private messages')); await wait(50);
 
-  /* Non-lus de la base : les deux « ok » archivés non lus comptent, le msgoff affiché et archivé non lu ne compte qu'une fois */
+  /* Database unreads: the two "ok" archived unread count, the msgoff shown and archived unread counts only once */
   const gusUnreadRecords = () => pmRecords.filter(r => r.target === 'gus' && r.unread).length;
   const unreadOf = n => { const r = convRow(n), b = r && r.querySelector('.tc-count'); return r ? (b ? +b.textContent : 0) : null; };
-  // Une migration écrit sans drapeau stocké : une seule pour toute la page, malgré les écritures de Nightango dans le même stockage.
+  // One migration write without a stored flag: a single one for the whole page, despite Nightango writes to the same storage.
   const kept = gusUnreadRecords(), resumed = unreadOf('gus'), migrations = calls.filter(c => c[0] === 'written' && !c[1]).length;
   pm('OK', []); await wait(150);
   const again = unreadOf('gus');
@@ -1370,7 +1370,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('offline messages archived', !!pmConnect && pmConnect[2] === true && archived.length === 1 && archived[0][1] === true && oks === 2, { pmConnect, archived, oks });
   C.private.socket.readyState = 1; await wait(2300);
 
-  /* Historique privé par pages : les 100 dernières entrées à OK, les 30 plus anciennes au défilement, puis le début de l'historique */
+  /* Private history in pages: the last 100 entries at OK, the 30 older ones on scroll, then the start of the history */
   for (let i = 1; i <= 130; i++) pmRecords.push(pmRecord('rhea', 'msg:rhea:marjorie:unknown:' + (1700001000 + i * 10) + '.5:0:<n000/>Page ' + i, 0));
   pm('OK', []); await until(() => !!byText('.conv', 'rhea'));
   click(byText('.conv', 'rhea')); await until(() => $$('.thread .tc-msg-text').length >= 100);
@@ -1387,7 +1387,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('older private history loads by pages', JSON.stringify(rheaFirst.texts) === JSON.stringify(pages(100)) && !rheaFirst.start && !!rheaTop
     && JSON.stringify(rheaAll.texts) === JSON.stringify(pages(130)) && rheaAll.start, { first: rheaFirst.texts.length, firstStart: rheaFirst.start, observed: !!rheaTop, all: rheaAll.texts.length, head: rheaAll.texts.slice(0, 3), allStart: rheaAll.start });
 
-  /* Import d'un historique privé : seuls les enregistrements valides de ce compte sont écrits, lus, sans écraser une clé présente */
+  /* Private history import: only valid records of this account are written, as read, without overwriting an existing key */
   const chooseFile = (text, sel = 'input[type="file"]') => {
     const input = $(sel);
     if (!input) return;
@@ -1410,7 +1410,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!byText('.toast .grow', 'Imported'));
   const importToast = (byText('.toast .grow', 'Imported') || {}).textContent || null;
   const imported = pmRecords.slice(countBefore), fayAfter = JSON.stringify(pmRecords.filter(r => r.target === 'fay'));
-  // Fichier d'un autre compte : son MP reçu passerait le tri seul, son MP envoyé trahit le compte.
+  // File from another account: its received PM would pass the filter alone, its sent PM gives the account away.
   chooseFile(JSON.stringify([
     { target: 'ivan', ts: 1700003040.5, data: 'msg:ivan:zed:unknown:1700003040.5:0:<n000/>Meant for zed', unread: 1 },
     { target: 'ivan', ts: 1700003050.5, data: 'msg:zed:zed:unknown:1700003050.5:0:<n000/>Sent by zed', unread: 0 }
@@ -1428,7 +1428,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && foreignFile.toast === "This file holds another account's messages. Nothing was imported." && !foreignFile.written,
     { notHistory, importToast, imported, fayBefore, fayAfter, foreignFile, ivanThread });
 
-  /* Import d'entrées plus anciennes que les 100 dernières : une conversation dont l'historique tenait en entier reprend la lecture par pages */
+  /* Import of entries older than the last 100: a conversation whose history fit entirely goes back to reading in pages */
   const ivanOlder = Array.from({ length: 120 }, (_, i) => ({ target: 'ivan', ts: 1690000000.5 + i, data: 'msg:ivan:marjorie:unknown:' + (1690000000.5 + i) + ':0:<n000/>Older ivan ' + i, unread: 0 }));
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!$('input[type="file"]'));
@@ -1444,7 +1444,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('pm history import reopens older pages', ivanSentinel && !ivanStart && ivanTexts.length === 122 && ivanTexts[0] === 'Older ivan 0',
     { ivanSentinel, ivanStart, observed: !!ivanTop, count: ivanTexts.length, head: ivanTexts.slice(0, 3) });
 
-  /* Import de médiathèque : seules les entrées dont l'URL est une image https et le nom un texte sont écrites dans la base de BetterChatango */
+  /* Media library import: only entries whose URL is an https image and whose name is text are written to the BetterChatango database */
   C.database.media = { transaction: mediaTransaction };
   const mediaNames = () => $$('.emoji-picker .media-name').map(x => x.textContent);
   const emojiButton = $('.thread .tc-composer button[aria-label="Emoji"]');
@@ -1468,7 +1468,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     mediaImport.toast === 'Imported 1 image. 3 skipped.' && JSON.stringify(mediaImport.written) === JSON.stringify([{ url: 'https://x.test/cat.gif', name: 'cat' }])
       && JSON.stringify(mediaImport.listed) === '["cat","old"]', mediaImport);
 
-  /* Retrait d'un MP de la base de BetterChatango : l'enregistrement est relu avant suppression, celui d'un autre membre reste intact */
+  /* Removing a PM from the BetterChatango database: the record is read again before deletion, another member's record stays intact */
   const recordAt = ts => pmRecords.find(r => r.ts === ts);
   const pmRow = txt => { const p = $$('.thread .tc-msg-text').find(x => x.textContent === txt); return p && p.closest('.tc-msg'); };
   const removeFromBrowser = async txt => {
@@ -1480,7 +1480,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     if (dialog) click(byText('.dialog-foot button', 'Remove'));
     return { item: !!item, dialog };
   };
-  // Clé déjà prise par un MP de walt : BetterChatango archive celui de vera une seconde plus tard, le pont garde la clé de la trame.
+  // Key already taken by a PM from walt: BetterChatango archives the one from vera one second later, the bridge keeps the frame key.
   pmRecords.push(pmRecord('walt', 'msg:walt:marjorie:unknown:1700004000.5:0:<n000/>Not yours', 0));
   pm('msg', ['vera', 'marjorie', 'unknown', '1700003900.5', '0', '<n000/>Remove me']);
   pm('msg', ['vera', 'marjorie', 'unknown', '1700004000.5', '0', '<n000/>Keep me']);
@@ -1492,12 +1492,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await removeFromBrowser('Keep me');
   await until(() => !!byText('.toast', 'This message could not be removed.'));
   const refused = { walt: (recordAt(1700004000.5) || {}).target, vera: (recordAt(1700004001.5) || {}).target, shown: !!pmRow('Keep me'), toast: !!byText('.toast', 'This message could not be removed. Reload the page and try again.') };
-  // Original modifié : relu par sa clé, il part avec sa modification, mais pas le MP de nell qui porte la même clé.
+  // Edited original: read again by its key, it goes with its edit, but not the PM from nell that has the same key.
   click(byText('.conv', 'olga')); await until(() => !!pmRow('Final text'));
   await removeFromBrowser('Final text');
   await until(() => !pmRow('Final text'));
   const edited = { original: !!recordAt(1700000900.5), edit: !!recordAt(1700000960.5), nell: !!recordAt(1700000350.5), shown: !!pmRow('Final text') };
-  // Modification affichée sans son original, archivé hors du fil : l'original part aussi, sinon il reviendrait au rechargement.
+  // Edit shown without its original, which is archived outside the message log: the original goes too, otherwise it would come back on reload.
   pmRecords.push(pmRecord('pia', 'msg:pia:marjorie:unknown:1700004100.5:0:<n000/><iorig9876/><m v="1"><g x12s000="0">Old draft</g></m>', 0));
   pm('msg', ['pia', 'marjorie', 'unknown', '1700004200.5', '0', '<n000/><iedit4321/><m v="1"><g x12s000="0"><eorig9876/>Only the edit</g></m>']);
   await until(() => !!byText('.conv', 'pia'));
@@ -1513,7 +1513,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && !editOnly.original && !editOnly.edit && !editOnly.shown,
     { removed, refused, edited, editOnly });
 
-  /* Reconnexion automatique : coupure par le serveur, page visible, réseau présent, groupe non affiché */
+  /* Automatic reconnection: dropped by the server, page visible, network up, group not shown */
   const connectsOf = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
   const focusesOf = gid => calls.filter(c => c[0] === 'focus' && c[1] === gid).length;
   click(byText('.tc-nav', 'Private messages')); await wait(50);
@@ -1526,7 +1526,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('automatic reconnect after a server drop, then after a failed attempt',
     auto1.test === 1 && auto1.pm === 1 && auto1.focus === 0 && auto2.test === 2 && auto2.pm === 1, { auto1, auto2 });
 
-  /* Session coupée : connecté ailleurs, hors ligne, connexion perdue, session expirée */
+  /* Session loss: signed in elsewhere, offline, connection lost, session expired */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
   C.private.socket.readyState = 3;

@@ -1,4 +1,4 @@
-/* ---------- Écrans du mode live : réglages branchés sur Chatango par le client BetterChatango ---------- */
+/* ---------- Live mode screens: settings wired to Chatango through the BetterChatango client ---------- */
 
 function liveSelect(id, label, value, options, onChange, disabled) {
   return h('select', { id: id, className: 'tc-input', style: { width: 'auto' }, 'aria-label': label, value: value, disabled: !!disabled, onChange: function (e) { onChange(+e.target.value); } },
@@ -17,12 +17,12 @@ function GroupSettingsViewLive(p) {
   var a = useState(function () { return g ? JSON.parse(sig) : null; }), draft = a[0], setDraft = a[1];
   var b = useState(false), pending = b[0], setPending = b[1];
   var synced = useRef(sig);
-  // Version serveur à partir de laquelle le brouillon a été construit : seuls les écarts avec elle sont envoyés.
+  // Server version the draft was built from: only the differences from it are sent.
   var base = useRef(sig);
   var saving = useRef(false);
   var scrollRef = useRef(null);
   useEffect(function () { if (g) app.actions.requestGroupSettings(g.id); }, [p.gid]);
-  // Les réponses de Chatango arrivent après l'ouverture : on recale le brouillon tant qu'il n'est pas modifié.
+  // Chatango's answers arrive after the page opens: the draft is realigned as long as it is not edited.
   useEffect(function () {
     if (!g) return;
     if (pending || JSON.stringify(draft) === synced.current) { setDraft(JSON.parse(sig)); setPending(false); base.current = sig; saving.current = false; }
@@ -55,7 +55,7 @@ function GroupSettingsViewLive(p) {
     else app.nav({ view: 'group', id: g.id });
   }
   var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: owner || perms.manageMods, scrollRef: scrollRef };
-  var map = { overview: GSOverviewLive, announcement: GSAnnouncementLive, automod: GSAutoModLive, media: GSMediaLive, bans: GSBansLive, audit: GSAuditLive, roles: GSStaff, members: GSMembers, invites: GSInvites };
+  var map = { overview: GSOverview, announcement: GSAnnouncementLive, automod: GSAutoModLive, media: GSMediaLive, bans: GSBansLive, audit: GSAuditLive, roles: GSStaff, members: GSMembers, invites: GSInvites };
   return h(SettingsShell, {
     navLabel: 'Group settings', sections: sections, page: page, onBack: leave, scrollRef: scrollRef,
     onPage: function (pg) { app.nav({ view: 'gsettings', id: g.id, page: pg }); },

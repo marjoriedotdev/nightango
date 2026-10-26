@@ -1,6 +1,6 @@
 var MEET_DEFAULTS = { query: '', sex: 'B', ageMin: 13, ageMax: 99, online: true, avatar: 0 };
 var PULL_TRIGGER = 64, PULL_MAX = 96;
-/** Filtres qui s'écartent des valeurs par défaut de BetterChatango, pour le compteur et les étiquettes. */
+/** Filters that differ from BetterChatango's defaults, for the counter and the chips. */
 function meetActive(f) {
   var out = [];
   if (f.sex !== 'B') out.push(['sex', f.sex === 'M' ? 'Men' : 'Women']);
@@ -10,11 +10,11 @@ function meetActive(f) {
   return out;
 }
 /**
- * Carte d'une personne dans Meet people.
- * @param {Object} s État de l'application.
- * @param {string} n Nom du membre.
- * @param {string} theme Thème résolu.
- * @param {Function} onClick Ouverture de la fiche.
+ * Person card in Meet people.
+ * @param {Object} s Application state.
+ * @param {string} n Member name.
+ * @param {string} theme Resolved theme.
+ * @param {Function} onClick Opens the card.
  */
 function personCard(s, n, theme, onClick) {
   var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status, mini = miniStyleOf(s.prefs, u, theme);
@@ -22,7 +22,7 @@ function personCard(s, n, theme, onClick) {
   return h('button', { key: n, type: 'button', className: 'conv person' + (mini ? ' mini-bg' : ''), style: mini ? { backgroundColor: mini.bg, color: mini.text } : null, onClick: onClick },
     h(T.Avatar, { name: n, size: 44, status: status, ring: mini ? mini.bg : 'var(--panel)' }),
     h('span', { className: 'conv-main' },
-      h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), presenceSr(status), youBadge(isMe), u.premium ? h(T.Badge, { tone: 'accent' }, 'Premium') : null),
+      h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), presenceSr(status), youBadge(isMe), developerBadge(n), u.premium ? h(T.Badge, { tone: 'accent' }, 'Premium') : null),
       personMetaLine(s, n),
       isProfilePending(n, u) ? h('span', { className: 'conv-about skel-about' }, h('span', { className: 'tc-sr' }, 'Loading profile'), h(T.Skeleton, { width: 220, height: 10 }), h(T.Skeleton, { width: 130, height: 10 }))
         : h('span', { className: 'conv-about' }, about || (u.profileMissing ? 'No public profile.' : null))));
@@ -73,7 +73,7 @@ function MeetPeople() {
   var c = useState(null), pull = c[0], setPull = c[1];
   var loading = !!(meet && meet.loading);
   if (pull === 'refresh' && !loading) setPull(null);
-  // Le décalage suit le doigt hors de React : un rendu par touchmove serait trop coûteux.
+  // The offset follows the finger outside React: one render per touchmove would cost too much.
   function setPullOffset(dy) {
     scrollRef.current.style.setProperty('--pull', dy + 'px');
     scrollRef.current.style.setProperty('--pull-progress', dy / PULL_TRIGGER);
@@ -103,7 +103,7 @@ function MeetPeople() {
     setPull(null);
   }
   var canLoadMore = !!(meet && !meet.loading && !meet.done && !meet.error && results.length);
-  // La page suivante reprend les filtres des résultats affichés : ils ne changent pas sans passer par un chargement.
+  // The next page reuses the filters of the shown results: they never change without a load.
   useInfiniteScroll(scrollRef, sentinelRef, canLoadMore, function () { app.actions.searchPeople(meet.filters, true); }, LOAD_BELOW_MARGIN);
   var active = meetActive(f);
   function clear(key) {

@@ -3,37 +3,37 @@ status: accepted
 date: 2026-10
 ---
 
-# Journal de diagnostic local, sans contenu
+# Local diagnostic journal, without content
 
-## Contexte
+## Context
 
-Le propriétaire perd souvent la connexion à des groupes ou aux MP sur mobile, sans accès aux outils de développement. Il demande, le 2026-10-24, de journaliser tout ce qui peut l'être et de lire le journal dans l'interface.
+The owner often loses the connection to groups or PMs on mobile, without access to developer tools. On 2026-10-24 they asked to log everything that can be logged and to read the journal in the interface.
 
-Le réglage « Debug mode » de BetterChatango n'a aucun effet : `mode_debug` n'est lu nulle part (`reference/torch/inject.js:9635`). La console de BetterChatango, elle, écrit sans condition le texte des MP reçus (`inject.js:4055`), des trames brutes et des réglages du compte. Elle ne donne ni le code de fermeture d'un socket ni le moment où le navigateur a suspendu la page. Enfin, la trame d'authentification de groupe porte le mot de passe en clair (`bauth`, `inject.js:5618`).
+BetterChatango's "Debug mode" setting has no effect: `mode_debug` is read nowhere (`reference/torch/inject.js:9635`). BetterChatango's console, on the other hand, writes unconditionally the text of received PMs (`inject.js:4055`), raw frames and the account settings. It gives neither the close code of a socket nor the moment the browser suspended the page. Finally, the group authentication frame carries the password in clear text (`bauth`, `inject.js:5618`).
 
-## Décision
+## Decision
 
-Torch Skin tient son propre journal, posé par le code page avant le démarrage de BetterChatango (`src/loader/skin-journal.js`) et exposé à l'application par `window.__TORCH_JOURNAL__`. Il est montré dans Settings, Diagnostics, qui permet de le copier, le télécharger ou l'effacer.
+Torch Skin keeps its own journal, set up by the page code before BetterChatango starts (`src/loader/skin-journal.js`) and exposed to the application through `window.__TORCH_JOURNAL__`. It is shown in Settings, Diagnostics, which lets the user copy, download or clear it.
 
-Il enregistre :
+It records:
 
-- les sockets créés dans la page (constructeur `WebSocket` enveloppé) : cible, serveur, ouverture, erreur, nom des trames de session et de refus reçues (`OK`, `inited`, `kickingoff`, `DENIED`...), fermeture avec code, durée de vie, nombre de trames reçues, délai depuis la dernière, visibilité de la page et état du réseau ;
-- la vie de la page : visibilité, `pagehide`, `pageshow`, `freeze`, `resume`, réseau, minuteurs suspendus ;
-- les erreurs non rattrapées ;
-- dans la console : les lignes `[torch-skin]`, les lignes de connexion de BetterChatango (liste fermée) et les objets `Error` ;
-- côté pont : tentatives de connexion et leur issue, changements d'état observés, avertissements de BetterChatango affichés.
+- the sockets created in the page (wrapped `WebSocket` constructor): target, server, open, error, name of the session and refusal frames received (`OK`, `inited`, `kickingoff`, `DENIED`...), close with code, lifetime, number of frames received, delay since the last one, page visibility and network state
+- the page lifecycle: visibility, `pagehide`, `pageshow`, `freeze`, `resume`, network, suspended timers
+- uncaught errors
+- in the console: `[torch-skin]` lines, BetterChatango's connection lines (closed list) and `Error` objects
+- on the bridge side: connection attempts and their outcome, observed state changes, BetterChatango warnings shown.
 
-Il n'enregistre jamais :
+It never records:
 
-- ce qui part par un socket : `send` n'est pas observé, l'authentification porte le mot de passe ([ADR-0001](0001-password-never-read.md)) ;
-- les arguments d'une trame reçue, donc ni texte de message ni nom de correspondant ;
-- le reste de la console de BetterChatango ;
-- la réponse de `/api/v1/who` ([ADR-0010](0010-linked-accounts-on-request.md)).
+- what goes out through a socket: `send` is not observed, authentication carries the password ([ADR-0001](0001-password-never-read.md))
+- the arguments of a received frame, so neither message text nor correspondent name
+- the rest of BetterChatango's console
+- the response of `/api/v1/who` ([ADR-0010](0010-linked-accounts-on-request.md)).
 
-Le journal garde les 1 000 derniers événements dans `localStorage` (`torch-skin:journal`), pour survivre au rechargement qui suit souvent une coupure sur mobile. Il ne quitte jamais le navigateur : aucun envoi, l'utilisateur le copie lui-même.
+The journal keeps the last 1,000 events in `localStorage` (`torch-skin:journal`), to survive the reload that often follows a connection loss on mobile. It never leaves the browser: nothing is sent, the user copies it themselves.
 
-## Conséquences
+## Consequences
 
-- Les lignes de la console attribuent leur origine à l'enveloppe du journal dans les outils de développement. La pile d'appels reste exacte.
-- Observer les envois, garder les arguments d'une trame ou élargir la capture de la console rouvre cette décision avec le propriétaire.
-- Une nouvelle ligne de connexion de BetterChatango entre dans la liste fermée avec sa référence `inject.js`.
+- In developer tools, console lines show the journal wrapper as their origin. The call stack stays exact.
+- Observing sends, keeping the arguments of a frame or widening the console capture reopens this decision with the owner.
+- A new BetterChatango connection line joins the closed list with its `inject.js` reference.

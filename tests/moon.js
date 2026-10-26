@@ -6,7 +6,7 @@ vm.runInContext(fs.readFileSync(process.argv[2] + '/torchds/project/components/b
 const T = ctx.window.Torch;
 const check = (c, msg, detail) => console.log((c ? 'ok  ' : 'FAIL') + ' ' + msg + (c || !detail ? '' : ' ' + JSON.stringify(detail)));
 
-/* Phases d'avril 2024, heures UTC de la table de l'observatoire de Perth : le mois synodique moyen doit tomber à quelques heures près */
+/* April 2024 phases, UTC times from the Perth Observatory table: the mean synodic month must land within a few hours */
 const near = (a, b) => Math.min(Math.abs(a - b), 1 - Math.abs(a - b)) < 0.02;
 const cases = [
   ['2024-04-08T18:21Z', 0, 'New moon'],
@@ -20,7 +20,7 @@ for (const [iso, phase, name] of cases) {
 }
 check(T.moonPhase(Date.parse('2024-04-08T18:21Z')).lit < 0.01 && T.moonPhase(Date.parse('2024-04-23T23:49Z')).lit > 0.99, 'lit part at new and full moon');
 
-/* Tracé : côté éclairé à droite quand la lune croît, à gauche quand elle décroît (hémisphère nord) */
+/* Drawing: lit side on the right while the moon waxes, on the left while it wanes (northern hemisphere) */
 const svg = (iso) => Server.renderToStaticMarkup(React.createElement(T.Moon, { date: Date.parse(iso), size: 20, label: true }));
 const limb = (markup) => /d="M10 0A10 10 0 0 (\d)/.exec(markup)[1];
 check(limb(svg('2024-04-15T19:13Z')) === '1' && limb(svg('2024-05-01T11:27Z')) === '0', 'lit limb on the right while waxing, on the left while waning');

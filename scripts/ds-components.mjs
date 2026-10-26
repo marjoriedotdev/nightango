@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// -- Gabarit ------------------------------------------------------------------
+// -- Template -----------------------------------------------------------------
 
 const COMPONENTS_DIR = join(dirname(dirname(fileURLToPath(import.meta.url))), 'torchds', 'project', 'components');
 
@@ -27,7 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
 </html>
 `;
 
-// -- Composants ---------------------------------------------------------------
+// -- Components ---------------------------------------------------------------
 
 const COMPONENTS = [
   ['Icon', 'Foundations', 64,
@@ -93,15 +93,15 @@ const COMPONENTS = [
     `  return h('div', { className: 'row' }, h(T.Switch, { label: 'On', defaultChecked: true }), h(T.Switch, { label: 'Off' }), h(T.Switch, { label: 'Locked', disabled: true }));`],
   ['Checkbox', 'Forms', 72,
     'A box for choices that are submitted or that sit in a matrix.',
-    `Use it in the notification matrix (one per event and channel) and in forms like the terms agreement. Pass \`label\` for a visible label or \`ariaLabel\` inside table cells, written as "Mentions, Sound".`,
-    `  return h('div', { className: 'row' }, h(T.Checkbox, { label: 'Keep me signed in', defaultChecked: true }), h(T.Checkbox, { label: 'I agree to the Terms of Service' }), h(T.Checkbox, { ariaLabel: 'Mentions, Email' }));`],
+    `Use it in the notification matrix (one per event and channel) and for options inside a dialog or a form. Pass \`label\` for a visible label or \`ariaLabel\` inside table cells, written as "Mentions, Desktop".`,
+    `  return h('div', { className: 'row' }, h(T.Checkbox, { label: 'Tile down', defaultChecked: true }), h(T.Checkbox, { label: 'Also delete their recent messages' }), h(T.Checkbox, { ariaLabel: 'Mentions, Desktop' }));`],
   ['SegmentedControl', 'Forms', 72,
     'Two to four mutually exclusive options shown side by side.',
-    `Provide \`options\` (strings or \`{value, label}\`), \`value\`, \`onChange\` and a \`label\` for the group. Use it for modes and presets: Log in or Sign up, Comfortable or Compact, AutoMod level. More than four options: use a select.
+    `Provide \`options\` (strings or \`{value, label}\`), \`value\`, \`onChange\` and a \`label\` for the group. Use it for modes and presets: Comfortable or Compact, Collapse or Hide, Banned or Unbanned. More than four options: use a select.
 
 - \`block\` stretches segments evenly across the container.`,
-    `  var s = React.useState('standard');
-  return h(T.SegmentedControl, { label: 'Protection level', options: [{ value: 'off', label: 'Off' }, { value: 'standard', label: 'Standard' }, { value: 'strict', label: 'Strict' }, { value: 'custom', label: 'Custom' }], value: s[0], onChange: s[1] });`],
+    `  var s = React.useState('collapse');
+  return h(T.SegmentedControl, { label: 'Messages from ignored users', options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }], value: s[0], onChange: s[1] });`],
   ['Badge', 'Status', 56,
     'A short label for roles and qualifiers next to a name or title.',
     `Children are one or two words. Default tone (\`selected\` fill, \`text-2\`) for roles like Mod or Owner, with the matching icon. \`accent\` tone for qualifiers that need attention, such as Sensitive on a permission. Mark the viewer's own row with a default-tone You badge.`,
@@ -232,7 +232,7 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
   return h('div', { className: 'row' }, [0, 4, 8, 12, 15, 19, 23, 26].map(function (d) { return h(T.Moon, { key: d, date: Date.UTC(2026, 9, 11) + d * day, size: 28, label: true }); }));`]
 ];
 
-// -- Génération ---------------------------------------------------------------
+// -- Generation ---------------------------------------------------------------
 
 for (const [name, group, height, summary, guide, body] of COMPONENTS) {
   const folder = join(COMPONENTS_DIR, name);

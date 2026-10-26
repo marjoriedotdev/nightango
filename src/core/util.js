@@ -1,4 +1,4 @@
-/* ---------- Utilitaires ---------- */
+/* ---------- Utilities ---------- */
 var MIN = 60000;
 var CONFIRM_TIMEOUT = 8000;
 function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
@@ -38,12 +38,12 @@ function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
 function isGuest(name) { return /^[!#]/.test(name); }
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* stockage indisponible : préférence non conservée */ } }
+function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable: preference not kept */ } }
 function storageMerge(key, patch) { storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
 /**
- * Permet de lire un fichier JSON choisi par l'utilisateur.
- * @param {File} file Fichier choisi.
- * @returns {Promise} Contenu analysé, rejetée si le fichier est illisible ou n'est pas du JSON.
+ * Reads a JSON file chosen by the user.
+ * @param {File} file Chosen file.
+ * @returns {Promise} Parsed content, rejected if the file is unreadable or is not JSON.
  */
 function readJsonFile(file) {
   return new Promise(function (resolve, reject) {
@@ -54,29 +54,29 @@ function readJsonFile(file) {
   });
 }
 /**
- * Permet de lire un fichier d'export de BetterChatango, dont le contenu est un tableau.
- * @param {File} file Fichier choisi.
- * @returns {Promise<?Array>} Tableau lu, null si le fichier est illisible ou ne contient pas de tableau.
+ * Reads a BetterChatango export file whose content is an array.
+ * @param {File} file Chosen file.
+ * @returns {Promise<?Array>} Array read, null if the file is unreadable or holds no array.
  */
 function readJsonArray(file) { return readJsonFile(file).then(function (v) { return Array.isArray(v) ? v : null; }, function () { return null; }); }
 /**
- * Permet de faire télécharger un texte en fichier.
- * @param {string} name Nom du fichier.
- * @param {string} text Contenu du fichier.
- * @param {string} type Type MIME du fichier.
+ * Downloads a text as a file.
+ * @param {string} name File name.
+ * @param {string} text File content.
+ * @param {string} type MIME type of the file.
  */
 function downloadFile(name, text, type) {
   var link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([text], { type: type }));
   link.download = name;
   link.click();
-  // Adresse gardée une minute : la révoquer dès le clic peut annuler le téléchargement.
+  // URL kept for one minute: revoking it right after the click can cancel the download.
   setTimeout(function () { URL.revokeObjectURL(link.href); }, MIN);
 }
 /**
- * Permet de faire télécharger une valeur en fichier JSON, au type text/json des exports de BetterChatango.
- * @param {string} name Nom du fichier.
- * @param {*} value Valeur écrite par JSON.stringify.
+ * Downloads a value as a JSON file with the text/json type of BetterChatango exports.
+ * @param {string} name File name.
+ * @param {*} value Value written by JSON.stringify.
  */
 function downloadJson(name, value) { downloadFile(name, JSON.stringify(value), 'text/json'); }
 function copyText(text, onDone) {

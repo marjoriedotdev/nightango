@@ -1,7 +1,7 @@
-/* ---------- MP : conversations, non-lus et historique privé ---------- */
+/* ---------- PMs: conversations, unreads and private history ---------- */
 
 /**
- * Archive des MP de BetterChatango, en live : BetterChatango y écrit lui-même chaque MP, le pont la marque lue et y compte les non-lus.
+ * BetterChatango PM archive in live: BetterChatango writes each PM to it itself, the bridge marks it read and counts the unreads in it.
  * @returns {{record: Function, markRead: function(string): Promise, unread: function(string): Promise<number>}} Archive.
  */
 function betterChatangoPmArchive() {
@@ -12,8 +12,8 @@ function betterChatangoPmArchive() {
   };
 }
 /**
- * Archive des MP en mémoire, avec le drapeau non lu de chaque entrée : celle du prototype, et celle du live quand la base de BetterChatango manque.
- * @param {Object=} seed Non-lus de départ par correspondant.
+ * In-memory PM archive with the unread flag of each entry: the prototype one and the live one when the BetterChatango database is missing.
+ * @param {Object=} seed Starting unreads by correspondent.
  * @returns {{record: Function, markRead: function(string): Promise, unread: function(string): Promise<number>}} Archive.
  */
 function memoryPmArchive(seed) {
@@ -27,11 +27,11 @@ function memoryPmArchive(seed) {
 }
 
 /**
- * Permet de recopier dans l'état les non-lus que l'archive compte, seule source de ces compteurs.
- * @param {Object} archive Archive des MP.
- * @param {Function} update Mise à jour de l'état.
- * @param {Array<string>} names Correspondants à relire.
- * @returns {Promise} Fin de la recopie.
+ * Copies into the state the unreads the archive counts as the only source of these counters.
+ * @param {Object} archive PM archive.
+ * @param {Function} update State update.
+ * @param {Array<string>} names Correspondents to read again.
+ * @returns {Promise} End of the copy.
  */
 function syncPmUnread(archive, update, names) {
   return Promise.all(names.map(function (n) { return archive.unread(n); })).then(function (counts) {
@@ -39,41 +39,41 @@ function syncPmUnread(archive, update, names) {
   }, warn);
 }
 /**
- * Permet de marquer lue une conversation dans l'archive, puis d'en recopier le compteur.
- * @param {Object} archive Archive des MP.
- * @param {Function} update Mise à jour de l'état.
- * @param {string} name Correspondant.
- * @returns {Promise} Fin de la recopie.
+ * Marks a conversation read in the archive and copies its counter back.
+ * @param {Object} archive PM archive.
+ * @param {Function} update State update.
+ * @param {string} name Correspondent.
+ * @returns {Promise} End of the copy.
  */
 function readPm(archive, update, name) {
   return archive.markRead(name).then(function () { return syncPmUnread(archive, update, [name]); }, warn);
 }
 
 /**
- * Permet de trouver ou de créer la conversation d'un correspondant.
- * @param {Object} d État en cours de modification.
- * @param {string} name Correspondant.
- * @param {Object=} extra Champs d'une conversation créée.
+ * Finds or creates the conversation of a correspondent.
+ * @param {Object} d State being modified.
+ * @param {string} name Correspondent.
+ * @param {Object=} extra Fields of a created conversation.
  */
 function pmConversation(d, name, extra) {
   return d.dms[name] || (d.dms[name] = Object.assign({ messages: [], unread: 0, lastReadTs: Date.now() }, extra));
 }
 /**
- * Permet de construire le message affiché d'une entrée reçue ou archivée.
- * @param {Object} x Entrée lue par le pont, ou message du prototype.
+ * Builds the shown message of a received or archived entry.
+ * @param {Object} x Entry read by the bridge, or prototype message.
  */
 function pmMessage(x) {
-  // Modification sans original chargé : elle prend la clé de l'original, que visent l'archive et les modifications suivantes.
+  // Edit without a loaded original: it takes the key of the original, which the archive and later edits target.
   var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
   if (x.editId) m.edited = true;
   return m;
 }
 function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
 /**
- * Permet de recevoir un MP dans sa conversation : une modification s'applique à son original, un nouveau message rouvre la conversation.
- * @param {Object} d État en cours de modification.
- * @param {Object} x Message reçu (op pm du pont, ou message du prototype).
- * @returns {boolean} Vrai si le message était une modification appliquée.
+ * Receives a PM in its conversation: an edit applies to its original and a new message reopens the conversation.
+ * @param {Object} d State being modified.
+ * @param {Object} x Received message (bridge pm op, or prototype message).
+ * @returns {boolean} True if the message was an applied edit.
  */
 function receivePm(d, x) {
   var c = pmConversation(d, x.from, { lastReadTs: 0 }), o = pmEditTarget(c, x);
@@ -84,13 +84,13 @@ function receivePm(d, x) {
   return false;
 }
 /**
- * Permet de fusionner des entrées de l'historique privé dans une conversation, sans doublon avec les messages affichés.
- * @param {Object} c Conversation dans l'état en cours de modification.
- * @param {Array} list Entrées lues par le pont, de la plus ancienne à la plus récente.
- * @param {function(Object)} onEntry Reçoit chaque entrée, pour en garder le style de l'auteur.
+ * Merges private history entries into a conversation without duplicating the shown messages.
+ * @param {Object} c Conversation in the state being modified.
+ * @param {Array} list Entries read by the bridge, from oldest to newest.
+ * @param {function(Object)} onEntry Receives each entry, to keep the author's style.
  */
 function mergePmHistory(c, list, onEntry) {
-  // L'horodatage archivé par BetterChatango diffère du nôtre : même auteur et même contenu à deux minutes près = même message. Chaque message déjà affiché ne couvre qu'une entrée.
+  // The timestamp archived by BetterChatango differs from ours: same author and same content within two minutes = same message. Each message already shown covers only one entry.
   var shown = c.messages.slice();
   list.forEach(function (x) {
     onEntry(x);

@@ -1,7 +1,7 @@
 /**
- * Permet de refuser un nom avec lequel aucune conversation ne peut s'ouvrir.
- * @param {Object} s État de l'application.
- * @param {string} name Nom en minuscules, non vide.
+ * Rejects a name no conversation can be opened with.
+ * @param {Object} s Application state.
+ * @param {string} name Lowercase name, not empty.
  */
 function dmNameError(s, name) {
   if (LIVE ? !ACCOUNT_NAME.test(name) : !s.users[name]) return LIVE ? 'Usernames use letters, numbers, - and _ only.' : unknownUserText(name);
@@ -12,7 +12,7 @@ function NewDmDialog(p) {
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
   var c = useState(null), asked = c[0], setAsked = c[1];
-  // Une réponse plus ancienne pour le même nom ne termine pas une nouvelle demande.
+  // An older answer for the same name does not end a new request.
   var answer = asked && s.pmChecked && s.pmChecked.name === asked.name && s.pmChecked.ts >= asked.ts ? s.pmChecked : null;
   useEffect(function () {
     if (!answer) return;

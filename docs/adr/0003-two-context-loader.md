@@ -3,22 +3,22 @@ status: accepted
 date: 2026-10
 ---
 
-# Loader en deux contextes : bac à sable et page
+# Two-context loader: sandbox and page
 
-## Contexte
+## Context
 
-Tampermonkey exécute un userscript qui demande des `@grant` dans un bac à sable isolé : il ne voit ni les objets globaux de BetterChatango (`client`, `chatango`, `sidebar`, `torch`) ni le React chargé dans la page. Par ailleurs, `vissle.me/track1/activity` n'envoie aucun en-tête CORS : depuis la page st.chatango.com, `fetch` ne peut pas lire sa réponse.
+Tampermonkey runs a userscript that asks for `@grant` in an isolated sandbox: it sees neither BetterChatango's global objects (`client`, `chatango`, `sidebar`, `torch`) nor the React loaded in the page. Also, `vissle.me/track1/activity` sends no CORS header: from the st.chatango.com page, `fetch` cannot read its response.
 
-## Décision
+## Decision
 
-Le userscript se découpe en deux contextes :
+The userscript is split into two contexts:
 
-- `skin-loader.js` reste dans le bac à sable. Il ne contient que la garde de page d'accueil et le pont vissle, qui appelle `GM_xmlhttpRequest` (`@connect vissle.me`, `anonymous: true`).
-- Tout le reste (`skin-page.js`, le design system, l'application) est injecté dans la page par un `<script>` inline dont le `textContent` est un littéral de chaîne JSON. Il y voit BetterChatango directement.
-- Les deux contextes communiquent par `CustomEvent` sur `document` (`torch-skin:vissle-request`, `torch-skin:vissle-response` et `torch-skin:account`).
+- `skin-loader.js` stays in the sandbox. It contains only the home page guard and the vissle bridge, which calls `GM_xmlhttpRequest` (`@connect vissle.me`, `anonymous: true`).
+- Everything else (`skin-page.js`, the design system, the application) is injected into the page by an inline `<script>` whose `textContent` is a JSON string literal. There it sees BetterChatango directly.
+- The two contexts communicate through `CustomEvent` on `document` (`torch-skin:vissle-request`, `torch-skin:vissle-response` and `torch-skin:account`).
 
-## Conséquences
+## Consequences
 
-- Le code page n'a aucun privilège Tampermonkey. Le seul accès privilégié est l'appel vissle, et son profil est fixé par le loader ([ADR-0005](0005-visitors-own-profile-only.md)).
-- Le code injecté ne doit jamais contenir `</script` : le build le vérifie.
-- Le nom du compte connecté se lit par une sonde inline que le loader injecte dans la page, jamais par `unsafeWindow`, absent de Userscripts (Safari).
+- The page code has no Tampermonkey privilege. The only privileged access is the vissle call, and its profile is set by the loader ([ADR-0005](0005-visitors-own-profile-only.md)).
+- The injected code must never contain `</script`: the build checks it.
+- The signed-in account name is read through an inline probe that the loader injects into the page, never through `unsafeWindow`, which Userscripts (Safari) lacks.

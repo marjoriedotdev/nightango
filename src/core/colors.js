@@ -1,4 +1,4 @@
-/* ---------- Couleurs ---------- */
+/* ---------- Colors ---------- */
 function hexToRgb(hex) {
   var m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || '').trim());
   if (!m) return null;
@@ -40,8 +40,8 @@ var CSS_COLOR_NAMES = Object.create(null);
   'thistle d8bfd8 tomato ff6347 turquoise 40e0d0 violet ee82ee wheat f5deb3 white ffffff whitesmoke f5f5f5 yellow ffff00 yellowgreen 9acd32')
   .split(' ').forEach(function (x, i, all) { if (i % 2 === 0) CSS_COLOR_NAMES[x] = '#' + all[i + 1]; });
 /**
- * Permet de convertir une couleur CSS en hex.
- * @param {string} value Couleur hex avec ou sans dièse, nommée, rgb() ou rgba().
+ * Converts a CSS color to hex.
+ * @param {string} value Hex color with or without a hash, named color, rgb() or rgba().
  */
 function cssColor(value) {
   var v = String(value || '').trim().toLowerCase();
@@ -53,17 +53,17 @@ function cssColor(value) {
 function rgba(hex, a) { var c = hexToRgb(hex) || [242, 122, 63]; return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + a + ')'; }
 function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToHex(c.map(function (v) { return v * f; })); }
 
-// Copie des jetons bg, text-body et selected de tokens.json : selected est la surface où l'accent en texte contraste le moins.
+// Copy of the bg, text-body and selected tokens from tokens.json: selected is the surface where the accent as text has the lowest contrast.
 var SURFACE = { dark: { bg: '#0d1427', body: '#d0d7e6', selected: '#1b2846' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
 var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Georgia': 'Georgia, serif', 'Courier New': 'Typewriter, "Courier New", monospace', 'Comic Sans MS': '"Comic Sans MS", "Comic Sans", cursive', 'Lucida Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Palatino': 'Palatino, serif', 'Impact': 'Impact, sans-serif', 'Papyrus': 'Papyrus, cursive', 'Times New Roman': 'Times, serif' };
 /**
- * Permet de convertir une taille de police Chatango en pourcentage.
- * @param {number} size Taille Chatango, 11 vaut 100 %.
+ * Converts a Chatango font size to a percentage.
+ * @param {number} size Chatango size, 11 equals 100 %.
  */
 function fontPercent(size) { return Math.round(Math.min(200, Math.max(82, size * 100 / 11))); }
 var CHANNELS = { none: { label: 'No channel', color: null }, red: { label: 'Red', color: '#e5484d' }, blue: { label: 'Blue', color: '#3e8bd8' }, mod: { label: 'Staff', color: '#8a8e96' } };
 /**
- * Permet de nommer un canal comme l'entrée d'envoi du menu de canal.
- * @param {string} k Clé de CHANNELS.
+ * Names a channel like the send entry of the channel menu.
+ * @param {string} k Key in CHANNELS.
  */
 function channelLabel(k) { return k === 'none' ? CHANNELS.none.label : CHANNELS[k].label + ' channel'; }

@@ -1,9 +1,9 @@
-// Test des userscripts complets, lisible et minifié : démarrage de BetterChatango, attente, montage de l'interface, pages à ignorer.
+// Test of the full userscripts, readable and minified: BetterChatango startup, wait, interface mounting, pages to ignore.
 const fs = require('fs');
 const vm = require('vm');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
-const USERSCRIPTS = ['torch-skin.user.js', 'torch-skin.min.user.js'];
+const USERSCRIPTS = ['nightango.user.js', 'nightango.min.user.js'];
 const react = fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8');
 const rdom = fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8');
 const START = 'https://vissle.me/client/start';
@@ -21,7 +21,7 @@ function page(userscript, url, before) {
   const injected = [], gm = [];
   new w.MutationObserver(rs => rs.forEach(r => r.addedNodes.forEach(n => { if (n.tagName === 'SCRIPT' && !n.src) injected.push(n.textContent); })))
     .observe(w.document, { childList: true, subtree: true });
-  // Bac à sable du gestionnaire : globales propres, DOM partagé, sans unsafeWindow, absent de Userscripts (Safari).
+  // Userscript manager sandbox: own globals, shared DOM, no unsafeWindow, which Userscripts (Safari) lacks.
   const sandbox = vm.createContext({
     document: w.document, location: w.location, CustomEvent: w.CustomEvent, console, setTimeout, clearTimeout,
     GM_xmlhttpRequest: details => { gm.push(details); }
@@ -38,14 +38,14 @@ function fakeBetterChatango(w) {
     connect() { return Promise.resolve(); }, socket() {}, systemMessage() {}, setNotice() {}
   }; window.chatango = { getAnon() { return '!anon'; } };`);
 }
-// Socket factice : jsdom ouvrirait une vraie connexion.
+// Fake socket: jsdom would open a real connection.
 function fakeSocket(w) {
   w.eval(`window.WebSocket = function (url) { this.url = url; this.on = {}; };
     WebSocket.prototype.addEventListener = function (type, fn) { (this.on[type] = this.on[type] || []).push(fn); };
     WebSocket.prototype.fire = function (type, e) { (this.on[type] || []).forEach(function (fn) { fn(e || {}); }); };
     WebSocket.OPEN = 1;`);
 }
-// jsdom ne télécharge pas les scripts : on exécute React à la main puis on signale le chargement.
+// jsdom does not download scripts: the test runs React by hand and then fires the load event.
 async function deliverReact(w) {
   for (const s of [...w.document.querySelectorAll('script[src*="cdnjs"]')]) {
     w.eval(/react-dom/.test(s.src) ? rdom : react);
@@ -59,7 +59,7 @@ async function deliverReact(w) {
 }
 
 async function suite(userscript) {
-  /* Page d'accueil, BetterChatango absent : le script le démarre */
+  /* Home page, BetterChatango absent: the script starts it */
   const a = page(userscript, 'https://st.chatango.com/');
   const starts = a.d.querySelectorAll('script[src="' + START + '"]');
   step('starts BetterChatango once on the home page', starts.length === 1);
@@ -67,7 +67,7 @@ async function suite(userscript) {
   step('no overlay before BetterChatango is ready', !a.d.getElementById('torch-skin'));
   step('React loaded with integrity check', [...a.d.querySelectorAll('script[src*="cdnjs"]')].every(s => s.integrity.indexOf('sha384-') === 0 && s.crossOrigin === 'anonymous'));
   await deliverReact(a.w);
-  // BetterChatango remplace tout le document par son client, écran de connexion compris.
+  // BetterChatango replaces the whole document with its client, sign-in screen included.
   a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div></body>';
   await wait(20);
   fakeBetterChatango(a.w);
@@ -85,7 +85,7 @@ async function suite(userscript) {
       && typeof a.w.client.event.group.getratelimit === 'function' && !!host2 && !!host2.shadowRoot.querySelector('#app').children.length,
     { injected: a.injected.length, skin: a.w.__TORCH_SKIN__, live: a.w.__TORCH_LIVE__ });
 
-  /* Pont vissle : seul le profil connecté est interrogé, sans cookies */
+  /* vissle bridge: only the signed-in profile is queried, without cookies */
   const replies = [];
   a.d.addEventListener('torch-skin:vissle-response', e => replies.push(JSON.parse(e.detail)));
   a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:vissle-request', { detail: JSON.stringify({ id: 'q1', profile: 'someoneelse', page: 1700000000.5, order: 'desc', get: 'like' }) }));
@@ -102,17 +102,17 @@ async function suite(userscript) {
   step('no page errors', a.errors.length === 0, a.errors);
   a.w.close();
 
-  /* Fenêtre de discussion intégrée ailleurs : rien ne se passe */
+  /* Chat window embedded elsewhere: nothing happens */
   const b = page(userscript, 'https://st.chatango.com/h5/gz/r1013231200/id.html');
   step('ignores Chatango embeds', !b.d.querySelector('script[src="' + START + '"]') && !b.d.querySelector('script[src*="cdnjs"]') && !b.w.__TORCH_SKIN__);
   b.w.close();
 
-  /* BetterChatango déjà lancé (ancien favori) : pas de second démarrage */
+  /* BetterChatango already started (old bookmark): no second start */
   const c = page(userscript, 'https://st.chatango.com/', fakeBetterChatango);
   step('does not start BetterChatango twice', !c.d.querySelector('script[src="' + START + '"]'));
   c.w.close();
 
-  /* BetterChatango injoignable : message, pas de rechargement en boucle */
+  /* BetterChatango unreachable: message, no reload loop */
   const e = page(userscript, 'https://st.chatango.com/');
   const s = e.d.querySelector('script[src="' + START + '"]');
   s.dispatchEvent(new e.w.Event('error'));
@@ -120,7 +120,7 @@ async function suite(userscript) {
   step('explains when BetterChatango cannot be reached', /could not be reached/.test(e.d.querySelector('h1').textContent));
   e.w.close();
 
-  /* Journal de diagnostic : cycle de vie des sockets, jamais le contenu des trames */
+  /* Diagnostic journal: socket lifecycle, never the frame content */
   const j = page(userscript, 'https://st.chatango.com/', fakeSocket);
   const journal = j.w.__TORCH_JOURNAL__;
   const sock = new j.w.WebSocket('wss://c1.chatango.com:8081/');

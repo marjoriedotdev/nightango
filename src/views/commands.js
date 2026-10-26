@@ -1,5 +1,5 @@
-/* ---------- Commandes des composeurs ---------- */
-// /background et /style de BetterChatango restent des messages tant que #70 et #71 ne leur donnent pas d'équivalent.
+/* ---------- Composer commands ---------- */
+// BetterChatango's /background and /style stay plain messages until #70 and #71 give them an equivalent.
 var COMMANDS = {
   '/join': { usage: '/join <group>', text: 'Joins a group by its name.' },
   '/leave': { usage: '/leave [group]', text: 'Leaves a group. Without a name, leaves the open group.' },
@@ -10,15 +10,15 @@ function commandHelp(cmd) { return 'Usage: ' + COMMANDS[cmd].usage + '. ' + COMM
 function commandList() { return 'Commands: ' + Object.keys(COMMANDS).map(function (k) { return COMMANDS[k].usage; }).join(', ') + '.'; }
 
 /**
- * Permet d'exécuter une commande tapée dans un composeur au lieu de l'envoyer.
- * @param {Object} app Contexte de l'application.
- * @param {string} text Texte du composeur.
- * @param {?string} gid Groupe ouvert, null dans un MP.
- * @returns {boolean} Vrai si le texte était une commande, qui n'est alors pas envoyée.
+ * Runs a command typed in a composer instead of sending it.
+ * @param {Object} app Application context.
+ * @param {string} text Composer text.
+ * @param {?string} gid Open group, null in a PM.
+ * @returns {boolean} True if the text was a command, which is then not sent.
  */
 function runCommand(app, text, gid) {
   var words = text.split(/\s+/), cmd = words[0].toLowerCase(), arg = (words[1] || '').toLowerCase();
-  // Propriétés propres seulement : un message « constructor » trouverait sinon celle d'Object.
+  // Own properties only: otherwise a "constructor" message would find the one on Object.
   if (!Object.prototype.hasOwnProperty.call(COMMANDS, cmd)) return false;
   var s = app.state, toast = app.ui.toast;
   if (cmd === '/join') {

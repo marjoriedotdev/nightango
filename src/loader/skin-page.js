@@ -7,7 +7,7 @@
   var FONTS_CSS = /*FONTS_CSS*/;
   var BETTER_CHATANGO_START = 'https://vissle.me/client/start';
 
-  // Bibliothèques vérifiées par empreinte : un fichier modifié sur le CDN n'est pas exécuté.
+  // Libraries checked by hash: a file modified on the CDN is not executed.
   function load(src, integrity) {
     return new Promise(function (resolve, reject) {
       var s = document.createElement('script');
@@ -23,7 +23,7 @@
     return !!window.__betterChatangoRefs;
   }
   function headline(text) { var h1 = document.querySelector('h1'); if (h1) h1.textContent = text; }
-  // Polices déclarées dans le document : Chrome ignore un @font-face posé seulement dans le shadow root.
+  // Fonts declared in the document: Chrome ignores an @font-face set only in the shadow root.
   function addFont() {
     if (document.getElementById('torch-skin-fonts')) return;
     var font = document.createElement('style');
@@ -32,7 +32,7 @@
     document.head.appendChild(font);
   }
 
-  /* Démarrage de BetterChatango, comme son favori : même script, sans rechargement en boucle en cas d'échec. */
+  /* BetterChatango startup, like its bookmarklet: same script, without a reload loop on failure. */
   function startBetterChatango() {
     if (probeBetterChatango() || document.querySelector('script[src^="' + BETTER_CHATANGO_START + '"]')) return;
     headline('Loading...');
@@ -61,17 +61,17 @@
 
   Promise.all([react, betterChatangoReady()])
     .then(function () {
-      // Créée après le démarrage de BetterChatango, qui construit sa page : l'interface ne risque pas d'être effacée.
+      // Created after BetterChatango startup, which builds its page: the interface cannot be wiped.
       var host = document.createElement('div');
       host.id = 'torch-skin';
-      // Masquage en style inline : la feuille de BetterChatango peut annuler l'attribut hidden.
+      // Hidden with an inline style: the BetterChatango stylesheet can override the hidden attribute.
       host.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:none !important;';
       document.body.appendChild(host);
       var shadow = host.attachShadow({ mode: 'open' });
       var style = document.createElement('style'); style.textContent = CSS; shadow.appendChild(style);
       var mount = document.createElement('div'); mount.id = 'app'; shadow.appendChild(mount);
       addFont();
-      // L'interface reste masquée tant que la session BetterChatango n'est pas ouverte : la connexion se fait sur l'écran de BetterChatango.
+      // The interface stays hidden until the BetterChatango session is open: sign-in happens on the BetterChatango screen.
       window.__TORCH_SHOW__ = function () {
         if (!host.isConnected) document.body.appendChild(host);
         if (!document.getElementById('torch-skin-hide')) {

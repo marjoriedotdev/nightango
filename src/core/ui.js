@@ -1,8 +1,8 @@
-/* ---------- Contexte et primitives UI ---------- */
+/* ---------- Context and UI primitives ---------- */
 var Ctx = React.createContext(null);
 function useApp() { return useContext(Ctx); }
 
-/* Calque unique pour fenêtres, menus et notifications : hors du flux, ils ne déforment plus la mise en page. */
+/* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
 var layerNode = null;
 function layerRoot() {
   if (layerNode && layerNode.isConnected) return layerNode;
@@ -32,12 +32,12 @@ function useOutside(ref, open, onClose, extraRef) {
 var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
 
 /**
- * Permet de demander la page suivante quand une sentinelle approche de la zone visible.
- * @param {Object} rootRef Référence de la zone qui défile.
- * @param {Object} sentinelRef Référence de la sentinelle.
- * @param {boolean} enabled Une page suivante peut être demandée.
- * @param {Function} onReach Demande de la page suivante.
- * @param {string} margin Marge d'approche au format rootMargin.
+ * Requests the next page when a sentinel approaches the visible area.
+ * @param {Object} rootRef Ref of the scrolling area.
+ * @param {Object} sentinelRef Ref of the sentinel.
+ * @param {boolean} enabled A next page can be requested.
+ * @param {Function} onReach Request for the next page.
+ * @param {string} margin Approach margin in rootMargin format.
  */
 function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
   useEffect(function () {
@@ -52,18 +52,18 @@ function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
 
 var FLOAT_UNPLACED = { position: 'fixed', visibility: 'hidden', top: 0, left: 0 };
 /**
- * Permet d'ancrer un calque flottant à son déclencheur, de le fermer au clic extérieur, à Escape, au défilement de la page ou d'un conteneur du déclencheur et au redimensionnement, et de donner le focus à son premier bouton.
- * @param {Object} anchorRef Référence du déclencheur.
- * @param {Object} floatRef Référence du calque.
- * @param {boolean} open Le calque est ouvert.
- * @param {function(Event)} onClose Fermeture, avec l'événement qui la provoque.
- * @param {{up: boolean, align: string, at: ?{x: number, y: number}}} o Ouverture vers le haut, alignement sur le bord gauche du déclencheur, point d'ancrage qui remplace le déclencheur.
- * @returns {Object} Style de position, masqué tant que le calque n'est pas mesuré.
+ * Anchors a floating layer to its trigger, closes it on an outside click, on Escape, on scroll of the page or of a trigger container and on resize, and focuses its first button.
+ * @param {Object} anchorRef Ref of the trigger.
+ * @param {Object} floatRef Ref of the layer.
+ * @param {boolean} open The layer is open.
+ * @param {function(Event)} onClose Closing, with the event that causes it.
+ * @param {{up: boolean, align: string, at: ?{x: number, y: number}}} o Opening upward, alignment on the left edge of the trigger, anchor point that replaces the trigger.
+ * @returns {Object} Position style, hidden until the layer is measured.
  */
 function useFloating(anchorRef, floatRef, open, onClose, o) {
   useOutside(anchorRef, open, onClose, floatRef);
   var ps = useState(null), place = ps[0], setPlace = ps[1];
-  // Position fixe calculée sur le déclencheur, retournée si le calque sortirait de l'écran.
+  // Fixed position computed from the trigger, flipped if the layer would leave the screen.
   useLayoutEffect(function () {
     if (!open) { setPlace(null); return; }
     if (!anchorRef.current) return;
@@ -77,24 +77,24 @@ function useFloating(anchorRef, floatRef, open, onClose, o) {
   }, [open, o.at]);
   useEffect(function () {
     if (!open) return;
-    // Seul le défilement d'un conteneur du déclencheur déplace le calque, pas celui du fil qui reçoit un message.
+    // Only the scroll of a trigger container moves the layer, not the scroll of the message log receiving a message.
     function onMove(e) { if (e.type === 'scroll' && e.target !== document && !e.target.contains(anchorRef.current)) return; onClose(e); }
     window.addEventListener('resize', onMove);
     document.addEventListener('scroll', onMove, true);
     return function () { window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); };
   }, [open]);
-  // Après le placement : un calque encore en visibility hidden refuse le focus dans un vrai navigateur.
+  // After placement: a layer still in visibility hidden refuses focus in a real browser.
   useEffect(function () {
     if (place && floatRef.current) { var first = floatRef.current.querySelector('button:not(:disabled)'); if (first) first.focus(); }
   }, [!!place]);
   return place || FLOAT_UNPLACED;
 }
 
-// Seul seuil de la colonne de droite : app.css ne le répète pas, la colonne n'est rendue qu'au-dessus.
+// Only breakpoint of the right column: app.css does not repeat it, the column is only rendered above it.
 var NARROW_LAYOUT = '(max-width:1180px)';
 /**
- * Permet de basculer la colonne de droite quand la fenêtre lui laisse la place, et sinon d'ouvrir son contenu en plein écran.
- * @param {Function} openFull Ouverture du même contenu en plein écran.
+ * Toggles the right column when the window leaves room for it and otherwise opens its content full screen.
+ * @param {Function} openFull Opens the same content full screen.
  */
 function useRightColumn(openFull) {
   var a = useState(function () { return !window.matchMedia(NARROW_LAYOUT).matches; }), fits = a[0], setFits = a[1];
@@ -108,7 +108,7 @@ function useRightColumn(openFull) {
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
 
-/* Bouton qui ouvre un menu d'actions. items : {label, icon, onSelect, danger, disabled, checked, divider, swatch}. open et onOpenChange le rendent contrôlé, at {x, y} l'ancre à un point */
+/* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
@@ -143,8 +143,8 @@ function MenuButton(p) {
 }
 
 /**
- * Champ de couleur avec sa valeur hexadécimale.
- * @param {{id: string, label: string, value: string, onChange: function(string)}} p Identifiant, libellé, couleur #rrggbb et rappel de changement.
+ * Color field with its hex value.
+ * @param {{id: string, label: string, value: string, onChange: function(string)}} p Id, label, #rrggbb color and change callback.
  */
 function ColorField(p) {
   return h('div', { className: 'tc-field' },
@@ -155,14 +155,14 @@ function ColorField(p) {
 }
 
 /**
- * Bouton qui ouvre le sélecteur de fichiers JSON.
- * @param {{onFile: function(File), icon: ?string, size: ?string, children: *}} p Rappel du fichier choisi, icône, taille et libellé du bouton.
+ * Button that opens the JSON file picker.
+ * @param {{onFile: function(File), icon: ?string, size: ?string, children: *}} p Callback for the chosen file, icon, size and button label.
  */
 function JsonFileButton(p) {
   var ref = useRef(null);
   function change(e) {
     var file = e.target.files && e.target.files[0];
-    // Sélecteur vidé : choisir de nouveau le même fichier doit relancer la lecture.
+    // Picker cleared: choosing the same file again must read it again.
     e.target.value = '';
     if (file) p.onFile(file);
   }
@@ -173,8 +173,8 @@ function JsonFileButton(p) {
 
 var SKELETON_WIDTHS = ['62%', '44%', '70%', '52%', '66%', '40%'];
 /**
- * Lignes d'attente à la forme d'une liste.
- * @param {{count: number, avatar: number, square: boolean, twoLines: boolean, label: string}} p Nombre de lignes, taille de l'avatar, avatar de groupe, seconde ligne de texte et annonce lue par les lecteurs d'écran.
+ * Placeholder rows shaped like a list.
+ * @param {{count: number, avatar: number, square: boolean, twoLines: boolean, label: string}} p Row count, avatar size, group avatar, second text line and announcement read by screen readers.
  */
 function SkeletonRows(p) {
   var rows = [];
@@ -198,7 +198,7 @@ function Dialog(p) {
     if (el) el.focus();
     openDialogs.push(ref);
     function onKey(e) {
-      // Toutes les fenêtres écoutent document : seule celle du dessus réagit.
+      // Every dialog listens on document: only the top one reacts.
       if (openDialogs[openDialogs.length - 1] !== ref) return;
       if (e.key === 'Escape' && p.onClose) { e.stopPropagation(); p.onClose(); }
       if (e.key === 'Tab' && ref.current) {
@@ -210,7 +210,7 @@ function Dialog(p) {
         else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
       }
     }
-    // Fenêtre non fermable : Escape est arrêté en capture, avant les fenêtres et menus ouverts dessous qui écoutent document.
+    // Dialog that cannot be closed: Escape is stopped in the capture phase, before the dialogs and menus open below that listen on document.
     function onEscape(e) { if (e.key === 'Escape') e.stopPropagation(); }
     var blocking = !p.onClose;
     document.addEventListener('keydown', onKey);
@@ -252,8 +252,8 @@ function Toasts(p) {
 }
 
 /**
- * Bannière d'une connexion live coupée ou en cours, avec Reconnect une fois fermée.
- * @param {{name: string, conn: string, onReconnect: Function, style: Object=}} p Connexion nommée (#groupe ou private messages), son état, sa relance et la marge du conteneur.
+ * Banner for a live connection that is lost or in progress with Reconnect once closed.
+ * @param {{name: string, conn: string, onReconnect: Function, style: Object=}} p Named connection (#group or private messages), its state, its restart and the container margin.
  */
 function ConnectionBanner(p) {
   return h('div', { className: 'banner-wrap', style: p.style }, h(T.Banner, {
@@ -262,25 +262,32 @@ function ConnectionBanner(p) {
   }, p.conn === 'connecting' ? 'Messages you send now may not arrive.' : 'New messages will not arrive until you reconnect.'));
 }
 
-// -- Personnes ----------------------------------------------------------------
+// -- People -------------------------------------------------------------------
 /**
- * Permet d'afficher le rôle court d'un membre en badge, à côté de son nom.
- * @param {?string} role Rôle du membre dans le groupe.
+ * Shows the short role of a member as a badge next to their name.
+ * @param {?string} role Role of the member in the group.
  */
 function roleBadge(role) { return role ? h(T.Badge, { icon: role === 'owner' ? 'crown' : 'shield' }, ROLE_LABEL[role]) : null; }
 /**
- * Permet de marquer sa propre ligne dans une liste.
- * @param {boolean} isMe Ligne de l'utilisateur connecté.
+ * Marks the user's own row in a list.
+ * @param {boolean} isMe Row of the signed-in user.
  */
 function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
+// Registered accounts only: a guest carries a # before their name and cannot impersonate it.
+var DEVELOPERS = ['marjorie'];
 /**
- * Permet de donner la présence d'une ligne de liste aux lecteurs d'écran, le point de l'avatar restant seul à l'œil.
- * @param {string} status Présence du membre.
+ * Marks a Nightango developer next to their name.
+ * @param {string} name Member name, in lowercase.
+ */
+function developerBadge(name) { return DEVELOPERS.indexOf(name) !== -1 ? h(T.Badge, { tone: 'accent' }, 'Nightango developer') : null; }
+/**
+ * Gives the presence of a list row to screen readers while the avatar dot stays visual only.
+ * @param {string} status Member presence.
  */
 function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + statusLabel(status)); }
 /**
- * Avatar et nom d'une personne dans un seul bouton qui ouvre sa fiche de profil.
- * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Nom du compte, nom affiché s'il diffère, groupe d'où la fiche s'ouvre, taille de l'avatar, présence et contour de son point, avatar sans le nom, simple texte pour qui n'a pas de compte.
+ * Avatar and name of a person in a single button that opens their profile card.
+ * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Account name, shown name if it differs, group the card opens from, avatar size, presence and outline of its dot, avatar without the name, plain text for someone without an account.
  */
 function Person(p) {
   var app = useApp(), label = p.label || p.name;

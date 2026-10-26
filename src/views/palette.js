@@ -1,4 +1,4 @@
-/* ---------- Palette de commandes ---------- */
+/* ---------- Command palette ---------- */
 function Palette(p) {
   var app = useApp(), s = app.state;
   var a = useState(''), q = a[0], setQ = a[1];
@@ -9,7 +9,6 @@ function Palette(p) {
     if (g.joined) entries.push({ group: 'Groups', label: '#' + k, hint: g.mentions ? '@' + g.mentions : g.unread ? g.unread + ' new' : '', icon: 'hash', run: function () { app.nav({ view: 'group', id: k }); } });
   });
   listedDms(s).forEach(function (n) { entries.push({ group: 'People', label: n, hint: statusLabel(userOf(s, n).status), icon: 'message', run: function () { app.actions.openDm(n); } }); });
-  Object.keys(s.groups).forEach(function (k) { if (!s.groups[k].joined && s.groups[k].discover) entries.push({ group: 'Join', label: 'Join #' + k, hint: s.groups[k].discover.topic, icon: 'plus', run: function () { app.actions.joinGroup(k); } }); });
   SETTINGS_NAV.forEach(function (sec) {
     sec.items.forEach(function (it) { entries.push({ group: 'Settings', label: it[1], hint: 'Settings', icon: 'sliders', run: function () { app.nav({ view: 'settings', page: it[0] }); } }); });
   });

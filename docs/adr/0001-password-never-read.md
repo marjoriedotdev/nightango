@@ -3,26 +3,26 @@ status: accepted
 date: 2026-10
 ---
 
-# Le mot de passe n'est jamais lu ni transmis
+# The password is never read or transmitted
 
-## Contexte
+## Context
 
-Torch Skin s'exécute dans la page de BetterChatango, qui connaît le mot de passe Chatango de l'utilisateur. Plusieurs fonctions de BetterChatango l'ajoutent d'elles-mêmes aux requêtes : l'option `credential` de `client.post`, et le formulaire de style `updatemsgstyles`. Un userscript qui touche au mot de passe devient un vecteur de vol d'identifiants, et l'utilisateur ne pourrait plus l'auditer en confiance.
+Torch Skin runs in the BetterChatango page, which knows the user's Chatango password. Several BetterChatango functions add it to requests on their own: the `credential` option of `client.post`, and the `updatemsgstyles` style form. A userscript that touches the password becomes a credential theft vector, and the user could no longer audit it with confidence.
 
-## Décision
+## Decision
 
-Notre code ne lit, ne stocke, ne journalise ni ne transmet jamais le mot de passe. La connexion se fait sur l'écran de BetterChatango. Aucun appel à une fonction de BetterChatango qui ajoute le mot de passe à une requête. Les seuls appels HTTP autorisés sont ceux de `docs/betterchatango-protocol.md#appels-http-autorisés` :
+Our code never reads, stores, logs or transmits the password. Sign-in happens on the BetterChatango screen. No call to a BetterChatango function that adds the password to a request. The only allowed HTTP calls are those in `docs/betterchatango-protocol.md#allowed-http-calls`:
 
-- `client.post(url, form, {})` vers `chatango.com` seulement, car BetterChatango ajoute sans option le jeton `s` vers tout hôte de sa liste, ou `client.post(url, form, { cookie: true })`, jamais `credential` ;
-- `client.post('https://vissle.me/chatango/upload', form, { key: true })`, cette URL seulement et jamais avec `progress` : BetterChatango y ajoute la clé de session vissle, jamais le mot de passe ;
-- `GET https://api.vissle.me/v1/pmr/{nom}` par `fetch`, sans cookie ni credential, pour le compte connecté (`client.user.name`) et seulement si `check_pmr` est actif ;
-- `GET https://vissle.me/api/v1/who/{nom}` par `fetch`, sans cookie ni credential, `{nom}` validé par `ACCOUNT_NAME`, un appel par clic sur « Who is this » : comptes liés, source `inject.js:7452-7477` ([ADR-0010](0010-linked-accounts-on-request.md)) ;
-- les GET publics `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml` (fond de message, dont l'image `msgbg.jpg` est une ressource chargée en `<img>` `no-referrer`) ;
-- `chatango.com/search` avec `credentials: 'include'`, comme BetterChatango ;
-- `POST https://vissle.me/track1/activity` par `GM_xmlhttpRequest`, `anonymous: true`.
+- `client.post(url, form, {})` to `chatango.com` only, because without an option BetterChatango adds the `s` token for any host in its list, or `client.post(url, form, { cookie: true })`, never `credential`
+- `client.post('https://vissle.me/chatango/upload', form, { key: true })`, this URL only and never with `progress`: BetterChatango adds the vissle session key to it, never the password
+- `GET https://api.vissle.me/v1/pmr/{name}` through `fetch`, without cookie or credential, for the signed-in account (`client.user.name`) and only if `check_pmr` is on
+- `GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential, `{name}` validated by `ACCOUNT_NAME`, one call per click on "Who is this": linked accounts, source `inject.js:7452-7477` ([ADR-0010](0010-linked-accounts-on-request.md))
+- the public GETs `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml` (message background, whose `msgbg.jpg` image is a resource loaded as a `no-referrer` `<img>`)
+- `chatango.com/search` with `credentials: 'include'`, like BetterChatango
+- `POST https://vissle.me/track1/activity` through `GM_xmlhttpRequest`, `anonymous: true`.
 
-## Conséquences
+## Consequences
 
-- Toute fonction Chatango qui exige le mot de passe est hors de portée. Le style de message perso n'est donc pas enregistré sur le compte ([ADR-0006](0006-local-message-style.md)).
-- Ajouter un endpoint à la liste demande de vérifier dans le code de BetterChatango qu'il ne transporte pas le mot de passe.
-- Décision du propriétaire du 2026-10-23 (#96) : l'envoi de fichiers par vissle (`{ key: true }`) et la restriction des MP de son propre compte (`v1/pmr`) entrent dans la liste, `client.post` sans option ne vise que `chatango.com`, et `check_block` (`v1/profile/{nom}?get=status`) reste exclu ([note hors périmètre](../../.out-of-scope/blocked-by-member.md)).
+- Any Chatango feature that requires the password is out of reach. The own message style is therefore not saved on the account ([ADR-0006](0006-local-message-style.md)).
+- Adding an endpoint to the list requires checking in BetterChatango's code that it does not carry the password.
+- Owner decision of 2026-10-23 (#96): file uploads through vissle (`{ key: true }`) and the PM restriction of one's own account (`v1/pmr`) join the list, `client.post` without an option targets only `chatango.com`, and `check_block` (`v1/profile/{name}?get=status`) stays excluded ([out of scope note](../../.out-of-scope/blocked-by-member.md)).

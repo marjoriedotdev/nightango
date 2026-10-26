@@ -42,7 +42,7 @@ jobs:
           node-version: 24
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      # Une release par @version : un push sans incrément de version ne publie rien.
+      # One release per @version: a push without a version bump publishes nothing.
       - name: Create release for @version
         env:
           GH_TOKEN: ${{ github.token }}
@@ -62,4 +62,4 @@ jobs:
             cat view.err
             exit 1
           fi
-          gh release create "$tag" dist/torch-skin.min.user.js dist/torch-skin.user.js --target "$GITHUB_SHA" --title "$tag" --generate-notes
+          gh release create "$tag" dist/nightango.min.user.js dist/nightango.user.js --target "$GITHUB_SHA" --title "$tag" --generate-notes

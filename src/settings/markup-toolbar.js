@@ -1,22 +1,22 @@
-/* ---------- Barre de mise en forme des champs de profil ---------- */
+/* ---------- Formatting bar of the profile fields ---------- */
 
-// Tailles en pixels, comme BetterChatango les lit (inject.js:656).
+// Sizes in pixels, as BetterChatango reads them (inject.js:656).
 var TEXT_SIZES = [['Small', 11], ['Large', 18], ['Huge', 24]];
-// Paragraphe et non div : BetterChatango retire toute balise div d'une bio (inject.js:660-661).
+// Paragraph and not div: BetterChatango removes every div tag from a bio (inject.js:660-661).
 var TEXT_ALIGNMENTS = [['Left', 'left'], ['Center', 'center'], ['Right', 'right']];
-// Pas de Ctrl+K pour le lien : il ouvre la palette de commandes dans toute l'application.
+// No Ctrl+K for the link: it opens the command palette across the whole application.
 var MARKUP_SHORTCUTS = { b: 'b', i: 'i', u: 'u' };
-// Comme RichText, seuls les liens http(s) s'affichent. Sans guillemet ni chevron, l'URL ne sort pas de son attribut.
+// Like RichText, only http(s) links are shown. With no quote or angle bracket, the URL cannot escape its attribute.
 var MARKUP_URL = /^https?:\/\/[^\s"<>]+$/i;
 
 /**
- * Permet d'entourer la sélection d'une balise, ou de la retirer si elle l'entoure déjà.
- * @param {string} value Texte du champ.
- * @param {number} start Début de la sélection.
- * @param {number} end Fin de la sélection.
- * @param {string} open Balise ouvrante.
- * @param {string} close Balise fermante.
- * @returns {{from: number, to: number, text: string, selStart: number, selEnd: number}} Plage remplacée, texte inséré et sélection qui suit.
+ * Wraps the selection in a tag or removes the tag if it already wraps it.
+ * @param {string} value Text of the field.
+ * @param {number} start Start of the selection.
+ * @param {number} end End of the selection.
+ * @param {string} open Opening tag.
+ * @param {string} close Closing tag.
+ * @returns {{from: number, to: number, text: string, selStart: number, selEnd: number}} Replaced range, inserted text and the selection that follows.
  */
 function wrapMarkup(value, start, end, open, close) {
   var sel = value.slice(start, end);
@@ -26,27 +26,27 @@ function wrapMarkup(value, start, end, open, close) {
 }
 
 var FONT_ATTRS = ['color', 'face', 'size'];
-// Balise <font> qui se termine au début de la sélection et ne porte que des attributs que la barre sait réécrire.
+// <font> tag that ends at the start of the selection and only holds attributes the bar can rewrite.
 var FONT_OPEN_BEFORE = /<font((?:\s+(?:color|face|size)="[^"<>]*")+)\s*>$/i;
 var FONT_CLOSE = '</font>';
 
 /**
- * Permet de poser un attribut de <font> sur la sélection, dans la balise qui l'entoure déjà quand c'est possible.
- * Même valeur : l'attribut est retiré, et la balise avec son dernier attribut.
- * @param {string} value Texte du champ.
- * @param {number} start Début de la sélection.
- * @param {number} end Fin de la sélection.
- * @param {string} name color, face ou size.
- * @param {string} val Valeur de l'attribut.
- * @returns {{from: number, to: number, text: string, selStart: number, selEnd: number}} Plage remplacée, texte inséré et sélection qui suit.
+ * Sets a <font> attribute on the selection inside the tag that already wraps it when possible.
+ * Same value: the attribute is removed, and the tag goes with its last attribute.
+ * @param {string} value Text of the field.
+ * @param {number} start Start of the selection.
+ * @param {number} end End of the selection.
+ * @param {string} name color, face or size.
+ * @param {string} val Value of the attribute.
+ * @returns {{from: number, to: number, text: string, selStart: number, selEnd: number}} Replaced range, inserted text and the selection that follows.
  */
 function fontMarkup(value, start, end, name, val) {
   var sel = value.slice(start, end), m = FONT_OPEN_BEFORE.exec(value.slice(0, start));
-  // Une balise font dans la sélection pourrait être celle que ferme le </font> qui suit.
+  // A font tag inside the selection could be the one the following </font> closes.
   if (!m || value.slice(end, end + FONT_CLOSE.length).toLowerCase() !== FONT_CLOSE || /<\/?font\b/i.test(sel))
     return wrapMarkup(value, start, end, '<font ' + name + '="' + val + '">', FONT_CLOSE);
   var attrs = {}, re = /(color|face|size)="([^"<>]*)"/gi, a;
-  // Le navigateur garde le premier attribut en double.
+  // The browser keeps the first of a duplicated attribute.
   while ((a = re.exec(m[1]))) if (!(a[1].toLowerCase() in attrs)) attrs[a[1].toLowerCase()] = a[2];
   if (attrs[name] === val) delete attrs[name]; else attrs[name] = val;
   var kept = FONT_ATTRS.filter(function (k) { return k in attrs; });
@@ -56,17 +56,17 @@ function fontMarkup(value, start, end, name, val) {
 }
 
 /**
- * Permet d'appliquer une édition au champ en gardant l'annulation du navigateur.
- * @param {HTMLTextAreaElement} el Champ modifié.
- * @param {{from: number, to: number, text: string, selStart: number, selEnd: number}} edit Édition calculée.
- * @param {function(string)} toast Message affiché quand le champ n'a plus la place.
+ * Applies an edit to the field and keeps the browser undo.
+ * @param {HTMLTextAreaElement} el Edited field.
+ * @param {{from: number, to: number, text: string, selStart: number, selEnd: number}} edit Computed edit.
+ * @param {function(string)} toast Message shown when the field has no room left.
  */
 function applyMarkupEdit(el, edit, toast) {
   var over = el.maxLength > 0 ? el.value.length - (edit.to - edit.from) + edit.text.length - el.maxLength : 0;
   if (over > 0) { toast('Remove ' + plural(over, 'character', 'characters') + ' to make room for this format.'); return; }
   el.focus();
   el.setSelectionRange(edit.from, edit.to);
-  // insertText garde Ctrl+Z. execCommand est déprécié : à défaut, setRangeText insère sans historique d'annulation.
+  // insertText keeps Ctrl+Z. execCommand is deprecated: as a fallback, setRangeText inserts without undo history.
   if (!document.execCommand('insertText', false, edit.text)) {
     el.setRangeText(edit.text, edit.from, edit.to);
     el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -75,17 +75,17 @@ function applyMarkupEdit(el, edit, toast) {
 }
 
 /**
- * Fenêtre qui demande l'adresse d'un lien ou d'une image, ou la couleur du texte.
- * @param {string} p.kind link, image ou color.
- * @param {string} p.color Couleur proposée au départ.
- * @param {function(string)} p.onSubmit Reçoit l'adresse ou la couleur.
- * @param {Function} p.onClose Fermeture sans rien insérer.
+ * Dialog that asks for the address of a link or an image or for the text color.
+ * @param {string} p.kind link, image or color.
+ * @param {string} p.color Color offered at first.
+ * @param {function(string)} p.onSubmit Receives the address or the color.
+ * @param {Function} p.onClose Close without inserting anything.
  */
 function MarkupDialog(p) {
   var color = p.kind === 'color';
   var v = useState(color ? p.color : ''), value = v[0], setValue = v[1];
   var e = useState(''), err = e[0], setErr = e[1];
-  // Entrée empêchée : l'insertion rend le focus à la textarea avant l'action par défaut, qui y ajouterait un saut de ligne.
+  // Enter is prevented: the insertion gives focus back to the textarea before the default action, which would add a line break there.
   function submit() {
     var url = value.trim();
     if (!color && !MARKUP_URL.test(url)) { setErr('Enter a link that starts with https:// and has no spaces, quotes or angle brackets.'); return; }
@@ -102,11 +102,11 @@ function MarkupDialog(p) {
 }
 
 /**
- * Permet de mettre en forme le HTML d'un champ de profil par une barre d'outils et des raccourcis.
- * @param {Object} inputRef Référence de la textarea, passée au TextField par inputRef.
- * @param {string} fieldId Identifiant de la textarea.
- * @param {boolean} [disabled] Barre désactivée avec le champ.
- * @returns {{toolbar: Object, onKeyDown: Function}} Barre à passer au TextField et gestionnaire des raccourcis de la textarea.
+ * Formats the HTML of a profile field through a toolbar and shortcuts.
+ * @param {Object} inputRef Ref of the textarea, passed to the TextField through inputRef.
+ * @param {string} fieldId Id of the textarea.
+ * @param {boolean} [disabled] Bar disabled along with the field.
+ * @returns {{toolbar: Object, onKeyDown: Function}} Bar to pass to the TextField and shortcut handler of the textarea.
  */
 function useMarkupToolbar(inputRef, fieldId, disabled) {
   var app = useApp();
@@ -161,8 +161,8 @@ function useMarkupToolbar(inputRef, fieldId, disabled) {
       kind: dialog, color: lastColor, onClose: function () { setDialog(null); },
       onSubmit: function (value) {
         var kind = dialog;
-        // Fermeture synchrone : la fenêtre rend le focus à son déclencheur en se démontant, l'insertion le reprend ensuite.
-        // Insérer depuis un effet casserait l'annulation, React y rétablit la valeur contrôlée du champ.
+        // Synchronous close: the dialog gives focus back to its trigger when it unmounts, then the insertion takes it again.
+        // Inserting from an effect would break undo, React restores the controlled value of the field there.
         ReactDOM.flushSync(function () { setDialog(null); });
         insert(kind, value);
       }

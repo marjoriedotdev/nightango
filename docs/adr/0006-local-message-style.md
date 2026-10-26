@@ -3,17 +3,17 @@ status: accepted
 date: 2026-10
 ---
 
-# Style de message perso local seulement
+# Own message style, local only
 
-## Contexte
+## Context
 
-L'utilisateur choisit police, taille, couleurs du texte et du nom, gras, italique et souligné pour ses messages. Chatango enregistre ce style sur le compte par le formulaire de style de BetterChatango (`updatemsgstyles`), qui transmet le mot de passe.
+The user picks the font, size, text and name colors, bold, italic and underline for their messages. Chatango saves this style on the account through BetterChatango's style form (`updatemsgstyles`), which transmits the password.
 
-## Décision
+## Decision
 
-Le style perso reste local au navigateur, dans `torch-skin:<pseudo>` (champ `style`). Il est écrit dans les champs de style de BetterChatango (formulaire `msgstyles`) juste avant chaque envoi, et n'est jamais enregistré chez Chatango. « Use account style » rétablit le style du compte. Motif : [ADR-0001](0001-password-never-read.md).
+The own style stays local to the browser, in `torch-skin:<username>` (`style` field). It is written into BetterChatango's style fields (`msgstyles` form) right before each send, and is never saved on Chatango. "Use account style" restores the account style. Reason: [ADR-0001](0001-password-never-read.md).
 
-## Conséquences
+## Consequences
 
-- Le style perso ne suit pas l'utilisateur sur un autre navigateur ou un autre client.
-- Revenir sur cette décision demande une voie d'enregistrement qui ne transporte pas le mot de passe, vérifiée dans une source de référence.
+- The own style does not follow the user to another browser or another client.
+- Reversing this decision requires a save path that does not carry the password, checked in a reference source.

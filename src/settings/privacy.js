@@ -1,24 +1,25 @@
 function PrivacyPage() {
   if (LIVE) return h(PrivacyPageLive, null);
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
-  return h(Page, { title: 'Privacy', lede: 'Control who can reach you and what others see.' },
+  return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
-      h(T.SettingRow, { title: 'Show read receipts and idle time', description: 'Others see when you read their message and how long you have been idle.', control: pr.sw('privacy.showIdle') }),
       h(PmHistoryRows, null),
       h(T.SettingRow, {
-        asLabel: false, title: 'Delete all conversations', description: 'Removes every private message from your account. Others keep their copy.',
-        control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete all conversations?', body: 'Every private message is removed from your account. This cannot be undone.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
+        asLabel: false, title: 'Delete saved conversations', description: 'Removes the sample private messages from this prototype.',
+        control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every sample private message is removed until you reset the sample data.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
     h(StartupSection, { value: prefs.privacy, onChange: function (k, v) { pr.set('privacy.' + k, v); } }),
-    h(T.SettingsSection, { title: 'Discoverability' },
-      h(T.SettingRow, { title: 'Show my profile in Meet people', description: 'Lets other Chatango users find you by age and location.', control: pr.sw('privacy.meet') }),
-      h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') })),
-    h(T.SettingsSection, { title: 'Your data' },
-      h(T.SettingRow, { asLabel: false, title: 'Request a copy of your data', description: 'Chatango holds your account data. BetterChatango keeps only your encrypted sign-in and these settings.', control: h(T.Button, { size: 'sm', onClick: function () { app.ui.toast('Data requests are not part of this prototype.'); } }, 'Request') })));
+    h(BrowserTabSection, null));
+}
+
+function BrowserTabSection() {
+  var pr = usePref();
+  return h(T.SettingsSection, { title: 'Browser tab' },
+    h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Useful when you run several accounts in different tabs.', control: pr.sw('privacy.usernameInTitle') }));
 }
 
 /**
- * Export et import de l'historique privé, au format de fichier de BetterChatango (exportMessages et importMessages).
+ * Export and import of the private history in the BetterChatango file format (exportMessages and importMessages).
  */
 function PmHistoryRows() {
   var app = useApp(), toast = app.ui.toast;
@@ -44,8 +45,8 @@ function PmHistoryRows() {
 var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
 
 /**
- * Réglages de démarrage de BetterChatango.
- * @param {{value: Object, onChange: function}} p value porte les trois interrupteurs, onChange reçoit la clé et la nouvelle valeur.
+ * BetterChatango startup settings.
+ * @param {{value: Object, onChange: function}} p value holds the three switches, onChange receives the key and the new value.
  */
 function StartupSection(p) {
   return h(T.SettingsSection, { title: 'On startup', description: 'BetterChatango applies these the next time it loads.' },
@@ -55,9 +56,9 @@ function StartupSection(p) {
 }
 
 /**
- * Permet de lire un hôte saisi seul, sans schéma, chemin ni identifiant, tel que new URL le rendrait.
- * @param {string} text Saisie de l'utilisateur.
- * @returns {?string} Hôte en minuscules, null si la saisie n'est pas un hôte seul.
+ * Reads a host typed alone (no scheme or path or user info) as new URL would return it.
+ * @param {string} text User input.
+ * @returns {?string} Lowercase host, null if the input is not a host alone.
  */
 function typedHost(text) {
   var v = text.trim().toLowerCase();
@@ -65,12 +66,12 @@ function typedHost(text) {
 }
 
 /**
- * Lignes d'une liste de Safety, chacune avec son bouton, ou le texte de la liste vide.
- * @param {Array<string>} list Valeurs listées.
- * @param {Function} content Contenu de la ligne d'une valeur.
- * @param {string} action Texte du bouton.
- * @param {Function} run Action du bouton sur une valeur.
- * @param {string} empty Texte de la liste vide.
+ * Rows of a Safety list with a button each or the empty list text.
+ * @param {Array<string>} list Listed values.
+ * @param {Function} content Row content for a value.
+ * @param {string} action Button text.
+ * @param {Function} run Button action on a value.
+ * @param {string} empty Text of the empty list.
  */
 function safetyRows(list, content, action, run, empty) {
   return list.length ? list.map(function (x) {
@@ -80,8 +81,8 @@ function safetyRows(list, content, action, run, empty) {
 }
 
 /**
- * Hôtes de confiance : ajout d'un hôte saisi et liste avec retrait.
- * @param {{hosts: Array<string>}} p Hôtes de confiance en minuscules.
+ * Trusted hosts: adding a typed host and a list with removal.
+ * @param {{hosts: Array<string>}} p Lowercase trusted hosts.
  */
 function TrustedSites(p) {
   var app = useApp();
@@ -131,52 +132,4 @@ function SafetyPage() {
       h(T.SettingRow, { title: 'Show guests in member lists', control: pr.sw('safety.showGuests') })),
     h(T.SettingsSection, { title: 'Blocked · ' + blocked.length }, people(blocked, 'blocked', 'Unblock', 'Nobody is blocked.')),
     h(T.SettingsSection, { title: 'Ignored · ' + ignored.length }, people(ignored, 'ignored', 'Stop ignoring', 'Nobody is ignored. Ignore someone from their profile or a message menu.')));
-}
-
-function AccountPage() {
-  if (LIVE) return h(AccountPageLive, null);
-  var app = useApp(), s = app.state;
-  var a = useState(''), email = a[0], setEmail = a[1];
-  var b = useState({ cur: '', next: '', confirm: '' }), pw = b[0], setPw = b[1];
-  var c = useState({}), err = c[0], setErr = c[1];
-  var d = useState(false), del = d[0], setDel = d[1];
-  var e = useState(''), delName = e[0], setDelName = e[1];
-  function changeEmail() {
-    if (!/^\S+@\S+\.\S+$/.test(email)) { setErr({ email: 'Enter a valid email address.' }); return; }
-    setErr({}); app.update(function (x) { x.account.pending = email; }); setEmail('');
-    app.ui.toast('Chatango sends a confirmation link to ' + email + '. In this prototype nothing is sent.');
-  }
-  function changePw() {
-    var x = {};
-    if (!pw.cur) x.cur = 'Enter your current password.';
-    if (pw.next.length < 8) x.next = 'Use at least 8 characters.';
-    if (pw.next !== pw.confirm) x.confirm = "The passwords don't match.";
-    setErr(x);
-    if (Object.keys(x).length) return;
-    setPw({ cur: '', next: '', confirm: '' });
-    app.ui.toast('Password changed.', { icon: 'check' });
-  }
-  return h(Page, { title: 'Password and email', lede: 'Sign-in details for your Chatango account.' },
-    h(T.SettingsSection, { title: 'Email', padded: true },
-      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
-        h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },
-          h('span', { style: { fontWeight: 500 } }, s.account.email), s.account.verified ? h(T.Badge, { icon: 'check' }, 'Verified') : null,
-          s.account.pending ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Waiting for confirmation of ' + s.account.pending) : null),
-        h(T.TextField, {
-          id: 'acc-email', label: 'New email', type: 'email', value: email, error: err.email, onChange: function (ev) { setEmail(ev.target.value); },
-          action: h(T.Button, { onClick: changeEmail }, 'Change email')
-        }))),
-    h(T.SettingsSection, { title: 'Password', padded: true },
-      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 } },
-        h(T.TextField, { id: 'pw-cur', label: 'Current password', type: 'password', autoComplete: 'current-password', value: pw.cur, error: err.cur, onChange: function (ev) { setPw(Object.assign({}, pw, { cur: ev.target.value })); } }),
-        h(T.TextField, { id: 'pw-new', label: 'New password', type: 'password', autoComplete: 'new-password', value: pw.next, error: err.next, hint: 'At least 8 characters.', onChange: function (ev) { setPw(Object.assign({}, pw, { next: ev.target.value })); } }),
-        h(T.TextField, { id: 'pw-confirm', label: 'Confirm new password', type: 'password', autoComplete: 'new-password', value: pw.confirm, error: err.confirm, onChange: function (ev) { setPw(Object.assign({}, pw, { confirm: ev.target.value })); } }),
-        h('div', null, h(T.Button, { variant: 'primary', onClick: changePw }, 'Change password')))),
-    h(T.SettingsSection, { title: 'Delete account' },
-      h(T.SettingRow, { asLabel: false, title: 'Delete your Chatango account', description: 'Your profile, messages and owned groups are removed after 30 days.', control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { setDel(true); } }, 'Delete account') })),
-    del ? h(Dialog, {
-      title: 'Delete your account?', description: 'Type your username to confirm. Owned groups close with it.', onClose: function () { setDel(false); setDelName(''); },
-      footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: function () { setDel(false); } }, 'Cancel'),
-        h(T.Button, { key: 'd', variant: 'danger', disabled: delName !== s.me, onClick: function () { setDel(false); setDelName(''); app.ui.toast('Deleting accounts is disabled in this prototype.'); } }, 'Delete account')]
-    }, h('div', { className: 'dialog-body' }, h(T.TextField, { id: 'del-name', label: 'Username', value: delName, autoComplete: 'off', onChange: function (ev) { setDelName(ev.target.value); } }))) : null);
 }

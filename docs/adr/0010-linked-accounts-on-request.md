@@ -3,49 +3,49 @@ status: accepted
 date: 2026-10
 ---
 
-# Comptes liés à la demande, montrés à l'utilisateur seul
+# Linked accounts on request, shown to the user only
 
-Remplace [ADR-0007](0007-no-linked-accounts.md).
+Supersedes [ADR-0007](0007-no-linked-accounts.md).
 
-## Contexte
+## Context
 
-BetterChatango propose « who » sur tout membre qui a un compte. L'entrée est dans le menu d'un message, pour les messages des comptes, les siens compris, jamais ceux d'un invité (`reference/torch/inject.js:8132-8138`), et dans le bouton « More » d'une fiche membre (`inject.js:782`).
+BetterChatango offers "who" on any member who has an account. The entry is in a message menu, for messages from accounts, one's own included, never a guest's (`reference/torch/inject.js:8132-8138`), and in the "More" button of a member card (`inject.js:782`).
 
-Au clic (`inject.js:7452-7477`), BetterChatango appelle ``fetch(`${torch.domain}/api/v1/who/${data.username}`)``, avec `torch.domain` = `https://vissle.me` (`inject.js:2911`). L'appel ne porte ni clé ni mot de passe, et `fetch` n'envoie pas de cookie vers une autre origine. La réponse JSON a un champ `target` et des listes de noms par niveau de rapprochement : `definite`, `linked`, `strong`, `medium` et `weak`. BetterChatango affiche le total puis chaque niveau non vide dans un message système local, que l'utilisateur est seul à voir et qui n'est pas gardé.
+On click (`inject.js:7452-7477`), BetterChatango calls ``fetch(`${torch.domain}/api/v1/who/${data.username}`)``, with `torch.domain` = `https://vissle.me` (`inject.js:2911`). The call carries neither key nor password, and `fetch` sends no cookie to another origin. The JSON response has a `target` field and lists of names per match level: `definite`, `linked`, `strong`, `medium` and `weak`. BetterChatango shows the total then each non-empty level in a local system message, which only the user sees and which is not kept.
 
-[ADR-0007](0007-no-linked-accounts.md) avait écarté la fonction, par décision de l'assistant : elle expose les comptes secondaires d'autres personnes, déduits de leur adresse IP, sans leur consentement. Le code client ne dit pas comment vissle calcule les niveaux.
+[ADR-0007](0007-no-linked-accounts.md) had ruled the feature out, by decision of the assistant: it exposes other people's secondary accounts, deduced from their IP address, without their consent. The client code does not say how vissle computes the levels.
 
-## Décision
+## Decision
 
-Décision du propriétaire du 2026-10-23 (#120) : Torch Skin propose les comptes liés comme BetterChatango, sur tout membre qui a un compte. Motif : le propriétaire veut retrouver cette fonction de BetterChatango dans l'interface refaite.
+Owner decision of 2026-10-23 (#120): Torch Skin offers linked accounts like BetterChatango, on any member who has an account. Reason: the owner wants to find this BetterChatango feature in the rebuilt interface.
 
-En live, « Who is this » figure dans le menu « More actions » de tout message d'un compte, les siens compris, jamais d'un invité, et dans le menu « More profile actions » de la fiche membre. Le clic ouvre une fenêtre « Who is {nom} » qui affiche le total puis chaque niveau non vide avec ses noms, et dit que c'est l'estimation de vissle, qui peut se tromper. Le prototype n'affiche pas l'entrée.
+In live, "Who is this" appears in the "More actions" menu of any message from an account, one's own included, never a guest's, and in the "More profile actions" menu of the member card. The click opens a "Who is {name}" dialog that shows the total then each non-empty level with its names, and says that it is vissle's estimate, which can be wrong. The prototype does not show the entry.
 
-Décision du propriétaire du 2026-10-24 : chaque compte listé a sa carte (photo, ASL, début de l'About), et un clic ouvre sa fiche par-dessus la liste. Les mini profils et avatars des comptes listés se chargent dès l'arrivée de la réponse, comme les résultats de Meet people : ce sont les fichiers publics de Chatango de la liste fermée, sans nouvel appel à vissle.
+Owner decision of 2026-10-24: each listed account has its card (picture, ASL, start of the About), and a click opens its card on top of the list. The mini profiles and avatars of the listed accounts load as soon as the response arrives, like the Meet people results: they are Chatango public files from the closed list, with no new call to vissle.
 
-Garde-fous :
+Guards:
 
-- le résultat est montré à l'utilisateur seul, dans une fenêtre, jamais publié dans un groupe ni un MP ;
-- il n'est jamais stocké (ni état persistant, ni `torch-skin:<pseudo>`, ni cache) ni journalisé (ni `console`, ni `warn`) : il vit dans la fenêtre, et la fermer l'oublie. Les mini profils chargés pour les cartes rejoignent l'état en mémoire comme tout profil consulté, sans trace du lien avec le compte visé ;
-- un appel par clic de l'utilisateur, jamais automatique ni en lot ;
-- l'appel entre dans la liste fermée ([ADR-0001](0001-password-never-read.md), `docs/betterchatango-protocol.md#appels-http-autorisés`) avec sa source : `GET https://vissle.me/api/v1/who/{nom}` par `fetch`, sans cookie ni credential, `{nom}` validé par `ACCOUNT_NAME` (`src/bridge/live-model.js`), source `inject.js:7452-7477` ;
-- seules les chaînes des cinq niveaux sont lues, tout autre champ est ignoré, et les noms sont rendus en texte, jamais en HTML.
+- the result is shown to the user only, in a dialog, never posted in a group or a PM
+- it is never stored (no persistent state, no `torch-skin:<username>`, no cache) or logged (no `console`, no `warn`): it lives in the dialog, and closing it forgets it. The mini profiles loaded for the cards join the in-memory state like any profile viewed, with no trace of the link to the targeted account
+- one call per user click, never automatic or in batch
+- the call joins the closed list ([ADR-0001](0001-password-never-read.md), `docs/betterchatango-protocol.md#allowed-http-calls`) with its source: `GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential, `{name}` validated by `ACCOUNT_NAME` (`src/bridge/live-model.js`), source `inject.js:7452-7477`
+- only the strings of the five levels are read, any other field is ignored, and names are rendered as text, never as HTML.
 
-## Risques acceptés par le propriétaire
+## Risks accepted by the owner
 
-- Comptes secondaires déduits de l'adresse IP de tiers, sans leur consentement.
-- Chatango reçoit une lecture du mini profil de chaque compte listé dès l'ouverture de la fenêtre.
-- Faux rapprochements : une adresse IP partagée (foyer, école, wifi public, opérateur mobile) relie des personnes sans rapport, et la méthode de vissle est invérifiable.
-- Usage du résultat pour accuser ou harceler un membre dans un groupe.
-- vissle reçoit le nom de chaque membre consulté, avec l'adresse IP de l'utilisateur.
+- Secondary accounts deduced from third parties' IP address, without their consent.
+- Chatango gets a read of the mini profile of each listed account as soon as the dialog opens.
+- False matches: a shared IP address (household, school, public wifi, mobile carrier) links unrelated people, and vissle's method cannot be checked.
+- Use of the result to accuse or harass a member in a group.
+- vissle gets the name of each member looked up, with the user's IP address.
 
-## Articulation avec les autres décisions
+## How it fits with the other decisions
 
-- [ADR-0005](0005-visitors-own-profile-only.md) ne change pas. Elle porte sur l'activité d'un profil enregistrée par le tracker vissle, que Torch Skin ne lit toujours que pour le compte connecté. Les comptes liés sont une exception distincte, décidée par le propriétaire, qui ne lit aucune activité d'un autre profil et ne part que d'un clic sur un membre précis.
-- `GET https://api.vissle.me/v1/profile/{nom}?get=status` (`check_block` de BetterChatango) reste exclu par la décision du 2026-10-23 sur #96 ([note hors périmètre](../../.out-of-scope/blocked-by-member.md)). Cette lecture de l'état d'un autre profil partirait d'elle-même, à l'insu de l'utilisateur comme du membre, pour chaque correspondant hors ligne de sa liste. Les comptes liés ne partent que d'un clic explicite. Cette décision ne rouvre pas `check_block`.
+- [ADR-0005](0005-visitors-own-profile-only.md) does not change. It covers a profile's activity recorded by the vissle tracker, which Torch Skin still reads only for the signed-in account. Linked accounts are a separate exception, decided by the owner, which reads no activity of another profile and starts only from a click on a specific member.
+- `GET https://api.vissle.me/v1/profile/{name}?get=status` (BetterChatango's `check_block`) stays excluded by the decision of 2026-10-23 on #96 ([out of scope note](../../.out-of-scope/blocked-by-member.md)). This read of another profile's state would go out on its own, without the user or the member knowing, for every offline correspondent in their list. Linked accounts start only from an explicit click. This decision does not reopen `check_block`.
 
-## Conséquences
+## Consequences
 
-- [ADR-0007](0007-no-linked-accounts.md) passe au statut `superseded by ADR-0010`.
-- `docs/betterchatango-protocol.md` (Appels HTTP autorisés, Comptes liés) et [ADR-0001](0001-password-never-read.md) ajoutent l'appel à la liste fermée.
-- Garder le résultat, le partager, l'enchaîner sur plusieurs membres ou le demander sans clic rouvre cette décision avec le propriétaire.
+- [ADR-0007](0007-no-linked-accounts.md) moves to the `superseded by ADR-0010` status.
+- `docs/betterchatango-protocol.md` (Allowed HTTP calls, Linked accounts (vissle)) and [ADR-0001](0001-password-never-read.md) add the call to the closed list.
+- Keeping the result, sharing it, chaining it over several members or requesting it without a click reopens this decision with the owner.

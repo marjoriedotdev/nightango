@@ -1,21 +1,21 @@
-/* ---------- Médiathèque de BetterChatango ---------- */
+/* ---------- BetterChatango media library ---------- */
 var MEDIA_SORTS = [{ value: 'name', label: 'Name' }, { value: 'url', label: 'Link' }];
-// Comme la complétion de BetterChatango (searchMedia avec auto) : trois médias au plus.
+// Like BetterChatango's completion (searchMedia with auto): three media at most.
 var MEDIA_SUGGESTIONS = 3;
-// Au début d'un mot seulement : le « : » d'une adresse tapée ne propose rien.
+// At the start of a word only: the ":" of a typed address offers nothing.
 var MEDIA_TOKEN = /(?:^|\s):(\S+)$/;
 
 /**
- * Permet de savoir si une vignette de la médiathèque peut se charger, aux règles des images de message.
- * @param {Object} safety Réglages Safety.
- * @param {boolean} revealed L'utilisateur a demandé « Show images ».
- * @param {string} url Adresse de l'image.
+ * Tells whether a media library thumbnail may load under the message image rules.
+ * @param {Object} safety Safety settings.
+ * @param {boolean} revealed The user asked for "Show images".
+ * @param {string} url Image address.
  */
 function mediaThumbShown(safety, revealed, url) { return safety.embedImages && (revealed || !waitsForClick(safety, 'image', url)); }
 
 /**
- * Vignette d'un média sans referrer, remplacée par une icône tant qu'elle ne peut pas se charger ou si elle échoue.
- * @param {{url: string, shown: boolean}} p Adresse de l'image et chargement permis.
+ * Media thumbnail without referrer, replaced by an icon while it may not load or if it fails.
+ * @param {{url: string, shown: boolean}} p Image address and whether loading is allowed.
  */
 function MediaThumb(p) {
   var st = useState(false), broken = st[0], setBroken = st[1];
@@ -24,8 +24,8 @@ function MediaThumb(p) {
 }
 
 /**
- * Étoile qui ajoute une image à la médiathèque ou l'en retire.
- * @param {{url: string, saved: boolean}} p Adresse de l'image et présence dans la médiathèque.
+ * Star that adds an image to the media library or removes it.
+ * @param {{url: string, saved: boolean}} p Image address and whether it is in the media library.
  */
 function MediaStarButton(p) {
   var app = useApp();
@@ -36,8 +36,9 @@ function MediaStarButton(p) {
 }
 
 /**
- * Étoile d'une image de message, affichée une fois sa présence lue dans la médiathèque, absente sans base.
- * @param {{url: string}} p Adresse de l'image.
+ * Star of a message image, shown once the media library says whether it holds the image.
+ * It is absent without a database.
+ * @param {{url: string}} p Image address.
  */
 function MediaStar(p) {
   var app = useApp(), rev = app.state.mediaRev;
@@ -51,8 +52,9 @@ function MediaStar(p) {
 }
 
 /**
- * Onglet Media du sélecteur : médiathèque de BetterChatango par pages, recherche par nom, import et export au format de BetterChatango.
- * @param {{scrollRef: Object, onPick: function(string)}} p Zone qui défile et insertion de l'adresse choisie.
+ * Media tab of the picker.
+ * It shows BetterChatango's media library by pages, with search by name and import and export in BetterChatango's format.
+ * @param {{scrollRef: Object, onPick: function(string)}} p Scrolling area and insertion of the chosen address.
  */
 function MediaPanel(p) {
   var app = useApp(), safety = app.state.prefs.safety, rev = app.state.mediaRev, toast = app.ui.toast;
@@ -65,7 +67,7 @@ function MediaPanel(p) {
   function load(after) {
     var id = ++asked.current;
     setLib(function (x) { return { list: x.list, more: false, loading: true, failed: false }; });
-    // Seule la dernière lecture s'applique : un tri, une recherche ou une écriture plus récente rend les autres obsolètes.
+    // Only the last read applies: a newer sort, search or write makes the others stale.
     app.actions.mediaPage(sort, after, text).then(function (page) {
       if (id === asked.current) setLib(function (x) { return { list: (after ? x.list : []).concat(page.list), more: page.more, loading: false, failed: false }; });
     }, function () { if (id === asked.current) setLib({ list: [], more: false, loading: false, failed: true }); });
@@ -108,11 +110,12 @@ function MediaPanel(p) {
 }
 
 /**
- * Permet de proposer les médias dont le nom contient le :texte tapé en fin de saisie, et de remplacer ce texte par l'adresse choisie, par Tab ou par un clic.
- * Contrairement à BetterChatango, Enter envoie toujours le texte tel quel, suggestions ouvertes ou non.
- * @param {string} value Texte du composeur.
- * @param {function(string)} setValue Écrit le texte du composeur.
- * @returns {{onKeyDown: Function, panel: Object}} Touches à traiter avant celles du composeur, et suggestions à rendre dans composer-wrap.
+ * Suggests the media whose name contains the :text typed at the end of the input.
+ * Tab or a click replaces that text with the chosen address.
+ * Unlike BetterChatango, Enter always sends the text as is, whether suggestions are open or not.
+ * @param {string} value Composer text.
+ * @param {function(string)} setValue Writes the composer text.
+ * @returns {{onKeyDown: Function, panel: Object}} Keys to handle before the composer's own, and suggestions to render in composer-wrap.
  */
 function useMediaCompletion(value, setValue) {
   var app = useApp(), safety = app.state.prefs.safety;
@@ -124,7 +127,7 @@ function useMediaCompletion(value, setValue) {
     if (token === closed.current) return;
     closed.current = null;
     var current = true;
-    app.actions.searchMedia(token, MEDIA_SUGGESTIONS).then(function (list) { if (current) setFound({ token: token, list: list, active: 0 }); }, function () { /* sans médiathèque, aucune suggestion */ });
+    app.actions.searchMedia(token, MEDIA_SUGGESTIONS).then(function (list) { if (current) setFound({ token: token, list: list, active: 0 }); }, function () { /* without a media library, no suggestion */ });
     return function () { current = false; };
   }, [token]);
   var open = !!found && found.token === token && found.list.length > 0;
@@ -144,7 +147,7 @@ function useMediaCompletion(value, setValue) {
   var list = open ? h('ul', { className: 'media-suggest', role: 'listbox', 'aria-label': 'Media suggestions' }, found.list.map(function (e, i) {
     return h('li', {
       key: e.url, role: 'option', 'aria-selected': String(i === found.active), className: 'media-suggest-item',
-      // Le champ garde le focus : le clic remplace le texte sans le quitter.
+      // The field keeps focus: the click replaces the text without leaving it.
       onMouseDown: function (ev) { ev.preventDefault(); }, onClick: function () { accept(i); }
     }, h(MediaThumb, { url: e.url, shown: mediaThumbShown(safety, false, e.url) }), h('span', { className: 'media-name' }, e.name), h('span', { className: 'media-url' }, e.url));
   })) : null;

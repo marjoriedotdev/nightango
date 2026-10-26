@@ -1,25 +1,25 @@
-/* Fausse base d'historique privé de BetterChatango (IndexedDB), partagée par les suites live_ui et pm. */
-// Ordre des clés IndexedDB : une chaîne passe après tout nombre, un tableau se compare élément par élément.
+/* Fake BetterChatango private history database (IndexedDB), shared by the live_ui and pm suites. */
+// IndexedDB key order: a string sorts after any number, an array compares element by element.
 function keyCmp(a, b) {
   if (Array.isArray(a)) { for (let i = 0; i < Math.min(a.length, b.length); i++) { const c = keyCmp(a[i], b[i]); if (c) return c; } return a.length - b.length; }
   if (typeof a !== typeof b) return typeof a === 'string' ? 1 : -1;
   return a < b ? -1 : a > b ? 1 : 0;
 }
-// Plages de clés que le pont construit, sur le modèle d'IDBKeyRange.
+// Key ranges the bridge builds, modelled on IDBKeyRange.
 const keyRange = { bound: (lower, upper, lowerOpen, upperOpen) => ({ lower, upper, lowerOpen: !!lowerOpen, upperOpen: !!upperOpen }), lowerBound: (lower, open) => ({ lower, lowerOpen: !!open }) };
 /**
- * Permet de créer la fabrique de transactions d'une fausse base d'historique privé.
- * @param {Array} records Enregistrements { target, ts, data, unread }, modifiés en place comme la base.
- * @param {Function=} onWrite Appelée quand une transaction readwrite se termine.
+ * Creates the transaction factory of a fake private history database.
+ * @param {Array} records Records { target, ts, data, unread }, modified in place like the database.
+ * @param {Function=} onWrite Called when a readwrite transaction completes.
  */
 function fakePmDb(records, onWrite) {
-  // Comme IndexedDB, une transaction voit les enregistrements présents à sa création : un archivage créé après elle lui échappe.
+  // Like IndexedDB, a transaction sees the records present when it is created: an archive write created after it escapes it.
   return function pmTransaction(stores, mode) {
     const seen = records.slice(), tx = {};
-    // Comme IndexedDB, une transaction sans aucune requête se termine aussi.
+    // Like IndexedDB, a transaction without any request also completes.
     let requests = 0;
     setTimeout(() => { if (!requests && tx.oncomplete) tx.oncomplete(); }, 0);
-    // Comme IndexedDB, la transaction se termine quand plus aucune requête n'attend, y compris celles ouvertes par un rappel.
+    // Like IndexedDB, the transaction completes when no request is pending, including those opened by a callback.
     let pending = 0;
     const done = () => {
       if (--pending) return;
@@ -27,7 +27,7 @@ function fakePmDb(records, onWrite) {
     };
     const drop = rec => [records, seen].forEach(l => { const i = l.indexOf(rec); if (i >= 0) l.splice(i, 1); });
     const request = run => { const req = {}; pending++; requests++; setTimeout(() => { run(req); done(); }, 0); return req; };
-    // Curseur en microtâches après une première tâche : un parcours lent ferait échouer les attentes courtes sous charge.
+    // Cursor in microtasks after a first task: a slow walk would make short waits fail under load.
     const cursor = list => {
       const req = {}; let i = 0; pending++; requests++;
       const read = () => {
@@ -43,7 +43,7 @@ function fakePmDb(records, onWrite) {
       return (range.lowerOpen ? lo > 0 : lo >= 0) && (range.upperOpen ? hi < 0 : hi <= 0);
     };
     const byIndex = (name, range) => name === 'target_ts_idx' ? seen.filter(inRange(range)).sort((a, b) => keyCmp([a.target, a.ts], [b.target, b.ts])) : [];
-    // Comme IndexedDB, add refuse une clé présente : sans preventDefault sur l'échec, toute la transaction est annulée.
+    // Like IndexedDB, add rejects an existing key: without preventDefault on the error, the whole transaction aborts.
     const adds = [];
     const commit = () => {
       const done = [];
