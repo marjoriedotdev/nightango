@@ -1,6 +1,8 @@
 /* ---------- Barre de mise en forme des champs de profil ---------- */
 
-var TEXT_SIZES = [['Small', 2], ['Large', 5], ['Huge', 7]];
+// Tailles en pixels, comme BetterChatango les lit (inject.js:656).
+var TEXT_SIZES = [['Small', 11], ['Large', 18], ['Huge', 24]];
+// Paragraphe et non div : BetterChatango retire toute balise div d'une bio (inject.js:660-661).
 var TEXT_ALIGNMENTS = [['Left', 'left'], ['Center', 'center'], ['Right', 'right']];
 // Pas de Ctrl+K pour le lien : il ouvre la palette de commandes dans toute l'application.
 var MARKUP_SHORTCUTS = { b: 'b', i: 'i', u: 'u' };
@@ -147,12 +149,11 @@ function useMarkupToolbar(inputRef, fieldId, disabled) {
     button('bold', 'Bold', function () { tag('b'); }, 'Control+B Meta+B'),
     button('italic', 'Italic', function () { tag('i'); }, 'Control+I Meta+I'),
     button('underline', 'Underline', function () { tag('u'); }, 'Control+U Meta+U'),
-    button('strikethrough', 'Strikethrough', function () { tag('s'); }),
     sep,
     button('palette', 'Text color', function () { setDialog('color'); }),
     menu('type', 'Font', FONT_FACES.map(function (f) { return { label: h('span', { style: { fontFamily: FONT_STACKS[f] } }, f), onSelect: function () { font('face', f); } }; })),
     menu('text-size', 'Text size', TEXT_SIZES.map(function (s) { return { label: s[0], onSelect: function () { font('size', String(s[1])); } }; })),
-    menu('align-left', 'Alignment', TEXT_ALIGNMENTS.map(function (a) { return { label: a[0], icon: 'align-' + a[1], onSelect: function () { wrap('<div align="' + a[1] + '">', '</div>'); } }; })),
+    menu('align-left', 'Alignment', TEXT_ALIGNMENTS.map(function (a) { return { label: a[0], icon: 'align-' + a[1], onSelect: function () { wrap('<p align="' + a[1] + '">', '</p>'); } }; })),
     sep,
     button('link', 'Add a link', function () { setDialog('link'); }),
     button('image', 'Add an image', function () { setDialog('image'); }),

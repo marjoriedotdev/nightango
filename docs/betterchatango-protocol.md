@@ -265,6 +265,18 @@ Sur la connexion privée. Les horodatages sont en secondes. `None` ou 0 veut dir
 - Profil complet : `mod2.xml`, balise `body`.
 - Fond de message : `msgbg.xml`, dans le même dossier mais sans le préfixe `sp/sp` (BetterChatango `chatango.subdomain.msgbg`, `inject.js:229`), lu par un simple `fetch` sans `credential` (`inject.js:504`). Format : les attributs du premier élément (`inject.js:509-514`), qui sont les champs du formulaire de fond de BetterChatango (`client.html:404-458`) : `bgc` (couleur hex sans `#`), `bgalp` (opacité de la couleur, 0 à 100), `useimg` (0 ou 1), `ialp` (opacité de l'image, 0 à 100), `align` (`tl`, `tr`, `bl` ou `br`), `tile` (0 ou 1), `hasrec` et `isvid`. L'image est `msgbg.jpg`, dans le même dossier (`inject.js:492`).
 
+### Rendu d'une bio
+
+La barre de mise en forme de la page Profile n'insère que ce que les clients affichent tous.
+
+- BetterChatango (`parseMini`, `inject.js:623-680`) :
+  - les retours à la ligne deviennent des `<br>` ;
+  - `<font>` devient `<span>`, en ne gardant que `size`, `color` et `face` ; `size` est lu en pixels, bornés de 10 à 30 (`inject.js:656`) ;
+  - `<center>` et `<div style="text-align: …">` deviennent des `<p>` alignés ; toute autre balise `<div>` est retirée (`inject.js:660-661`) ;
+  - seules `b`, `i`, `u`, `a`, `p`, `span`, `br` et `img` restent (`inject.js:666`) : `<s>` disparaît.
+- Le client natif de Chatango ignore les retours à la ligne (constaté par le propriétaire le 2026-10-26, pas de source dans le code). La page Profile enregistre pourtant la bio telle qu'elle est écrite : une conversion automatique en `<br>` ajoute 3 caractères par ligne et peut faire dépasser la limite de 2 000 sans que l'utilisateur l'ait voulu (décision du propriétaire, 2026-10-26).
+- `RichText` suit BetterChatango : `size` en pixels bornés de 10 à 30, retours à la ligne en `<br>`. Les paragraphes sont espacés de `1em` en dessous, comme les `<p>` de BetterChatango, dont la marge du haut est nulle (`client.css`, `.application-profile-about p`).
+
 ### Fond Premium
 
 - Fichier `custom_profile.css`, dans le même dossier mais sans le préfixe `sp/sp` (BetterChatango `chatango.subdomain.custom_profile`).
