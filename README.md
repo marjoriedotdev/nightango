@@ -19,32 +19,7 @@ Nightango is a Tampermonkey userscript for [st.chatango.com](https://st.chatango
 
 To update, paste the new release over the same script. Settings > What's new lists the changes of each version.
 
-## Features
-
-**Group chats**
-- Replies, mentions, unread markers and a "New messages" jump.
-- A Mentions page with recent messages that mention you, across groups.
-- Red, blue and staff channels.
-- Older messages load on scroll.
-- The BetterChatango media library: star an image to save it, insert it from the Media tab or with `:name` then Tab, import and export it.
-
-**Private messages and friends**
-- Search in all saved conversations.
-- Friend list with presence, swipe actions on phones.
-
-**Profiles**
-- Mini profiles with the member's Premium colors and background.
-- Full profiles in a sandboxed frame that can't run scripts.
-- Edit your bio and full profile, upload and crop your picture, set your Premium background.
-
-**Moderation**
-- Bans and unbans, moderation log, moderator roles, announcements, banned words, slow mode.
-
-**Appearance** (Settings > Appearance, saved in the browser)
-- Dark and light themes, or the system theme.
-- A night sky with the moon at its current phase, computed on the device. Presence is shown as moon phases: full for online, crescent for idle, new for offline.
-- Accent color, density, text size, and switches for members' Chatango styles.
-- Your own message style, kept in the browser.
+## Preview
 
 ![Group chat in the dark and light themes](docs/readme/themes.webp)
 
@@ -63,6 +38,10 @@ To update, paste the new release over the same script. Settings > What's new lis
 - Profile and message backgrounds and full-size profile pictures load without a referrer.
 - Fonts ship inside the userscript.
 - The diagnostic journal (Settings > Diagnostics) stays in the browser and never records frame contents or what you send.
+
+## Support
+
+For any question or problem, send a private message to [marjorie](https://marjorie.chatango.com) on Chatango.
 
 ## Development
 
@@ -94,6 +73,6 @@ Bug reports go to the [issue tracker](https://github.com/marjoriedotdev/nightang
 
 Nightango is released under the [MIT License](LICENSE).
 
-BetterChatango is by Vissle, under the [MIT License](https://github.com/Vissle-Drissle/Torch-Client). A read-only copy of its code sits in [reference/torch/](reference/torch/) to check its behaviour.
+BetterChatango is by Vissle, under the [MIT License](https://github.com/Vissle-Drissle/Torch-Client).
 
 Geist, Geist Mono and Instrument Serif are embedded under the SIL Open Font License 1.1 ([torchds/project/fonts/OFL.txt](torchds/project/fonts/OFL.txt)).
