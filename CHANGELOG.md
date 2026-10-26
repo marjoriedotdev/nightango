@@ -2,6 +2,18 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.20.2] - 2026-10-26
+
+### Fixed
+
+- Alignment from the formatting toolbar now shows in BetterChatango too.
+- Text sizes from the toolbar are in pixels, the way BetterChatango and Chatango read them. Mini profiles show sizes the same way.
+- Paragraphs in mini profiles are spaced like in BetterChatango.
+
+### Removed
+
+- The strikethrough button: BetterChatango doesn't show struck text.
+
 ## [0.20.1] - 2026-10-25
 
 ### Fixed
