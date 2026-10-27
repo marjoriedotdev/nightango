@@ -152,6 +152,7 @@ function useProfileActions(name, gid) {
       onSelect: function () { if (u.friend) confirmRemoveFriend(app, name); else app.actions.toggleUser(name, 'friend'); }
     },
     u.friend ? notifyOnlineItem(app, name) : null,
+    whoItem(app, name),
     styleItem(app, name),
     ignoreItem(app, name),
     {
@@ -185,7 +186,7 @@ function ProfileDialog(p) {
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
       : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
         buttons.map(function (it) { return h(T.Button, { key: it.id, variant: it.id === 'message' ? 'primary' : undefined, icon: it.icon, disabled: it.disabled, onClick: it.onSelect }, it.buttonLabel || it.label); }),
-        h(MenuButton, { label: 'More profile actions', items: [whoItem(app, name)].concat(actions.filter(function (it) { return buttons.indexOf(it) < 0; })) }))));
+        h(MenuButton, { label: 'More profile actions', items: actions.filter(function (it) { return buttons.indexOf(it) < 0; }) }))));
 }
 
 /**
