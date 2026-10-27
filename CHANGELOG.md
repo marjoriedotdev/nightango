@@ -2,6 +2,12 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.22.1] - 2026-10-27
+
+### Fixed
+
+- Profile pictures no longer blink when you switch views or groups.
+
 ## [0.22.0] - 2026-10-27
 
 ### Added
