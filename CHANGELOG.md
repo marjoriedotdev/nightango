@@ -2,6 +2,13 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.22.2] - 2026-10-27
+
+### Fixed
+
+- The PM list no longer shows someone who isn't your friend as online hours after they went offline.
+- After your private messages reconnect, the open conversation keeps showing when that person goes online or offline.
+
 ## [0.22.1] - 2026-10-27
 
 ### Fixed
