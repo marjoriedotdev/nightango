@@ -55,7 +55,7 @@ function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToH
 
 // Copy of the bg, text-body and selected tokens from tokens.json: selected is the surface where the accent as text has the lowest contrast.
 var SURFACE = { dark: { bg: '#0d1427', body: '#d0d7e6', selected: '#1b2846' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
-var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Georgia': 'Georgia, serif', 'Courier New': 'Typewriter, "Courier New", monospace', 'Comic Sans MS': '"Comic Sans MS", "Comic Sans", cursive', 'Lucida Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Palatino': 'Palatino, serif', 'Impact': 'Impact, sans-serif', 'Papyrus': 'Papyrus, cursive', 'Times New Roman': 'Times, serif' };
+var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Georgia': 'Georgia, serif', 'Courier New': 'Typewriter, "Courier New", monospace', 'Comic Sans MS': '"Comic Sans MS", "Comic Sans", "Chalkboard SE", sans-serif', 'Lucida Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Palatino': 'Palatino, serif', 'Impact': 'Impact, sans-serif', 'Papyrus': 'Papyrus, cursive', 'Times New Roman': 'Times, serif' };
 /**
  * Converts a Chatango font size to a percentage.
  * @param {number} size Chatango size, 11 equals 100 %.
