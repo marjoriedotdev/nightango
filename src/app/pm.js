@@ -66,6 +66,7 @@ function pmMessage(x) {
   // Edit without a loaded original: it takes the key of the original, which the archive and later edits target.
   var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
   if (x.editId) m.edited = true;
+  if (x.replyId) m.replyTo = { key: x.replyId };
   return m;
 }
 function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }

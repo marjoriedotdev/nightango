@@ -95,6 +95,8 @@ function mediaTransaction() {
 }
 // Snapshot of the BetterChatango style when it builds a message body (sendMessage with length).
 let styleProbe = null;
+// Like BetterChatango, each PM build draws a new <i…/> key: a second build would not give the key that was sent.
+let pmBuilds = 0;
 const styleAtBuild = [];
 function fakeGroup() { return { socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { information: { title: 'Test group', description: 'A test room' } }, load: 5 }; }
 const C = {
@@ -110,7 +112,7 @@ const C = {
   sendMessage(data, length, group, user) {
     if (length && styleProbe) styleAtBuild.push({ group, style: styleProbe() });
     // Like BetterChatango, a PM body replaces a YouTube link with its <i> tag.
-    if (length) return group === 'private_message' ? '<n3366FF/><m v="1"><g x12s9900cc="4">' + data.replace(/https:\/\/youtu\.be\/([\w-]{11})\S*/, '<i s="vid://yt:$1" w="126" h="93"/>') + '</g></m>' : '<n000/><f x11000="0">' + data;
+    if (length) return group === 'private_message' ? '<n3366FF/><ipm' + String(++pmBuilds).padStart(5, '0') + '/><m v="1"><g x12s9900cc="4">' + data.replace(/https:\/\/youtu\.be\/([\w-]{11})\S*/, '<i s="vid://yt:$1" w="126" h="93"/>') + '</g></m>' : '<n000/><f x11000="0">' + data;
     calls.push(['pm', group, user, data]);
   },
   // Like BetterChatango's socketEvent: a group still in cache.connect is ignored, its promise never settles.
@@ -723,7 +725,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('history text decoded', d.body.textContent.includes('Hello & welcome'));
   step('BetterChatango pm focus follows the open conversation', C.private.focus === 'dave');
   type($('.thread .tc-composer textarea'), 'x < y'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(30);
-  step('pm escaped', calls.some(c => c[0] === 'pm' && c[1] === 'private_message' && c[2] === 'dave' && c[3] === 'x &lt; y'));
+  const escapedPm = frame('msg:dave:').pop() || '';
+  step('pm escaped and sent as BetterChatango built it', /^msg:dave:<n3366FF\/><ipm\d{5}\/><m v="1"><g x12s9900cc="4">x &lt; y<\/g><\/m>$/.test(escapedPm) && !calls.some(c => c[0] === 'pm'), escapedPm);
   click(byText('.profile .mrow', 'Add friend')); await wait(30);
   step('add friend frame', frame('wladd:dave').length === 1);
   pm('wladd', ['nobody', 'invalid']); await until(() => !!byText('.toast', 'No Chatango user named nobody.'));
@@ -773,7 +776,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('pm history keeps style', styleOk(old), old.p && [old.p.style.cssText, old.name && old.name.style.cssText]);
   type($('.thread .tc-composer textarea'), 'Mine'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
   const mine = styled('Mine');
-  const minePms = calls.filter(c => c[0] === 'pm' && c[2] === 'fay' && c[3] === 'Mine').length;
+  const minePms = frame('msg:fay:').filter(f => f.endsWith('>Mine</g></m>')).length;
   step('own pm carries own style', styleOk(mine) && minePms === 1, { minePms, style: mine.p && [mine.p.style.cssText, mine.name && mine.name.style.cssText] });
 
   click(byText('.tc-nav', 'test')); await wait(50);
@@ -1360,6 +1363,40 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const editHist = olgaThread();
   const editOk = r => JSON.stringify(r) === JSON.stringify({ texts: ['Final text'], edited: 1 });
   step('pm edit replaces the original, live and after history', editOk(editLive) && editOk(editHist), { editLive, editHist });
+
+  /* PM reply: <r…/> right after the <g …> head like BetterChatango (inject.js:5253-5258), to a received PM or to one's own PM just sent, resolved live and from the history */
+  pmRecords.push(
+    pmRecord('rex', 'msg:rex:marjorie:unknown:1700001500.5:0:<n000/><iqst00001/><m v="1"><g x12s000="0">Old question</g></m>', 0),
+    pmRecord('rex', 'msg:rex:marjorie:unknown:1700001510.5:0:<n000/><iqst00002/><m v="1"><g x12s000="0"><rqst00001/>Archived reply</g></m>', 0));
+  pm('OK', []); await until(() => listed('rex'));
+  click($$('.convs .conv-name').find(x => x.textContent === 'rex').closest('.conv')); await wait(50);
+  const rexRow = txt => $$('.thread .tc-msg').find(x => { const t = x.querySelector('.tc-msg-text'); return t && t.textContent === txt; });
+  const replyLine = txt => { const q = rexRow(txt) && rexRow(txt).querySelector('.tc-msg-reply'); return q ? q.textContent : null; };
+  const replyTo = async (orig, txt) => {
+    click(rexRow(orig).querySelector('button[aria-label="Reply"]')); await wait(30);
+    const context = ($('.thread .tc-composer-context') || {}).textContent || '';
+    type($('.thread .tc-composer textarea'), txt); key($('.thread .tc-composer textarea'), 'Enter'); await until(() => !!rexRow(txt));
+    return { context, frame: frame('msg:rex:').pop() || '' };
+  };
+  const fromHistory = replyLine('Archived reply');
+  const answer = await replyTo('Old question', 'Answer');
+  const answerKey = (/<i(pm\d{5})\/>/.exec(answer.frame) || [])[1];
+  const followUp = await replyTo('Answer', 'Follow-up');
+  pm('msg', ['rex', 'marjorie', 'unknown', '1700001600.5', '0', '<n000/><iqst00003/><m v="1"><g x12s000="0"><rgone0001/>About something old</g></m>']);
+  pm('msg', ['rex', 'marjorie', 'unknown', '1700001610.5', '0', '<n000/>From the official client']);
+  await until(() => !!rexRow('From the official client'));
+  const rex = {
+    fromHistory, answer, answerKey, followUp, answerLine: replyLine('Answer'), followLine: replyLine('Follow-up'), missing: replyLine('About something old'),
+    officialReply: !!rexRow('From the official client').querySelector('button[aria-label="Reply"]'), contextLeft: !!$('.thread .tc-composer-context')
+  };
+  const PM_HEAD = '^msg:rex:<n3366FF\\/><ipm\\d{5}\\/><m v="1"><g x12s9900cc="4">';
+  step('pm reply carries <r> after the <g> head, resolves live and from the history, and only targets a PM key',
+    (rex.fromHistory || '').includes('Old question') && rex.answer.context.includes('Replying to') && rex.answer.context.includes('Old question')
+      && new RegExp(PM_HEAD + '<rqst00001\\/>Answer<\\/g><\\/m>$').test(rex.answer.frame)
+      && !!rex.answerKey && new RegExp(PM_HEAD + '<r' + rex.answerKey + '\\/>Follow-up<\\/g><\\/m>$').test(rex.followUp.frame)
+      && (rex.answerLine || '').includes('Old question') && (rex.followLine || '').includes('Answer') && rex.missing === 'Original message not loaded'
+      && !rex.officialReply && !rex.contextLeft,
+    rex);
 
   /* PMs received offline: database opened before the private connection, msgoff right after OK, two identical "ok" 10 s apart in the history */
   pmRecords.push(

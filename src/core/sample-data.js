@@ -126,9 +126,10 @@ function seedWorld(me) {
     });
   });
 
-  function dm(from, text, m) { return { id: uid(), from: from, text: text, ts: t(m) }; }
+  function dm(from, text, m, extra) { return Object.assign({ id: uid(), key: uid(), from: from, text: text, ts: t(m) }, extra); }
+  var backdrop = dm('sable', 'Quick question: does it keep the backdrop color, or only the palette?', 7);
   var dms = {
-    sable: { messages: [dm('sable', 'Hey, saw your theme export change. Clean work.', 7), dm('sable', 'Quick question: does it keep the backdrop color, or only the palette?', 7), dm(me, 'Both. The backdrop is stored with the palette in the same JSON file.', 6), dm('sable', "Perfect. I'll check the s12 logs tonight and tell you whether it's the client or Chatango.", 5)], unread: 1, lastReadTs: t(6) },
+    sable: { messages: [dm('sable', 'Hey, saw your theme export change. Clean work.', 7), backdrop, dm(me, 'Both. The backdrop is stored with the palette in the same JSON file.', 6, { replyTo: { key: backdrop.key } }), dm('sable', "Perfect. I'll check the s12 logs tonight and tell you whether it's the client or Chatango.", 5)], unread: 1, lastReadTs: t(6) },
     kestrel: { messages: [dm('kestrel', 'Did you get my trade offer?', 65)], unread: 1, lastReadTs: t(120) },
     quill: { messages: [dm('quill', 'Can you send the invite link for #retrogaming?', 60 * 3), dm(me, 'Here: retrogaming.chatango.com', 60 * 3 - 2), dm(me, 'Thanks for the invite link', 60 * 2)], unread: 0, lastReadTs: now },
     halcyon: { messages: [dm('halcyon', 'See you Friday for game night.', 60 * 26)], unread: 0, lastReadTs: now },

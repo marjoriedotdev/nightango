@@ -102,7 +102,7 @@ function pmRecordEntry(v) {
   var parts = String(v.data || '').split(':').slice(1);
   if (parts.length <= 5) return null;
   var body = parsePm(parts);
-  return { from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, unread: !!v.unread };
+  return { from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
 }
 var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
 /**

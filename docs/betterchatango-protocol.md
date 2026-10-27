@@ -48,6 +48,7 @@ Received frames only: nothing is sent.
 - A frame goes out through `client.socket(gid, frame, errorText)`.
 - For a message, `client.sendMessage(text, true, gid)` returns the styled body without sending it. BetterChatango expects HTML: the text must be escaped (`&`, `<`, `>`).
 - The bridge inserts `<r{ref}/>` for a reply, then sends `bm:{id}:{flag}:{body}`.
+- For a PM, `client.sendMessage(text, true, 'private_message', name)` returns the body, which the bridge sends as is: `msg:{name}:{body}` through `client.socket('private_message', …)`, like `sendMessage` without length (`inject.js:5206`, `5266`). Each build draws a new `<i…/>` PM key (`inject.js:5141`, `5177`): building once keeps for the shown PM the key that was sent, which a reply can target. `client.socket` archives the sent PM for `client.private.focus` (`inject.js:4633-4645`).
 - Group message length: 2900 characters at most (`room.character`, `inject.js:3086`, reset to 2900 on each `groupflagsupdate`, `inject.js:3924-3928`). BetterChatango counts the `String.length` of the body that `sendMessage` builds in length mode, without the `bm:{id}:{flag}:` prefix (`inject.js:4989-4994`): own style, `<br/>` and entities count. `liveBridge.measure` counts the same body, with the `<r…/>`, the `<e…/>` or the quote that sending inserts. BetterChatango shows this count without blocking sending. Nightango shows it at 300 remaining characters or fewer and refuses to send beyond the limit. A message refused by Chatango gets `msglexceeded` (`inject.js:3861-3863`), shown as a notification by the bridge.
   - BetterChatango lowers the limit to 850 for a group with the `NO_REPETITION` flag (`inject.js:3106-3108`, `3924-3925`). This name is missing from `chatango.flags.group`, so the limit is never applied, and without a source Nightango does not reuse it. PMs (9000 in BetterChatango, `inject.js:8825`) have no count.
 - Message references `<r…/>` and `<e…/>`: id without the trailing `=`, `-` replaced by `hypheN` and `_` by `underS`.
@@ -186,6 +187,10 @@ One call excluded by the owner's decision (2026-10-23, #96): `GET https://api.vi
 - On receipt, BetterChatango applies it to the original with the same key and the same author, and hides the edit message (`displayEdit`, `inject.js:5497-5536`). Nightango does the same, in real time and in the history merge (`app/root.js`): the original keeps its place and its timestamp, takes the text and media of the edit and shows "(edited)". In real time, an applied edit counts neither as an unread nor as a notification.
 - An edit whose original is not loaded is shown as a received PM, marked edited. It takes the key of the original, which the archive and the following edits target.
 - Nightango sends no PM edit.
+- Reply (BetterChatango `sendMessage`, `inject.js:5253-5258`, Reply entry on every PM row, `inject.js:8128-8139`): `msg:{name}:<n…/><i{id}/><m v="1"><g …><r{ref}/>{content}</g></m>`. The ref is the PM key of the original, in the message reference format (see Sending). The bridge inserts `<r…/>` right after `<g …>`, where BetterChatango puts it. Failure text: "Your reply could not be sent."
+  - Receiving (BetterChatango `displayReply`, `inject.js:5406-5455`, called for group rows and PM rows, `inject.js:8213-8222`): the original is shown above the reply only if it is loaded. The bridge passes `replyId` for `msg`, `msgoff` and the private history. Nightango looks for the message with this key in the conversation, otherwise shows "Original message not loaded".
+  - A PM without a key, sent by the official Chatango client, has no Reply in Nightango: the reply could not point to it.
+  - How the official client renders `<r…/>` in a PM is not checked.
 
 ### PM style
 
@@ -422,6 +427,7 @@ Chatango returns no request identifier. For three requests, the bridge waits for
 
 ### Private messages
 
+- `msg:{n}:{body}`, and the reply `msg:{n}:<n…/><i{id}/><m v="1"><g …><r{ref}/>{content}</g></m>` (`inject.js:5206`, `5253-5258`, see Sending and PM key and edits)
 - `idle:0` or `idle:1`
 - `wladd:{n}`, `wldelete:{n}`
 - `block:{n}:{n}:S`, `unblock:{n}`
