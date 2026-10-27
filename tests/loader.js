@@ -17,6 +17,8 @@ function page(userscript, url, before) {
   const dom = new JSDOM('<!doctype html><html><head></head><body><h1>Chatango</h1><div class="login"></div></body></html>', { url, runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc });
   const w = dom.window;
   w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+  // jsdom has no fetch: the update check meets an unreachable GitHub.
+  w.fetch = () => Promise.reject(new w.TypeError('Failed to fetch'));
   if (before) before(w);
   const injected = [], gm = [];
   new w.MutationObserver(rs => rs.forEach(r => r.addedNodes.forEach(n => { if (n.tagName === 'SCRIPT' && !n.src) injected.push(n.textContent); })))

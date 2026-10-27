@@ -8,7 +8,7 @@ The version installed on the user's machine is in real use: every release touche
 
 Rules 1, 2, 4 and 6 have their ADR under `docs/adr/`, linked at the end of the rule. Rules 3 and 5 have none. Read the ADR before any change that comes close to it.
 
-1. **Password out of reach.** Our code never reads, stores, logs or transmits the password. Sign-in happens on the BetterChatango screen. Never call a BetterChatango function that adds the password to a request (in `client.post`, no `credential` option). The HTTP calls our code makes to Chatango and vissle are listed in `docs/betterchatango-protocol.md#allowed-http-calls`, and this list is closed. The resources loaded by the loader and the interface (React, fonts, BetterChatango script, media, avatars) are listed separately in the same section. [ADR-0001](docs/adr/0001-password-never-read.md)
+1. **Password out of reach.** Our code never reads, stores, logs or transmits the password. Sign-in happens on the BetterChatango screen. Never call a BetterChatango function that adds the password to a request (in `client.post`, no `credential` option). The HTTP calls our code makes to Chatango, vissle and GitHub are listed in `docs/betterchatango-protocol.md#allowed-http-calls`, and this list is closed. The resources loaded by the loader and the interface (React, fonts, BetterChatango script, media, avatars) are listed separately in the same section. [ADR-0001](docs/adr/0001-password-never-read.md)
 2. **Sourced frame or nothing.** Every Chatango frame sent comes from BetterChatango's code or from a reference library (chadango, chatango-lib, ch.py). Without a source, the feature stays marked "not wired" and the interface says so. [ADR-0002](docs/adr/0002-no-invented-frames.md)
 3. **No fake success in live.** An action that is not actually sent is hidden or shown as unavailable.
 4. **Member HTML rebuilt, never injected.** Mini profile: `RichText` (allowlist rebuilt as React elements). Full profile: `sandbox` `iframe` without `allow-scripts` or `allow-same-origin`, CSP in a `<meta>` (`fullProfileDoc`). Mini profile CSS: parsed, never injected. [ADR-0004](docs/adr/0004-member-html-never-injected.md)
@@ -21,6 +21,7 @@ Decisions that follow from these and must not be "fixed":
 - the loader runs in two contexts, sandbox and page ([ADR-0003](docs/adr/0003-two-context-loader.md))
 - the diagnostic journal stays in the browser and observes neither socket sends nor frame contents ([ADR-0011](docs/adr/0011-diagnostic-journal.md))
 - PM unreads come only from BetterChatango's private history, the state keeps only a copy read back from it ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
+- the update check asks GitHub once per sign-in and never installs code on its own ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
 
 ## Project preferences
 

@@ -80,7 +80,7 @@ Received frames only: nothing is sent.
 
 ## Allowed HTTP calls
 
-This list is closed. It covers the calls that the application code (bridge, loader, screens) makes itself to Chatango and vissle, through `fetch`, `client.post` or `GM_xmlhttpRequest`. None of these calls carries the password ([ADR-0001](adr/0001-password-never-read.md)).
+This list is closed. It covers the calls that the application code (bridge, loader, screens) makes itself to Chatango, vissle and GitHub, through `fetch`, `client.post` or `GM_xmlhttpRequest`. None of these calls carries the password ([ADR-0001](adr/0001-password-never-read.md)).
 
 - `client.post(url, form, {})`, to `chatango.com` only. Without an option, BetterChatango adds the Chatango token `s` to the form for any host in its list, vissle paths included (`inject.js:4748-4749`, list `inject.js:4687-4730`).
 - `client.post(url, form, { cookie: true })`.
@@ -91,6 +91,7 @@ This list is closed. It covers the calls that the application code (bridge, load
 - The public GETs on `ust.chatango.com`: `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml`.
 - The search `chatango.com/search` with `credentials: 'include'`, as BetterChatango does.
 - `POST https://vissle.me/track1/activity`, through the loader's `GM_xmlhttpRequest` bridge, with `anonymous: true`.
+- `GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` through `fetch`, without cookie or credential, once per page at sign-in, in live only: latest Nightango release, only `tag_name` read ([ADR-0013](adr/0013-update-check-at-sign-in.md)).
 
 ### Resources loaded by the loader and the interface
 

@@ -4,6 +4,18 @@ var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
 // Delays of the attempts that follow a connection loss: a Chatango restart makes an immediate retry fail.
 var RECONNECT_DELAYS = [3000, 10000, 30000];
+var RELEASES_URL = 'https://github.com/marjoriedotdev/nightango/releases/';
+
+/**
+ * Reads the version of the latest Nightango release published on GitHub.
+ * @returns {Promise<?string>} Version without its v, null if the reply does not give one.
+ */
+function fetchLatestVersion() {
+  return fetch('https://api.github.com/repos/marjoriedotdev/nightango/releases/latest').then(function (r) {
+    if (!r.ok) return null;
+    return r.json().then(function (data) { var m = /^v(\d+\.\d+\.\d+)$/.exec(data && data.tag_name); return m ? m[1] : null; });
+  });
+}
 
 function Root(props) {
   var st = useState(function () { return props.boot && props.boot.auth ? props.boot : initialState(); }), state = st[0], setState = st[1];
@@ -95,6 +107,16 @@ function Root(props) {
     setTimeout(function () { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }, t.action ? 7000 : 4500);
   }, []);
   function dismissToast(id) { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }
+
+  /* Newer release, checked once per page at sign-in */
+  var updateChecked = useRef(false);
+  useEffect(function () {
+    if (!LIVE || !state.auth.loggedIn || updateChecked.current) return;
+    updateChecked.current = true;
+    fetchLatestVersion().then(function (v) {
+      if (v && isNewerVersion(v, APP_VERSION)) toast('Nightango ' + v + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(RELEASES_URL + 'tag/v' + v, '_blank', 'noopener'); } } });
+    }).catch(function () { if (JOURNAL) JOURNAL.add('app', 'Update check failed'); });
+  }, [state.auth.loggedIn]);
 
   function nav(route) {
     update(function (d) {
