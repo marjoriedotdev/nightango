@@ -149,6 +149,7 @@ function DmThread(p) {
   var asked = useRef(false);
   var len = convo.messages.length;
   var log = useMessageLog();
+  var rp = useState(null), replyTo = rp[0], setReplyTo = rp[1];
   var personActions = useProfileActions(id, null);
   // Search result: older pages load one by one until it is reached.
   useEffect(function () {
@@ -169,7 +170,11 @@ function DmThread(p) {
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    rows.push(h(DmMessageRow, { key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id }));
+    var original = m.replyTo ? convo.messages.find(function (x) { return x.key === m.replyTo.key; }) : null;
+    rows.push(h(DmMessageRow, {
+      key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
+      original: original, onJump: function (o) { log.jumpTo(o.id); }, onReply: u.blocked ? null : setReplyTo
+    }));
     prev = m;
   });
   var older = !LIVE || !s.pmLoaded ? null
@@ -181,7 +186,7 @@ function DmThread(p) {
     };
   var bottom;
   if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
-  else bottom = h(DmComposer, { id: id });
+  else bottom = h(DmComposer, { id: id, replyTo: replyTo, onCancelReply: function () { setReplyTo(null); } });
   return h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
       h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
@@ -198,9 +203,9 @@ function DmThread(p) {
 }
 
 /**
- * Private message row with its local action menu.
- * It has no Reply because no sourced frame exists for it.
- * @param {{m: Object, peer: string, continued: boolean, highlight: boolean}} p Message, conversation correspondent, follow-up of the previous message from the same author, and highlight.
+ * Private message row with its Reply button and its local action menu.
+ * A message without a PM key, sent by the official Chatango client, has no Reply: the reply could not point to it.
+ * @param {{m: Object, peer: string, continued: boolean, highlight: boolean, original: ?Object, onJump: Function, onReply: ?Function}} p Message, conversation correspondent, follow-up of the previous message from the same author, highlight, loaded original of a reply, jump to it, and reply to the message (null when sending is not possible).
  */
 function DmMessageRow(p) {
   var app = useApp(), s = app.state, m = p.m;
@@ -213,26 +218,37 @@ function DmMessageRow(p) {
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
       app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(p.peer, LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
     } } : null];
+  var o = p.original;
+  var reply = o ? { author: h(Person, { name: o.from, size: 16 }), text: messagePreview(o), onJump: function () { p.onJump(o); } }
+    : m.replyTo ? { text: 'Original message not loaded' } : null;
+  var actions = h(Frag, null,
+    p.onReply && m.key ? h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: function () { p.onReply(m); } }) : null,
+    moreActionsButton(items, setMenuOpen));
   return h(T.Message, {
     compact: s.prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, s.prefs.h24),
-    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row,
-    actions: moreActionsButton(items, setMenuOpen), msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open')
+    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row, reply: reply,
+    actions: actions, msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open')
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
 }
 
 /**
- * Private conversation composer with its draft, emoticon and media picker, :name completion and file upload.
- * @param {{id: string}} p Conversation correspondent.
+ * Private conversation composer with its draft, reply, emoticon and media picker, :name completion and file upload.
+ * @param {{id: string, replyTo: ?Object, onCancelReply: Function}} p Conversation correspondent, message being replied to, and end of the reply.
  */
 function DmComposer(p) {
-  var app = useApp(), id = p.id;
+  var app = useApp(), id = p.id, reply = p.replyTo;
   var d = useState(''), draft = d[0], setDraft = d[1];
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'dm', id: id });
   return h(Frag, null, media.panel, h(T.Composer, {
     placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status,
-    onSend: function (text) { if (!runCommand(app, text, null)) app.actions.sendDm(id, text); }, beforeSend: h(MessageStyleButton, null)
+    context: reply ? Object.assign({ author: reply.from, text: messagePreview(reply) }, COMPOSER_MODES.reply) : null, onCancelContext: p.onCancelReply,
+    onSend: function (text) {
+      if (runCommand(app, text, null)) return;
+      app.actions.sendDm(id, text, { replyTo: reply ? { key: reply.key } : null });
+      p.onCancelReply();
+    }, beforeSend: h(MessageStyleButton, null)
   }), emoji.picker, attach.input);
 }
 

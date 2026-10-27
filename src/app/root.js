@@ -220,7 +220,7 @@ function Root(props) {
     }
   }
   function receiveDm(from, text) {
-    var s0 = stateRef.current, m = { from: from, text: text, ts: Date.now() };
+    var s0 = stateRef.current, m = { from: from, key: uid(), text: text, ts: Date.now() };
     var focused = isDmInView(s0, from);
     update(function (d) {
       receivePm(d, m);
@@ -283,9 +283,9 @@ function Root(props) {
         setTimeout(function () { receiveGroup(gid, { id: uid(), kind: 'msg', author: who, text: '@' + me + ' ' + pick(['On it.', 'Sure, give me a minute.', 'Thanks, checking now.', 'Good point.']), ts: Date.now() }); }, 3400);
       }
     },
-    sendDm: function (name, text) {
-      var me = stateRef.current.me;
-      update(function (d) { d.dms[name].messages.push({ id: uid(), from: me, text: text, ts: Date.now() }); });
+    sendDm: function (name, text, opts) {
+      var me = stateRef.current.me, replyKey = opts && opts.replyTo && opts.replyTo.key;
+      update(function (d) { d.dms[name].messages.push(pmMessage({ from: me, key: uid(), replyId: replyKey, text: text, ts: Date.now() })); });
       var u = userOf(stateRef.current, name);
       if (u.status === 'offline' || u.blocked) return;
       setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
@@ -637,10 +637,10 @@ function Root(props) {
     // Editing an edit shown on its own targets its original, the only message visible to other members.
     actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. BetterChatango rejected it.'); };
     actions.sendDm = function (name, text, opts) {
-      var me = stateRef.current.me;
-      var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle);
+      var me = stateRef.current.me, replyKey = opts && opts.replyTo && opts.replyTo.key;
+      var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, replyKey);
       if (!sent) { if (!(opts && opts.quiet)) toast('Private message not sent.'); return false; }
-      update(function (d) { var c = pmConversation(d, name); c.messages.push({ id: uid(), from: me, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
+      update(function (d) { pmConversation(d, name).messages.push(pmMessage({ from: me, key: sent.key, replyId: sent.replyId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() })); });
       setOwnStyle(sent.style);
       return true;
     };

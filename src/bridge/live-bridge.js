@@ -172,7 +172,7 @@ var liveBridge = (function () {
     switch (name) {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
-        emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
+        emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, replyId: p2.replyId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
         // BetterChatango plays the sound itself for the PM of client.private.focus, reset to false on each private connection: the bridge plays it for the others, like BetterChatango, except for edits and ignored members.
         var from = lower(data[0]);
         if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
@@ -767,22 +767,27 @@ var liveBridge = (function () {
       try { var built = groupBody(gid, text, opts); return built ? built.body.length : 0; } catch (e) { warn(e); return 0; }
     },
     /**
-     * Sends a private message.
+     * Sends a private message or the reply to a private message.
      * @param {string} user Recipient.
      * @param {string} text Typed text.
      * @param {?Object} style Own style.
-     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array}} Body built by BetterChatango parsed like a received PM, null if nothing was sent.
+     * @param {?string} replyKey PM key of the original for a reply.
+     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array, key: ?string, replyId: ?string}} Body built by BetterChatango parsed like a received PM, null if nothing was sent.
      */
-    sendPm: function (user, text, style) {
+    sendPm: function (user, text, style, replyKey) {
       try {
         applyStyle(style);
-        // The first call builds the body without sending it: only the second one emits the frame.
+        // Built once and sent as is: a second build would draw another <i…/> PM key than the one shown.
         var body = C.sendMessage(esc(text), true, 'private_message', user);
         if (typeof body !== 'string' || !body) return null;
-        C.sendMessage(esc(text), false, 'private_message', user);
+        if (replyKey) {
+          var head = /<g [^>]*>/.exec(body), at = head.index + head[0].length;
+          body = body.slice(0, at) + '<r' + encodeRef(replyKey) + '/>' + body.slice(at);
+        }
+        if (!send('private_message', 'msg:' + user + ':' + body, replyKey ? 'Your reply could not be sent.' : 'Your message failed to be delivered.')) return null;
         // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
-        return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds };
+        return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId };
       } catch (e) { warn(e); return null; }
     },
     /**
