@@ -77,6 +77,7 @@ function GSMembers(p) {
         isMe || r === 'owner' ? null : h(MenuButton, {
           label: 'Actions for ' + n, items: [
             viewProfileItem(app, n, g.id),
+            whoItem(app, n),
             canMods && !r ? { label: 'Make moderator', icon: 'shield', onSelect: function () { p.edit(function (d) { d.staff[n] = 'mod'; d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); }); app.ui.toast(n + ' will be a moderator once you save.'); } } : null,
             canMods && (r === 'mod' || r === 'admin') ? { label: 'Remove from staff', icon: 'user-minus', onSelect: function () { p.edit(function (d) { delete d.staff[n]; delete d.modFlags[n]; }); app.ui.toast(n + ' leaves staff once you save.'); } } : null,
             { divider: true },

@@ -6,14 +6,14 @@ var UNSTYLED = { names: false, fonts: false, backgrounds: false };
  * @param {{style: ?Object, unstyled: ?boolean}} u Member, with their style and hidden style flag.
  * @param {Object} styles "Chatango styles" settings.
  * @param {string} theme Resolved theme.
- * @param {boolean} mention Row that mentions the user.
+ * @param {boolean} highlighted Row highlighted as a mention or a channel message, whose highlight replaces the member background.
  * @param {?Object} [msgBg] Premium message background read by parseMsgBg, in live.
  */
-function memberStyles(u, styles, theme, mention, msgBg) {
+function memberStyles(u, styles, theme, highlighted, msgBg) {
   var style = u.style || {};
   if (u.unstyled) styles = UNSTYLED;
   var surf = SURFACE[theme], bg = surf.bg, out = { name: null, text: null, row: null, image: null, plain: !!u.unstyled };
-  var shown = styles.backgrounds && !mention, color = msgBg ? msgBg.alpha && msgBg.color : style.bg;
+  var shown = styles.backgrounds && !highlighted, color = msgBg ? msgBg.alpha && msgBg.color : style.bg;
   if (shown && color) {
     bg = rgbToHex(mix(hexToRgb(surf.bg), hexToRgb(color), theme === 'dark' ? 0.6 : 0.18));
     out.row = { background: bg };
@@ -36,7 +36,9 @@ function MessageRow(p) {
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var u = userOf(s, m.author);
   var mention = m.author !== me && mentionsMe(me, m.text);
-  var ms = memberStyles(u, prefs.styles, app.theme, mention, m.bg ? u.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
+  var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
+  var chanRow = !!chanColor && !mention;
+  var ms = memberStyles(u, prefs.styles, app.theme, mention || chanRow, m.bg ? u.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
   var bgUnknown = u.msgBg === undefined;
   useEffect(function () { if (m.bg && prefs.styles.backgrounds && !u.unstyled && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, u.unstyled, bgUnknown]);
   var bgImage = ms.image && prefs.safety.embedImages && !prefs.safety.proxyMedia ? h(MessageBgImage, ms.image) : null;
@@ -71,9 +73,8 @@ function MessageRow(p) {
   var body = m.deleted
     ? h('p', { className: 'tc-msg-text deleted' }, m.deleted.by === m.author ? 'Message deleted' : 'Message deleted by ' + m.deleted.by)
     : h(MessageContent, { m: m, style: textStyle, plain: ms.plain, gid: g.id });
-  var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
-  if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
+  if (chanRow) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
   var original = m.replyTo && findMsg(g, m.replyTo.id);
   var reply = original ? { author: h(Person, { name: original.author, gid: g.id, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
     : m.replyTo ? { text: 'Original message not loaded' } : null;
@@ -83,7 +84,7 @@ function MessageRow(p) {
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
     avatar: h(Person, { name: m.author, gid: g.id, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(role), developerBadge(m.author), chan), reply: reply, actions: actions,
-    msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle, background: bgImage
+    msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanRow && 'chan-msg'), style: rowStyle, background: bgImage
   }, body);
 }
 

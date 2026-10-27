@@ -162,6 +162,7 @@ const MSGBG = {
   trap: '<?xml version="1.0" ?><bgi bgc="red;background:url(https://evil.test/a.png)" bgalp="100" useimg="1" ialp="250" align="constructor" tile="1" url="https://evil.test/b.jpg" onload="alert(1)"/>',
   pale: '<?xml version="1.0" ?><bgi bgc="336699" bgalp="0" useimg="1" ialp="-20" align="tl" tile="0" hasrec="0" isvid="0"/>'
 };
+const RELEASES_LATEST = 'https://api.github.com/repos/marjoriedotdev/nightango/releases/latest';
 // vissle linked accounts: response body, null for a network failure, whoHold holds back the response.
 let whoBody = '{}', whoHold = null;
 w.fetch = (url, opts) => {
@@ -185,6 +186,7 @@ w.fetch = (url, opts) => {
   else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
+  else if (url === RELEASES_LATEST) { body = '{"tag_name":"v99.0.0"}'; type = 'application/json'; }
   else if (/^https:\/\/api\.vissle\.me\/v1\/pmr\//.test(url)) { body = '{"pmr":true}'; type = 'application/json'; }
   else if (/^https:\/\/vissle\.me\/api\/v1\/who\//.test(url)) { if (whoBody === null) return Promise.reject(new w.TypeError('Failed to fetch')); body = whoBody; type = 'application/json'; }
   const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body), json: () => Promise.resolve(body).then(JSON.parse) };
@@ -240,6 +242,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fetchesAtLogin = fetches.length;
   C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
   CH.getBackground({ username: 'alice', node: d.createElement('div') });
+  await until(() => !!byText('.toast', 'Nightango 99.0.0 is available.'));
+  const releaseAsks = fetches.filter(x => x.url === RELEASES_LATEST);
+  step('newer release announced once at sign-in, without credentials', !!byText('.toast', 'Nightango 99.0.0 is available.') && releaseAsks.length === 1 && !releaseAsks[0].credentials, releaseAsks);
   step("BetterChatango's own oEmbed and message background requests muted", fetches.length === fetchesAtLogin, fetches.slice(fetchesAtLogin).map(x => x.url));
   SB.renderGroup({ group: 'test', header: 'Test' });
   g('ok', 'test', ['marjorie', '', '', '', '1700000000', '', 'alice,' + MOD + ';bob,' + (MOD | 2 | 16), String(64)]);

@@ -2,6 +2,22 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.22.0] - 2026-10-27
+
+### Added
+
+- When a newer version of Nightango is out, a notice at sign-in offers to download it.
+- Who is this in the PM conversation menu, the PM list menu, the profile panel and the staff list menu.
+
+### Changed
+
+- Messages in the red, blue and staff channels are highlighted with a gradient in the channel color, like mentions. A mention keeps its own highlight.
+
+### Fixed
+
+- The status menu shows Idle as a crescent moon, like your avatar.
+- Messages in Comic Sans MS no longer show in joined handwriting on iPhone and iPad.
+
 ## [0.21.0] - 2026-10-26
 
 ### Added

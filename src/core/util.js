@@ -34,6 +34,16 @@ function elapsedShort(ts) {
   if (m < 1440) return Math.floor(m / 60) + ' h';
   return Math.floor(m / 1440) + ' d';
 }
+/**
+ * Tells whether a version number X.Y.Z comes after another.
+ * @param {string} a Compared version.
+ * @param {string} b Reference version.
+ */
+function isNewerVersion(a, b) {
+  var x = a.split('.'), y = b.split('.');
+  for (var i = 0; i < 3; i++) if (+x[i] !== +y[i]) return +x[i] > +y[i];
+  return false;
+}
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
 function isGuest(name) { return /^[!#]/.test(name); }

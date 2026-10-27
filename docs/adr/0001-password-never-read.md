@@ -19,7 +19,8 @@ Our code never reads, stores, logs or transmits the password. Sign-in happens on
 - `GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential, `{name}` validated by `ACCOUNT_NAME`, one call per click on "Who is this": linked accounts, source `inject.js:7452-7477` ([ADR-0010](0010-linked-accounts-on-request.md))
 - the public GETs `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml` (message background, whose `msgbg.jpg` image is a resource loaded as a `no-referrer` `<img>`)
 - `chatango.com/search` with `credentials: 'include'`, like BetterChatango
-- `POST https://vissle.me/track1/activity` through `GM_xmlhttpRequest`, `anonymous: true`.
+- `POST https://vissle.me/track1/activity` through `GM_xmlhttpRequest`, `anonymous: true`
+- `GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` through `fetch`, without cookie or credential, once per page at sign-in ([ADR-0013](0013-update-check-at-sign-in.md)).
 
 ## Consequences
 
