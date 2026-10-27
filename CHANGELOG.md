@@ -2,6 +2,12 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.23.0] - 2026-10-27
+
+### Added
+
+- Reply to a private message, like in groups. The reply shows the message it answers: click it to go back there. Messages sent from the official Chatango client can't be replied to.
+
 ## [0.22.2] - 2026-10-27
 
 ### Fixed
