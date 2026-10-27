@@ -731,7 +731,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.profile .mrow', 'Block')); await wait(30);
   click(byText('.dialog-foot button', 'Block')); await wait(30);
   step('pm block frame', frame('block:dave:dave:S').length === 1);
+  const presenceBeforeFriends = frame('getpresence:').length;
   pm('wl', ['erin', '0', 'off', '0']); await wait(30);
+  step('presence of the listed correspondents asked once the history and the friends are loaded, except the shown one', presenceBeforeFriends === 0 && JSON.stringify(frame('getpresence:')) === JSON.stringify(['getpresence:fay']), frame('getpresence:'));
   pm('wlonline', ['erin']); await until(() => !!byText('.toast', 'erin is online.'));
   step('friend online notification', !!byText('.toast', 'erin is online.'));
 
@@ -755,6 +757,18 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fayDays = +((/^Last online (\d+) days ago$/.exec(fayHead.topic) || [])[1]);
   step('opening a pm asks Chatango for the presence', JSON.stringify(fayFrames) === JSON.stringify([['private_message', 'connect:fay']]) && fayHead.offline
     && Math.abs(fayDays - (Date.now() - 1700000000000) / 86400000) <= 1 && !calls.some(c => c[0] === 'betterChatangoPmScreen'), { fayFrames, fayHead, betterChatango: calls.filter(c => c[0] === 'betterChatangoPmScreen').length });
+  // Private connection back: BetterChatango builds a new client.private after its OK handler, and Chatango forgets the previous connect.
+  const sentBeforeOk = sent.length;
+  pm('OK', []); C.private.focus = false;
+  await until(() => C.private.focus === 'fay' && frame('getpresence:').length > 1);
+  const okFrames = sent.slice(sentBeforeOk).map(x => x[1]);
+  step('reconnection follows the shown conversation again', C.private.focus === 'fay' && okFrames.includes('connect:fay') && okFrames.includes('getpresence:dave'), { focus: C.private.focus, okFrames });
+  const realNow = w.Date.now, presenceAsks = () => frame('getpresence:').length, askedBefore = presenceAsks();
+  d.dispatchEvent(new w.Event('visibilitychange'));
+  const askedRecent = presenceAsks() - askedBefore;
+  w.Date.now = () => realNow.call(w.Date) + 6 * 60000;
+  try { d.dispatchEvent(new w.Event('visibilitychange')); } finally { w.Date.now = realNow; }
+  step('presence asked again when the page comes back after five minutes', askedRecent === 0 && presenceAsks() - askedBefore === 1, { askedRecent, asked: presenceAsks() - askedBefore });
   const old = styled('Old styled');
   step('pm history keeps style', styleOk(old), old.p && [old.p.style.cssText, old.name && old.name.style.cssText]);
   type($('.thread .tc-composer textarea'), 'Mine'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);

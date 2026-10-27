@@ -2,6 +2,10 @@
 var THREAD_MAX = 500;
 var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
+// Chatango pushes no presence for a correspondent who is neither a friend nor connected since the last private connection.
+var PRESENCE_REFRESH = 5 * MIN;
+// Names per presence request, the page size of BetterChatango's Meet people.
+var PRESENCE_MAX = 40;
 // Delays of the attempts that follow a connection loss: a Chatango restart makes an immediate retry fail.
 var RECONNECT_DELAYS = [3000, 10000, 30000];
 var RELEASES_URL = 'https://github.com/marjoriedotdev/nightango/releases/';
@@ -541,6 +545,7 @@ function Root(props) {
   var offlineCount = useRef(0);
   // Automatic reconnections in progress, by connection: attempts made and timer of the next one.
   var retries = useRef({});
+  var presenceAt = useRef(0);
   function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
@@ -1004,6 +1009,7 @@ function Root(props) {
       update(function (d) {
         if (!d.auth.loggedIn) return;
         d.pmLoaded = true;
+        d.pmHistoryRev++;
         names.forEach(function (t) {
           ensureLiveUser(d, t);
           var c = pmConversation(d, t, { closed: localRef.current.hidden.indexOf(t) >= 0 });
@@ -1016,6 +1022,19 @@ function Root(props) {
       names.forEach(function (t) { if (isDmInView(stateRef.current, t)) readPm(pmArchive.current, update, t); });
       syncPmUnread(pmArchive.current, update, names.filter(function (t) { return !isDmInView(stateRef.current, t); }));
     });
+  }
+  /**
+   * Asks again for the presence of the listed correspondents who are not friends.
+   * @param {boolean} ifStale Only when the last request is older than PRESENCE_REFRESH.
+   */
+  function refreshPmPresence(ifStale) {
+    var s0 = stateRef.current;
+    // Before the friend list, a friend would get the approximate last online time of presence instead of the exact one of wl.
+    if (!s0.pmLoaded || !s0.friendsLoaded || (ifStale && Date.now() - presenceAt.current < PRESENCE_REFRESH)) return;
+    // The shown conversation follows its presence through connect, whose last online time is exact.
+    var shown = s0.route.view === 'dm' ? s0.route.id : null;
+    var names = listedDms(s0).filter(function (n) { return n !== s0.me && n !== shown && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
+    if (names.length && liveBridge.refreshPresence(names)) presenceAt.current = Date.now();
   }
   function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
   /**
@@ -1252,7 +1271,7 @@ function Root(props) {
       case 'session': update(function (d) {
         if (!d.session || SESSION_RANK[op.reason] >= SESSION_RANK[d.session.reason]) d.session = { reason: op.reason, attempts: 0 };
       }); break;
-      case 'visible': if (navigator.onLine) reconnectClosed(); break;
+      case 'visible': if (navigator.onLine) reconnectClosed(); refreshPmPresence(true); break;
       case 'online':
         reconnectClosed();
         update(function (d) {
@@ -1367,6 +1386,12 @@ function Root(props) {
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
   });
   useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(handleLiveOp); }, []);
+  useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);
+  useEffect(function () {
+    if (!LIVE || !state.auth.loggedIn) return;
+    var timer = setInterval(function () { if (document.visibilityState === 'visible') refreshPmPresence(true); }, MIN);
+    return function () { clearInterval(timer); };
+  }, [state.auth.loggedIn]);
 
   var ui = {
     toast: toast,
