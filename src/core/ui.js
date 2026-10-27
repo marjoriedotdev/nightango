@@ -108,7 +108,7 @@ function useRightColumn(openFull) {
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
 
-/* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
+/* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch, presence}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
@@ -136,7 +136,7 @@ function MenuButton(p) {
           className: it.danger ? 'danger' : undefined, disabled: it.disabled,
           onClick: function () { close(); it.onSelect(); }
         },
-          it.swatch ? h('span', { className: 'swatch', style: { background: it.swatch } }) : it.icon ? h(T.Icon, { name: it.icon, size: 15 }) : null,
+          it.presence ? h('span', { className: 'tc-presence tc-presence-' + it.presence + ' menu-presence' }) : it.swatch ? h('span', { className: 'swatch', style: { background: it.swatch } }) : it.icon ? h(T.Icon, { name: it.icon, size: 15 }) : null,
           h('span', { className: 'grow' }, it.label),
           it.checked ? h(T.Icon, { name: 'check', size: 14 }) : null);
       }))) : null);

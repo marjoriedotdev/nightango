@@ -104,8 +104,8 @@ function Sidebar() {
     h('div', { className: 'me' },
       h(MenuButton, {
         up: true, align: 'left', items: [
-          { label: 'Online', swatch: 'var(--status-online)', checked: s.meStatus === 'online', onSelect: function () { app.actions.setStatus('online'); } },
-          { label: 'Idle', swatch: 'var(--status-idle)', checked: s.meStatus === 'idle', onSelect: function () { app.actions.setStatus('idle'); } },
+          { label: 'Online', presence: 'online', checked: s.meStatus === 'online', onSelect: function () { app.actions.setStatus('online'); } },
+          { label: 'Idle', presence: 'idle', checked: s.meStatus === 'idle', onSelect: function () { app.actions.setStatus('idle'); } },
           { divider: true },
           { label: 'Edit profile', icon: 'edit', onSelect: function () { app.nav({ view: 'settings', page: 'profile' }); } },
           { label: 'Log out', icon: 'log-out', danger: true, onSelect: app.actions.logout }
