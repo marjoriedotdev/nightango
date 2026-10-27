@@ -1,0 +1,2210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BetterChatango Architecture Review</title>
+<style>
+/* Layout: one reading column of ranked cards; each card has four tabs (schematic, today, proposed files, pseudo-code). Self-contained: no external fonts or scripts. */
+:root {
+  --paper: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #16202a;
+  --muted: #5b6673;
+  --rule: #d6dbe1;
+  --accent: #0e6a5b;
+  --accent-tint: #e3f1ee;
+  --leak: #c0352d;
+  --leak-tint: #fbeceb;
+  --warn: #9a5b00;
+  --warn-tint: #fbf1e1;
+  --slate: #5f6b7a;
+  --slate-tint: #eceff3;
+  --code-bg: #f7f8fa;
+  --code-kw: #7a3e9d;
+  --code-str: #0e6a5b;
+  --code-cm: #7b8591;
+  --font-display: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0e1318;
+    --surface: #151c23;
+    --ink: #e4e8ed;
+    --muted: #97a2af;
+    --rule: #2a333d;
+    --accent: #45b8a0;
+    --accent-tint: #13302b;
+    --leak: #f06b61;
+    --leak-tint: #3a1b19;
+    --warn: #e3a541;
+    --warn-tint: #33260f;
+    --slate: #9aa6b4;
+    --slate-tint: #1e262f;
+    --code-bg: #10161c;
+    --code-kw: #c79be6;
+    --code-str: #6fd0bb;
+    --code-cm: #7f8a97;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-block: 32px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+}
+h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 700; line-height: 1.05; }
+h2 { font-size: 1.45rem; font-weight: 700; line-height: 1.2; }
+h3 { font-size: 1.1rem; font-weight: 650; }
+h4 { font-size: 0.95rem; font-weight: 650; }
+p { margin: 0; }
+code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; color: inherit; }
+.eyebrow { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; }
+.note-sm { font-size: 0.78rem; color: var(--muted); }
+.note-sm.leak { color: var(--leak); }
+
+/* Header */
+.masthead { display: flex; flex-direction: column; gap: 14px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 0.9rem; }
+.assumptions { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-left: 3px solid var(--warn); background: var(--warn-tint); border-radius: 0 4px 4px 0; font-size: 0.88rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 0.82rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.lg-box { width: 22px; height: 14px; border: 1.5px solid var(--ink); background: var(--surface); }
+.lg-deep { width: 22px; height: 14px; border: 3px solid var(--accent); background: var(--accent-tint); }
+.lg-seam { width: 26px; border-top: 2px dashed var(--accent); }
+.lg-leak { width: 26px; border-top: 2px solid var(--leak); }
+
+/* Toolbar */
+.toolbar { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); padding-block: 10px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; padding: 6px 12px; font-size: 0.82rem; cursor: pointer; border-right: 1px solid var(--rule); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.tool-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
+.ghost-btn { border: 1px solid var(--rule); background: var(--surface); border-radius: 6px; padding: 6px 12px; font-size: 0.82rem; cursor: pointer; }
+.ghost-btn:hover, .seg button:hover { color: var(--accent); }
+.seg button[aria-pressed="true"]:hover { color: var(--surface); }
+.count { margin-left: auto; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* File map */
+.filemap { display: flex; flex-direction: column; gap: 10px; }
+.bar { display: flex; height: 34px; border-radius: 4px; overflow: hidden; border: 1px solid var(--rule); }
+.bar > div { min-width: 2px; border-right: 1px solid var(--paper); }
+.bar > div:last-child { border-right: 0; }
+.b-client { background: var(--accent); }
+.b-ui { background: var(--slate); opacity: 0.55; }
+.b-core { background: var(--slate); opacity: 0.85; }
+.map-keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 20px; font-size: 0.82rem; color: var(--muted); }
+.map-keys div { display: flex; gap: 8px; align-items: baseline; }
+.map-keys .sw { width: 10px; height: 10px; flex: none; border-radius: 2px; align-self: center; }
+.map-keys .n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); margin-left: auto; }
+
+/* Notes */
+.note { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat b { font-family: var(--font-display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 0.8rem; color: var(--muted); }
+.note ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Index */
+.index { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px 24px; padding: 0; margin: 0; list-style: none; }
+.index a { display: flex; gap: 10px; align-items: baseline; color: var(--ink); text-decoration: none; padding: 4px 0; border-bottom: 1px solid var(--rule); }
+.index a:hover .t { color: var(--accent); }
+.index .k { font-family: var(--font-mono); color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.index .t { flex: 1; min-width: 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; align-self: center; }
+.dot.strong { background: var(--accent); }
+.dot.explore { background: var(--warn); }
+
+/* Cards */
+.cards { display: flex; flex-direction: column; gap: 36px; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 64px; min-width: 0; }
+.card-head { display: flex; flex-direction: column; gap: 8px; }
+.rank { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; }
+.badge.strong { background: var(--accent-tint); color: var(--accent); }
+.badge.explore { background: var(--warn-tint); color: var(--warn); }
+.tag { font-family: var(--font-mono); font-size: 0.74rem; padding: 2px 8px; border: 1px solid var(--rule); border-radius: 3px; color: var(--muted); }
+.ps { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 6px 16px; margin: 0; }
+.ps dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; padding-top: 3px; }
+.ps dd { margin: 0; max-width: 70ch; }
+.wins { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.wins li { font-size: 0.82rem; padding: 3px 10px; border-radius: 999px; background: var(--accent-tint); color: var(--accent); }
+.callout { font-size: 0.86rem; padding: 10px 14px; border-radius: 4px; background: var(--warn-tint); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+.callout b { color: var(--warn); }
+
+/* Tabs */
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--rule); }
+.tabs button { border: 0; background: transparent; padding: 8px 12px; font-size: 0.85rem; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.tabs button:hover { color: var(--ink); }
+.panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel-title { display: none; }
+html:not(.js) .panel-title { display: block; }
+html:not(.js) .tabs { display: none; }
+html:not(.js) .panel + .panel { border-top: 1px solid var(--rule); padding-top: 14px; }
+
+/* Diagram kit */
+.dg { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.pane { border: 1px solid var(--rule); border-radius: 6px; padding: 14px; background: var(--paper); display: flex; flex-direction: column; gap: 10px; min-width: 0; overflow-x: auto; }
+.pane-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); font-weight: 600; }
+.pane.after .pane-label { color: var(--accent); }
+.m { border: 1.5px solid var(--ink); background: var(--surface); padding: 6px 9px; font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.35; border-radius: 2px; min-width: 0; }
+.m .lbl { display: block; font-family: var(--font-body); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 2px; }
+.m.deep { border: 3px solid var(--accent); background: var(--accent-tint); padding: 10px 12px; }
+.m.deep .lbl { color: var(--accent); }
+.m.leak { border-color: var(--leak); background: var(--leak-tint); }
+.m.quiet { border-color: var(--rule); }
+.col { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.row > .m { flex: 1 1 auto; }
+.down { text-align: center; color: var(--muted); font-size: 0.85rem; line-height: 1; }
+.down.leak { color: var(--leak); }
+.seam { border-top: 2px dashed var(--accent); position: relative; margin: 6px 0; }
+.seam span { position: absolute; right: 0; top: -9px; background: var(--paper); padding: 0 6px; font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-family: var(--font-mono); font-size: 0.68rem; padding: 1px 6px; border: 1px solid var(--leak); color: var(--leak); border-radius: 2px; background: var(--surface); }
+.inside { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.inside span { font-size: 0.68rem; font-family: var(--font-mono); padding: 1px 6px; border: 1px dotted var(--accent); color: var(--muted); border-radius: 2px; }
+.answers { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; font-family: var(--font-body); font-size: 0.78rem; }
+.answers span::before { content: "\2192\00a0"; color: var(--accent); }
+.fan { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
+.edge { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); white-space: nowrap; }
+.edge::before { content: "\2500\00a0"; }
+.edge::after { content: "\00a0\2192"; }
+.mass { display: flex; gap: 18px; align-items: flex-end; min-height: 150px; }
+.mass-group { display: flex; flex-direction: column; gap: 4px; align-items: center; flex: 1; }
+.mass-bars { display: flex; gap: 4px; align-items: flex-end; height: 120px; }
+.mass-bars div { width: 26px; }
+.mb-if { background: var(--leak); }
+.mb-im { background: var(--slate); opacity: 0.45; }
+.mass-cap { font-size: 0.7rem; color: var(--muted); text-align: center; }
+
+/* Trees */
+.trees { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.tree-box { border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); padding: 12px 14px; overflow-x: auto; }
+pre.tree-src { margin: 0; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.6; white-space: pre; }
+ul.tree, ul.tree ul { list-style: none; margin: 0; padding: 0; }
+ul.tree ul { padding-left: 18px; border-left: 1px solid var(--rule); margin-left: 7px; }
+ul.tree li { margin: 0; }
+.node { display: flex; align-items: baseline; gap: 8px; padding: 1px 0; font-size: 0.8rem; min-width: max-content; }
+.twisty { width: 16px; height: 16px; flex: none; border: 0; background: transparent; cursor: pointer; color: var(--muted); padding: 0; font-size: 0.7rem; line-height: 16px; transform: translateY(1px); }
+.twisty[aria-expanded="false"] { transform: translateY(1px) rotate(-90deg); }
+.twisty-space { width: 16px; flex: none; }
+.nm { font-family: var(--font-mono); }
+.nm.dir { font-weight: 600; }
+.node.deep .nm { color: var(--accent); font-weight: 600; }
+.node.deep .nm::before { content: "\25A0\00a0"; font-size: 0.7em; }
+.node.leak .nm { color: var(--leak); }
+.node.leak .nm::before { content: "\25B2\00a0"; font-size: 0.65em; }
+.node.faint { opacity: 0.55; }
+.ref { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+a.ref { color: var(--accent); text-decoration: none; }
+a.ref:hover { text-decoration: underline; }
+.nt { font-size: 0.76rem; color: var(--muted); }
+.tree-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.76rem; color: var(--muted); }
+.tree-legend .deep { color: var(--accent); }
+.tree-legend .leak { color: var(--leak); }
+
+/* Code */
+.code-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.code-pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.code-pane h4 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-family: var(--font-body); }
+.code-pane.after h4 { color: var(--accent); }
+pre.pseudo { margin: 0; background: var(--code-bg); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.76rem; line-height: 1.55; tab-size: 2; }
+.code-pane.after pre.pseudo { border-color: color-mix(in srgb, var(--accent) 40%, var(--rule)); }
+.tk-k { color: var(--code-kw); }
+.tk-s { color: var(--code-str); }
+.tk-c { color: var(--code-cm); font-style: italic; }
+
+/* Top recommendation */
+.top { border: 3px solid var(--accent); background: var(--accent-tint); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.top h2 a { color: var(--ink); }
+.top ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Defects */
+.defects { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
+td:first-child { font-family: var(--font-mono); font-size: 0.8rem; white-space: nowrap; color: var(--accent); font-variant-numeric: tabular-nums; }
+td:nth-child(2) { color: var(--muted); white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+.area-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.area-chips button { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; cursor: pointer; }
+.area-chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+footer { color: var(--muted); font-size: 0.8rem; display: flex; flex-direction: column; gap: 4px; }
+footer code { overflow-wrap: anywhere; }
+
+[hidden] { display: none !important; }
+
+@media (max-width: 760px) {
+  .dg, .code-grid { grid-template-columns: minmax(0, 1fr); }
+  .ps { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .ps dd { margin-bottom: 8px; }
+  .card { padding: 18px; scroll-margin-top: 16px; }
+  .toolbar { position: static; }
+  .count { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="masthead">
+    <span class="eyebrow">Architecture review · deepening opportunities</span>
+    <h1>BetterChatango architecture review</h1>
+    <div class="meta">
+      <span><code>inject.js</code> as served by vissle.me on 2026-10-19</span>
+      <span>12,912 lines, one file</span>
+      <span>Reviewed 2026-10-27, read only, nothing executed</span>
+    </div>
+    <div class="assumptions">
+      <span><b>Delivery stays the same.</b> The proposed files are concatenated in a fixed order into one <code>inject.js</code>, so vissle.me keeps serving a single script. No bundler and no module syntax at runtime.</span>
+      <span><b>Pseudo-code is a sketch.</b> "Before" is condensed from the cited lines. "After" names and signatures are proposals to challenge, not a specification.</span>
+    </div>
+    <div class="legend" aria-label="Diagram legend">
+      <span><i class="lg-box"></i>module</span>
+      <span><i class="lg-deep"></i>deep module</span>
+      <span><i class="lg-seam"></i>seam</span>
+      <span><i class="lg-leak"></i>leakage</span>
+    </div>
+  </header>
+
+  <div class="toolbar" role="toolbar" aria-label="Filters">
+    <span class="tool-label">Strength</span>
+    <div class="seg" id="strength-filter">
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="strong" aria-pressed="false">Strong</button>
+      <button type="button" data-filter="explore" aria-pressed="false">Worth exploring</button>
+    </div>
+    <span class="tool-label">Show in every card</span>
+    <div class="seg" id="tab-all">
+      <button type="button" data-tab="schematic">Schematic</button>
+      <button type="button" data-tab="today">Today</button>
+      <button type="button" data-tab="files">Files</button>
+      <button type="button" data-tab="pseudo">Pseudo-code</button>
+    </div>
+    <button type="button" class="ghost-btn" id="expand-trees">Expand trees</button>
+    <button type="button" class="ghost-btn" id="collapse-trees">Collapse trees</button>
+    <span class="count" id="card-count">12 candidates</span>
+  </div>
+
+  <section class="filemap" aria-labelledby="map-h">
+    <h3 id="map-h">Where the lines live today</h3>
+    <div class="bar" role="img" aria-label="Share of inject.js lines by region; class Client holds 45 percent">
+      <div class="b-core" style="width:8.83%" title="Chatango class and login, 1-1140"></div>
+      <div class="b-ui" style="width:13.69%" title="Menus, theme, language, FAQ, credits, 1141-2908"></div>
+      <div class="b-core" style="width:0.57%" title="torch object, 2909-2981"></div>
+      <div class="b-client" style="width:45.15%" title="class Client, 2982-8810"></div>
+      <div class="b-core" style="width:4.85%" title="class Private, 8811-9436"></div>
+      <div class="b-core" style="width:1.51%" title="Group and Font, 9437-9631"></div>
+      <div class="b-core" style="width:2.08%" title="settings, 9632-9899"></div>
+      <div class="b-ui" style="width:4.32%" title="class Sidebar, 9900-10457"></div>
+      <div class="b-ui" style="width:13.33%" title="roles, purchase, header, chat, windows, 10458-12178"></div>
+      <div class="b-ui" style="width:5.68%" title="utilities, filters, dev mode, plugins, 12179-12912"></div>
+    </div>
+    <div class="map-keys">
+      <div><i class="sw b-client"></i>class Client<span class="n">5,829</span></div>
+      <div><i class="sw b-ui"></i>Menus, theme, language<span class="n">1,768</span></div>
+      <div><i class="sw b-ui"></i>Roles, header, chat, windows<span class="n">1,721</span></div>
+      <div><i class="sw b-core"></i>Chatango class, login<span class="n">1,140</span></div>
+      <div><i class="sw b-ui"></i>Utilities, filters, plugins<span class="n">734</span></div>
+      <div><i class="sw b-core"></i>class Private<span class="n">626</span></div>
+      <div><i class="sw b-ui"></i>class Sidebar<span class="n">558</span></div>
+      <div><i class="sw b-core"></i>settings<span class="n">268</span></div>
+      <div><i class="sw b-core"></i>Group, Font<span class="n">195</span></div>
+      <div><i class="sw b-core"></i>torch object<span class="n">73</span></div>
+    </div>
+  </section>
+
+  <section class="note" aria-labelledby="cross-h">
+    <h3 id="cross-h">Behind every card: the globals are the real interface</h3>
+    <div class="stats">
+      <div class="stat"><b>1,708</b><span><code>querySelector</code> calls</span></div>
+      <div class="stat"><b>108</b><span>reads of <code>client.settings</code></span></div>
+      <div class="stat"><b>30 / 21</b><span>raw <code>.socket.send</code> vs <code>client.socket()</code></span></div>
+      <div class="stat"><b>11</b><span>copies of the flag decode loop</span></div>
+    </div>
+    <ul>
+      <li>Client methods reach for the global <code>client</code> instead of <code>this</code> (5559, 5618, 5622, 5626, 5735), so a second <code>Client</code> cannot exist, even in a test.</li>
+      <li><code>Sidebar</code> stores <code>this.client</code> (9904) and still uses the global everywhere.</li>
+      <li><code>client.connect</code> and <code>client.post</code> exist only after <code>requests()</code> has run (4732, 4738): an ordering constraint no caller can see.</li>
+      <li>State is read back from <code>data-*</code> attributes across modules (unread counts, presence, timestamps), so the page is the store.</li>
+    </ul>
+    <p class="note-sm">Every module below receives its dependencies (socket factory, storage, settings) instead of reaching for globals. <code>src/app.js</code> creates each module once and wires them; that is the precondition for testing any of them.</p>
+  </section>
+
+  <section class="note" aria-labelledby="tree-h" id="proposed-tree">
+    <h3 id="tree-h">Proposed source tree</h3>
+    <div class="tree-legend"><span class="deep">■ deep module introduced by a card</span><span>→ link opens the card</span></div>
+    <div class="tree-box">
+<pre class="tree-src" data-tree>
+torch/
+  build.mjs | | concatenates src/ in a fixed order into inject.js
+  inject.js | | built file, served by vissle.me as today
+  src/
+    app.js | | creates every module once and wires them
+    protocol/
+      * flags.js | @frame-codec | bit tables, decode and encode
+      * frame-codec.js | @frame-codec | raw frame to named event
+      * message-codec.js | @message-pipeline | message body, style, intent
+    net/
+      * connection.js | @connection | one lifecycle per room and for PMs
+      * session.js | @session | credentials and allowlist
+      send.js | @message-pipeline | the only outbound path
+      upload.js | @session | progress UI, a caller of session
+    room/
+      * group.js | @room-model | the room model
+      roster.js | @room-model | members, roles, sort, duplicates
+    message/
+      view-model.js | @message-pipeline | message to view, pure
+      render.js | @message-pipeline | view to DOM
+      composer.js | @message-pipeline | input, style, intent
+      * actions.js | @actions | action registry
+    member/
+      * sanitiser.js | @member-content | markup to allowlisted tree
+      link-policy.js | @member-content | open, warn, embed or proxy
+      * resources.js | @resources | backgrounds, mini profiles
+    private/
+      private.js | @pm-history | PM view and conversation focus
+      * pm-history.js | @pm-history | IndexedDB store, record format
+    storage/
+      * settings.js | @settings | defaults, merge, get and set by path
+      favourites.js | @pm-history | media favourites, same pattern
+    ui/
+      sidebar.js | | renders the roster and room list
+      * theme.js | @theme | theme model
+      filter.js | @modal-shell | filter modal
+      modal-nav.js | @modal-shell | sections, focus, tabindex
+      windows.js | @modal-shell | window pages mounted once
+      menus/ | | language, accessibility, FAQ, credits
+    util/
+      color.js | | hexToRgb, hexBrightness, pure
+      time.js | | formatTime, displayEpoch
+  tests/
+    frame-codec.test.js | @frame-codec
+    group.test.js | @room-model
+    connection.test.js | @connection
+    message-codec.test.js | @message-pipeline
+    sanitiser.test.js | @member-content
+    pm-history.test.js | @pm-history
+    settings.test.js | @settings
+</pre>
+    </div>
+  </section>
+
+  <nav aria-labelledby="idx-h" class="col">
+    <h3 id="idx-h">Candidates, strongest first</h3>
+    <ol class="index">
+      <li data-strength="strong"><a href="#frame-codec"><span class="k">01</span><span class="t">Frame decoding behind one codec</span><i class="dot strong"></i></a></li>
+      <li data-strength="strong"><a href="#room-model"><span class="k">02</span><span class="t">Group as the room model</span><i class="dot strong"></i></a></li>
+      <li data-strength="strong"><a href="#connection"><span class="k">03</span><span class="t">One connection lifecycle per room</span><i class="dot strong"></i></a></li>
+      <li data-strength="strong"><a href="#message-pipeline"><span class="k">04</span><span class="t">Message codec, view model, one send seam</span><i class="dot strong"></i></a></li>
+      <li data-strength="strong"><a href="#member-content"><span class="k">05</span><span class="t">Member content sanitiser and link policy</span><i class="dot strong"></i></a></li>
+      <li data-strength="strong"><a href="#pm-history"><span class="k">06</span><span class="t">PM history store</span><i class="dot strong"></i></a></li>
+      <li data-strength="strong"><a href="#settings"><span class="k">07</span><span class="t">Settings module</span><i class="dot strong"></i></a></li>
+      <li data-strength="explore"><a href="#actions"><span class="k">08</span><span class="t">Message action registry</span><i class="dot explore"></i></a></li>
+      <li data-strength="explore"><a href="#resources"><span class="k">09</span><span class="t">Member resource cache</span><i class="dot explore"></i></a></li>
+      <li data-strength="explore"><a href="#theme"><span class="k">10</span><span class="t">Theme model</span><i class="dot explore"></i></a></li>
+      <li data-strength="explore"><a href="#modal-shell"><span class="k">11</span><span class="t">Filter, modal and window shell</span><i class="dot explore"></i></a></li>
+      <li data-strength="explore"><a href="#session"><span class="k">12</span><span class="t">Session: credentials and transport</span><i class="dot explore"></i></a></li>
+    </ol>
+  </nav>
+
+  <section class="cards" aria-label="Candidates">
+
+<!-- ===================== 01 ===================== -->
+    <article class="card" id="frame-codec" data-strength="strong">
+      <div class="card-head">
+        <span class="rank">01</span>
+        <h2>Put frame decoding behind one codec</h2>
+        <div class="badges"><span class="badge strong">Strong</span><span class="tag">in-process</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>Each of about 75 handlers decodes positional fields, mutates three state stores, writes the DOM and sometimes sends follow-up frames, so learning what a <code>b</code> frame carries means reading DOM code.</dd>
+        <dt>Solution</dt><dd>A pure codec turns each raw frame into a named event with a decoded payload and owns the flag tables; handlers apply events to room state and never parse.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="m">WebSocket.onmessage<span class="lbl">Chatango socket</span></div>
+              <div class="down">↓</div>
+              <div class="m leak"><span class="lbl">about 75 handlers, each one</span>decodes data[n] · mutates state · writes DOM · sends frames</div>
+              <div class="down leak">↓ ↓ ↓ ↓ ↓</div>
+              <div class="fan"><div class="m quiet">DOM</div><div class="m quiet">client.cache</div><div class="m quiet">torch.groups</div><div class="m quiet">sidebar</div><div class="m quiet">socket.send</div></div>
+              <div class="chips" aria-label="eleven copies of the decode loop"><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span><span class="chip">decode</span></div>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="m">WebSocket<span class="lbl">adapter</span></div>
+              <div class="seam"><span>seam</span></div>
+              <div class="m deep"><span class="lbl">Frame codec</span>raw frame → named event + payload<div class="inside"><span>flag tables</span><span>bit decode / encode</span><span>role derivation</span><span>positional fields</span></div></div>
+              <div class="down">↓</div>
+              <div class="m">Room state appliers</div>
+              <div class="seam"><span>seam</span></div>
+              <div class="row"><div class="m quiet">DOM view</div><div class="m quiet">sidebar view</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  class Chatango | 3-1139
+    flags | 5-191 | tables only, every caller decodes
+  class Client | 2982-8810
+    constructor
+      event.group | 3053-4029 | about 45 handlers
+        ! ok | 3060 | decode loops 1 and 2, builds Group, writes DOM
+        ! i | 3188 | decode loop 3, renderMessage
+        ! b | 3317 | decode loop 4, same item as i
+        ! mods | 3769 | decode loop 5
+        ! groupflagsupdate | 3915 | decode loop 6
+      event.private | 4030-4387 | about 30 handlers
+        ! msg | 4054 | decode loop 7, notify policy, history
+    socketEvent | 5603 | dispatch through the global client.event
+    ! sendMessage | 5221 | decode loop 8
+    ! setInput | 5870 | decode loop 9
+  class Private | 8811-9436
+    ! setFocus | 8952 | decode loop 10
+    ! saveMessage | 9050 | decode loop 11
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  protocol/
+    * flags.js | | bit tables; decode(bits) and encode(names)
+    * frame-codec.js | | decode(raw) to a named event; one reader per command
+    frames/
+      group.js | | readers for ok, i, b, n, u, participant…
+      private.js | | readers for OK, msg, wl, status…
+  net/
+    connection.js | @connection | feeds decoded events to the room
+tests/
+  frame-codec.test.js | | recorded frames in, events out
+  fixtures/frames.txt | | real frames captured from a session
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 5642-5654, 3188-3200</h4>
+<pre class="pseudo"><code>// socketEvent: split, then hand raw fields to a handler
+socket.onmessage = x =&gt; {
+  frame = x.data.replace("\r\n\x00", "").split(":")
+  command = frame[0]; args = frame.slice(1)
+  if (command in interchange.event)        // client.event.group | .private
+    interchange.event[command](client, socket, group, args)
+}
+
+// event.group.i: same shape in b, ok, n, participant…
+i(client, socket, room, data) {
+  flags = []
+  for (x in chatango.flags.message)        // copy 3 of 11
+    if (x &amp; parseInt(data[7])) flags.push(chatango.flags.message[x])
+  item = { username: data[1] || "#" + data[2] || chatango.getAnon(…) }
+  message = client.renderMessage(item)     // DOM, inside the decoder
+  if (client.focus == room &amp;&amp; client.groups[room].ready == "wait") …
+}</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// protocol/flags.js
+MessageFlags = bitset({ PREMIUM: 4, BG_ON: 8, MEDIA_ON: 16, … })
+MessageFlags.decode(bits)   // Set of names, single bits only
+MessageFlags.encode(names)  // integer
+// BG_ON_ANNC (3) becomes a mask, never a bit
+
+// protocol/frame-codec.js
+function decode(raw) {
+  [command, ...fields] = splitFrame(raw)
+  reader = READERS[command] || unknown
+  return { type: reader.type, ...reader.read(fields) }
+}
+READERS.i = { type: "historyMessage", read: f =&gt; ({
+  user: identity(f[1], f[2], f[3]),
+  flags: MessageFlags.decode(f[7]),
+  body: f.slice(9).join(":")
+}) }
+
+// net/connection.js: no parsing left in handlers
+socket.onmessage = x =&gt; room.apply(decode(x.data))
+
+// tests/frame-codec.test.js
+expect(decode(fixture("i")).type).toBe("historyMessage")</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Frames testable without a socket</li><li>One flag decoder, not eleven</li><li>Leverage for every handler</li><li>DOM becomes an adapter</li></ul>
+      <p class="callout"><b>Quirk the codec would fix once:</b> key <code>3: "BG_ON_ANNC"</code> (51) is tested with <code>x &amp; flags</code>, so every decode loop reports it whenever bit 0 or bit 1 is set.</p>
+    </article>
+
+<!-- ===================== 02 ===================== -->
+    <article class="card" id="room-model" data-strength="strong">
+      <div class="card-head">
+        <span class="rank">02</span>
+        <h2>Deepen Group into the room model</h2>
+        <div class="badges"><span class="badge strong">Strong</span><span class="tag">in-process</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>A room lives in five places, so posting mode is computed twice, rank four ways, presence only in the DOM, and bans by substring.</dd>
+        <dt>Solution</dt><dd>Group becomes the single owner of a room's flags, staff, members, bans and unread count, and answers the derived questions that handlers and the sidebar now recompute.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="row"><div class="m">frame handlers</div><div class="m">Sidebar</div><div class="m">sort handlers</div><div class="m">Private</div></div>
+              <div class="down leak">↓ read and write all five ↓</div>
+              <div class="fan"><div class="m leak">groups[r].room</div><div class="m leak">groups[r].user</div><div class="m leak">client.cache</div><div class="m leak">torch.groups</div><div class="m leak">DOM data-*</div></div>
+              <p class="note-sm">"Who is online" can only be answered by querying the page.</p>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="row"><div class="m">frame appliers</div><div class="m">views</div></div>
+              <div class="down">↓</div>
+              <div class="m deep"><span class="lbl">Group</span>one room, one owner
+                <div class="answers"><span>can I post here, and in which mode</span><span>who is online, with which role</span><span>is this member banned</span><span>how many unread</span></div>
+                <div class="inside"><span>flags</span><span>staff</span><span>roster</span><span>ban list</span><span>rank rules</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  ! torch.groups | 2909 | title and information per room
+  class Client
+    constructor
+      ! cache | 3028-3039 | catch-all, room data included
+      event.group
+        ! ok | 3060-3187 | room built inline, posting mode rule 1
+        ! participant | 3409-3538 | presence into data-* attributes
+        ! blocklist | 3598-3667 | bans as "session:ip:name" strings
+        ! unblocklist | 3686-3741 | near copy of blocklist
+        ! unblocked | 3742-3765 | substring match, "false" bug at 3762
+        ! mods | 3769-3789 | staff decode, second copy
+        ! groupflagsupdate | 3915-3941 | posting mode rule 2
+    ! setFocus | 5921-6120 | rank worked out three times
+    ! renderMessage | 8151-8154 | rank a fourth time, result unused
+  ~ class Group | 9437-9616 | fields and a ping timer only
+  class Sidebar
+    ! renderPerson | 10191-10330 | roster rules inside the view
+    ! parseParticipant | 10378-10425 | reads client.groups[client.focus]
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  room/
+    * group.js | | apply(event), posting mode, roles, bans, unread
+    roster.js | | members by name, status, sort, duplicates
+    ban-list.js | | structured entries and paging cursor
+  ui/
+    sidebar.js | | renders from group.members(), never stores state
+tests/
+  group.test.js | | events in, answers out
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 3102-3183, 3762, 3409-3538</h4>
+<pre class="pseudo"><code>// the room today, in five places
+client.groups[room].room     // ok packet: flags, owner, mods
+client.groups[room].user     // channel, badge, premium
+client.cache.*               // whitelist, overload, connect…
+torch.groups[room]           // title, information, recent
+[data-target][data-timestamp][data-previous]   // presence, in the DOM
+
+// posting mode, computed in ok and again in groupflagsupdate
+for (x in chatango.flags.group)
+  if (x &amp; parseInt(data[7])) item.flag.push(chatango.flags.group[x])
+if (item.flag.includes("NO_ANONS")) placeholder = …
+
+// guest unban
+banned.filter(x =&gt; !x.includes(target[2] || false) || …)</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// room/group.js
+class Group {
+  constructor(okEvent, me)
+  apply(event)               // the only writer
+  postingMode()              // "open" | "no_anons" | "mods_only" | …
+  roleOf(name)               // "owner" | "admin" | "mod" | "member" | "anon"
+  members({ online })        // sorted, duplicates folded
+  isBanned({ name, ip, session })
+  get unread()
+  on("change", fn)
+}
+
+// views subscribe instead of being written by handlers
+group.on("change", () =&gt; sidebar.render(group.members({ online: true })))
+
+// tests/group.test.js
+g = new Group(fixtureEvent("ok"), me)
+g.apply({ type: "participantJoined", name: "bob" })
+expect(g.members({ online: true }).map(m =&gt; m.name)).toContain("bob")</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Room rules testable as pure logic</li><li>Roster leaves the DOM</li><li>One posting-mode rule</li><li>Ban matching gets locality</li></ul>
+    </article>
+
+<!-- ===================== 03 ===================== -->
+    <article class="card" id="connection" data-strength="strong">
+      <div class="card-head">
+        <span class="rank">03</span>
+        <h2>One connection lifecycle per room</h2>
+        <div class="badges"><span class="badge strong">Strong</span><span class="tag">mock</span><span class="tag">fake WebSocket</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>Connection state is one slot shared by every room plus a list every caller must clean by hand, so parallel joins lose their timeout and a repeated join hangs.</dd>
+        <dt>Solution</dt><dd>Each room, and the PM connection, gets a lifecycle module that owns its state, timeout, ping and reconnect, always settles its promise and takes a socket factory.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="row"><div class="m">join room A</div><div class="m">join room B</div><div class="m">join room C</div></div>
+              <div class="down leak">↓ each overwrites ↓</div>
+              <div class="m leak"><span class="lbl">one shared slot</span>client.cache.connecting</div>
+              <div class="m leak"><span class="lbl">one shared list, cleaned by 13 callers</span>client.cache.connect</div>
+              <p class="note-sm leak">Only the last room keeps its timeout check (5700).</p>
+              <p class="note-sm leak">A repeated join returns a promise that never settles (5611).</p>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After · one per room, socket factory injected</span>
+            <div class="col">
+              <div class="row"><div class="m">Connecting</div><span class="edge">inited</span><div class="m deep">Open</div><span class="edge">leave, offline</span><div class="m">Closed</div></div>
+              <div class="row"><div class="m">Connecting</div><span class="edge">timeout 10 s</span><div class="m leak">Failed</div></div>
+              <div class="row"><div class="m deep">Open</div><span class="edge">not ready</span><div class="m">Overloaded</div><span class="edge">retry</span><div class="m">Connecting</div></div>
+              <p class="note-sm">Every path ends the join promise: resolved on Open, rejected on Failed.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  class Chatango
+    login
+      ! logGroups | 1181-1230 | parallel joins; filter(x =&gt; x != x) at 1224
+  class Client
+    constructor
+      ! cache.connect / cache.connecting | 3026 | one list, one slot for all rooms
+      event.group
+        ! inited | 3226-3261 | overload retry; undefined group at 3239
+    requests
+      ! this.connect | 4732-4736 | exists only after requests() ran
+    ! socketEvent | 5603-5707 | no else at 5611; timeout checks one slot
+    disconnectFrom | 5709-5727
+    ! registerGroup | 5729-5754 | retry calls missing this.renderGroup
+  class Private
+    initiate | 8835-8873 | PM entry path 1
+    setFocus | 8875-8931 | PM entry path 2
+    disconnectFrom | 9426-9434
+  class Group
+    ping | 9444-9446 | timer per room
+  sidebar onclick
+    ! private | 10601-10705 | PM entry path 3
+  ! window.onoffline | 12705-12719 | clears group pings, not the PM ping
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  net/
+    * connection.js | | createConnection({ room, openSocket, auth })
+    servers.js | | getServer(room), PM endpoint
+  room/
+    rooms.js | | one connection and one Group per joined room
+  private/
+    private.js | | open(), focus(target), close(): one entry path
+tests/
+  connection.test.js | | fake socket and fake clock
+  support/fake-socket.js | | records sends, replays frames
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 5603-5707, 1222-1229</h4>
+<pre class="pseudo"><code>socketEvent(group, data, resolve, reject) {
+  if (this.cache.connect.indexOf(group) &lt; 0) {
+    this.cache.connect.push(group)
+    this.cache.connecting = group        // one slot for every room
+    socket = new WebSocket(server)
+    …
+    setTimeout(() =&gt; {
+      if (this.cache.connecting == group) // only the last room
+        reject("timed out")
+    }, 10000)
+  }
+  // no else: a repeated join never settles
+}
+
+// login
+client.connect(x).then(() =&gt; {
+  // x is shadowed: the list is emptied
+  client.cache.connect = client.cache.connect.filter(x =&gt; x != x)
+})</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// net/connection.js
+function createConnection({ room, openSocket, auth, timeoutMs = 10000 }) {
+  state = "closed"; pending = null
+  function join() {
+    if (pending) return pending           // same promise, always settles
+    pending = new Promise((resolve, reject) =&gt; {
+      state = "connecting"
+      socket = openSocket(serverFor(room))
+      timer = setTimeout(() =&gt; fail(reject, "timeout"), timeoutMs)
+      socket.onmessage = x =&gt; {
+        event = decode(x.data)
+        if (event.type == "joined") open(resolve)
+        emit("event", event)
+      }
+    }).finally(() =&gt; pending = null)
+    return pending
+  }
+  return { join, leave, get state() { return state }, on }
+}
+
+// tests/connection.test.js
+fake = fakeSocket()
+conn = createConnection({ room: "a", openSocket: () =&gt; fake })
+p = conn.join(); clock.tick(10000)
+await expect(p).rejects.toThrow("timeout")</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Per-room state, no shared slot</li><li>Join promise always settles</li><li>Reconnect logic in one place</li><li>Fake socket tests the lifecycle</li></ul>
+      <p class="callout"><b>Seen on the way:</b> <code>filter(x =&gt; x != x)</code> (1224, 1227) empties the whole list; <code>inited</code> passes an undefined <code>group</code> to <code>disconnectFrom</code> (3239), so the overload path throws.</p>
+    </article>
+
+<!-- ===================== 04 ===================== -->
+    <article class="card" id="message-pipeline" data-strength="strong">
+      <div class="card-head">
+        <span class="rank">04</span>
+        <h2>Message codec, view model and one send seam</h2>
+        <div class="badges"><span class="badge strong">Strong</span><span class="tag">in-process</span><span class="tag">jsdom for the view</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>Decoding, encoding and rendering a message are spread over six functions with their own regexes, and restyling patches the DOM because there is no model to render again.</dd>
+        <dt>Solution</dt><dd>A pure codec shared by sending and rendering, a pure view model per message and a thin DOM projection; every outbound frame goes through one send seam.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before · interface vs implementation</span>
+            <div class="mass" role="img" aria-label="renderMessage and sendMessage have interfaces nearly as wide as their implementations">
+              <div class="mass-group"><div class="mass-bars"><div class="mb-if" style="height:92px"></div><div class="mb-im" style="height:120px"></div></div><span class="mass-cap">renderMessage<br>20+ keys · 500 lines</span></div>
+              <div class="mass-group"><div class="mass-bars"><div class="mb-if" style="height:70px"></div><div class="mb-im" style="height:62px"></div></div><span class="mass-cap">sendMessage<br>5 params + DOM · 130 lines</span></div>
+              <div class="mass-group"><div class="mass-bars"><div class="mb-if" style="height:40px"></div><div class="mb-im" style="height:30px"></div></div><span class="mass-cap">emoji<br>2 regex sets</span></div>
+            </div>
+            <p class="note-sm">Red bar: what a caller must know. Grey bar: what it gets.</p>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="row"><div class="m">inbound frame</div><div class="m">composer input</div></div>
+              <div class="down">↓</div>
+              <div class="m deep"><span class="lbl">Message codec</span>raw body ⇄ style + content + intent</div>
+              <div class="row">
+                <div class="col" style="flex:1"><div class="down">↓</div><div class="m">view model</div><div class="down">↓</div><div class="m">DOM projection</div></div>
+                <div class="col" style="flex:1"><div class="down">↓</div><div class="m">send seam</div><div class="down">↓</div><div class="m quiet">WebSocket</div></div>
+              </div>
+              <p class="note-sm">The echo of a sent message comes back through the view model.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  class Client
+    ! socket | 4622-4670 | send, PM history, echo, sidebar; 21 callers
+    ! sendMessage | 5138-5271 | reads 6 DOM nodes; length = dry run
+    ! setInput | 5865-5918 | encodes by calling sendMessage(html, true, …)
+    ! parseEmoji | 6889-6918 | outbound emoji regexes
+    ! renderEmoji | 6920-6966 | inbound emoji regexes, built again
+    ! messageCommand | 7285-7346 | style and background patch the DOM
+    ! renderMention | 7697-7793 | runs the mention regex again
+    ! renderMessage | 7795-8302 | 500 lines, 20+ option keys, 35 callers
+      sanitiser | 7797-7836
+      ignore mode | 7861-7893
+      channel gradient | 7905-7942
+      badges | 7996-8013
+      links and media | 8074-8100
+      actions | 8126-8167
+      ! side effects | 8199-8262 | fetch, timers, notifications
+  raw .socket.send | | 30 sites bypass client.socket()
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  protocol/
+    * message-codec.js | | encode(intent) and decode(body), emoji included
+  message/
+    view-model.js | | message + room + settings to a view, pure
+    render.js | | view to DOM, no fetch, no timers
+    composer.js | | reads the input once, holds style and intent
+  net/
+    send.js | | send(room, frame); echo and history subscribe
+tests/
+  message-codec.test.js | | round trip: encode then decode
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 5138-5265, 5883</h4>
+<pre class="pseudo"><code>sendMessage(data, length, group, username, force) {
+  style = {
+    bold: fonts.querySelector(".fa-bold").previousElementSibling.checked,
+    fontSize: document.querySelector(".font-size .text-input").value, …
+  }                                       // style read from the DOM
+  meta = document.querySelector(`.application-chat-meta[data-group="${focus}"]`)
+  if (tag == "edit") {
+    capture += `&lt;e${target}/&gt;${content}`
+    if (length) return capture            // dry-run mode
+    this.socket(focus, `${frame}:${capture}`, …)
+  } else if (tag == "reply") { … same three lines … }
+}
+
+setInput() { … this.sendMessage(html, true, false, false, true) … }
+
+renderMessage({ banner, node, position, edit, action,
+  client_only, client_self, ephemeral, announcement, pfp, … })</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// protocol/message-codec.js
+encode({ text, style, intent, to })   // intent: plain | edit | reply | quote
+decode(rawBody)   // { style, nodes, mentions, replyTo, editOf }
+
+// message/view-model.js
+viewOf(message, { room, settings, me })
+  // { style, badges, channel, hidden, actions }
+
+// message/render.js
+render(view)      // HTMLElement; no fetch, no timers
+
+// net/send.js: the only way out
+send(roomId, frame)
+send.on("sent", echo)   // history and local echo subscribe
+
+// composer
+send(room.id, encode({ text: input.text,
+  style: composer.style, intent: composer.intent }))
+
+// restyle = render again
+messages.forEach(m =&gt; replace(m.node, render(viewOf(m, ctx))))</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Sanitiser testable without DOM</li><li>One regex set</li><li>Restyle by rendering again</li><li>Every send through one seam</li></ul>
+    </article>
+
+<!-- ===================== 05 ===================== -->
+    <article class="card" id="member-content" data-strength="strong">
+      <div class="card-head">
+        <span class="rank">05</span>
+        <h2>Sanitise member content into structure, with one link policy</h2>
+        <div class="badges"><span class="badge strong">Strong</span><span class="tag">in-process</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>Member markup is cleaned by regex into an HTML string that carries inline handlers on global objects, and three separate rules decide whether a link may be opened or embedded.</dd>
+        <dt>Solution</dt><dd>A pure sanitiser turns member markup into an allowlisted tree that a renderer turns into nodes, and a pure link policy answers every "may this URL…" question.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="m">member HTML</div>
+              <div class="down">↓</div>
+              <div class="m leak"><span class="lbl">regex chain</span>about 25 passes over a string</div>
+              <div class="down leak">↓</div>
+              <div class="m leak">HTML string with inline <code>onclick</code> on globals → innerHTML</div>
+              <div class="row"><div class="m">crawl ×6 params</div></div>
+              <div class="chips"><span class="chip">url</span><span class="chip">img html</span><span class="chip">video html</span><span class="chip">audio html</span><span class="chip">link html</span></div>
+              <div class="chips"><span class="chip">trust rule 1</span><span class="chip">trust rule 2</span><span class="chip">trust rule 3</span></div>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="m">member markup</div>
+              <div class="down">↓</div>
+              <div class="m deep"><span class="lbl">Sanitiser</span>markup → allowlisted tree</div>
+              <div class="down">↓</div>
+              <div class="m">Renderer: nodes and handlers</div>
+              <div class="seam"><span>seam</span></div>
+              <div class="m deep"><span class="lbl">Link policy</span>URL + settings → one decision<div class="inside"><span>open</span><span>warn</span><span>embed</span><span>proxy</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  class Chatango
+    ! parseMini | 623-714 | about 25 regex passes; adds &lt;link&gt; to head
+    ! embed | 1083-1100 | inline onclick strings
+    ! crawl | 1102-1137 | 6 positional params, 5 output shapes
+    renderMini | 885 | result assigned to innerHTML
+  login
+    profile preview | 1544 | innerHTML again
+  class Client
+    ! embedAudio | 6434-6442 | link trust rule 1
+    ! renderMessage | 8074-8100 | crawl and embed again, onclick at 8095
+    ! externalWarning
+      audio | 8403-8420 | link trust rule 2
+      default | 8541-8561 | link trust rule 3
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  member/
+    * sanitiser.js | | markup to tree; tag, attribute and CSS allowlists
+    tree-render.js | | tree to nodes; handlers attached, no inline JS
+    * link-policy.js | | decide(url, context): open, warn, embed, proxy
+    media-url.js | | proxied URL for an image or video, one question
+tests/
+  sanitiser.test.js | | hostile markup in, safe tree out
+  link-policy.test.js | | whitelist, mirrors, settings
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 623-714, 1102-1112</h4>
+<pre class="pseudo"><code>parseMini(data, color) {
+  target = decodeURIComponent(data).replaceAll(…)
+  target = target.replace(/&lt;span.*?&gt;/gi, "")
+  target = target.replace(/face=…/gi, x =&gt; {
+    document.head.appendChild(fontLink)   // side effect while parsing
+  })
+  … about 25 passes …
+  return target   // a string with onclick="client.externalWarning(…)"
+}
+node.innerHTML = chatango.parseMini(profile)
+
+crawl(data, query, mime, rng, pair, only) {
+  domain.href = data.replace("fp.chatango.com", "ust.chatango.com")
+  if (domain.hostname.length &gt;= 4) {
+    if (torch.mirror… || client.cache.whitelist… || !client.settings.safety…)
+      …                            // one of five shapes
+  }                                // else: undefined
+}
+crawl(link, false, "image", false, false, true)</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// member/sanitiser.js
+sanitise(markup)   // Tree; only allowlisted tags, attributes, CSS
+
+// member/tree-render.js
+toNodes(tree, { onLink })   // DocumentFragment, handlers attached here
+
+// member/link-policy.js
+decide(url, { settings, whitelist, mirrors })
+  // { action: "open" | "warn" | "embed" | "proxy", url }
+
+// member/media-url.js
+proxied(url, kind)   // one question, one answer
+
+// usage
+profileNode.replaceChildren(toNodes(sanitise(profile), {
+  onLink: url =&gt; linkActions[decide(url, ctx).action](url)
+}))
+
+// tests/sanitiser.test.js
+expect(sanitise('&lt;img src=x onerror=alert(1)&gt;'))
+  .toEqual(tree(img({ src: "x" })))</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Security fixes in one place</li><li>Sanitiser tested with strings</li><li>No globals in generated HTML</li><li>crawl flags leave the interface</li></ul>
+    </article>
+
+<!-- ===================== 06 ===================== -->
+    <article class="card" id="pm-history" data-strength="strong">
+      <div class="card-head">
+        <span class="rank">06</span>
+        <h2>One PM history store</h2>
+        <div class="badges"><span class="badge strong">Strong</span><span class="tag">local-substitutable</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>Every caller opens its own transaction and knows both the colon-joined record format and the schema, and a timestamp collision is handled by retrying one second later (9065-9068).</dd>
+        <dt>Solution</dt><dd>One module owns the schema, the record format and paging, offers per-conversation operations that return decoded messages, and leaves rendering to <code>Private</code>.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="fan"><div class="m">saveMessage</div><div class="m">loadMessage</div><div class="m">markRead</div><div class="m">markUnread</div><div class="m">viewRecent</div><div class="m">… 6 more</div><div class="m">Client.socket</div><div class="m">PM handlers</div></div>
+              <div class="down leak">↓ each opens a cursor and knows the format ↓</div>
+              <div class="row"><div class="m leak">client.database.pm</div><div class="m leak">DOM</div></div>
+              <p class="note-sm leak">Read bounds already disagree: <code>[name, 0]</code> at 9222, <code>[name, 1]</code> at 9249.</p>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After · two adapters, a real seam</span>
+            <div class="col">
+              <div class="row"><div class="m">Private (renders)</div><div class="m">Client handlers</div></div>
+              <div class="down">↓</div>
+              <div class="m deep"><span class="lbl">PM history</span>per conversation: append, page, mark read, unread, export, clear<div class="inside"><span>schema</span><span>record format</span><span>paging</span><span>ts collisions</span></div></div>
+              <div class="seam"><span>seam</span></div>
+              <div class="row"><div class="m">IndexedDB adapter</div><div class="m quiet">in-memory adapter</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  class Client
+    ! socket | 4645 | echo saved to history
+    event.private
+      ! msg | 4065-4115 | save, unread badge in data-amount
+      ! msgoff | 4116-4119
+    ! messageAction | 7516 | remove from history
+    favourites | 8588-8787 | same pattern for media
+  class Private
+    ! setFocus | 8939-8978 | own cursor, splits the record
+    ! saveMessage | 9039-9071 | writes "msg:…", +1 s retry on collision
+    removeMessage | 9073-9087
+    ! searchMessage | 9089-9114 | splits the record again
+    ! loadMessage | 9116-9149 | splits the record again
+    exportMessages | 9151-9163
+    importMessages | 9165-9189
+    viewRecent | 9191-9217
+    ! markUnread | 9219-9243 | bound [name, 0]
+    ! markRead | 9245-9271 | bound [name, 1]
+    clearHistory | 9273-9287
+  sidebar onclick
+    ! private | 10611-10679 | database opened and upgraded here
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  private/
+    * pm-history.js | | createPmHistory(store): the only owner of the format
+    stores/
+      indexeddb.js | | production adapter, opens and upgrades the database
+      memory.js | | test adapter
+    private.js | | renders what pm-history returns
+  storage/
+    favourites.js | | same shape for media favourites
+tests/
+  pm-history.test.js | | runs against the memory adapter
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 9039-9071, 9222, 9249</h4>
+<pre class="pseudo"><code>saveMessage(data, target, unread) {
+  start = client.database.pm.transaction(["messages"], "readwrite")
+    .objectStore("messages").add({
+      target, ts: parseFloat(data[3]),
+      data: ["msg"].concat(data).join(":"),   // the format, here
+      unread: unread ? 1 : 0 })
+  start.onsuccess = () =&gt; {
+    flags = …decode loop…
+    this.renderInbox(client.renderMessage(…))    // DOM, in the store
+  }
+  start.onerror = x =&gt; {
+    if (x.target.error.name == "ConstraintError") {
+      data[3] = (parseFloat(data[3]) + 1).toString()
+      this.saveMessage(data, target, unread)      // retry one second later
+    }
+  }
+}
+markUnread: IDBKeyRange.bound([data.username, 0], [data.username, data.key])
+markRead:   IDBKeyRange.bound([data.username, 1], [data.username, data.key])</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// private/pm-history.js
+function createPmHistory(store) {
+  return {
+    append(conversation, message, { unread }),
+    page(conversation, { before, limit }),   // decoded messages
+    markRead(conversation, upTo),
+    unreadCounts(),                          // Map conversation to count
+    export(), import(dump), clear()
+  }
+}
+// format, schema and ts collisions stay inside
+
+// private.js only renders
+messages = await history.page(target, { before: oldestTs, limit: 20 })
+view.prepend(messages.map(render))
+
+// tests/pm-history.test.js
+h = createPmHistory(memoryStore())
+await h.append("bob", msg(1), { unread: true })
+await h.markRead("bob", 1)
+expect(await h.unreadCounts()).toEqual(new Map())</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Record format gets locality</li><li>Storage tested with a fake</li><li>Unread rules in one place</li><li>Private only renders</li></ul>
+    </article>
+
+<!-- ===================== 07 ===================== -->
+    <article class="card" id="settings" data-strength="strong">
+      <div class="card-head">
+        <span class="rank">07</span>
+        <h2>A settings module</h2>
+        <div class="badges"><span class="badge strong">Strong</span><span class="tag">in-process</span><span class="tag">local-substitutable</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>Missing keys are merged two levels deep and checked against the wrong object at the third (9796-9798), and the first run makes the live settings the defaults object itself (9812).</dd>
+        <dt>Solution</dt><dd>One module owns the defaults, a deep merge on load and get and set by path that saves on every set; the HTML binding becomes one adapter.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="row"><div class="m">writer</div><div class="m">writer</div><div class="m">writer</div><div class="m">writer</div><div class="m">writer</div></div>
+              <div class="down leak">↓</div>
+              <div class="m leak">localStorage "settings"</div>
+              <div class="m leak"><span class="lbl">merge, two levels deep</span>checkSettings + reduce over 2-segment paths</div>
+              <div class="down">↓</div>
+              <div class="m">client.settings · 108 readers</div>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="m">108 readers, writers</div>
+              <div class="down">↓</div>
+              <div class="m deep"><span class="lbl">Settings</span>get and set by path; every set is saved<div class="inside"><span>defaults</span><span>deep merge on load</span><span>path rules</span></div></div>
+              <div class="seam"><span>seam</span></div>
+              <div class="row"><div class="m">Storage adapter</div><div class="m">DOM binding adapter</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  class Client
+    ! messageAction | 7611, 7624 | save copies 1 and 2
+  settings | 9632-9782 | defaults
+  ! checkSettings | 9784-9805 | merge, wrong object at depth 3
+  ! load | 9807-9815 | first run aliases the defaults
+  ! [data-setting] binding | 9817-9848 | 2-segment paths; save copy 3
+  class Sidebar
+    ! handlers | 10161, 10175 | save copies 4 and 5
+  ! mode_developer onchange | 12834 | replaces the generic handler
+  readers | | 108 reads of client.settings or this.settings
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  storage/
+    * settings.js | | createSettings({ defaults, storage })
+    defaults.js | | the defaults object, frozen
+    bind-controls.js | | [data-setting-dir] controls to paths
+tests/
+  settings.test.js | | merge at any depth, set saves, defaults untouched
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 9784-9805, 9812, 9822</h4>
+<pre class="pseudo"><code>checkSettings(data, path) {
+  Object.entries(data).forEach(x =&gt; {
+    if (x[1].constructor == Object) {
+      checkSettings(x[1], `${path} ${x[0]}`)
+      currentPath = `${path} ${x[0]}`.trim().split(" ")
+      if (!(currentPath[0] in client.settings)) …
+      else if (!(currentPath[1] in client.settings[currentPath[0]])) …
+      else Object.entries(x[1]).forEach(y =&gt; {
+        // at depth 3 this checks the depth-2 object
+        if (!(y[0] in client.settings[currentPath[0]][currentPath[1]])) …
+      })
+    }
+  })
+}
+client.settings = settings     // first run: same object as defaults
+value = directory.split(" ").reduce((y, z) =&gt; client.settings[y][z])
+localStorage.setItem("settings", JSON.stringify(client.settings))  // ×5</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// storage/settings.js
+function createSettings({ defaults, storage }) {
+  current = deepMerge(clone(defaults), storage.read() || {})  // any depth
+  return {
+    get(path),            // "safety.messages.censor_unsafe"
+    set(path, value),     // checks the path exists in defaults, then saves
+    on(path, fn)
+  }
+}
+
+// storage/bind-controls.js: one adapter, one handler per control
+bindControls(document, settings)
+
+// tests/settings.test.js
+s = createSettings({ defaults, storage: memoryStorage({ safety: {} }) })
+expect(s.get("safety.messages.censor_unsafe.blacklist")).toEqual([])
+s.set("profile.advanced.mode_developer", true)
+expect(storage.saved.profile.advanced.mode_developer).toBe(true)</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Merge testable in-process</li><li>One save path</li><li>One interface, 108 readers</li><li>Defaults stay pristine</li></ul>
+      <p class="callout"><b>Seen on the way:</b> <code>mode_developer</code> gets the generic <code>onchange</code> at 9824, then 12834 replaces it, so that setting is never saved.</p>
+    </article>
+
+<!-- ===================== 08 ===================== -->
+    <article class="card" id="actions" data-strength="explore">
+      <div class="card-head">
+        <span class="rank">08</span>
+        <h2>One message action registry</h2>
+        <div class="badges"><span class="badge explore">Worth exploring</span><span class="tag">in-process</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>One action is defined across a catalogue, a switch, three button builders and DOM walking, so four actions are offered with no handler and three end in an <code>alert</code>.</dd>
+        <dt>Solution</dt><dd>One entry per action holds its icon, an availability rule and a handler that receives a resolved message context; every menu is built from the registry.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="fan"><div class="m">catalogue</div><div class="m">switch</div><div class="m">3 builders</div><div class="m leak">parentNode ×4</div></div>
+              <span class="note-sm">Offered, no handler:</span>
+              <div class="chips"><span class="chip">logs</span><span class="chip">comment</span><span class="chip">help</span><span class="chip">group_favorite</span></div>
+              <span class="note-sm">Handler is <code>alert("TODO…")</code>:</span>
+              <div class="chips"><span class="chip">user_switch</span><span class="chip">user_logout</span><span class="chip">group_settings</span></div>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="m deep"><span class="lbl">Action registry</span>one entry per action<div class="inside"><span>icon</span><span>available when</span><span>handler(message context)</span></div></div>
+              <div class="down">↓</div>
+              <div class="row"><div class="m">message options</div><div class="m">mention copy</div><div class="m">context menu</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  class Client
+    constructor
+      ! flags.message | 4389-4600 | catalogue: icons and labels
+    ! setContext | 6254-6300 | button builder 1
+    ! messageAction | 7388-7695 | switch; parentNode ×4 at 7410
+      user_switch, user_logout, group_settings | 7682-7690 | alert("TODO…")
+    ! renderMention | 7727-7746 | button builder 2
+    renderMessage
+      ! availability | 8126-8167 | rules inside the renderer
+      ! options | 8169-8190 | button builder 3
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  message/
+    * actions.js | | registry: icon, available(ctx), run(ctx)
+    action-menu.js | | builds any menu from available(ctx)
+    message-context.js | | resolves author, IP, session from the model
+tests/
+  actions.test.js | | every offered action has a handler
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 7388-7416, 7682-7690</h4>
+<pre class="pseudo"><code>messageAction(target, action, data, meta, event) {
+  switch (action) {
+    case "reply":
+      data.flip = true
+      this.setMeta(data, target, "reply", "Reply")
+      break
+    case "ban":
+      if (meta.original) {
+        data.username = target.parentNode.parentNode
+          .parentNode.parentNode.getAttribute("data-user")
+        data.ip = target.parentNode…getAttribute("data-ip")
+      }
+      …
+    case "user_logout":
+      alert("TODO: …")
+  }
+  // no case for logs, comment, help, group_favorite
+}</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// message/actions.js
+ACTIONS = {
+  reply: { icon: "reply",
+    available: ctx =&gt; ctx.room.postingMode() != "closed",
+    run: ctx =&gt; composer.reply(ctx.message) },
+  ban: { icon: "ban",
+    available: ctx =&gt; ctx.room.roleOf(ctx.me) in MODERATORS,
+    run: ctx =&gt; moderation.ban(ctx.room, ctx.author) },
+  …
+}
+available(ctx)     // names, in display order
+run(name, ctx)
+
+// ctx is resolved once from the message model, not the DOM
+ctx = messageContext(message, room, me)
+
+// tests/actions.test.js
+for (name of offeredActions())
+  expect(ACTIONS[name].run).toBeDefined()</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Missing handlers detectable</li><li>One edit per new action</li><li>Availability as pure rule</li><li>No ancestor walking</li></ul>
+    </article>
+
+<!-- ===================== 09 ===================== -->
+    <article class="card" id="resources" data-strength="explore">
+      <div class="card-head">
+        <span class="rank">09</span>
+        <h2>One cache for member resources</h2>
+        <div class="badges"><span class="badge explore">Worth exploring</span><span class="tag">in-process</span><span class="tag">mock fetch</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>"Fetch once, park concurrent requests, drain the queue" is written twice by hand, each mixed with parsing and three copies of the paint code; one copy paints <code>data.node</code> inside a loop over other nodes (518-520).</dd>
+        <dt>Solution</dt><dd>One cache turns a username and a resource kind into a promise of a parsed record and owns coalescing and reload; painting takes the record.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="row"><div class="m leak"><span class="lbl">premium</span>wait + queue by hand</div><div class="m leak"><span class="lbl">mini profile</span>wait + queue by hand</div></div>
+              <div class="down">↓</div>
+              <div class="row"><div class="m">fetch</div><div class="m">parse</div><div class="m">paint</div><div class="m">paint</div><div class="m">paint</div></div>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="m deep"><span class="lbl">Resource cache</span>username + kind → parsed record<div class="inside"><span>coalescing</span><span>reload</span><span>mod1 / msgbg / profile parsing</span></div></div>
+              <div class="down">↓</div>
+              <div class="m">one painter</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  class Chatango
+    setBackground | 402-469
+    ! getBackground | 471-575 | wait and queue by hand
+      ! paint copy 1 | 482-498
+      ! paint copy 2 | 518-533 | paints data.node inside the loop
+      ! paint copy 3 | 538-555
+      queue drain | 559-565
+    ! renderMini | 893-1044 | wait and queue again
+      ! colour fields | 1014-1015 | read by position in the CSS
+  class Client
+    constructor
+      cache.wait, cache.queue | 3028-3039
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  member/
+    * resources.js | | get(username, kind, { reload }), coalesced
+    parse-profile.js | | mod1, msgbg, custom profile to records
+    paint-background.js | | one painter
+tests/
+  resources.test.js | | two concurrent gets share one fetch
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 471-481, 559-565</h4>
+<pre class="pseudo"><code>getBackground(data) {
+  target = data.username.toLowerCase()
+  if (client.cache.wait.premium.indexOf(target) &gt;= 0) {
+    // park the request
+    client.cache.queue.premium[target] ||= []
+    client.cache.queue.premium[target].push(data)
+  } else if (target in client.cache.background &amp;&amp; !data.reload) {
+    … paint copy 1 …
+  } else {
+    client.cache.wait.premium.push(target)
+    fetch(…).then(… parse … paint copy 2 … paint copy 3 …
+      client.cache.wait.premium = client.cache.wait.premium.filter(x =&gt; x != target)
+      client.cache.queue.premium[target].forEach(x =&gt; chatango.getBackground(x))
+    )
+  }
+}
+// renderMini repeats the same wait/queue by hand</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// member/resources.js
+function createResourceCache({ fetchText, parse }) {
+  inflight = new Map(); cache = new Map()
+  return {
+    get(username, kind, { reload } = {}) {
+      key = kind + ":" + username.toLowerCase()
+      if (!reload &amp;&amp; cache.has(key)) return Promise.resolve(cache.get(key))
+      if (!inflight.has(key))
+        inflight.set(key, fetchText(urlFor(kind, username))
+          .then(text =&gt; parse[kind](text))
+          .then(rec =&gt; (cache.set(key, rec), rec))
+          .finally(() =&gt; inflight.delete(key)))
+      return inflight.get(key)
+    }
+  }
+}
+
+// usage
+paintBackground(node, await resources.get(name, "background"))</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Parsing tested without network</li><li>One painter, not three</li><li>Cache invariants in one place</li></ul>
+    </article>
+
+<!-- ===================== 10 ===================== -->
+    <article class="card" id="theme" data-strength="explore">
+      <div class="card-head">
+        <span class="rank">10</span>
+        <h2>A theme model behind the theme cards</h2>
+        <div class="badges"><span class="badge explore">Worth exploring</span><span class="tag">local-substitutable</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd>A theme's shape, import, storage and application are spread over DOM handlers, and only the first of three pasted handlers has the <code>y.curentTarget</code> typo (1878) that throws on a valid hex.</dd>
+        <dt>Solution</dt><dd>One theme module owns the data shape, normalisation, storage keys, ids and applying CSS variables; the theme card becomes a view of it.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="row"><div class="m">handler</div><div class="m">handler</div><div class="m leak">handler · curentTarget</div></div>
+              <div class="row"><div class="m">normalise</div><div class="m">normalise</div><div class="m">normalise</div></div>
+              <div class="row"><div class="m">serialise</div><div class="m">serialise</div></div>
+              <p class="note-sm">Theme id from counting DOM nodes; localStorage touched from six places.</p>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="m deep"><span class="lbl">Theme model</span>shape, ids, storage, apply to :root<div class="inside"><span>normalise</span><span>serialise</span><span>storage keys</span></div></div>
+              <div class="seam"><span>seam</span></div>
+              <div class="row"><div class="m">theme card view</div><div class="m">file import</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  MAIN MENU THEME | 1814
+    ! incrementalTheme | 1816-1825 | id from counting DOM nodes
+    applyTheme | 1827-2034
+      ! colour handler 1 | 1874-1888 | curentTarget typo at 1878
+      ! colour handler 2 | 1896-1910
+      ! colour handler 3 | 1920-1934
+      ! serialise copy 1 | 1950-1955
+      ! serialise copy 2 | 1972-1977
+    ! import copy 1 | 2047-2063
+    ! import copy 2 | 2100-2116
+    presets | 2132-2189 | read --theme-background, not --theme-primary
+    ~ theme-select | 1842, 2182 | written, never read
+  startup
+    ! import copy 3 | 12515-12531
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  ui/
+    * theme.js | | createThemes({ storage, root })
+    theme-card.js | | view; calls into theme.js only
+tests/
+  theme.test.js | | import, save, reload, apply
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 1874-1888</h4>
+<pre class="pseudo"><code>edit.oninput = y =&gt; {
+  hex = value.match(/^([a-f\d]{3}|[a-f\d]{6})$/i)
+  clean = hex ? `#${hex[1]}` : empty
+  if (hex) { y.curentTarget.value = clean }   // typo: throws
+  identifier = y.currentTarget.parentNode.parentNode.parentNode
+    .querySelector(".theme-wrapper").getAttribute(…)
+  unsaved = localStorage.getItem(`custom-theme-${identifier}`)
+  …
+}
+// pasted twice more (1896, 1920) without the typo</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// ui/theme.js
+function createThemes({ storage, root }) {
+  return {
+    list(), get(id), save(theme), remove(id),
+    import(fileText),   // one normalisation
+    export(id),         // one serialisation
+    apply(id)           // CSS variables on root
+  }
+}
+
+// ui/theme-card.js
+input.oninput = e =&gt; card.setColour(key, normaliseHex(e.target.value))
+saveButton.onclick = () =&gt; themes.save(card.theme)</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Round-trip testable</li><li>Three handlers become one</li><li>Storage keys get locality</li></ul>
+    </article>
+
+<!-- ===================== 11 ===================== -->
+    <article class="card" id="modal-shell" data-strength="explore">
+      <div class="card-head">
+        <span class="rank">11</span>
+        <h2>Filters, modals and windows that own their own steps</h2>
+        <div class="badges"><span class="badge explore">Worth exploring</span><span class="tag">local-substitutable</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd><code>filterModal</code> only builds toggles, so each caller wires Apply and reset itself; selection classes and tabindex rules are copied across five navigation sites.</dd>
+        <dt>Solution</dt><dd>The filter, the modal navigation and the window pages each own their open, apply and reset steps, and hand callers plain values.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="fan"><div class="m">inbox</div><div class="m">meet</div><div class="m">media</div><div class="m">ban</div><div class="m">unban</div><div class="m">language</div><div class="m">FAQ</div></div>
+              <div class="down leak">↓ each wires open, Apply, reset ↓</div>
+              <div class="m leak">.filter-apply.onclick (shared)</div>
+              <p class="note-sm leak">Inbox and media never set Apply, so it runs the previous filter's handler.</p>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="fan"><div class="m">inbox</div><div class="m">meet</div><div class="m">media</div><div class="m">…</div></div>
+              <div class="down">↓ spec, then a promise</div>
+              <div class="m deep"><span class="lbl">Filter</span>open, apply, reset; resolves with plain values</div>
+              <div class="row"><div class="m">modal navigator</div><div class="m">window page mounts</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  ! attachMenu | 1695-1735 | type 1 or 2 picks two behaviours
+  ! changeMenu | 1737-1756 | looks up [data-menu] document-wide
+  tabindex | 1758-1812 | copied toggles
+  language filter | 2324 | caller 1
+  FAQ filter | 2606 | caller 2
+  class Client
+    renderWindow | 6654 | windows; pages moved from [data-preload]
+  ! inbox filter | 11342-11363 | never sets Apply
+  meet filter | 11433-11500 | reset snapshot copy 1
+  ! media filter | 12020-12046 | never sets Apply
+  filterModal | 12308-12344 | builds toggles only
+  ban filter | 12747-12781 | reset snapshot copy 2
+  unban filter | 12783-12817 | reset snapshot copy 3
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  ui/
+    * filter.js | | openFilter(spec): Promise of selection or null
+    modal-nav.js | | createModalNav(modal): open(section), close()
+    windows.js | | renderWindow(name, pages), each page mounted once
+tests/
+  filter.test.js | | under jsdom with client.html
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 12308-12344, callers</h4>
+<pre class="pseudo"><code>function filterModal(data) {
+  if (filter != data.id) {
+    … build one checkbox per toggle …
+    /* check.onchange = … */       // per-toggle callback commented out
+    document.querySelector(".filter-items").replaceChildren(...items)
+  }
+}
+
+// every caller then does it by hand
+filterModal(MEET)
+document.querySelector(".filter").classList.add("filter-view")
+document.querySelector(".filter-apply").onclick = () =&gt; {
+  selection = [...items].map(x =&gt; x.getAttribute("data-filter-id").split(…))
+  meetPeople(selection)
+}
+// inbox and media skip the onclick line</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// ui/filter.js
+function openFilter({ id, title, icon, toggles }) {
+  // builds, opens, wires Apply, Reset and close itself
+  return new Promise(resolve =&gt; {
+    applyButton.onclick = () =&gt; { close(); resolve(selection()) }
+    closeButton.onclick = () =&gt; { close(); resolve(null) }
+  })
+}
+
+// caller
+selection = await openFilter(MEET_FILTER)
+if (selection) meetPeople(selection)</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Apply handler cannot leak</li><li>Reset logic in one place</li><li>Openers shrink</li></ul>
+    </article>
+
+<!-- ===================== 12 ===================== -->
+    <article class="card" id="session" data-strength="explore">
+      <div class="card-head">
+        <span class="rank">12</span>
+        <h2>Session: credentials apart from transport</h2>
+        <div class="badges"><span class="badge explore">Worth exploring</span><span class="tag">ports &amp; adapters</span></div>
+      </div>
+      <dl class="ps">
+        <dt>Problem</dt><dd><code>requests</code> keeps credentials in closures and creates <code>client.connect</code> and <code>client.post</code> only when it runs, while <code>post</code> mixes credentials, upload UI and a global lock.</dd>
+        <dt>Solution</dt><dd>A session module alone holds credentials and attaches them to allowlisted requests; upload progress becomes the caller's concern.</dd>
+      </dl>
+      <div class="tabs" role="tablist"></div>
+      <div class="panel" data-panel="schematic">
+        <h4 class="panel-title">Schematic</h4>
+        <div class="dg">
+          <div class="pane">
+            <span class="pane-label">Before</span>
+            <div class="col">
+              <div class="m leak"><span class="lbl">requests() closure</span>credentials · allowlist · XHR · upload UI · global lock</div>
+              <div class="row"><div class="m">client.connect</div><div class="m">client.post</div></div>
+              <p class="note-sm leak">Outside the allowlist, <code>post</code> returns <code>undefined</code> (4862) and callers' <code>.then</code> throws.</p>
+            </div>
+          </div>
+          <div class="pane after">
+            <span class="pane-label">After</span>
+            <div class="col">
+              <div class="m deep"><span class="lbl">Session</span>holds credentials, attaches them to allowlisted requests, always returns a promise</div>
+              <div class="seam"><span>seam</span></div>
+              <div class="row"><div class="m">vissle transport</div><div class="m">chatango transport</div></div>
+              <div class="m quiet">upload UI, as a caller</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" data-panel="today">
+        <h4 class="panel-title">Today in inject.js</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+inject.js
+  login
+    #login.onsubmit | 1232-1592 | calls client.requests at 1252
+  class Client
+    ! requests | 4672-4866 | credentials in closures
+      domain | 4687-4730 | allowlist
+      ! this.connect | 4732-4736 | created here, as a side effect
+      ! this.post | 4738-4865 | credentials, XHR, upload UI, global lock
+        ! case "OK" | 4777 | falls through into "success"
+        ! secure[frame](...frame) | 4845 | spreads a string
+        ! empty else | 4862 | returns undefined
+    socketEvent
+      group auth frame | 5618 | credentials in the auth frame
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="files">
+        <h4 class="panel-title">Proposed files</h4>
+        <div class="tree-box">
+<pre class="tree-src" data-tree>
+src/
+  net/
+    * session.js | | createSession({ credentials, allowlist, transport })
+    allowlist.js | | hosts and the auth each one takes
+    transport.js | | fetch and XHR, no UI
+    upload.js | | progress and notices, a caller of session
+tests/
+  session.test.js | | rejects outside the allowlist; attaches auth by kind
+</pre>
+        </div>
+      </div>
+      <div class="panel" data-panel="pseudo">
+        <h4 class="panel-title">Pseudo-code</h4>
+        <div class="code-grid">
+          <div class="code-pane">
+            <h4>Before · 4672-4760</h4>
+<pre class="pseudo"><code>requests(data) {
+  let u = data.username; let p = data.password
+  let loading = false
+  this.connect = group =&gt; new Promise((resolve, reject) =&gt;
+    this.socketEvent(group, { token, un: u, pw: p }, resolve, reject))
+  this.post = (host, form, item) =&gt; {
+    secure = domain(host)
+    if (secure) {
+      if (item.credential) { form.set(item.credential, u); form.set("p", p) }
+      …
+      return new Promise((resolve, reject) =&gt; {
+        if (loading) return reject(loading)    // one request at a time, globally
+        … XHR, progress bar, notices …
+      })
+    } else {
+      // empty: returns undefined
+    }
+  }
+}</code></pre>
+          </div>
+          <div class="code-pane after">
+            <h4>After · sketch</h4>
+<pre class="pseudo"><code>// net/session.js
+function createSession({ credentials, allowlist, transport }) {
+  return {
+    request(host, form, { auth }) {
+      rule = allowlist.find(host)
+      if (!rule) return Promise.reject(new Error("host not allowed"))
+      return transport.send(host, withAuth(form, auth, credentials))
+    },
+    connectionAuth(room)   // what connection.js needs, nothing more
+  }
+}
+// auth: "credential" | "key" | "token" | "cookie"
+
+// net/upload.js
+upload(file, { onProgress }) =&gt; session.request(UPLOAD_HOST, form(file), { auth: "credential" })</code></pre>
+          </div>
+        </div>
+      </div>
+      <ul class="wins"><li>Credentials get one owner</li><li>post always returns a promise</li><li>No hidden startup order</li></ul>
+    </article>
+  </section>
+
+  <section class="top" id="top-recommendation" aria-labelledby="top-h">
+    <span class="eyebrow">Top recommendation</span>
+    <h2 id="top-h"><a href="#frame-codec">Start with the frame codec</a></h2>
+    <p>It is pure and in-process, so it can be tested from day one with recorded frames. It removes eleven copies of the flag decoder, and it is the seam that the room model and the message pipeline then build on.</p>
+    <ol>
+      <li><a href="#frame-codec">Frame codec</a>: decoding leaves the handlers.</li>
+      <li><a href="#room-model">Group as the room model</a>: handlers apply events to one owner.</li>
+      <li><a href="#connection">Connection lifecycle</a>: fixes the hangs and the overload crash on the way.</li>
+    </ol>
+  </section>
+
+  <section class="col" aria-labelledby="def-h" style="gap:14px">
+    <h3 id="def-h">Defects found on the way</h3>
+    <p class="note-sm">Each one was checked against the line cited. None was run.</p>
+    <div class="area-chips" id="area-filter" role="group" aria-label="Filter defects by area"></div>
+    <div class="defects">
+      <table>
+        <thead><tr><th>Line</th><th>Area</th><th>What happens</th></tr></thead>
+        <tbody id="defect-rows">
+          <tr data-area="connect"><td>1224, 1227</td><td>connect</td><td><code>filter(x =&gt; x != x)</code> empties all of <code>cache.connect</code>, not just the room that finished.</td></tr>
+          <tr data-area="connect"><td>3239</td><td>connect</td><td><code>inited</code> passes an undefined <code>group</code> to <code>disconnectFrom</code>; the overload path throws a ReferenceError.</td></tr>
+          <tr data-area="connect"><td>5611</td><td>connect</td><td>A second <code>connect()</code> to a room already in <code>cache.connect</code> returns a promise that never settles.</td></tr>
+          <tr data-area="connect"><td>5748</td><td>connect</td><td>Retry calls <code>this.renderGroup</code>, which exists only on <code>Sidebar</code> (10083).</td></tr>
+          <tr data-area="protocol"><td>51</td><td>protocol</td><td><code>BG_ON_ANNC</code> (key 3) is reported whenever bit 0 or bit 1 is set.</td></tr>
+          <tr data-area="moderation"><td>3762</td><td>moderation</td><td>Guest unban matches the string <code>"false"</code> through <code>target[2] || false</code>.</td></tr>
+          <tr data-area="moderation"><td>3649, 3728</td><td>moderation</td><td><code>unblocklist</code> lacks the <code>frame[1] == 0</code> page reset that <code>blocklist</code> has.</td></tr>
+          <tr data-area="moderation"><td>7426</td><td>moderation</td><td><code>removemod:{data.username}</code> lacks the <code>$</code>; the literal text is sent.</td></tr>
+          <tr data-area="ui"><td>4233, 4278</td><td>ui</td><td><code>unqiue</code> typo: the <code>unique</code> option is ignored.</td></tr>
+          <tr data-area="http"><td>4777</td><td>http</td><td><code>case "OK"</code> falls through into <code>case "success"</code>.</td></tr>
+          <tr data-area="http"><td>4845</td><td>http</td><td><code>secure[frame](...frame)</code> spreads the frame name into single characters.</td></tr>
+          <tr data-area="http"><td>4862</td><td>http</td><td><code>post</code> returns <code>undefined</code> for a host outside the allowlist.</td></tr>
+          <tr data-area="media"><td>7242</td><td>media</td><td><code>getAttribue</code> typo.</td></tr>
+          <tr data-area="media"><td>8601</td><td>media</td><td><code>data.amount || 21 &gt; index</code> pages without limit for any truthy <code>amount</code>.</td></tr>
+          <tr data-area="media"><td>6456-6457</td><td>media</td><td><code>link.href = link</code> assigns the anchor element, not the URL.</td></tr>
+          <tr data-area="media"><td>6628</td><td>media</td><td>Elapsed time computed as <code>currentTime * 60</code>.</td></tr>
+          <tr data-area="ui"><td>7682-7690</td><td>ui</td><td><code>user_switch</code>, <code>user_logout</code>, <code>group_settings</code> end in <code>alert("TODO…")</code>.</td></tr>
+          <tr data-area="ui"><td>1878</td><td>ui</td><td><code>y.curentTarget</code> throws when a valid hex is typed in the first colour field.</td></tr>
+          <tr data-area="settings"><td>9796-9798</td><td>settings</td><td>Third-level defaults are checked against the wrong object.</td></tr>
+          <tr data-area="settings"><td>12834</td><td>settings</td><td>Replaces the generic <code>onchange</code> of <code>mode_developer</code>, which is then never saved.</td></tr>
+          <tr data-area="storage"><td>9222, 9249</td><td>storage</td><td><code>markUnread</code> reads from <code>[name, 0]</code>, <code>markRead</code> from <code>[name, 1]</code>.</td></tr>
+          <tr data-area="ui"><td>10810</td><td>ui</td><td>Reads <code>client.groups[client.focus].premium</code>, undefined when the focus is <code>private_message</code>.</td></tr>
+          <tr data-area="ui"><td>12200</td><td>ui</td><td><code>hexToRgb</code> throws on a <code>null</code> match before its fallback can run.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>Line numbers refer to <code>inject.js</code> as served by vissle.me on 2026-10-19, SHA-256 <code>61b63885afcb43bc8f7d45c65bf5b6a517cb737a8a36ee4fc79ce20aae458bf5</code>.</span>
+    <span>Vocabulary: module, interface, depth, seam, adapter, leverage, locality. Dependency tags: in-process, local-substitutable, ports &amp; adapters, mock.</span>
+  </footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  document.documentElement.classList.add("js");
+
+  var TAB_LABELS = { schematic: "Schematic", today: "Today in inject.js", files: "Proposed files", pseudo: "Pseudo-code" };
+
+  // Tabs: one tablist per card, built from its panels.
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".card"));
+  cards.forEach(function (card) {
+    var list = card.querySelector(".tabs");
+    var panels = Array.prototype.slice.call(card.querySelectorAll(".panel"));
+    panels.forEach(function (panel, i) {
+      var key = panel.getAttribute("data-panel");
+      var id = card.id + "-" + key;
+      panel.id = id;
+      panel.setAttribute("role", "tabpanel");
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("role", "tab");
+      btn.setAttribute("aria-controls", id);
+      btn.setAttribute("data-tab", key);
+      btn.textContent = TAB_LABELS[key] || key;
+      btn.addEventListener("click", function () { selectTab(card, key); });
+      list.appendChild(btn);
+      panel.hidden = i !== 0;
+      btn.setAttribute("aria-selected", i === 0 ? "true" : "false");
+    });
+    list.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      var tabs = Array.prototype.slice.call(list.querySelectorAll("[role=tab]"));
+      var i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      var next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus();
+      next.click();
+    });
+  });
+
+  function selectTab(card, key) {
+    card.querySelectorAll(".panel").forEach(function (p) { p.hidden = p.getAttribute("data-panel") !== key; });
+    card.querySelectorAll("[role=tab]").forEach(function (b) { b.setAttribute("aria-selected", b.getAttribute("data-tab") === key ? "true" : "false"); });
+  }
+
+  document.querySelectorAll("#tab-all button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var key = b.getAttribute("data-tab");
+      cards.forEach(function (card) { selectTab(card, key); });
+    });
+  });
+
+  // Strength filter for cards and index.
+  var filterButtons = document.querySelectorAll("#strength-filter button");
+  filterButtons.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var value = b.getAttribute("data-filter");
+      filterButtons.forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      var shown = 0;
+      document.querySelectorAll(".card, .index li").forEach(function (el) {
+        var visible = value === "all" || el.getAttribute("data-strength") === value;
+        el.hidden = !visible;
+        if (visible && el.classList.contains("card")) shown++;
+      });
+      document.getElementById("card-count").textContent = shown + (shown === 1 ? " candidate" : " candidates");
+    });
+  });
+
+  // Trees: "marker name | ref | note", two spaces of indent per level.
+  // Markers: "* " deep module, "! " leakage, "~ " faded.
+  function parseTree(text) {
+    var root = { children: [] };
+    var stack = [{ depth: -1, node: root }];
+    text.split("\n").forEach(function (raw) {
+      if (!raw.trim()) return;
+      var depth = (raw.match(/^ */)[0].length) / 2;
+      var line = raw.trim();
+      var kind = "";
+      if (/^[*!~] /.test(line)) { kind = { "*": "deep", "!": "leak", "~": "faint" }[line[0]]; line = line.slice(2); }
+      var parts = line.split("|").map(function (p) { return p.trim(); });
+      var node = { name: parts[0], ref: parts[1] || "", note: parts[2] || "", kind: kind, children: [] };
+      while (stack[stack.length - 1].depth >= depth) stack.pop();
+      stack[stack.length - 1].node.children.push(node);
+      stack.push({ depth: depth, node: node });
+    });
+    return root.children;
+  }
+
+  function renderTree(nodes, top) {
+    var ul = document.createElement("ul");
+    if (top) { ul.className = "tree"; ul.setAttribute("role", "tree"); } else { ul.setAttribute("role", "group"); }
+    nodes.forEach(function (n) {
+      var li = document.createElement("li");
+      li.setAttribute("role", "treeitem");
+      var row = document.createElement("div");
+      row.className = "node" + (n.kind ? " " + n.kind : "");
+      var child = null;
+      if (n.children.length) {
+        var tw = document.createElement("button");
+        tw.type = "button";
+        tw.className = "twisty";
+        tw.textContent = "▾";
+        tw.setAttribute("aria-expanded", "true");
+        tw.setAttribute("aria-label", "Toggle " + n.name);
+        row.appendChild(tw);
+        child = renderTree(n.children, false);
+        tw.addEventListener("click", function () {
+          var open = tw.getAttribute("aria-expanded") === "true";
+          tw.setAttribute("aria-expanded", open ? "false" : "true");
+          child.hidden = open;
+        });
+      } else {
+        var sp = document.createElement("span");
+        sp.className = "twisty-space";
+        row.appendChild(sp);
+      }
+      var nm = document.createElement("span");
+      nm.className = "nm" + (/\/$/.test(n.name) ? " dir" : "");
+      nm.textContent = n.name;
+      row.appendChild(nm);
+      if (n.ref) {
+        var ref;
+        if (n.ref.charAt(0) === "@") {
+          ref = document.createElement("a");
+          ref.href = "#" + n.ref.slice(1);
+          ref.textContent = "→ card " + cardRank(n.ref.slice(1));
+          ref.addEventListener("click", function () { openCard(n.ref.slice(1), "files"); });
+        } else {
+          ref = document.createElement("span");
+          ref.textContent = n.ref;
+        }
+        ref.className = "ref";
+        row.appendChild(ref);
+      }
+      if (n.note) {
+        var nt = document.createElement("span");
+        nt.className = "nt";
+        nt.textContent = n.note;
+        row.appendChild(nt);
+      }
+      li.appendChild(row);
+      if (child) li.appendChild(child);
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  function cardRank(id) {
+    var el = document.getElementById(id);
+    var r = el && el.querySelector(".rank");
+    return r ? r.textContent : id;
+  }
+
+  function openCard(id, key) {
+    var card = document.getElementById(id);
+    if (!card) return;
+    if (card.hidden) document.querySelector('#strength-filter [data-filter="all"]').click();
+    selectTab(card, key);
+  }
+
+  document.querySelectorAll("pre[data-tree]").forEach(function (pre) {
+    pre.replaceWith(renderTree(parseTree(pre.textContent), true));
+  });
+
+  function setAllTrees(open) {
+    document.querySelectorAll(".twisty").forEach(function (tw) {
+      var isOpen = tw.getAttribute("aria-expanded") === "true";
+      if (isOpen !== open) tw.click();
+    });
+  }
+  document.getElementById("expand-trees").addEventListener("click", function () { setAllTrees(true); });
+  document.getElementById("collapse-trees").addEventListener("click", function () { setAllTrees(false); });
+
+  // Pseudo-code: light highlighting of comments, strings and keywords.
+  var KEYWORDS = /\b(function|return|if|else|for|while|new|class|const|let|var|await|async|in|of|this|switch|case|break|true|false|null|undefined)\b/g;
+  function escapeHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function highlightCode(src) {
+    return src.split("\n").map(function (line) {
+      var comment = "";
+      var m = line.match(/(^|[^:"'`])(\/\/.*)$/);
+      if (m) { comment = m[2]; line = line.slice(0, line.length - comment.length); }
+      var out = "";
+      var re = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`)/g;
+      var last = 0, s;
+      while ((s = re.exec(line))) {
+        out += escapeHtml(line.slice(last, s.index)).replace(KEYWORDS, '<span class="tk-k">$1</span>');
+        out += '<span class="tk-s">' + escapeHtml(s[0]) + "</span>";
+        last = re.lastIndex;
+      }
+      out += escapeHtml(line.slice(last)).replace(KEYWORDS, '<span class="tk-k">$1</span>');
+      if (comment) out += '<span class="tk-c">' + escapeHtml(comment) + "</span>";
+      return out;
+    }).join("\n");
+  }
+  document.querySelectorAll("pre.pseudo code").forEach(function (code) {
+    code.innerHTML = highlightCode(code.textContent);
+  });
+
+  // Defects: filter by area.
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#defect-rows tr"));
+  var areas = ["all"];
+  rows.forEach(function (r) { var a = r.getAttribute("data-area"); if (areas.indexOf(a) < 0) areas.push(a); });
+  var chipBox = document.getElementById("area-filter");
+  areas.forEach(function (a) {
+    var b = document.createElement("button");
+    b.type = "button";
+    var n = a === "all" ? rows.length : rows.filter(function (r) { return r.getAttribute("data-area") === a; }).length;
+    b.textContent = (a === "all" ? "All areas" : a) + " (" + n + ")";
+    b.setAttribute("aria-pressed", a === "all" ? "true" : "false");
+    b.addEventListener("click", function () {
+      chipBox.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      rows.forEach(function (r) { r.hidden = a !== "all" && r.getAttribute("data-area") !== a; });
+    });
+    chipBox.appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>
