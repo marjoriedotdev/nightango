@@ -220,7 +220,13 @@ var liveBridge = (function () {
       }
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
       case 'unblocked': emit({ op: 'pmUnblocked', name: lower(data[0]) }); break;
-      case 'OK': emit({ op: 'pmReady' }); if (pmrConnected) pmrConnected(); break;
+      case 'OK':
+        // Chatango forgets the connect of the previous connection, and BetterChatango builds a new client.private after this handler.
+        connectTarget = '';
+        setTimeout(function () { focusPm(pmFocus); }, 0);
+        emit({ op: 'pmReady' });
+        if (pmrConnected) pmrConnected();
+        break;
       case 'kickingoff': emit({ op: 'session', reason: 'kicked' }); break;
       case 'DENIED': emit({ op: 'session', reason: 'denied' }); break;
       case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: 'Flood warning: slow down or Chatango may disconnect your private messages.' }); break;
@@ -371,6 +377,18 @@ var liveBridge = (function () {
     if (!pmOpen() || !send('private_message', 'connect:' + n, 'The conversation with ' + n + ' could not be opened.')) return false;
     connectTarget = n;
     return true;
+  }
+  // Correspondent of the shown conversation, false outside PMs.
+  var pmFocus = false;
+  /**
+   * Follows the shown conversation and asks for its presence when the correspondent changes.
+   * @param {string|boolean} user Shown correspondent, false outside PMs.
+   */
+  function focusPm(user) {
+    pmFocus = user || false;
+    // BetterChatango only archives a sent private message for the conversation it considers open.
+    try { if (C.private) C.private.focus = pmFocus; } catch (e) { warn(e); }
+    if (pmFocus && pmFocus !== connectTarget) connectPm(pmFocus);
   }
   function post(url, fields, item) {
     if (typeof C.post !== 'function') return Promise.reject(new Error('BetterChatango is not signed in yet.'));
@@ -776,15 +794,13 @@ var liveBridge = (function () {
     },
     applyStyle: function (style) { try { applyStyle(style); } catch (e) { warn(e); } },
     focus: function (gid) { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } },
+    focusPm: focusPm,
     /**
-     * Follows the shown conversation and asks for its presence when the correspondent changes.
-     * @param {string|boolean} user Shown correspondent, false outside PMs.
+     * Asks Chatango for the presence of correspondents with the frame BetterChatango sends for Meet people (inject.js:9387).
+     * @param {string[]} names Target correspondents. The reply arrives as a people op.
+     * @returns {boolean} True if the frame was sent.
      */
-    focusPm: function (user) {
-      // BetterChatango only archives a sent private message for the conversation it considers open.
-      try { if (C.private) C.private.focus = user || false; } catch (e) { warn(e); }
-      if (user && user !== connectTarget) connectPm(user);
-    },
+    refreshPresence: function (names) { return pmOpen() && send('private_message', 'getpresence:' + names.join(';'), ''); },
     /**
      * Tells whether the account is Premium like BetterChatango before writing a Premium emoticon.
      * @returns {boolean} Status 200 or 210 of the premium frame, false while the private connection is not open.
