@@ -11,7 +11,7 @@
 .tc-btn-ghost{color:var(--text-2)}
 .tc-btn-ghost:hover{color:var(--text)}
 .tc-btn-danger{color:var(--danger);border-color:var(--control)}
-.tc-btn-sm{height:var(--size-control-sm);padding:0 12px;font-size:12.5px;border-radius:7px}
+.tc-btn-sm{height:var(--size-control-sm);padding:0 12px;font-size:12.5px}
 .tc-btn-lg{height:var(--size-control-lg);padding:0 18px;font-size:14px}
 .tc-btn-block{width:100%}
 .tc-btn:disabled{opacity:.5;cursor:not-allowed;filter:none;background-clip:padding-box}
@@ -40,13 +40,13 @@ select.tc-input{padding:0 10px}
 .tc-switch:checked{background:var(--accent)}
 .tc-switch:checked::after{transform:translateX(16px);background:var(--on-accent)}
 .tc-switch:disabled{opacity:.45;cursor:not-allowed}
-.tc-check{appearance:none;-webkit-appearance:none;flex:none;width:18px;height:18px;margin:0;border-radius:5px;border:1.5px solid var(--control-strong);background:var(--raised);display:inline-grid;place-content:center;cursor:pointer;vertical-align:middle}
+.tc-check{appearance:none;-webkit-appearance:none;flex:none;width:18px;height:18px;margin:0;border-radius:var(--radius-sm);border:1.5px solid var(--control-strong);background:var(--raised);display:inline-grid;place-content:center;cursor:pointer;vertical-align:middle}
 .tc-check:checked{background:var(--accent);border-color:var(--accent)}
 .tc-check:checked::after{content:"";width:9px;height:5px;border-left:2px solid var(--on-accent);border-bottom:2px solid var(--on-accent);transform:translate(0,-1px) rotate(-45deg)}
 .tc-switch:focus-visible,.tc-check:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .tc-checkline{display:inline-flex;align-items:center;gap:var(--space-2);font-size:13.5px;color:var(--text-body);cursor:pointer}
 
-.tc-seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--track);border:1px solid var(--border)}
+.tc-seg{display:inline-flex;gap:2px;padding:3px;border-radius:calc(var(--radius-md) + 3px);background:var(--track);border:1px solid var(--border)}
 .tc-seg-block{display:flex}
 .tc-seg-block button{flex:1}
 .tc-seg button{height:30px;padding:0 14px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-3);font:500 13px var(--font-sans);cursor:pointer;white-space:nowrap;transition:background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}

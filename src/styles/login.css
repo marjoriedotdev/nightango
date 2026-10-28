@@ -42,7 +42,7 @@
 .login .login-label{color:var(--accent-text)}
 .login .login-label:hover,.login .login-label:focus{color:var(--accent-text);text-decoration:underline}
 .login .checkbox-text{position:relative;display:inline-flex;align-items:center;gap:var(--space-2)}
-.login .checkbox-text::before{flex:none;width:18px;height:18px;margin:0;padding:0;box-sizing:border-box;border:1.5px solid var(--control-strong);border-radius:5px;background:var(--raised)}
+.login .checkbox-text::before{flex:none;width:18px;height:18px;margin:0;padding:0;box-sizing:border-box;border:1.5px solid var(--control-strong);border-radius:var(--radius-sm);background:var(--raised)}
 .login .checkbox-input:hover+.checkbox-text::before{border:1.5px solid var(--text-2)}
 .login .checkbox-input:focus-visible+.checkbox-text::before{border:1.5px solid var(--control-strong);outline:2px solid var(--focus-ring);outline-offset:2px}
 .login .checkbox-input:checked+.checkbox-text::before{border:1.5px solid var(--accent);background:var(--accent)}

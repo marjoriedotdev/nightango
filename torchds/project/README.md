@@ -36,7 +36,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 ## Spacing, radius and layout
 
 - Spacing steps: `space-2` between an icon and its label, `space-3` between an avatar and a message, `space-5` for the message log side padding and settings rows, `space-6` between settings sections, `space-10` and `space-12` for settings page padding.
-- Radius: `radius-md` for rows and icon buttons, `radius-lg` for buttons, inputs and banners, `radius-xl` for sections, cards, the composer and the save bar, `radius-panel` for the panels over the sky, `radius-full` for avatars, presence, switches and the send button.
+- Radius: `radius-md` for rows and icon buttons, `radius-lg` for buttons, inputs and banners, `radius-xl` for sections, cards, the composer, the save bar, menus, popovers and toasts, `radius-panel` for the panels over the sky and dialogs, `radius-full` for avatars, presence, switches and the send button.
 - App shell: panels floating over the sky with a 10px gutter: `size-sidebar` navigation, a fluid center column, an optional `size-members` column on the right (members in a group, profile in a private conversation). Below 1180px the right column hides; its header control then opens the same content full screen. Below 860px the panels go edge to edge and the sidebar becomes a drawer.
 - Settings pages: navigation on the left, content capped at 820px, sections stacked with `space-6`.
 - Targets: `size-control-md` on desktop, at least `size-touch` on mobile.
@@ -45,6 +45,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 
 - Panels (navigation, main, members, settings) float over the sky with a `border` hairline and `shadow-panel`. Inside a panel, separate areas with `border` hairlines, not shadows. Rows inside a section use `divider`.
 - Floating elements get a shadow: `shadow-popover` for the message toolbar and menus, `shadow-floating` for the save bar and dialogs.
+- Dialogs and the open navigation drawer sit on a `scrim` veil.
 - Gradients belong to the sky only: the sky itself, the sky band at the top of the navigation, the dusk at the top of the main panel, the mention light, hairlines that fade at their ends. Text never sits on the sky or on a cloud.
 - No glass effects, no colored left borders. One exception: a message posted on a Chatango channel carries a 3px stripe and a light tint in the channel color, and the message head still names the channel.
 
