@@ -2,6 +2,24 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.24.0] - 2026-10-28
+
+### Added
+
+- The BetterChatango sign-in screen now takes Nightango's colors, fonts and theme. BetterChatango still handles your sign-in.
+- About Nightango links to the Nightango source code and issue tracker on GitHub.
+
+### Changed
+
+- When the connection drops, one banner shows Reconnecting, then Reconnected once it's back. If no attempt is left, it offers Try again and Reload.
+- Gender shows as M or F in your profile and in Meet people.
+
+### Fixed
+
+- In Meet people, age is now picked with a two-handle slider that always spans at least one year. Asking for a single age showed an empty list.
+- Group avatars show the group's initial instead of Chatango's "?" picture.
+- On iPhone and iPad, tapping a field of the sign-in screen no longer zooms into the page.
+
 ## [0.23.0] - 2026-10-27
 
 ### Added

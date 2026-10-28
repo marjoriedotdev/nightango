@@ -521,9 +521,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const connBanner = () => { const el = $('.conn-banner'); return el ? { phase: el.dataset.phase, text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   C.groups.test.socket.readyState = 3; await wait(2300);
   const lostBanner = connBanner();
-  C.groups.test.socket.readyState = 1; await wait(2300);
+  // The bridge sees the socket at its next 2 s poll, and Reconnected only stays 2 s: a fixed delay can read it already gone.
+  C.groups.test.socket.readyState = 1; await until(() => (connBanner() || {}).phase === 'done');
   const backBanner = connBanner();
-  await wait(2300);
+  await until(() => !connBanner());
   step('connection banner goes from reconnecting to reconnected, then away',
     lostBanner && lostBanner.phase === 'trying' && lostBanner.text.includes('Reconnecting to #test') && !lostBanner.buttons.length
       && backBanner && backBanner.phase === 'done' && backBanner.text.includes('Reconnected to #test') && !connBanner(),
