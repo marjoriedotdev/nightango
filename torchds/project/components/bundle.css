@@ -2,7 +2,7 @@
 .tc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .tc-icon{flex:none;display:inline-block;vertical-align:middle}
 
-.tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);height:var(--size-control-md);padding:0 14px;border-radius:var(--radius-lg);border:1px solid transparent;background:none;color:var(--text);font:500 13.5px/1 var(--font-sans);white-space:nowrap;cursor:pointer;transition:background-color var(--duration-fast) var(--ease-out),border-color var(--duration-fast) var(--ease-out)}
+.tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);height:var(--size-control-md);padding:0 14px;border-radius:var(--radius-lg);border:1px solid transparent;background:none;color:var(--text);font:500 13.5px/1 var(--font-sans);white-space:nowrap;cursor:pointer;transition:background-color var(--duration-fast) var(--ease-out),border-color var(--duration-fast) var(--ease-out),color var(--duration-fast) var(--ease-out),filter var(--duration-fast) var(--ease-out)}
 .tc-btn:focus-visible,.tc-ib:focus-visible,.tc-nav:focus-visible,.tc-seg button:focus-visible,.tc-send:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .tc-btn-primary{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--shadow-glow)}
 .tc-btn-primary:hover{filter:brightness(1.06)}
@@ -16,7 +16,7 @@
 .tc-btn-block{width:100%}
 .tc-btn:disabled{opacity:.5;cursor:not-allowed;filter:none;background-clip:padding-box}
 
-.tc-ib{display:inline-flex;align-items:center;justify-content:center;flex:none;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);cursor:pointer;padding:0}
+.tc-ib{display:inline-flex;align-items:center;justify-content:center;flex:none;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);cursor:pointer;padding:0;transition:background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
 .tc-ib:hover{background:var(--hover-2);color:var(--text)}
 .tc-ib[aria-pressed="true"]{background:var(--selected);color:var(--text)}
 
@@ -49,7 +49,7 @@ select.tc-input{padding:0 10px}
 .tc-seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--track);border:1px solid var(--border)}
 .tc-seg-block{display:flex}
 .tc-seg-block button{flex:1}
-.tc-seg button{height:30px;padding:0 14px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-3);font:500 13px var(--font-sans);cursor:pointer;white-space:nowrap}
+.tc-seg button{height:30px;padding:0 14px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-3);font:500 13px var(--font-sans);cursor:pointer;white-space:nowrap;transition:background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
 .tc-seg button:hover{color:var(--text)}
 .tc-seg button[aria-pressed="true"]{background:var(--thumb);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 
@@ -76,7 +76,7 @@ select.tc-input{padding:0 10px}
 .tc-moon-crater{fill:var(--moon-crater)}
 .tc-moon-limb{stop-color:var(--moon-limb)}
 
-.tc-nav{display:flex;align-items:center;gap:10px;width:100%;height:var(--size-control-md);padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);font:400 14px var(--font-sans);text-align:left;text-decoration:none;cursor:pointer}
+.tc-nav{display:flex;align-items:center;gap:10px;width:100%;height:var(--size-control-md);padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);font:400 14px var(--font-sans);text-align:left;text-decoration:none;cursor:pointer;transition:background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
 .tc-nav:hover{background:var(--hover);color:var(--text)}
 .tc-nav[aria-current="page"]{background:var(--selected);color:var(--text);font-weight:500}
 .tc-nav-unread{color:var(--text);font-weight:600}
@@ -92,12 +92,12 @@ select.tc-input{padding:0 10px}
 .tc-msg-author{font-weight:600;color:var(--text)}
 .tc-msg-time{font:400 11.5px var(--font-sans);font-variant-numeric:tabular-nums;color:var(--text-3)}
 .tc-msg-text{margin:2px 0 0;color:var(--text-body);overflow-wrap:anywhere;white-space:pre-wrap}
-.tc-msg-gutter{width:36px;flex:none;padding-top:3px;text-align:right;font:400 10.5px var(--font-sans);font-variant-numeric:tabular-nums;color:transparent}
+.tc-msg-gutter{width:36px;flex:none;padding-top:3px;text-align:right;font:400 10.5px var(--font-sans);font-variant-numeric:tabular-nums;color:transparent;transition:color var(--duration-base) var(--ease-out)}
 .tc-msg:hover .tc-msg-gutter{color:var(--text-3)}
 .tc-msg-reply{display:flex;align-items:center;gap:6px;min-width:0;margin:0 0 4px 18px;font-size:12.5px;color:var(--text-3)}
 .tc-msg-reply-author{font-weight:500;color:var(--text-2)}
 .tc-msg-reply-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tc-msg-reply-jump{padding:0;border:0;border-radius:var(--radius-sm);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.tc-msg-reply-jump{padding:0;border:0;border-radius:var(--radius-sm);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:color var(--duration-base) var(--ease-out)}
 .tc-msg-reply-jump:hover{color:var(--text-2);text-decoration:underline;text-underline-offset:2px}
 .tc-msg-reply-jump:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .tc-msg:focus-visible,.cmsg:focus-visible{outline:2px solid var(--focus-ring);outline-offset:-2px}

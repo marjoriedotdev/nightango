@@ -21,6 +21,8 @@ h1,h2,h3{text-wrap:balance}
 .muted{color:var(--text-3)}
 .mono{font-family:var(--font-mono)}
 .tnum{font-variant-numeric:tabular-nums}
+/* Hover fades. Keyboard selection in menus, the palette and media suggestions stays instant: a fade there lags behind the arrow keys. */
+.searchbtn,.sec-label,.me-btn,.pillbtn,.linkbtn,.embed-play,.embed-reveal,.mrow,.tab,.conv,.card,.pick,.role-btn,.media-pick,.filter-chip button{transition:background-color var(--duration-base) var(--ease-out),border-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
 
 .shell{display:flex;gap:10px;height:100%;min-height:0;padding:10px max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px))}
 /* Sky behind the panels: text always stays on a solid surface. */
@@ -240,7 +242,7 @@ h1,h2,h3{text-wrap:balance}
 .conv-row{position:relative;touch-action:pan-y pinch-zoom}
 .conv-row:hover .conv{background:var(--hover)}
 .conv-row .conv[aria-current="page"]{background:var(--selected)}
-.conv-row>.conv{position:relative;z-index:1;transform:translateX(var(--swipe,0px));transition:transform var(--duration-surface) var(--ease-out)}
+.conv-row>.conv{position:relative;z-index:1;transform:translateX(var(--swipe,0px));transition:transform var(--duration-surface) var(--ease-out),background-color var(--duration-base) var(--ease-out)}
 .conv-row.dragging,.conv-row.swiped{overflow:hidden;border-radius:8px}
 .conv-row.dragging>.conv,.conv-row.swiped>.conv{background:var(--panel)}
 .conv-row.dragging>.conv{transition:none}
