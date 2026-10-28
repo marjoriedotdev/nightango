@@ -8,7 +8,7 @@ var PRESENCE_REFRESH = 5 * MIN;
 var PRESENCE_MAX = 40;
 // Delays of the attempts that follow a connection loss: a Chatango restart makes an immediate retry fail.
 var RECONNECT_DELAYS = [3000, 10000, 30000];
-var RELEASES_URL = 'https://github.com/marjoriedotdev/nightango/releases/';
+var RELEASES_URL = REPO_URL + '/releases/';
 
 /**
  * Reads the version of the latest Nightango release published on GitHub.

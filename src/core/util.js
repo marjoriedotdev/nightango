@@ -1,6 +1,7 @@
 /* ---------- Utilities ---------- */
 var MIN = 60000;
 var CONFIRM_TIMEOUT = 8000;
+var REPO_URL = 'https://github.com/marjoriedotdev/nightango';
 function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
