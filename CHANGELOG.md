@@ -2,17 +2,6 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
-## [0.24.0] - 2026-10-28
-
-### Added
-
-- The BetterChatango sign-in screen now takes Nightango's colors, fonts and theme. BetterChatango still handles your sign-in.
-- About Nightango links to the Nightango source code and issue tracker on GitHub.
-
-### Fixed
-
-- On iPhone and iPad, tapping a field of the sign-in screen no longer zooms into the page.
-
 ## [0.23.0] - 2026-10-27
 
 ### Added
