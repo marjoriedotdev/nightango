@@ -687,6 +687,7 @@ function Root(props) {
       liveBridge.reconnect(gid, background);
       update(function (d) { var g = d.groups[gid]; if (g) g.conn = 'connecting'; if (gid === 'private_message') d.pmConn = 'connecting'; });
     };
+    actions.retryConnection = function (gid) { startRetries(gid); };
     actions.reconnectSession = function () {
       reconnectClosed();
       update(function (d) { if (d.session) d.session.attempts += 1; });
@@ -1045,7 +1046,7 @@ function Root(props) {
     if (!s0.auth.loggedIn) return;
     var gids = Object.keys(s0.groups).filter(function (gid) { var g = s0.groups[gid]; return g.joined && g.conn === 'closed'; });
     if (s0.pmConn === 'closed' && !held) gids.push('private_message');
-    gids.forEach(function (gid) { stopRetry(gid); retries.current[gid] = { tries: 0, timer: null }; reconnectAuto(gid); });
+    gids.forEach(startRetries);
   }
 
   // -- Automatic reconnection ---------------------------------------------------
@@ -1073,9 +1074,27 @@ function Root(props) {
     var r = stateRef.current.route;
     actions.reconnect(gid, gid !== 'private_message' && !(r.view === 'group' && r.id === gid));
   }
+  /**
+   * Starts a sequence of automatic attempts with an immediate first one.
+   * @param {string} gid Group or private_message.
+   */
+  function startRetries(gid) {
+    stopRetry(gid);
+    trackRetry(gid, { tries: 0, timer: null });
+    reconnectAuto(gid);
+  }
+  /**
+   * Records the sequence of a connection and copies its presence into the state, which the connection banner reads.
+   * @param {string} gid Group or private_message.
+   * @param {?{tries: number, timer: ?number}} r Sequence in progress, null when it ends.
+   */
+  function trackRetry(gid, r) {
+    if (r) retries.current[gid] = r; else delete retries.current[gid];
+    update(function (d) { if (!d.auth.loggedIn) return; if (r) d.retrying[gid] = true; else delete d.retrying[gid]; });
+  }
   function stopRetry(gid) {
     var r = retries.current[gid];
-    if (r) { clearTimeout(r.timer); delete retries.current[gid]; }
+    if (r) { clearTimeout(r.timer); trackRetry(gid, null); }
   }
   /**
    * Schedules the next attempt of a lost connection until RECONNECT_DELAYS runs out.
@@ -1089,13 +1108,13 @@ function Root(props) {
     if (tries >= RECONNECT_DELAYS.length) { liveBridge.note('Stopped reconnecting to ' + liveBridge.connName(gid) + ' after ' + tries + ' attempts'); return; }
     var delay = RECONNECT_DELAYS[tries];
     liveBridge.note('Reconnecting to ' + liveBridge.connName(gid) + ' in ' + delay / 1000 + ' s, attempt ' + (tries + 1) + ' of ' + RECONNECT_DELAYS.length);
-    retries.current[gid] = { tries: tries + 1, timer: setTimeout(function () {
+    trackRetry(gid, { tries: tries + 1, timer: setTimeout(function () {
       var s0 = stateRef.current, conn = connOf(s0, gid);
       // Attempt already started elsewhere (Reconnect, network back): its failure resumes the sequence.
       if (conn === 'connecting') return;
       if (conn !== 'closed' || !canRetry(s0)) { stopRetry(gid); return; }
       reconnectAuto(gid);
-    }, delay) };
+    }, delay) });
   }
 
   function handleLiveOp(op) {

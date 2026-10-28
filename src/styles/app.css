@@ -115,6 +115,22 @@ h1,h2,h3{text-wrap:balance}
 .notice .grow{min-width:200px}
 .searchbar{flex:none;display:flex;align-items:center;gap:8px;margin:12px 20px 0}
 .banner-wrap{flex:none;margin:12px 20px 0}
+.conn-banner{flex:none;display:grid;grid-template-rows:1fr;margin:0 20px;transition:grid-template-rows .15s ease-out,opacity .15s ease-out;animation:conn-in .15s ease-out}
+.conn-banner-leaving{grid-template-rows:0fr;opacity:0}
+@keyframes conn-in{from{grid-template-rows:0fr;opacity:0}}
+.conn-banner-clip{min-height:0;overflow:hidden}
+.conn-banner-clip>.tc-banner{margin-top:12px}
+.conn-banner .tc-banner-icon{color:var(--text-2);transition:color .15s ease-out}
+.conn-banner[data-phase="done"] .tc-banner-icon{color:var(--accent-text)}
+.conn-banner[data-phase="failed"] .tc-banner-icon{color:var(--warning)}
+.conn-banner-actions{display:flex;flex:none;gap:8px}
+@media (max-width:640px){.conn-banner .tc-banner{flex-wrap:wrap}.conn-banner-actions{flex-basis:100%;padding-left:26px}}
+.conn-fade{animation:tc-fade-in .15s ease-out}
+.conn-icon{display:inline-grid;width:16px;height:16px}
+.conn-icon>span{grid-area:1/1;display:inline-flex;opacity:0;transform:scale(.6);transition:opacity .15s ease-out,transform .15s ease-out}
+.conn-banner[data-phase="trying"] .conn-icon-spin,.conn-banner[data-phase="done"] .conn-icon-check,.conn-banner[data-phase="failed"] .conn-icon-alert{opacity:1;transform:none}
+.conn-icon-check path{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .15s ease-out .1s}
+.conn-banner[data-phase="done"] .conn-icon-check path{stroke-dashoffset:0}
 .chan-pick{position:relative}
 
 .menu-anchor{position:relative;display:inline-flex}

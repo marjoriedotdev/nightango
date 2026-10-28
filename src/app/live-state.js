@@ -26,7 +26,7 @@ function liveWorld(me) {
     me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
     route: { view: 'discover' }, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
-    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false
+    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, retrying: {}
   };
 }
 /** Key of a ban list entry: unid and IP, like removeblock. */

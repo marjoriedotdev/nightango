@@ -194,7 +194,7 @@ function GroupView(p) {
         h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
         h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: count + ':' + !!search, newBelow: 'notify', older: older }),
-      LIVE && g.conn && g.conn !== 'open' ? h(ConnectionBanner, { name: '#' + g.id, conn: g.conn, onReconnect: function () { app.actions.reconnect(g.id); } }) : null,
+      LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onMouseDown: endCompletion, onBlur: endCompletion },
         composer,
         h('p', { className: 'tc-sr', 'aria-live': 'polite' }, completed))),
