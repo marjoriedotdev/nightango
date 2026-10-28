@@ -167,6 +167,19 @@ function tokensCss(tokens) {
     themeRules(tokens, ':root', ':root:not([data-theme="dark"])', ':root[data-theme="light"]', ':root[data-theme="dark"]');
 }
 
+/**
+ * Produces the stylesheet of the BetterChatango sign-in screen.
+ * @param {object} tokens Content of tokens.json.
+ * @param {string} login Sign-in screen rules.
+ */
+function loginCss(tokens, login) {
+  const chosen = (theme) => `body:has(> #torch-skin[data-theme="${theme}"]) > .login`;
+  const css = themeRules(tokens, '.login', '.login', chosen('light'), chosen('dark')) + login;
+  // This stylesheet sits next to the password field: it must load nothing.
+  if (/url\(|@import/i.test(css)) throw new Error('The sign-in screen stylesheet must not load a resource.');
+  return css;
+}
+
 // -- Fonts --------------------------------------------------------------------
 
 const FONTS_DIR = join(ROOT, 'torchds', 'project', 'fonts');
@@ -230,11 +243,12 @@ const MINIFIED = {
  * @param {{ js: Function, css: Function }} pack Transform of the code and the stylesheets.
  */
 async function userscript(source, pack) {
-  const [css, fontsCss] = await Promise.all([pack.css(source.css), pack.css(source.fontsCss)]);
+  const [css, fontsCss, loginStyles] = await Promise.all([pack.css(source.css), pack.css(source.fontsCss), pack.css(source.loginCss)]);
   // The page code becomes a string literal run by a <script> through textContent: never parsed as HTML.
   const page = await pack.js(source.page
     .replaceAll('/*CSS*/', () => jsonString(css))
     .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
+    .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginStyles))
     .replaceAll('/*JOURNAL*/', () => source.journalJs)
     .replaceAll('/*BUNDLE*/', () => source.bundleJs)
     .replaceAll('/*APP*/', () => source.appJs));
@@ -308,6 +322,7 @@ ${appJs}
     journalJs: read('src', 'loader', 'skin-journal.js'),
     css: skinCss(css, bundleCss, appCss),
     fontsCss,
+    loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
     fontsLicense: read('torchds', 'project', 'fonts', 'OFL.txt'),
     bundleJs,
     appJs

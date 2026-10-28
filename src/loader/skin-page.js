@@ -5,6 +5,7 @@
 /*JOURNAL*/
   var CSS = /*CSS*/;
   var FONTS_CSS = /*FONTS_CSS*/;
+  var LOGIN_CSS = /*LOGIN_CSS*/;
   var BETTER_CHATANGO_START = 'https://vissle.me/client/start';
 
   // Libraries checked by hash: a file modified on the CDN is not executed.
@@ -31,6 +32,22 @@
     font.textContent = FONTS_CSS;
     document.head.appendChild(font);
   }
+  // Sign-in screen in Nightango colors through a stylesheet only: the form stays BetterChatango's (ADR-0001).
+  function skinLogin() {
+    if (document.getElementById('torch-skin-login') || !document.querySelector('body > .login')) return;
+    addFont();
+    var style = document.createElement('style');
+    style.id = 'torch-skin-login';
+    style.textContent = LOGIN_CSS;
+    document.head.appendChild(style);
+  }
+  function unskinLogin() {
+    loginWatch.disconnect();
+    var style = document.getElementById('torch-skin-login');
+    if (style) style.remove();
+  }
+  // BetterChatango replaces the whole document with its page, sign-in screen included, before its code starts.
+  var loginWatch = new MutationObserver(skinLogin);
 
   /* BetterChatango startup, like its bookmarklet: same script, without a reload loop on failure. */
   function startBetterChatango() {
@@ -55,6 +72,8 @@
     });
   }
 
+  loginWatch.observe(document.documentElement, { childList: true });
+  if (probeBetterChatango()) skinLogin();
   startBetterChatango();
   var react = load('https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js', 'sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z')
     .then(function () { return load('https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js', 'sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1'); });
@@ -88,7 +107,10 @@
       boot();
       console.info('[torch-skin] attached to BetterChatango. Sign in with the BetterChatango login screen.');
     })
-    .catch(function (e) { console.error('[torch-skin] could not start, the original BetterChatango interface stays in place.', e); });
+    .catch(function (e) {
+      unskinLogin();
+      console.error('[torch-skin] could not start, the original BetterChatango interface stays in place.', e);
+    });
 
   function boot() {
 /*BUNDLE*/

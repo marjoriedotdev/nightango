@@ -72,6 +72,9 @@ async function suite(userscript) {
   // BetterChatango replaces the whole document with its client, sign-in screen included.
   a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div></body>';
   await wait(20);
+  const skin = a.d.getElementById('torch-skin-login');
+  step('sign-in screen skinned in the new document, without loading anything',
+    !!skin && skin.parentNode === a.d.head && /\.login/.test(skin.textContent) && !/url\(|@import/.test(skin.textContent) && !!a.d.getElementById('torch-skin-fonts'));
   fakeBetterChatango(a.w);
   await wait(700);
   const host = a.d.getElementById('torch-skin');
@@ -121,6 +124,17 @@ async function suite(userscript) {
   await wait(20);
   step('explains when BetterChatango cannot be reached', /could not be reached/.test(e.d.querySelector('h1').textContent));
   e.w.close();
+
+  /* React unreachable: the sign-in screen gets its BetterChatango look back */
+  const f = page(userscript, 'https://st.chatango.com/');
+  const reactScript = f.d.querySelector('script[src*="cdnjs"]');
+  f.d.documentElement.innerHTML = '<head></head><body><div class="login"></div></body>';
+  await wait(20);
+  const skinned = !!f.d.getElementById('torch-skin-login');
+  reactScript.dispatchEvent(new f.w.Event('error'));
+  await wait(20);
+  step('sign-in screen unskinned when Nightango cannot start', skinned && !f.d.getElementById('torch-skin-login'));
+  f.w.close();
 
   /* Diagnostic journal: socket lifecycle, never the frame content */
   const j = page(userscript, 'https://st.chatango.com/', fakeSocket);
