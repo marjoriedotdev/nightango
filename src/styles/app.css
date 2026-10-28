@@ -360,9 +360,11 @@ h1,h2,h3{text-wrap:balance}
   .shell,.settings{gap:0;padding:0 env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
   .main,.col,.spage{border:0;border-radius:0;box-shadow:none}
   .main::before{display:none}
-  .sidebar{position:fixed;top:0;bottom:0;left:0;z-index:40;width:min(300px,86vw);transform:translateX(-104%);transition:transform .2s ease;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);border-width:0 1px 0 0;border-radius:0 var(--radius-panel) var(--radius-panel) 0;box-shadow:var(--shadow-floating)}
-  .shell.nav-open .sidebar{transform:none}
-  .shell.nav-open .scrim{display:block;position:fixed;inset:0;z-index:39;background:rgba(3,6,16,.55)}
+  .sidebar{position:fixed;top:0;bottom:0;left:0;z-index:40;width:min(300px,86vw);visibility:hidden;transform:translateX(-104%);transition:transform .2s ease,visibility 0s .2s;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);border-width:0 1px 0 0;border-radius:0 var(--radius-panel) var(--radius-panel) 0;box-shadow:var(--shadow-floating)}
+  /* Visibility follows the slide: a closed drawer is only moved off screen and would keep its buttons in the Tab order. */
+  .shell.nav-open .sidebar{visibility:visible;transform:none;transition-delay:0s}
+  .scrim{display:block;position:fixed;inset:0;z-index:39;background:rgba(3,6,16,.55);visibility:hidden;opacity:0;transition:opacity .2s ease,visibility 0s .2s}
+  .shell.nav-open .scrim{visibility:visible;opacity:1;transition-delay:0s}
   .only-mobile{display:inline-flex!important}
   .hide-mobile{display:none!important}
   .topbar{padding-left:6px;gap:6px}
