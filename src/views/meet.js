@@ -28,33 +28,53 @@ function personCard(s, n, theme, onClick) {
         : h('span', { className: 'conv-about' }, about || (u.profileMissing ? 'No public profile.' : null))));
 }
 
+/**
+ * Age range with two handles that never meet: Chatango finds nobody when the youngest and oldest ages are equal.
+ * @param {{lo: number, hi: number, onChange: Function}} p Ages shown and their setter, called with (lo, hi).
+ */
+function AgeRange(p) {
+  var min = MEET_DEFAULTS.ageMin, max = MEET_DEFAULTS.ageMax, span = max - min;
+  var a = useState(null), hover = a[0], setHover = a[1];
+  // Handles can overlap: the one on the pointer's side goes on top, else the one that can still move away from its end.
+  var loOnTop = hover ? hover === 'lo' : p.lo > (min + max) / 2;
+  function onPointerMove(e) {
+    if (e.buttons) return;
+    var r = e.currentTarget.getBoundingClientRect();
+    // 9: half the handle width in app.css, where the handle center stops at each end.
+    var v = min + (e.clientX - r.left - 9) / (r.width - 18) * span;
+    setHover(v < (p.lo + p.hi) / 2 ? 'lo' : 'hi');
+  }
+  function handle(label, value, onValue, top) {
+    return h('input', { type: 'range', min: min, max: max, step: 1, value: value, 'aria-label': label, style: top ? { zIndex: 1 } : null, onChange: function (e) { onValue(+e.target.value); } });
+  }
+  return h('div', { className: 'age-range', onPointerMove: onPointerMove, onPointerLeave: function () { setHover(null); } },
+    h('div', { className: 'age-range-track' }, h('span', { style: { left: (p.lo - min) / span * 100 + '%', right: (max - p.hi) / span * 100 + '%' } })),
+    handle('Youngest', p.lo, function (v) { p.onChange(Math.min(v, p.hi - 1), p.hi); }, loOnTop),
+    handle('Oldest', p.hi, function (v) { p.onChange(p.lo, Math.max(v, p.lo + 1)); }, false));
+}
+
 function MeetFilters(p) {
   var a = useState(function () { return Object.assign({}, p.value); }), f = a[0], setF = a[1];
   function set(k, v) { setF(function (x) { var o = Object.assign({}, x); o[k] = v; return o; }); }
-  var lo = parseInt(f.ageMin, 10), hi = parseInt(f.ageMax, 10);
-  var ageErr = isNaN(lo) || isNaN(hi) || lo < 13 || hi > 99 || lo > hi ? 'Use ages between 13 and 99, youngest first.' : '';
   function seg(label, value, options, onChange) {
     return h('div', { className: 'tc-field' }, h('span', { className: 'tc-label' }, label),
       h(T.SegmentedControl, { label: label, block: true, value: value, onChange: onChange, options: options }));
   }
-  var num = { className: 'tc-input', type: 'number', min: 13, max: 99, style: { width: 84 } };
   return h(Dialog, {
     title: 'Filter people', description: 'Chatango lists public profiles that match every filter.', onClose: p.onClose,
     footer: [
       h(T.Button, { key: 'r', variant: 'ghost', onClick: function () { setF(Object.assign({}, MEET_DEFAULTS, { query: f.query })); } }, 'Reset'),
       h('span', { key: 'g', style: { flex: 1 } }),
       h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
-      h(T.Button, { key: 'a', variant: 'primary', disabled: !!ageErr, onClick: function () { p.onApply(Object.assign({}, f, { ageMin: lo, ageMax: hi })); } }, 'Show results')
+      h(T.Button, { key: 'a', variant: 'primary', onClick: function () { p.onApply(f); } }, 'Show results')
     ]
   },
     h('div', { className: 'dialog-body', style: { gap: 18 } },
       seg('Gender', f.sex, [{ value: 'B', label: 'Anyone' }, { value: 'M', label: 'Men' }, { value: 'F', label: 'Women' }], function (v) { set('sex', v); }),
-      h('div', { className: 'tc-field' },
-        h('span', { className: 'tc-label', id: 'meet-age-l' }, 'Age'),
-        h('div', { role: 'group', 'aria-labelledby': 'meet-age-l', style: { display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-2)' } },
-          h('input', Object.assign({ 'aria-label': 'Youngest', value: f.ageMin, 'aria-invalid': ageErr ? 'true' : undefined, onChange: function (e) { set('ageMin', e.target.value); } }, num)), 'to',
-          h('input', Object.assign({ 'aria-label': 'Oldest', value: f.ageMax, 'aria-invalid': ageErr ? 'true' : undefined, onChange: function (e) { set('ageMax', e.target.value); } }, num))),
-        h('span', { className: ageErr ? 'tc-error' : 'tc-hint' }, ageErr || 'From 13 to 99.')),
+      h('div', { className: 'tc-field', role: 'group', 'aria-labelledby': 'meet-age-l' },
+        h('span', { className: 'age-range-head' }, h('span', { className: 'tc-label', id: 'meet-age-l' }, 'Age'), h('span', { className: 'tnum' }, f.ageMin + ' to ' + f.ageMax)),
+        h(AgeRange, { lo: f.ageMin, hi: f.ageMax, onChange: function (lo, hi) { setF(function (x) { return Object.assign({}, x, { ageMin: lo, ageMax: hi }); }); } }),
+        h('span', { className: 'tc-hint' }, 'Chatango searches two ages or more.')),
       seg('Profile picture', String(f.avatar || 0), [{ value: '0', label: 'Any' }, { value: '1', label: 'Photos' }, { value: '2', label: 'Characters' }], function (v) { set('avatar', +v); }),
       h('label', { className: 'tc-checkline', style: { justifyContent: 'space-between', width: '100%' } },
         h('span', null, h('span', { style: { display: 'block', fontWeight: 500 } }, 'Online now'), h('span', { className: 'tc-hint' }, 'Only people connected right now.')),
