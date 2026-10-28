@@ -150,7 +150,7 @@ function themeBlock(tokens, theme) {
  */
 function themeRules(tokens, root, auto, light, dark) {
   const statics = [];
-  for (const family of ['spacing', 'radius', 'size']) for (const t of tokens[family].tokens) statics.push(`--${t.name}: ${t.value};`);
+  for (const family of ['spacing', 'radius', 'size', 'motion']) for (const t of tokens[family].tokens) statics.push(`--${t.name}: ${t.value};`);
   for (const [key, stack] of Object.entries(tokens.type.families)) statics.push(`--font-${key}: ${stack};`);
   return `${root} { color-scheme: dark; ${ACCENT_DEFAULTS} ${statics.join(' ')} ${themeBlock(tokens, 'dark')} }\n` +
     `@media (prefers-color-scheme: light) { ${auto} { color-scheme: light; ${themeBlock(tokens, 'light')} } }\n` +
