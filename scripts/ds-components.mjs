@@ -169,7 +169,7 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
     `  return h('div', null, h(T.DayDivider, { date: Date.now() - 5 * 864e5 }, 'Mon 12 Oct'), h(T.DayDivider, { date: Date.now() }, 'Today'));`],
   ['Banner', 'Feedback', 120,
     'A one-line notice above content: group announcements and permission warnings.',
-    `\`tone\` is \`info\` (pin icon in \`accent-text\`) or \`warning\` (alert icon in \`warning\`). Give a short \`title\`, the text as children, an optional \`action\` button and \`onDismiss\` when the reader may hide it. Below 860px the text goes under the title. One banner per view.`,
+    `\`tone\` is \`info\` (pin icon in \`accent-text\`) or \`warning\` (alert icon in \`warning\`). \`icon\` names another icon, or takes a 16px element for an icon that changes with a state. Give a short \`title\`, the text as children, an optional \`action\` button and \`onDismiss\` when the reader may hide it. Below 860px the text goes under the title. One banner per view.`,
     `  return h('div', { className: 'col' },
     h(T.Banner, { title: 'Announcement', onDismiss: function () {} }, 'Server s12 drops connections today. Reconnect twice.'),
     h(T.Banner, { tone: 'warning', action: h(T.Button, { size: 'sm' }, 'Allow in browser') }, 'Your browser blocks desktop notifications for this site.'));`],

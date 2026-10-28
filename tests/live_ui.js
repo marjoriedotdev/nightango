@@ -518,16 +518,29 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('BetterChatango warning becomes a toast with its action', !!t && !!byText('.toast button', 'Reload'));
   click(byText('.toast button', 'Reload'));
   step('toast action calls BetterChatango', reloads === 1);
+  const connBanner = () => { const el = $('.conn-banner'); return el ? { phase: el.dataset.phase, text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   C.groups.test.socket.readyState = 3; await wait(2300);
-  step('disconnect banner', !!byText('.banner-wrap', 'Disconnected from #test'));
-  click(byText('.banner-wrap button', 'Reconnect')); await wait(30);
+  const lostBanner = connBanner();
   C.groups.test.socket.readyState = 1; await wait(2300);
-  step('banner clears once connected', !byText('.banner-wrap', 'Disconnected'));
+  const backBanner = connBanner();
+  await wait(2300);
+  step('connection banner goes from reconnecting to reconnected, then away',
+    lostBanner && lostBanner.phase === 'trying' && lostBanner.text.includes('Reconnecting to #test') && !lostBanner.buttons.length
+      && backBanner && backBanner.phase === 'done' && backBanner.text.includes('Reconnected to #test') && !connBanner(),
+    { lostBanner, backBanner, after: connBanner() });
+  // A loss while the page is hidden starts no attempt: the same state as a spent sequence, which takes 43 s.
+  Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
   C.groups.test.socket.readyState = 3; await wait(2300);
-  click(byText('.banner-wrap button', 'Reconnect')); await wait(30);
+  delete d.visibilityState;
+  const failedBanner = connBanner();
   const testConnects = calls.filter(c => c[0] === 'connect' && c[1] === 'test').length;
-  step('reconnect twice', testConnects === 2 && !C.cache.connect.includes('test'), { testConnects, cache: C.cache.connect });
-  C.groups.test.socket.readyState = 1;
+  click(byText('.conn-banner button', 'Try again')); await wait(30);
+  const retried = { connects: calls.filter(c => c[0] === 'connect' && c[1] === 'test').length - testConnects, cached: C.cache.connect.includes('test'), banner: connBanner() };
+  step('connection banner without attempts left offers Try again and Reload',
+    failedBanner && failedBanner.phase === 'failed' && failedBanner.text.includes("Couldn't reconnect to #test") && JSON.stringify(failedBanner.buttons) === '["Try again","Reload"]'
+      && retried.connects === 1 && !retried.cached && retried.banner && retried.banner.phase === 'trying',
+    { failedBanner, retried });
+  C.groups.test.socket.readyState = 1; await wait(2300);
 
   /* History */
   const historyWatcher = () => observers.find(x => x.targets.some(t => t.closest('.log')));

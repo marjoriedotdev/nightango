@@ -1,4 +1,4 @@
-import type { ReactNode, CSSProperties, ButtonHTMLAttributes, InputHTMLAttributes, KeyboardEvent } from 'react';
+import type { ReactNode, ReactElement, CSSProperties, ButtonHTMLAttributes, InputHTMLAttributes, KeyboardEvent } from 'react';
 
 export type IconName = string;
 export type Presence = 'online' | 'idle' | 'offline';
@@ -19,7 +19,7 @@ export interface MessageProps { time: string; /** A text becomes a p.tc-msg-text
 export interface DayDividerProps { children: ReactNode; /** Day of the divider: shows the moon of that night. */ date?: number | Date }
 export interface MoonProps { /** Moment whose phase is drawn, now by default. */ date?: number | Date; /** Fixed phase from 0 (new moon) to 1, takes precedence over date. */ phase?: number; size?: number; /** true: phase name and lit part. Text: the given label. Absent: decorative. */ label?: boolean | string; className?: string; style?: CSSProperties }
 export interface MoonPhase { phase: number; lit: number; name: string }
-export interface BannerProps { tone?: 'info' | 'warning'; icon?: IconName; title?: ReactNode; children: ReactNode; action?: ReactNode; onDismiss?: () => void }
+export interface BannerProps { tone?: 'info' | 'warning'; /** An icon name, or a 16px element that replaces the icon (a state that animates, for example). */ icon?: IconName | ReactElement; title?: ReactNode; children: ReactNode; action?: ReactNode; onDismiss?: () => void }
 export interface SettingsSectionProps { title?: ReactNode; description?: ReactNode; headerAside?: ReactNode; padded?: boolean; children?: ReactNode }
 export interface SettingRowProps { title: ReactNode; description?: ReactNode; control: ReactNode; badge?: ReactNode; asLabel?: boolean }
 export interface SaveBarProps { children: ReactNode; onDiscard?: () => void; onSave?: () => void; saveLabel?: string; discardLabel?: string }
