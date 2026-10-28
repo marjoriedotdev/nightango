@@ -3,7 +3,7 @@ var PULL_TRIGGER = 64, PULL_MAX = 96;
 /** Filters that differ from BetterChatango's defaults, for the counter and the chips. */
 function meetActive(f) {
   var out = [];
-  if (f.sex !== 'B') out.push(['sex', f.sex === 'M' ? 'Men' : 'Women']);
+  if (f.sex !== 'B') out.push(['sex', f.sex]);
   if (+f.ageMin !== 13 || +f.ageMax !== 99) out.push(['age', 'Age ' + f.ageMin + ' to ' + f.ageMax]);
   if (+f.avatar) out.push(['avatar', +f.avatar === 1 ? 'Photos' : 'Characters']);
   if (!f.online) out.push(['online', 'Offline included']);
@@ -48,7 +48,7 @@ function MeetFilters(p) {
     ]
   },
     h('div', { className: 'dialog-body', style: { gap: 18 } },
-      seg('Gender', f.sex, [{ value: 'B', label: 'Anyone' }, { value: 'M', label: 'Men' }, { value: 'F', label: 'Women' }], function (v) { set('sex', v); }),
+      seg('Gender', f.sex, [{ value: 'B', label: 'Anyone' }, { value: 'M', label: 'M' }, { value: 'F', label: 'F' }], function (v) { set('sex', v); }),
       h('div', { className: 'tc-field' },
         h('span', { className: 'tc-label', id: 'meet-age-l' }, 'Age'),
         h('div', { role: 'group', 'aria-labelledby': 'meet-age-l', style: { display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-2)' } },
