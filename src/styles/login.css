@@ -1,0 +1,64 @@
+/* BetterChatango sign-in screen in Nightango colors. A stylesheet only: the form and its fields stay BetterChatango's (ADR-0001). */
+.login{--theme-primary:var(--bg);--theme-secondary:var(--raised);--theme-backdrop:var(--panel);--theme-text-title:var(--text);--theme-text-description:var(--text-2);--theme-highlight:var(--accent-text);--theme-passive:var(--accent-text);--theme-active:var(--accent);--brand-chatango:var(--accent-text);overflow-y:auto;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;accent-color:var(--accent)}
+.login :focus-visible:not(.text-input){outline:2px solid var(--focus-ring);outline-offset:2px}
+
+.login .login-header{flex:none;align-items:center;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--sky-top),var(--bg))}
+.login .client-logo{margin:0;padding:22px 0 18px;color:var(--text);font-family:var(--font-display);font-size:28px;line-height:28px;font-weight:400;text-shadow:none}
+.login .client-logo::after{content:"Nightango"}
+.login .client-logo-fire,.login .client-fire{display:none}
+.login .icon-menu{margin:0 var(--space-4);color:var(--text-2);font-size:18px;transition:color .12s}
+.login .icon-menu-redirect{color:inherit}
+.login .icon-menu-redirect:hover,.login .menu-side:hover+.menu-toggle{color:var(--text)}
+.login .menu-wrapper{border-left:1px solid var(--border);background:var(--panel)}
+.login .menu-header{color:var(--text-3);font-size:13px}
+.login .menu-header-title{color:var(--text-3);font-size:11.5px;font-weight:600;letter-spacing:.06em}
+.login .menu-item{color:var(--text-2);font-size:14px;line-height:2}
+.login .menu-item:hover{color:var(--text)}
+
+.login .login-wrapper{width:100%;max-width:412px;margin:auto;padding:var(--space-12) var(--space-4);box-sizing:border-box;filter:none}
+.login .login-fail{margin:0 0 var(--space-4);justify-content:flex-start;color:var(--danger);font-size:13px}
+.login .login-fail:empty{display:none}
+.login .login-member{min-width:0;margin:0;padding:0;border:0}
+/* A legend keeps its own box in a fieldset: floated, it spans the width like a heading. */
+.login .login-title{float:left;width:100%;margin:0 0 var(--space-5);padding:0;text-align:left;color:var(--text);font-size:22px;line-height:28px;font-weight:600;letter-spacing:-.01em}
+.login .login-member form{clear:both;align-items:stretch;gap:var(--space-3)}
+
+.login .field-display{flex-wrap:nowrap;align-items:center;height:var(--size-control-md);padding-left:var(--space-3);box-sizing:border-box;border:1px solid var(--border-strong);border-radius:var(--radius-lg);background:var(--raised);transition:border-color .12s,box-shadow .12s}
+.login .field-display:focus-within{border-color:var(--focus-ring);box-shadow:0 0 0 3px var(--accent-soft)}
+.login .field-icon{margin:0 10px 0 0;color:var(--text-3);font-size:14px;cursor:default}
+.login .text-field{align-self:stretch;flex-wrap:nowrap;margin:0;font-size:14px}
+.login .text-input{min-width:0;padding:0;border-radius:0;background:none;color:var(--text);font-family:var(--font-sans);font-size:14px}
+.login .text-input::placeholder{color:var(--text-3)}
+.login .text-input:hover::placeholder,.login .text-input:focus::placeholder{color:var(--text-2)}
+.login .field-action{width:36px;border-radius:0 var(--radius-lg) var(--radius-lg) 0;background:none}
+.login .field-action::before{color:var(--text-3);font-size:13px}
+.login .field-action:hover::before{color:var(--text)}
+
+.login .login-item{align-items:center;gap:var(--space-2) var(--space-4);margin-top:var(--space-1)}
+.login .login-item-down{align-items:flex-start}
+.login .checkbox-label{display:inline-flex;align-items:center}
+.login .checkbox-label,.login .login-label{margin:0;color:var(--text-2);font-size:13.5px}
+.login .checkbox-label:hover{color:var(--text)}
+.login .login-label{color:var(--accent-text)}
+.login .login-label:hover,.login .login-label:focus{color:var(--accent-text);text-decoration:underline}
+.login .checkbox-text{position:relative;display:inline-flex;align-items:center;gap:var(--space-2)}
+.login .checkbox-text::before{flex:none;width:18px;height:18px;margin:0;padding:0;box-sizing:border-box;border:1.5px solid var(--control-strong);border-radius:5px;background:var(--raised)}
+.login .checkbox-input:hover+.checkbox-text::before{border:1.5px solid var(--text-2)}
+.login .checkbox-input:focus-visible+.checkbox-text::before{border:1.5px solid var(--control-strong);outline:2px solid var(--focus-ring);outline-offset:2px}
+.login .checkbox-input:checked+.checkbox-text::before{border:1.5px solid var(--accent);background:var(--accent)}
+.login .checkbox-input:checked+.checkbox-text::after{content:"";position:absolute;top:50%;left:4.5px;width:9px;height:5px;border-left:2px solid var(--on-accent);border-bottom:2px solid var(--on-accent);transform:translateY(-70%) rotate(-45deg)}
+
+.login .login-button-wrapper{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-5)}
+.login .login-divide{display:none}
+.login .login-button{flex:1;height:var(--size-control-lg);padding:0 18px;border:1px solid var(--control);border-radius:var(--radius-lg);background:none;color:var(--text);font-family:var(--font-sans);font-size:14px;font-weight:600;transition:background-color .12s,border-color .12s}
+.login .login-button:hover,.login .login-button:focus{border:1px solid var(--control);background:var(--hover-2);color:var(--text)}
+.login .login-select,.login .login-select:hover,.login .login-select:focus{border:1px solid transparent;background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-glow)}
+.login .login-select:hover{filter:brightness(1.06)}
+.login .login-button:disabled,.login .login-button[disabled]:hover{opacity:.5;cursor:not-allowed;filter:none}
+
+.login .login-footer{flex:none;justify-content:center;gap:var(--space-2) 18px;padding:var(--space-4);font-size:12.5px}
+.login .login-footer a{margin:0;color:var(--text-3)}
+.login .login-footer a:hover{color:var(--text-2)}
+
+/* iOS Safari zooms into a field whose text is under 16px. */
+@media (pointer:coarse){.login .text-input{font-size:16px}.login .field-display{height:var(--size-touch)}.login .login-button{height:var(--size-touch)}}

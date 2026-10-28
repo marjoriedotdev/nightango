@@ -60,6 +60,7 @@ src/
     skin-journal.js  diagnostic journal, inserted by the build at the top of the page code (ADR-0011)
   styles/
     app.css          application styles
+    login.css        BetterChatango sign-in screen in Nightango colors, put in the document by skin-page.js
 scripts/
   build.mjs          Node build (concatenation, userscript assembly, esbuild minification)
   ds-components.mjs  regenerates README.md and preview.html of the design system components
@@ -78,7 +79,7 @@ The build opens the IIFE with two names: `APP_VERSION`, the `@version` of `src/l
 
 `bridge/live-parse.js` sits right before `bridge/live-bridge.js`, after `bridge/live-model.js` whose `FONT_FACES` it reads. Its functions become names of the single scope, shared with every file: a name that duplicates another replaces the first one without an error.
 
-The build rejects app code or a bundle that contains `</script`, and a userscript stylesheet that still targets `:root` or `html,body{`.
+The build rejects app code or a bundle that contains `</script`, a userscript stylesheet that still targets `:root` or `html,body{`, and a sign-in screen stylesheet that contains `url(` or `@import`.
 
 ## Userscript in two contexts
 
@@ -98,7 +99,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 - The loader stops outside the home page (`window.top !== window` or `pathname !== '/'`): st.chatango.com also serves the chat windows embedded in other sites.
 - The page code is injected by a `<script>` whose `textContent` is an ASCII-only JSON string literal. It is never parsed as HTML.
 - Only the vissle bridge runs in the sandbox. It reads the queried profile from `client.user.name` through an inline probe injected on each request, which returns it through a synchronous `CustomEvent` (`torch-skin:account`), and ignores the one the page would ask for. No `unsafeWindow`: Userscripts (Safari) does not provide it ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
-- `skin-page.js` protects itself from a double start (`window.__TORCH_SKIN__`), sets up the diagnostic journal (`skin-journal.js`, in place of `/*JOURNAL*/`) before any BetterChatango socket, adds the BetterChatango startup script, loads React and ReactDOM from cdnjs with SRI, waits for BetterChatango's global objects, then mounts the interface.
+- `skin-page.js` protects itself from a double start (`window.__TORCH_SKIN__`), sets up the diagnostic journal (`skin-journal.js`, in place of `/*JOURNAL*/`) before any BetterChatango socket, watches for the BetterChatango sign-in screen, adds the BetterChatango startup script, loads React and ReactDOM from cdnjs with SRI, waits for BetterChatango's global objects, then mounts the interface.
 - If the startup fails, the original BetterChatango client stays in place.
 
 ## Diagnostic journal
@@ -110,7 +111,9 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 
 - The `#torch-skin` host is created after BetterChatango has started, since BetterChatango rebuilds its page. It carries an open Shadow DOM that contains the application stylesheet and the `#app` mount point.
 - The build adapts the application stylesheet to the Shadow DOM: `:root` becomes `:host`, and the global classes (`reduce-motion`, `underline-links`, `calm-sky`, `moon-south`) move to `:host(...)`.
-- The interface stays hidden until the BetterChatango session is open. Sign-in happens on the BetterChatango screen, left as is.
+- The interface stays hidden until the BetterChatango session is open. Sign-in happens on the BetterChatango screen.
+- That screen only gets a stylesheet, `<style id="torch-skin-login">` in `document.head`: `src/styles/login.css` after the tokens declared under `.login`, in the system theme, or the one chosen in Nightango once the `#torch-skin` host carries it (`body:has(> #torch-skin[data-theme])`). It recolors BetterChatango's `--theme-*` variables, so its menu and windows follow too. No script touches its form, and the stylesheet loads nothing ([ADR-0001](adr/0001-password-never-read.md)). BetterChatango replaces the whole document before showing its screen: a `MutationObserver` on `<html>` adds the stylesheet to the new document, before the first paint. If the interface cannot start, the stylesheet is removed and the screen goes back to its BetterChatango look.
+- Fields of that screen use 16px text on touch screens (`pointer: coarse`), like the interface fields: iOS Safari zooms into a field under 16px.
 - On sign-in, `window.__TORCH_SHOW__` hides the rest of the BetterChatango page and shows the host.
 - Dialogs, menus and notifications go through `Portal`, rendered in a `#layer` layer next to `#app`, so they do not distort the layout.
 - The interface fonts (Geist, Geist Mono, Instrument Serif) are embedded: woff2 files of the Latin subset in `torchds/project/fonts/`, under SIL OFL 1.1 (`OFL.txt`). The build encodes them as base64 `data:` URLs in the `@font-face` rules of `fonts.css`. `skin-page.js` puts these `@font-face` rules in a `<style id="torch-skin-fonts">` in `document.head` when the interface mounts: Chrome ignores a `@font-face` declared only in the shadow root. The hosted prototype gets the same `@font-face` rules in its stylesheet. The design system previews and the mockups link `fonts.css`. No external font request.
