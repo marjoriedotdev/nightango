@@ -1,5 +1,32 @@
 var EMBED_LABEL = { youtube: 'Video', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
-function messagePreview(m) { var e = m.embeds && m.embeds[0]; return m.text || (e ? EMBED_LABEL[e.kind] : ''); }
+/**
+ * Returns the text segments of a message as shown, without the links it already shows as a media.
+ * @param {{text: string, parts: ?Array, embeds: ?Array}} m Message read by parseContent.
+ * @returns {Array} Non-empty segments {text, b, i, u, s}.
+ */
+function shownParts(m) {
+  var links = mediaLinks(m), parts = m.parts || [{ text: m.text || '' }];
+  if (!links.length) return m.text ? parts : [];
+  var shown = parts.map(function (part) {
+    var chunks = String(part.text).split(/(https?:\/\/\S+)/), text = '';
+    for (var i = 0; i < chunks.length; i++) {
+      if (i % 2 && links.indexOf(chunks[i]) >= 0) {
+        // The space after a hidden link leaves with it: no double space or blank line stays.
+        if (i + 1 < chunks.length) chunks[i + 1] = chunks[i + 1].replace(/^\s+/, '');
+        continue;
+      }
+      text += chunks[i];
+    }
+    return Object.assign({}, part, { text: text });
+  });
+  shown[0].text = shown[0].text.replace(/^\s+/, '');
+  shown[shown.length - 1].text = shown[shown.length - 1].text.replace(/\s+$/, '');
+  return shown.filter(function (part) { return part.text; });
+}
+function messagePreview(m) {
+  var e = m.embeds && m.embeds[0], text = shownParts(m).map(function (part) { return part.text; }).join('');
+  return text || (e ? EMBED_LABEL[e.kind] : '');
+}
 /**
  * Returns the host of an https URL as the browser will reach it.
  * @param {string} url URL read.

@@ -474,40 +474,56 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.dialog-foot button', 'Delete')); await wait(30);
   step('delete also deletes the edits, like BetterChatango', JSON.stringify(frame('delmsg:').slice(delBefore)) === JSON.stringify(['delmsg:H-1=', 'delmsg:E-1=']), frame('delmsg:').slice(delBefore));
 
-  /* File upload through vissle: Nightango posts the link in the chosen group, never in client.focus */
-  // Returns the confirmation text. Without a button or a picker, the step fails without stopping the suite.
+  /* File upload through vissle: the picked file waits in the composer, then leaves with the typed text and the reply, in the group it was picked in, never in client.focus */
+  // jsdom has no object URLs: the composer preview reads the file through one.
+  w.URL.createObjectURL = () => 'blob:preview';
+  w.URL.revokeObjectURL = () => {};
   const pickFile = async name => {
     const btn = $('button[aria-label="Attach media"]'), input = $('.composer-wrap input[type="file"]');
-    if (!btn || !input) return null;
+    if (!btn || !input) return;
     click(btn);
     Object.defineProperty(input, 'files', { configurable: true, value: [new w.File(['x'], name, { type: 'image/png' })] });
     input.dispatchEvent(new w.Event('change', { bubbles: true })); await wait(30);
-    const ask = $('#layer .dialog'), ok = byText('.dialog-foot button', 'Upload'), text = ask && ask.textContent;
-    if (ok) click(ok);
-    await wait(30);
-    return text;
   };
   const linkFrames = from => sent.slice(from).filter(x => /^bm:/.test(x[1]));
+  const sendButton = () => $('.composer-wrap .tc-send');
   let releaseUpload = null;
   uploadReply = () => new Promise(resolve => { releaseUpload = () => resolve('data:abc/f.png'); });
   const uploadFrom = { focus: C.focus, sent: sent.length, posts: posts.length };
-  const uploadAsk = await pickFile('f.png') || '';
+  await pickFile('f.png');
+  const staged = {
+    dialog: !!$('#layer .dialog'), chip: !!byText('.tc-composer', 'f.png') && !!byText('.tc-composer', 'Anyone with the link can open it.'),
+    preview: ($('.tc-composer img') || { getAttribute: () => null }).getAttribute('src'), sendable: !!sendButton() && !sendButton().disabled,
+    posts: posts.length - uploadFrom.posts, sent: linkFrames(uploadFrom.sent).length
+  };
+  click($$('.tc-msg').find(x => x.textContent.includes('Mine')).querySelector('button[aria-label="Reply"]')); await wait(30);
+  type(editBox(), 'Look'); key(editBox(), 'Enter'); await wait(30);
   const uploadPost = posts[uploadFrom.posts] || {};
-  const uploading = !!byText('.tc-composer', 'Uploading f.png');
+  const uploading = { status: !!byText('.tc-composer', 'Uploading f.png'), blocked: !!sendButton() && sendButton().disabled, sent: linkFrames(uploadFrom.sent).length };
   click(byText('.tc-nav', 'test')); await wait(50);
   if (releaseUpload) releaseUpload();
   await until(() => !!byText('.toast', 'File sent.'));
   const uploadLinks = linkFrames(uploadFrom.sent);
-  step('uploaded file link sent to the group it was picked in, not client.focus',
-    uploadFrom.focus === 'test' && uploadAsk.includes('Upload f.png?') && uploadAsk.includes('vissle.me stores the file and Nightango posts its link in #edits. Anyone with the link can open it.') && posts.length === uploadFrom.posts + 1 && uploadPost.url === 'https://vissle.me/chatango/upload'
-      && JSON.stringify(uploadPost.item) === '{"key":true}' && JSON.stringify(Object.keys(uploadPost.f || {})) === '["filedata"]' && uploadPost.f.filedata.name === 'f.png' && uploading
-      && uploadLinks.length === 1 && uploadLinks[0][0] === 'edits' && /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">https:\/\/vissle\.me\/abc\/f\.png$/.test(uploadLinks[0][1]) && !!byText('.toast', 'File sent.'),
-    { uploadFrom, uploadAsk, uploadPost: { url: uploadPost.url, item: uploadPost.item, fields: Object.keys(uploadPost.f || {}) }, uploading, uploadLinks });
+  step('picked file waits in the composer, then its link leaves with the text and the reply in the group it was picked in, not client.focus',
+    uploadFrom.focus === 'test' && JSON.stringify(staged) === JSON.stringify({ dialog: false, chip: true, preview: 'blob:preview', sendable: true, posts: 0, sent: 0 })
+      && posts.length === uploadFrom.posts + 1 && uploadPost.url === 'https://vissle.me/chatango/upload'
+      && JSON.stringify(uploadPost.item) === '{"key":true}' && JSON.stringify(Object.keys(uploadPost.f || {})) === '["filedata"]' && uploadPost.f.filedata.name === 'f.png'
+      && JSON.stringify(uploading) === JSON.stringify({ status: true, blocked: true, sent: 0 })
+      && uploadLinks.length === 1 && uploadLinks[0][0] === 'edits' && /^bm:[a-z0-9]+:0:<n000\/><f x11000="0"><rAhypheNBunderSC\/>Look https:\/\/vissle\.me\/abc\/f\.png$/.test(uploadLinks[0][1]) && !!byText('.toast', 'File sent.'),
+    { uploadFrom, staged, uploadPost: { url: uploadPost.url, item: uploadPost.item, fields: Object.keys(uploadPost.f || {}) }, uploading, uploadLinks });
   uploadReply = () => Promise.resolve('error:x');
   const failFrom = sent.length;
   await pickFile('g.png');
+  type(editBox(), 'Again'); key(editBox(), 'Enter');
   await until(() => !!byText('.toast', 'The file could not be uploaded. Try again.'));
-  step('rejected upload sends nothing', !!byText('.toast', 'The file could not be uploaded. Try again.') && !linkFrames(failFrom).length, linkFrames(failFrom));
+  await wait(30);
+  const failKept = { draft: editBox().value, chip: !!byText('.tc-composer', 'g.png') };
+  const removeFile = $('.tc-composer button[aria-label="Remove g.png"]');
+  if (removeFile) { click(removeFile); await wait(30); }
+  type(editBox(), '');
+  step('rejected upload sends nothing and keeps the text and the file',
+    !!byText('.toast', 'The file could not be uploaded. Try again.') && !linkFrames(failFrom).length && failKept.draft === 'Again' && failKept.chip && !!removeFile && !byText('.tc-composer', 'g.png'),
+    { sent: linkFrames(failFrom), failKept, removed: !!removeFile });
 
   /* Warnings and connection */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
@@ -835,7 +851,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(shownBg) === JSON.stringify([[ROSA, bgImg('rosa', '0.4', 'right bottom')], [ROSA, bgImg('rosa', '0.4', 'right bottom')], ['', bgImg('trap', '1', 'left top')], ['', bgImg('pale', '0', 'left top')], ['', null], ['', null], ['', null]])
     && JSON.stringify(askedBg) === '[1,1,1,1,0,0]' && !leaked, { askedOff, blockedBg, shownBg, askedBg, leaked });
 
-  /* Media typed as text: YouTube without a duplicate of its tag, video and audio created only on click, http loaded as https, other extensions as links, failed player turned back into a link */
+  /* Media typed as text: YouTube without a duplicate of its tag, link hidden behind its media, video and audio created only on click, http loaded as https, other extensions as links, failed player turned back into a link */
   const MEDIA_LINKS = ['https://youtu.be/dQw4w9WgXcQ', 'https://x.test/clip.MP4?t=3', 'https://x.test/song.mp3#end', 'http://x.test/old.webm', 'https://x.test/old.wmv', 'https://www.youtube.com/watch?v=jNQXAC9IVRw'];
   g('b', 'test', ['1700000300.1', 'Eve', '', 'u7', 'UNID7', 'tmpmedia', '9.9.9.9', '0', '', '<n000/><f x11000="0">Media ' + MEDIA_LINKS.join(' ') + ' <i s="vid://yt:dQw4w9WgXcQ" w="126" h="93"/>']);
   const mediaRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Media ') === 0); return p && p.closest('article'); };
@@ -852,9 +868,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (mediaRow().querySelector('audio')) mediaRow().querySelector('audio').dispatchEvent(new w.Event('error'));
   await until(() => !mediaRow().querySelector('audio'));
   const failed = { audio: !!mediaRow().querySelector('audio'), link: !!mediaRow().querySelector('.embeds a.msg-link[href="https://x.test/song.mp3#end"]') };
+  // Links shown as a media leave the text.
+  const TEXT_LINKS = ['https://x.test/old.wmv'];
   const MEDIA_EMBEDS = ['embed-video:', 'embed-reveal:Play videox.test', 'embed-reveal:Play audiox.test', 'embed-reveal:Play videox.test', 'embed-video:'];
-  step('media links in text embed and load only on click', !!mediaBlocked && JSON.stringify(mediaBlocked) === JSON.stringify({ links: MEDIA_LINKS, embeds: MEDIA_EMBEDS, players: 0 })
-    && !!mediaOpen && JSON.stringify(mediaOpen) === JSON.stringify({ links: MEDIA_LINKS, embeds: MEDIA_EMBEDS, players: 0 })
+  step('media links in text embed and load only on click', !!mediaBlocked && JSON.stringify(mediaBlocked) === JSON.stringify({ links: TEXT_LINKS, embeds: MEDIA_EMBEDS, players: 0 })
+    && !!mediaOpen && JSON.stringify(mediaOpen) === JSON.stringify({ links: TEXT_LINKS, embeds: MEDIA_EMBEDS, players: 0 })
     && JSON.stringify(played.frames) === JSON.stringify(['dQw4w9WgXcQ', 'jNQXAC9IVRw'].map(id => 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1'))
     && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true], ['VIDEO', 'https://x.test/old.webm', true, true]])
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
@@ -862,10 +880,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Trusted host (BetterChatango list): under proxyMedia, only its image shows without a click, the host parsed like the browser does */
   const TRUST_LINKS = ['https://i.imgur.com/a.png', 'https://evil.example/b.png', 'https://i.imgur.com@evil.example/c.png'];
   g('b', 'test', ['1700000301.1', 'Eve', '', 'u7', 'UNID7', 'tmptrust', '9.9.9.9', '0', '', '<n000/><f x11000="0">Trusted ' + TRUST_LINKS.join(' ')]);
-  const trustRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Trusted ') === 0); return p && p.closest('article'); };
+  const trustRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent === 'Trusted'); return p && p.closest('article'); };
   await until(() => !!trustRow() && trustRow().querySelectorAll('.embeds > *').length === 3);
-  const trustImgs = [...trustRow().querySelectorAll('.embeds img')].map(x => x.getAttribute('src'));
-  step('trusted host images load without a click', JSON.stringify(trustImgs) === JSON.stringify(['https://i.imgur.com/a.png']), trustImgs);
+  const trustImgs = trustRow() && [...trustRow().querySelectorAll('.embeds img')].map(x => x.getAttribute('src'));
+  const trustText = trustRow() && trustRow().querySelectorAll('.tc-msg-text a').length;
+  step('trusted host images load without a click, their links out of the text', JSON.stringify(trustImgs) === JSON.stringify(['https://i.imgur.com/a.png']) && trustText === 0, { trustImgs, trustText });
 
   /* Received emphasis: BetterChatango allowlist rebuilt as elements, neither media nor PM id in italics, tags outside the list without an element */
   const EMPH = '<b>Bold @alice</b> <I>Ital</I> <u>Under</u> <s>Gone</s> \u2593Struck\u2592 <iabc1234/>plain <i s="https://x.test/e.png"/>tail<script>alert(1)</script><img src="x" onerror="alert(2)">';

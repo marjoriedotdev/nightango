@@ -94,7 +94,7 @@ function MessageRow(p) {
  * @param {Object} m Message.
  */
 function copyTextItem(app, m) {
-  return { label: 'Copy text', icon: 'copy', onSelect: function () { copyText(messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed. Select the text and copy it.'); }); } };
+  return { label: 'Copy text', icon: 'copy', onSelect: function () { copyText(m.text || messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed. Select the text and copy it.'); }); } };
 }
 
 /**
@@ -153,8 +153,8 @@ function authorName(name, style) {
 }
 
 function MessageContent(p) {
-  var m = p.m;
-  return h(Frag, null, m.text ? h(MessageText, { text: m.text, parts: m.parts, style: p.style, plain: p.plain, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
+  var m = p.m, parts = shownParts(m);
+  return h(Frag, null, parts.length ? h(MessageText, { text: m.text, parts: parts, style: p.style, plain: p.plain, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
 }
 
 var FILE_MEDIA = { video: { icon: 'play', label: 'Play video', className: 'embed-frame' }, audio: { icon: 'volume', label: 'Play audio', className: 'embed-audio' } };

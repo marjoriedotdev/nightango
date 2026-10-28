@@ -189,12 +189,13 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
     'A floating bar that appears when a page has unsaved changes that go to Chatango.',
     `Use it only where changes are sent to Chatango (profile, group settings). Local preferences save on change and never show it. Children say what will change ("Moderator role changed. Applies to sable and vantage."). Provide \`onDiscard\` and \`onSave\`.`,
     `  return h(T.SaveBar, { onDiscard: function () {}, onSave: function () {} }, 'You have 2 unsaved changes');`],
-  ['Composer', 'Chat', 270,
+  ['Composer', 'Chat', 440,
     'The message input with reply or edit context, optional tools and send button.',
     `Provide \`placeholder\` ("Message #community", "Message sable") and \`onSend(text)\`. Enter sends, Shift+Enter adds a line. A click anywhere in the composer outside its controls focuses the input.
 
 - \`context\` shows the message the send relates to, above the input: \`{icon, verb, author, text, cancelLabel}\`, such as \`{icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply'}\` or \`{icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit'}\`. A new context focuses the input with the cursor at the end. Escape and the cancel button call \`onCancelContext\`.
 - \`status\` shows a send in progress above the input, with a spinner and no cancel button: "Uploading cat.png".
+- \`attachment\` shows the file that leaves with the next send, above the input: \`{name, preview, icon, note, onRemove}\`. \`preview\` is an image address for the thumbnail, otherwise \`icon\` stands in (\`image\`, \`play\`, \`volume\`). \`note\` says where the file goes, such as "vissle.me hosts it when you send. Anyone with the link can open it." While it is set, Send works with an empty input. Leave out \`onRemove\` while the file is being sent.
 - \`onEmoji\` and \`onAttach\` each show their tool button; leave them out when the feature does not exist.
 - \`aside\` holds the channel picker. \`beforeSend\` holds one icon button placed right before Send, such as the message style.
 - Pass \`value\` and \`onChange\` when the view writes into the input, such as a mention, and \`inputRef\` to focus it afterwards.
@@ -204,6 +205,7 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
     `  var s = React.useState('Thanks @sa'), long = React.useState('A message past the length BetterChatango allows');
   return h('div', { className: 'col' },
     h(T.Composer, { placeholder: 'Message #community', value: s[0], onChange: s[1], onKeyDown: function (e) { if (e.key === 'Tab' && !e.shiftKey && /@sa$/.test(s[0])) { e.preventDefault(); s[1](s[0] + 'ble '); } }, context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) }),
+    h(T.Composer, { placeholder: 'Message #community', onSend: function () {}, onAttach: function () {}, attachment: { name: 'reconnect-loop.png', icon: 'image', note: 'vissle.me hosts it when you send. Anyone with the link can open it.', onRemove: function () {} } }),
     h(T.Composer, { placeholder: 'Message #community', value: long[0], onChange: long[1], onSend: function () {}, hint: 'Shorten your message by 12 characters to send it.', hintTone: 'warning', canSend: false }));`],
   ['Skeleton', 'Feedback', 120,
     'A shimmering placeholder that holds the place of content still loading.',

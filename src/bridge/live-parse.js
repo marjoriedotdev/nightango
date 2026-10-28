@@ -42,6 +42,19 @@ function linkEmbedOf(url) {
   var file = secureMediaUrl(url);
   return VIDEO_URL.test(file) ? { kind: 'video', url: file } : AUDIO_URL.test(file) ? { kind: 'audio', url: file } : embedOf(url);
 }
+function textLinks(text) { return text.match(/https?:\/\/\S+/g) || []; }
+function sameEmbed(a, b) { return a.kind === b.kind && a.id === b.id && a.url === b.url; }
+/**
+ * Lists the links of a message text that the message already shows as a media.
+ * @param {{text: string, embeds: ?Array}} m Message read by parseContent.
+ */
+function mediaLinks(m) {
+  if (!m.text || !m.embeds || !m.embeds.length) return [];
+  return textLinks(m.text).filter(function (url) {
+    var e = linkEmbedOf(url);
+    return !!e && m.embeds.some(function (x) { return sameEmbed(x, e); });
+  });
+}
 /**
  * Renders an sm:// emoticon as text.
  * @param {string} name Name read in the tag. Gives its emoji, its first shortcut if it is Premium without the flag, or the bare name if the table does not know it and it is made of [a-z0-9_-].
@@ -82,9 +95,9 @@ function parseContent(raw, keepMedia, premium) {
     })
     .replace(STRIKE_PAIR, '<s>$1</s>');
   var text = decodeHtml(body.replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
-  (text.match(/https?:\/\/\S+/g) || []).forEach(function (url) {
+  textLinks(text).forEach(function (url) {
     var m = linkEmbedOf(url);
-    if (m && !embeds.some(function (x) { return x.kind === m.kind && x.id === m.id && x.url === m.url; })) embeds.push(m);
+    if (m && !embeds.some(function (x) { return sameEmbed(x, m); })) embeds.push(m);
   });
   return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null, key: k ? decodeRef(k[1]) : null };
 }
