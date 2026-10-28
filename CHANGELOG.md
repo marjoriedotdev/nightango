@@ -2,6 +2,19 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.25.0] - 2026-10-28
+
+### Changed
+
+- A picked file now waits above the message field, with a preview and a remove button, until you press Send. It then goes out in one message with your text. Nothing is uploaded before Send.
+- A link to an image, video, audio file or YouTube video no longer repeats in the text when the message already shows it.
+- Menus, popovers and dialogs fade in as they open, and every button, row and tab fades on hover.
+- Corners follow one scale across the interface, and the veil behind dialogs is lighter in dawn.
+
+### Fixed
+
+- On a narrow screen, the closed navigation drawer no longer takes keyboard focus off screen.
+
 ## [0.24.0] - 2026-10-28
 
 ### Added
