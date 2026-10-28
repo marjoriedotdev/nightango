@@ -240,13 +240,15 @@ function DmComposer(p) {
   var d = useState(''), draft = d[0], setDraft = d[1];
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
-  var attach = useAttachMedia({ kind: 'dm', id: id });
+  var attach = useAttachMedia({ kind: 'dm', id: id }, setDraft);
   return h(Frag, null, media.panel, h(T.Composer, {
-    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status,
+    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status, attachment: attach.attachment, canSend: !attach.busy,
     context: reply ? Object.assign({ author: reply.from, text: messagePreview(reply) }, COMPOSER_MODES.reply) : null, onCancelContext: p.onCancelReply,
     onSend: function (text) {
       if (runCommand(app, text, null)) return;
-      app.actions.sendDm(id, text, { replyTo: reply ? { key: reply.key } : null });
+      var opts = { replyTo: reply ? { key: reply.key } : null };
+      if (attach.file) { attach.send(text, opts, p.onCancelReply); return; }
+      app.actions.sendDm(id, text, opts);
       p.onCancelReply();
     }, beforeSend: h(MessageStyleButton, null)
   }), emoji.picker, attach.input);

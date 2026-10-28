@@ -368,9 +368,10 @@
     var own = React.useRef(null), ref = props.inputRef || own;
     var id = React.useId(), hintId = id + '-hint';
     var blocked = props.canSend === false;
+    var file = props.attachment;
     function send() {
       var text = value.trim();
-      if (!text || blocked) return;
+      if (!text && !file || blocked) return;
       // Cleared before onSend: the view can put back a draft it set aside.
       setValue('');
       if (props.onSend) props.onSend(text);
@@ -404,6 +405,12 @@
         h('span', { className: 'tc-composer-context-text' },
           ctx.verb, ' ', h('strong', { style: { color: 'var(--text-2)', fontWeight: 600 } }, ctx.author), ' ', ctx.text),
         h(IconButton, { icon: 'x', label: ctx.cancelLabel, size: 24, iconSize: 13, onClick: props.onCancelContext })) : null,
+      file ? h('div', { className: 'tc-composer-file' },
+        h(ComposerThumb, { key: file.preview || '', src: file.preview, icon: file.icon }),
+        h('span', { className: 'tc-composer-file-text' },
+          h('span', { className: 'tc-composer-file-name' }, file.name),
+          file.note ? h('span', { className: 'tc-composer-file-note' }, file.note) : null),
+        file.onRemove ? h(IconButton, { icon: 'x', label: 'Remove ' + file.name, size: 24, iconSize: 13, onClick: file.onRemove }) : null) : null,
       h('label', { htmlFor: id, className: 'tc-sr' }, props.label || 'Message'),
       h('textarea', {
         id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value, 'aria-describedby': props.hint ? hintId : undefined,
@@ -422,7 +429,13 @@
           props.hintTone === 'warning' ? h(Icon, { name: 'alert', size: 14 }) : null, props.hint) : h('span', { style: { flex: 1 } }),
         props.aside || null,
         props.beforeSend || null,
-        h('button', { type: 'button', className: 'tc-send', 'aria-label': 'Send message', disabled: !value.trim() || blocked, onClick: send }, h(Icon, { name: 'send', size: 16 }))));
+        h('button', { type: 'button', className: 'tc-send', 'aria-label': 'Send message', disabled: !value.trim() && !file || blocked, onClick: send }, h(Icon, { name: 'send', size: 16 }))));
+  }
+
+  function ComposerThumb(props) {
+    var broken = React.useState(false);
+    if (props.src && !broken[0]) return h('img', { className: 'tc-composer-file-thumb', src: props.src, alt: '', onError: function () { broken[1](true); } });
+    return h('span', { className: 'tc-composer-file-thumb' }, h(Icon, { name: props.icon || 'paperclip', size: 18 }));
   }
 
   function Skeleton(props) {

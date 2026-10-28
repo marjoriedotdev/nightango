@@ -21,7 +21,7 @@ function GroupView(p) {
   var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
   var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
-  var attach = useAttachMedia({ kind: 'group', id: p.gid, channel: channel });
+  var attach = useAttachMedia({ kind: 'group', id: p.gid }, setDraft);
   var log = useMessageLog();
   var count = g ? g.messages.length : 0;
   var q = search ? search.trim().toLowerCase() : '';
@@ -89,7 +89,9 @@ function GroupView(p) {
     if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
     if (runCommand(app, text, g.id)) return;
     log.follow();
-    app.actions.sendGroup(g.id, text, { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel });
+    var opts = { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel }, sentMode = mode;
+    if (attach.file) { attach.send(text, opts, function () { setMode(function (cur) { return cur === sentMode ? null : cur; }); }); return; }
+    app.actions.sendGroup(g.id, text, opts);
     setMode(null);
   }
   // As in BetterChatango, a hidden message still counts in unreads and mentions.
@@ -142,11 +144,13 @@ function GroupView(p) {
   } else {
     var left = GROUP_MESSAGE_MAX - measured;
     composer = h(Frag, null, media.panel, h(T.Composer, {
-      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0,
+      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
       hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
-      onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status,
+      onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
+      // An edit changes only the text: the picked file waits for the next message.
+      onAttach: kind === 'edit' ? null : attach.onAttach, attachment: kind === 'edit' ? null : attach.attachment,
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {

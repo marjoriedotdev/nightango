@@ -645,19 +645,25 @@ function Root(props) {
       return true;
     };
     /**
-     * Uploads a file through vissle and posts its link in the chosen group or PM and never in client.focus.
-     * @param {{kind: string, id: string, channel: ?string}} to Destination fixed when the file is chosen.
-     * @param {File} file Chosen file.
+     * Uploads a file through vissle and posts the text followed by its link in the chosen group or PM and never in client.focus.
+     * @param {{kind: string, id: string}} to Destination fixed when the message is sent.
+     * @param {File} file Picked file.
+     * @param {string} text Typed text, possibly empty.
+     * @param {Object} opts Reply, quote and channel passed to sendGroup or sendDm.
+     * @returns {Promise<?string>} Null once the message has left, the unsent message with its link otherwise, rejected if the upload fails.
      */
-    actions.uploadFile = function (to, file) {
+    actions.uploadFile = function (to, file, text, opts) {
       setUpload(to, file.name);
-      liveBridge.uploadFile(file).then(function (link) {
-        var sent = to.kind === 'dm' ? actions.sendDm(to.id, link, { quiet: true }) : actions.sendGroup(to.id, link, { channel: to.channel, quiet: true });
-        if (sent) { toast('File sent.', { icon: 'check' }); return; }
-        toast('The file was uploaded, but its link was not sent.', { action: { label: 'Copy link', run: function () {
+      return liveBridge.uploadFile(file).then(function (link) {
+        var body = text ? text + ' ' + link : link, o = Object.assign({}, opts, { quiet: true });
+        var sent = to.kind === 'dm' ? actions.sendDm(to.id, body, o) : actions.sendGroup(to.id, body, o);
+        setUpload(to, null);
+        if (sent) { toast('File sent.', { icon: 'check' }); return null; }
+        toast('The file was uploaded, but the message was not sent.', { action: { label: 'Copy link', run: function () {
           copyText(link, function (ok) { toast(ok ? 'Link copied.' : 'Copy failed. The link is ' + link); });
         } } });
-      }, function (e) { toast(e.message); }).then(function () { setUpload(to, null); });
+        return body;
+      }, function (e) { setUpload(to, null); toast(e.message); throw e; });
     };
     actions.setMessageStyle = function (style) {
       liveBridge.applyStyle(style);
