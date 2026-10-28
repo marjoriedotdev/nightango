@@ -24,3 +24,5 @@ check(img && img.getAttribute('src').endsWith('/m/a/marjorie/thumb_m.jpg'), 'img
 check(w.document.querySelector('.tc-avatar').textContent === 'MA', 'initials kept underneath');
 w.ReactDOM.flushSync(() => img.dispatchEvent(new w.Event('error')));
 check(!w.document.querySelector('.tc-avatar-img') && w.document.querySelector('.tc-presence'), 'initials fallback after an error, presence intact');
+w.ReactDOM.flushSync(() => root.render(w.React.createElement(w.__T.Avatar, { name: 'nightango', square: true })));
+check(!w.document.querySelector('.tc-avatar-img') && w.document.querySelector('.tc-avatar').textContent === 'N', 'group avatar: initial, no picture request');

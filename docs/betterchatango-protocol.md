@@ -103,7 +103,7 @@ These are not calls from the application code but resources that the browser loa
 - The `www.youtube-nocookie.com/embed/` iframe, created only on click. The `i.ytimg.com` thumbnail is shown if `embedVideos` is on and if `proxyMedia` is off or `i.ytimg.com` is trusted.
 - Message images and media library thumbnails (`chatango.com/pmmessageimg` or an https URL, with http loaded as https and `fp.chatango.com` on `ust.chatango.com` like BetterChatango, `inject.js:1112`) depending on `embedImages`, `proxyMedia` and the trusted hosts (see BetterChatango startup settings, Trusted hosts).
 - Message video (mp4, webm) and audio (mp3, ogg, wav) files, as an https URL from any host (http loaded as https, like images), in `<video>` or `<audio>`, depending on `embedVideos` and the trusted hosts: created only on click, or as soon as shown without autoplay for a trusted host.
-- The avatars `ust.chatango.com/profileimg/…/thumb.jpg` or `thumb_m.jpg`, in `<img>`.
+- The member avatars `ust.chatango.com/profileimg/…/thumb.jpg` or `thumb_m.jpg`, in `<img>`. Group avatars show the group's initial without a request: for an account without a picture, Chatango serves a "?" image (`profileimg/noimage.jpg`, `inject.js:233`) instead of an error, so the initial underneath never shows.
 - The full profile picture `ust.chatango.com/profileimg/…/full.jpg`, in `<img>` `referrerPolicy="no-referrer"`, loaded only on click on the mini profile avatar, or in the cropping of one's own picture.
 - After an upload or a crop, the pictures of one's own account carry `?v={timestamp}` (see Cropping).
 - The message background image `ust.chatango.com/profileimg/…/msgbg.jpg`, in `<img>` `referrerPolicy="no-referrer"`, only if `embedImages` is on and `proxyMedia` off.
