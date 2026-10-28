@@ -6,7 +6,7 @@
 .login .client-logo{margin:0;padding:22px 0 18px;color:var(--text);font-family:var(--font-display);font-size:28px;line-height:28px;font-weight:400;text-shadow:none}
 .login .client-logo::after{content:"Nightango"}
 .login .client-logo-fire,.login .client-fire{display:none}
-.login .icon-menu{margin:0 var(--space-4);color:var(--text-2);font-size:18px;transition:color .12s}
+.login .icon-menu{margin:0 var(--space-4);color:var(--text-2);font-size:18px;transition:color var(--duration-fast) var(--ease-out)}
 .login .icon-menu-redirect{color:inherit}
 .login .icon-menu-redirect:hover,.login .menu-side:hover+.menu-toggle{color:var(--text)}
 .login .menu-wrapper{border-left:1px solid var(--border);background:var(--panel)}
@@ -23,7 +23,7 @@
 .login .login-title{float:left;width:100%;margin:0 0 var(--space-5);padding:0;text-align:left;color:var(--text);font-size:22px;line-height:28px;font-weight:600;letter-spacing:-.01em}
 .login .login-member form{clear:both;align-items:stretch;gap:var(--space-3)}
 
-.login .field-display{flex-wrap:nowrap;align-items:center;height:var(--size-control-md);padding-left:var(--space-3);box-sizing:border-box;border:1px solid var(--border-strong);border-radius:var(--radius-lg);background:var(--raised);transition:border-color .12s,box-shadow .12s}
+.login .field-display{flex-wrap:nowrap;align-items:center;height:var(--size-control-md);padding-left:var(--space-3);box-sizing:border-box;border:1px solid var(--border-strong);border-radius:var(--radius-lg);background:var(--raised);transition:border-color var(--duration-fast) var(--ease-out),box-shadow var(--duration-fast) var(--ease-out)}
 .login .field-display:focus-within{border-color:var(--focus-ring);box-shadow:0 0 0 3px var(--accent-soft)}
 .login .field-icon{margin:0 10px 0 0;color:var(--text-3);font-size:14px;cursor:default}
 .login .text-field{align-self:stretch;flex-wrap:nowrap;margin:0;font-size:14px}
@@ -50,7 +50,7 @@
 
 .login .login-button-wrapper{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-5)}
 .login .login-divide{display:none}
-.login .login-button{flex:1;height:var(--size-control-lg);padding:0 18px;border:1px solid var(--control);border-radius:var(--radius-lg);background:none;color:var(--text);font-family:var(--font-sans);font-size:14px;font-weight:600;transition:background-color .12s,border-color .12s}
+.login .login-button{flex:1;height:var(--size-control-lg);padding:0 18px;border:1px solid var(--control);border-radius:var(--radius-lg);background:none;color:var(--text);font-family:var(--font-sans);font-size:14px;font-weight:600;transition:background-color var(--duration-fast) var(--ease-out),border-color var(--duration-fast) var(--ease-out)}
 .login .login-button:hover,.login .login-button:focus{border:1px solid var(--control);background:var(--hover-2);color:var(--text)}
 .login .login-select,.login .login-select:hover,.login .login-select:focus{border:1px solid transparent;background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-glow)}
 .login .login-select:hover{filter:brightness(1.06)}

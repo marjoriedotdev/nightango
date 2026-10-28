@@ -55,7 +55,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Destructive actions ask for confirmation in a dialog that repeats the consequence.
 - A row in Chats or Friends opens the conversation. A row in Meet people or a member list opens the profile. A row about a person whose main action is not the profile offers View profile in its menu.
 - Loading: a list with no rows yet shows skeleton rows shaped like its rows. A list loading its next page keeps its rows and shows a `Spinner` below them. A single block (a form, a profile, one control) says what is loading in one line of text.
-- Interface motion is limited to 120 to 150ms color and position transitions. Nothing bounces.
+- Interface motion uses the motion tokens, all on `ease-out`: `duration-fast` for buttons, `duration-base` for colors, opacity and short moves, `duration-surface` for surfaces that travel (the navigation drawer, a swiped row, pull to refresh). Nothing bounces.
 - Ambient motion: one cloud drifts across the sky band over 150s. Calm sky (Appearance) and reduced motion stop it.
 - The moon is the real one: `Moon` draws the phase of the moment, computed on the device. Southern hemisphere (Appearance) turns it half a turn, as seen south of the equator.
 

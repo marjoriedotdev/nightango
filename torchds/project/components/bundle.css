@@ -2,7 +2,7 @@
 .tc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .tc-icon{flex:none;display:inline-block;vertical-align:middle}
 
-.tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);height:var(--size-control-md);padding:0 14px;border-radius:var(--radius-lg);border:1px solid transparent;background:none;color:var(--text);font:500 13.5px/1 var(--font-sans);white-space:nowrap;cursor:pointer;transition:background-color .12s,border-color .12s}
+.tc-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);height:var(--size-control-md);padding:0 14px;border-radius:var(--radius-lg);border:1px solid transparent;background:none;color:var(--text);font:500 13.5px/1 var(--font-sans);white-space:nowrap;cursor:pointer;transition:background-color var(--duration-fast) var(--ease-out),border-color var(--duration-fast) var(--ease-out)}
 .tc-btn:focus-visible,.tc-ib:focus-visible,.tc-nav:focus-visible,.tc-seg button:focus-visible,.tc-send:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .tc-btn-primary{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--shadow-glow)}
 .tc-btn-primary:hover{filter:brightness(1.06)}
@@ -35,8 +35,8 @@ select.tc-input{padding:0 10px}
 .tc-hint{font-size:12.5px;color:var(--text-3)}
 .tc-error{font-size:12.5px;color:var(--danger)}
 
-.tc-switch{appearance:none;-webkit-appearance:none;position:relative;flex:none;width:36px;height:20px;margin:0;border-radius:var(--radius-full);background:var(--control);cursor:pointer;transition:background-color .15s}
-.tc-switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--knob);transition:transform .15s}
+.tc-switch{appearance:none;-webkit-appearance:none;position:relative;flex:none;width:36px;height:20px;margin:0;border-radius:var(--radius-full);background:var(--control);cursor:pointer;transition:background-color var(--duration-base) var(--ease-out)}
+.tc-switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--knob);transition:transform var(--duration-base) var(--ease-out)}
 .tc-switch:checked{background:var(--accent)}
 .tc-switch:checked::after{transform:translateX(16px);background:var(--on-accent)}
 .tc-switch:disabled{opacity:.45;cursor:not-allowed}
@@ -83,7 +83,7 @@ select.tc-input{padding:0 10px}
 .tc-nav-muted{color:var(--text-3)}
 .tc-nav-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-.tc-msg{position:relative;display:flex;gap:var(--space-3);padding:6px var(--space-5);transition:background-color .15s}
+.tc-msg{position:relative;display:flex;gap:var(--space-3);padding:6px var(--space-5);transition:background-color var(--duration-base) var(--ease-out)}
 .tc-msg:hover{background:var(--subtle)}
 .tc-msg-mention,.tc-msg-mention:hover{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,transparent),var(--accent-soft) 45%,transparent)}
 .tc-msg-cont{padding-top:2px;padding-bottom:2px}
@@ -103,7 +103,7 @@ select.tc-input{padding:0 10px}
 .tc-msg:focus-visible,.cmsg:focus-visible{outline:2px solid var(--focus-ring);outline-offset:-2px}
 .tc-msg-actions{position:absolute;top:-14px;right:var(--space-5);display:none;align-items:center;gap:2px;padding:3px;border-radius:var(--radius-lg);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-popover)}
 .tc-msg:hover .tc-msg-actions,.tc-msg:focus-within .tc-msg-actions,.cmsg:hover .tc-msg-actions,.cmsg:focus-within .tc-msg-actions{display:flex}
-.cmsg{position:relative;display:flex;flex-wrap:wrap;gap:0 var(--space-2);align-items:baseline;padding:3px var(--space-5);transition:background-color .15s}
+.cmsg{position:relative;display:flex;flex-wrap:wrap;gap:0 var(--space-2);align-items:baseline;padding:3px var(--space-5);transition:background-color var(--duration-base) var(--ease-out)}
 .cmsg:hover{background:var(--subtle)}
 .cmsg .tc-msg-time{flex:none;width:58px}
 .cmsg .tc-msg-author{flex:none}
@@ -158,6 +158,6 @@ label.tc-row{cursor:pointer}
 @keyframes tc-shimmer{to{background-position:-50% 0}}
 .tc-spinner{display:inline-flex;flex:none;vertical-align:middle;animation:tc-spin .8s linear infinite}
 @keyframes tc-spin{to{transform:rotate(360deg)}}
-.tc-fade-in{animation:tc-fade-in .2s ease-out}
+.tc-fade-in{animation:tc-fade-in var(--duration-base) var(--ease-out)}
 @keyframes tc-fade-in{from{opacity:0}}
 @media (prefers-reduced-motion: reduce){.tc-skeleton,.tc-spinner,.tc-fade-in{animation:none}.tc-skeleton{background-image:none}}
