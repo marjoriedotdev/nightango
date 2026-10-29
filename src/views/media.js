@@ -144,9 +144,9 @@ function useMediaCompletion(value, setValue) {
     else return;
     e.preventDefault();
   }
-  var list = open ? h('ul', { className: 'media-suggest', role: 'listbox', 'aria-label': 'Media suggestions' }, found.list.map(function (e, i) {
+  var list = open ? h('ul', { className: 'suggest', role: 'listbox', 'aria-label': 'Media suggestions' }, found.list.map(function (e, i) {
     return h('li', {
-      key: e.url, role: 'option', 'aria-selected': String(i === found.active), className: 'media-suggest-item',
+      key: e.url, role: 'option', 'aria-selected': String(i === found.active), className: 'suggest-item',
       // The field keeps focus: the click replaces the text without leaving it.
       onMouseDown: function (ev) { ev.preventDefault(); }, onClick: function () { accept(i); }
     }, h(MediaThumb, { url: e.url, shown: mediaThumbShown(safety, false, e.url) }), h('span', { className: 'media-name' }, e.name), h('span', { className: 'media-url' }, e.url));

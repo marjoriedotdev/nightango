@@ -21,7 +21,7 @@ h1,h2,h3{text-wrap:balance}
 .muted{color:var(--text-3)}
 .mono{font-family:var(--font-mono)}
 .tnum{font-variant-numeric:tabular-nums}
-/* Hover fades. Keyboard selection in menus, the palette and media suggestions stays instant: a fade there lags behind the arrow keys. */
+/* Hover fades. Keyboard selection in menus, the palette and composer suggestions stays instant: a fade there lags behind the arrow keys. */
 .searchbtn,.sec-label,.me-btn,.pillbtn,.linkbtn,.embed-play,.embed-reveal,.mrow,.tab,.conv,.card,.pick,.role-btn,.media-pick,.filter-chip button{transition:background-color var(--duration-base) var(--ease-out),border-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
 
 .shell{display:flex;gap:10px;height:100%;min-height:0;padding:10px max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px))}
@@ -164,11 +164,13 @@ h1,h2,h3{text-wrap:balance}
 .media-name{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .media-note{margin:0;padding:var(--space-2);color:var(--text-3);font-size:13px}
 .media-more{display:flex;justify-content:center;min-height:var(--size-control-sm)}
-.media-suggest{position:absolute;left:var(--space-5);right:var(--space-5);bottom:100%;z-index:20;margin:0;padding:var(--space-1);list-style:none;border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);animation:tc-fade-in var(--duration-base) var(--ease-out)}
-.media-suggest-item{display:flex;align-items:center;gap:var(--space-2);min-height:var(--size-control-md);padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);color:var(--text-body);font-size:13.5px;cursor:pointer}
-.media-suggest-item:hover,.media-suggest-item[aria-selected="true"]{background:var(--hover)}
-.media-suggest-item .media-thumb{flex:none;width:var(--size-control-md)}
-.media-suggest-item .media-name{flex:none;max-width:40%}
+.suggest{position:absolute;left:var(--space-5);right:var(--space-5);bottom:100%;z-index:20;margin:0;padding:var(--space-1);list-style:none;border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);animation:tc-fade-in var(--duration-base) var(--ease-out)}
+.suggest-item{display:flex;align-items:center;gap:var(--space-2);min-height:var(--size-control-md);padding:var(--space-1) var(--space-2);border-radius:var(--radius-md);color:var(--text-body);font-size:13.5px;cursor:pointer}
+.suggest-item:hover,.suggest-item[aria-selected="true"]{background:var(--hover)}
+.suggest-item .media-thumb{flex:none;width:var(--size-control-md)}
+.suggest-item .media-name{flex:none;max-width:40%}
+.suggest-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suggest-item-off .suggest-name{color:var(--text-3)}
 .media-url{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-3);font-size:12px}
 
 .overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:max(72px,env(safe-area-inset-top,0px)) 16px 16px;background:var(--scrim);animation:tc-fade-in var(--duration-base) var(--ease-out)}
@@ -385,7 +387,7 @@ h1,h2,h3{text-wrap:balance}
   .spage{padding:24px 16px 0}
   .ev,.ignored-row{padding-left:20px}
   .composer-wrap{padding-left:12px;padding-right:12px}
-  .media-suggest{left:var(--space-3);right:var(--space-3)}
+  .suggest{left:var(--space-3);right:var(--space-3)}
   .chan-trigger{width:32px;height:32px;padding:0;justify-content:center}
   .tc-msg{padding-left:16px;padding-right:16px}
 }

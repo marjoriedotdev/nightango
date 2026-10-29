@@ -28,7 +28,7 @@ src/
     live-bridge.js   liveBridge: incoming and outgoing frames, warnings, connections,
                      profiles, search, private history, media library, vissle, group creation
   views/      main screens
-    login, shell (sidebar), group, message (row, media),
+    login, shell (sidebar), group (and @name suggestions of its composer), message (row, media),
     message-log (group and PM message log: bottom tracking, reading kept in place, older pages, jump to a message),
     members (list, profile card, linked accounts, ban, external link, profile link), dm (Chats and PM search, Friends),
     meet (Meet people), mentions (recent mentions from all groups, row of a message outside its message log),
