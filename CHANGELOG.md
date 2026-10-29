@@ -2,6 +2,16 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.26.0] - 2026-10-29
+
+### Added
+
+- In a group, typing @ opens a list of members above the message field, with their avatar, presence and staff role. Arrows move through it, Tab, Enter or a click inserts the name, Escape closes it. It replaces Tab cycling through names in the text.
+
+### Changed
+
+- In messages, member lists and Meet people, the developer and Premium badges are icons, named on hover. The open profile spells them out under the name, Premium included.
+
 ## [0.25.0] - 2026-10-28
 
 ### Changed
