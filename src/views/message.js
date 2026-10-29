@@ -26,7 +26,7 @@ function memberStyles(u, styles, theme, highlighted, msgBg) {
     if (style.font) out.text = Object.assign({}, out.text, { fontFamily: FONT_STACKS[style.font] || style.font });
     if (style.textColor) out.text = Object.assign({}, out.text, { color: ensureContrast(style.textColor, bg, 4.5) });
     // A percentage would be computed on the parent: the size multiplies --msg-size, set on the same element.
-    if (style.fontSize) out.text = Object.assign({}, out.text, { fontSize: 'calc(var(--msg-size, 14px) * ' + style.fontSize / 100 + ')' });
+    if (style.fontSize && !styles.sameSize) out.text = Object.assign({}, out.text, { fontSize: 'calc(var(--msg-size, 14px) * ' + style.fontSize / 100 + ')' });
   }
   return out;
 }
