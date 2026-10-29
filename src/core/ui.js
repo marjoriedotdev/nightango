@@ -319,10 +319,24 @@ function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
 // Registered accounts only: a guest carries a # before their name and cannot impersonate it.
 var DEVELOPERS = ['marjorie'];
 /**
- * Marks a Nightango developer next to their name.
+ * Marks a Nightango developer next to their name, as an icon in lists and messages.
  * @param {string} name Member name, in lowercase.
+ * @param {boolean} [full] Shows the text, in the open profile.
  */
-function developerBadge(name) { return DEVELOPERS.indexOf(name) !== -1 ? h(T.Badge, { tone: 'accent' }, 'Nightango developer') : null; }
+function developerBadge(name, full) { return DEVELOPERS.indexOf(name) !== -1 ? traitBadge('code', 'Nightango developer', full) : null; }
+/**
+ * Marks a Chatango Premium account next to its name, as an icon in lists.
+ * @param {boolean} premium Premium active according to the mini profile.
+ * @param {boolean} [full] Shows the text, in the open profile.
+ */
+function premiumBadge(premium, full) { return premium ? traitBadge('gem', 'Premium', full) : null; }
+/**
+ * Badge of a trait of a person, icon only unless the text is asked for.
+ * @param {string} icon Icon name.
+ * @param {string} label Trait name.
+ * @param {boolean} [full] Shows the text.
+ */
+function traitBadge(icon, label, full) { return full ? h(T.Badge, { tone: 'accent', icon: icon }, label) : h(T.Badge, { tone: 'accent', icon: icon, label: label }); }
 /**
  * Gives the presence of a list row to screen readers while the avatar dot stays visual only.
  * @param {string} status Member presence.

@@ -118,6 +118,16 @@ function profileMeta(s, name) {
 }
 
 /**
+ * Traits of the member spelled out under their name.
+ * @param {string} name Member name.
+ * @param {Object} u Member data.
+ */
+function profileBadges(name, u) {
+  var dev = developerBadge(name, true), premium = premiumBadge(u.premium, true);
+  return dev || premium ? h('span', { className: 'profile-badges' }, dev, premium) : null;
+}
+
+/**
  * Profile summary shared by the dialog and the panel.
  * It holds the photo, name, status, ASL, About, full profile and groups in common.
  * @param {string} p.name Member name.
@@ -140,7 +150,7 @@ function ProfileSummary(p) {
       // Key on the name: the panel keeps its instance from one conversation to the next.
       h(ProfilePhoto, { key: name, name: name, size: p.size, status: name === s.me ? s.meStatus : u.status, ring: p.ring }),
       h(p.heading, p.focusHeading ? { className: 'profile-name', tabIndex: -1, 'data-autofocus': true } : { className: 'profile-name' }, name),
-      developerBadge(name),
+      profileBadges(name, u),
       h('span', { className: 'muted profile-line' }, personStatus(s, name, p.gid)),
       profileMeta(s, name),
       p.skin ? coverReveal(cover, p.skin) : null),
