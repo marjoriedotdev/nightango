@@ -73,6 +73,7 @@ function AppearancePage() {
     h(T.SettingsSection, { title: 'Chatango styles', description: 'Members can style their name, messages and mini profile on Chatango. Nightango corrects colors that would be hard to read.' },
       h(T.SettingRow, { title: 'Name colors', description: 'The color each member picked for their username.', control: pr.sw('styles.names') }),
       h(T.SettingRow, { title: 'Fonts and text colors', description: 'Custom typefaces, text sizes and text colors in messages.', control: pr.sw('styles.fonts') }),
+      h(T.SettingRow, { title: 'Same text size for everyone', description: 'Messages use your text size, whatever size members picked. Mini profiles keep their sizes.', control: pr.sw('styles.sameSize') }),
       h(T.SettingRow, { title: 'Message backgrounds', description: 'Background colors and images set by Premium members.', control: pr.sw('styles.backgrounds') }),
       h(T.SettingRow, { title: 'Profile backgrounds', description: 'Colors and images Premium members set on their mini profile.', control: pr.sw('styles.profileBackgrounds') })),
     h(T.SettingsSection, {
