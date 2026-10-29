@@ -25,11 +25,13 @@ var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|
 var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
 // Like BetterChatango crawl (inject.js:1112): an http media loads over https, one on fp.chatango.com loads from ust.chatango.com.
 function secureMediaUrl(url) { return url.replace(/^http:\/\//i, 'https://').replace(/^https:\/\/fp\.chatango\.com\//i, 'https://ust.chatango.com/'); }
+// BetterChatango opens the l_ full size of an image uploaded to Chatango (inject.js:8317): the t_ thumbnail is sized for Chatango's chat and shows blurry here.
+function fullImageUrl(url) { return url.replace(/^(https:\/\/ust\.chatango\.com\/um\/[^\/?#]+\/[^\/?#]+\/[^\/?#]+\/img\/)t_/i, '$1l_'); }
 function embedOf(src) {
   var yt = /^vid:\/\/yt:([\w-]{11})/.exec(src), img = /^img:\/\/(?:cam|lib):([^"&?\/\s]+)/.exec(src);
   if (yt) return { kind: 'youtube', id: yt[1] };
   if (img) return { kind: 'photo', url: 'https://chatango.com/pmmessageimg?i=' + encodeURIComponent(img[1]) };
-  var url = secureMediaUrl(src);
+  var url = fullImageUrl(secureMediaUrl(src));
   return IMAGE_URL.test(url) ? { kind: 'image', url: url } : null;
 }
 /**
