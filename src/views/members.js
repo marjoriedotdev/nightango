@@ -179,7 +179,7 @@ function ProfileDialog(p) {
   var buttons = actions.filter(function (it) { return it.id === 'message' || it.id === 'friend'; });
   var mini = miniStyleOf(s.prefs, u, app.theme);
   function go(route) { done(); app.nav(route); }
-  return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: 'profile-dialog', style: mini ? miniSkin(mini) : null },
+  return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: cx('profile-dialog', mini && 'mini-skin'), style: mini ? miniSkin(mini) : null },
     // Initial focus on the name: on the first button, placed under the bio, the dialog would open scrolled.
     h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', focusHeading: true, size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
