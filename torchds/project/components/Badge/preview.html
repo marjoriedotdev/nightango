@@ -12,7 +12,7 @@
 <script>
 var T = window.Torch, h = React.createElement;
 function Demo() {
-  return h('div', { className: 'row' }, h(T.Badge, { icon: 'shield' }, 'Mod'), h(T.Badge, { icon: 'crown' }, 'Owner'), h(T.Badge, { tone: 'accent' }, 'Sensitive'), h(T.Badge, null, 'Friend'));
+  return h('div', { className: 'row' }, h(T.Badge, { icon: 'shield' }, 'Mod'), h(T.Badge, { icon: 'crown' }, 'Owner'), h(T.Badge, { tone: 'accent' }, 'Sensitive'), h(T.Badge, null, 'Friend'), h(T.Badge, { tone: 'accent', icon: 'code', label: 'Nightango developer' }), h(T.Badge, { tone: 'accent', icon: 'gem', label: 'Premium' }));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
 </script>

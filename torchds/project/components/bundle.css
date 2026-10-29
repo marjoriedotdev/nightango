@@ -55,6 +55,7 @@ select.tc-input{padding:0 10px}
 
 .tc-badge{display:inline-flex;align-items:center;gap:var(--space-1);height:18px;padding:0 6px;border-radius:var(--radius-sm);background:var(--selected);color:var(--text-2);font-size:11px;font-weight:500;white-space:nowrap;vertical-align:middle}
 .tc-badge-accent{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
+.tc-badge-icon{width:18px;padding:0;justify-content:center}
 .tc-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:20px;height:18px;padding:0 6px;border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:600;box-shadow:var(--shadow-glow)}
 .tc-dot{flex:none;width:11px;height:11px;background:var(--moon-ink);clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
 

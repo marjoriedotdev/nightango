@@ -46,6 +46,8 @@
     flame: [['path', { d: 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z' }]],
     shield: [['path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10' }]],
     crown: [['path', { d: 'm2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14' }]],
+    gem: [['path', { d: 'M6 3h12l4 6-10 13L2 9Z' }], ['path', { d: 'M11 3 8 9l4 13 4-13-3-6' }], ['path', { d: 'M2 9h20' }]],
+    code: [['polyline', { points: '16 18 22 12 16 6' }], ['polyline', { points: '8 6 2 12 8 18' }]],
     image: [['rect', { width: 18, height: 18, x: 3, y: 3, rx: 2 }], ['circle', { cx: 9, cy: 9, r: 2 }], ['path', { d: 'm21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21' }]],
     play: [['polygon', { points: '6 3 20 12 6 21 6 3' }]],
     'rotate-cw': [['path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8' }], ['path', { d: 'M21 3v5h-5' }]],
@@ -173,8 +175,11 @@
   }
 
   function Badge(props) {
-    return h('span', { className: cx('tc-badge', props.tone === 'accent' && 'tc-badge-accent', props.className) },
-      props.icon ? h(Icon, { name: props.icon, size: 11, strokeWidth: 2.4 }) : null, props.children);
+    // Without children, the label names the icon for screen readers and on hover.
+    var iconOnly = props.children == null && props.label;
+    return h('span', iconOnly ? { className: cx('tc-badge', 'tc-badge-icon', props.tone === 'accent' && 'tc-badge-accent', props.className), role: 'img', 'aria-label': props.label, title: props.label }
+      : { className: cx('tc-badge', props.tone === 'accent' && 'tc-badge-accent', props.className) },
+      props.icon ? h(Icon, { name: props.icon, size: 11, strokeWidth: 2.4 }) : null, iconOnly ? null : props.children);
   }
 
   function CountBadge(props) {

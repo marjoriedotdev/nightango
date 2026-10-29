@@ -11,7 +11,7 @@ export interface ToolbarProps { label: string; /** Id of the field the bar edits
 export interface SwitchProps extends InputHTMLAttributes<HTMLInputElement> { label?: string }
 export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> { label?: ReactNode; ariaLabel?: string }
 export interface SegmentedControlProps { options: Array<string | { value: string; label: ReactNode }>; value: string; onChange?: (value: string) => void; label: string; block?: boolean }
-export interface BadgeProps { tone?: 'neutral' | 'accent'; icon?: IconName; children: ReactNode }
+export interface BadgeProps { tone?: 'neutral' | 'accent'; icon?: IconName; /** Without children, names the icon-only badge for screen readers and on hover. */ label?: string; children?: ReactNode }
 export interface CountBadgeProps { count: number; mention?: boolean }
 export interface AvatarProps { name: string; size?: number; status?: Presence; color?: string; ring?: string; square?: boolean; /** Profile picture. The initials stay visible if it does not load. */ src?: string | null; /** Called when the profile picture has loaded. */ onLoad?: () => void }
 export interface NavItemProps { label: ReactNode; icon?: IconName; avatar?: ReactNode; active?: boolean; unread?: boolean; count?: number; mention?: boolean; muted?: boolean; href?: string; onClick?: () => void; trailing?: ReactNode }

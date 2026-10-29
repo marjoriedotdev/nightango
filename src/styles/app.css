@@ -195,6 +195,7 @@ h1,h2,h3{text-wrap:balance}
 .navlist .pal-empty{margin:4px 10px;padding:0;font-size:13px;text-align:left}
 .profile-card{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:28px 20px 16px}
 .profile-name{margin:10px 0 0;font-family:var(--font-display);font-size:26px;line-height:30px;font-weight:400}
+.profile-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-1)}
 .profile-line{font-size:13px}
 .profile-full{padding:0 var(--space-5) var(--space-2)}
 .about{margin:0;color:var(--text-body);font-size:13.5px;white-space:pre-wrap}
