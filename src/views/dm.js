@@ -237,7 +237,7 @@ function DmMessageRow(p) {
  */
 function DmComposer(p) {
   var app = useApp(), id = p.id, reply = p.replyTo;
-  var d = useState(''), draft = d[0], setDraft = d[1];
+  var d = useDraft('dm:' + id), draft = d[0], setDraft = d[1];
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'dm', id: id }, setDraft);

@@ -464,6 +464,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     editing.value === 'Mine typo' && editing.focused && editing.caret === 9 && editing.context && unchanged.sent === 0 && unchanged.draft === 'my draft'
       && /^bm:[a-z0-9]+:0:<n000\/><f x11000="0"><eAhypheNBunderSC\/>Mine fixed$/.test(editFrame) && frame('bm:').length === bmBefore + 1 && editBox().value === 'my draft',
     { editing, unchanged, editFrame, draft: editBox().value });
+  await openMenu('Mine typo'); click(menuItem('Edit message')); await wait(30);
+  click(byText('.tc-nav', 'test')); await wait(50);
+  const otherDraft = editBox().value;
+  click(byText('.tc-nav', 'edits')); await wait(50);
+  step('leaving a group keeps its draft, not the message being edited',
+    otherDraft === '' && editBox().value === 'my draft' && !byText('.tc-composer', 'Editing'), { otherDraft, draft: editBox().value });
   g('i', 'edits', ['1700000290.1', 'Dana', '', 'u7', 'UNID7', 'E-1=', '4.4.4.4', '0', '', '<n000/><f x11000="0"><eHhypheN1/>Dana fixed']);
   g('i', 'edits', ['1700000280.1', 'Dana', '', 'u7', 'UNID7', 'H-1=', '4.4.4.4', '0', '', '<n000/><f x11000="0">Dana typo']);
   await wait(50);

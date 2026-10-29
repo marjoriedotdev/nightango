@@ -108,6 +108,22 @@ function useRightColumn(openFull) {
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
 
+// In memory only: a reload, which is also how live signs out, drops every draft.
+var drafts = {};
+/**
+ * Composer text kept when leaving the conversation and given back on return.
+ * @param {string} key Conversation, as group:<id> or dm:<name>.
+ * @returns {Array} Text, its setter, and a ref to the text saved on leaving, which the view may replace after the call.
+ */
+function useDraft(key) {
+  var a = useState(function () { return drafts[key] || ''; }), kept = useRef('');
+  kept.current = a[0];
+  useEffect(function () {
+    return function () { if (kept.current) drafts[key] = kept.current; else delete drafts[key]; };
+  }, [key]);
+  return [a[0], a[1], kept];
+}
+
 /* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch, presence}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];

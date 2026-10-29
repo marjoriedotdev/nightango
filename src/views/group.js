@@ -20,7 +20,7 @@ function GroupView(p) {
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
-  var a9 = useState(''), draft = a9[0], setDraft = a9[1];
+  var a9 = useDraft('group:' + p.gid), draft = a9[0], setDraft = a9[1];
   var inputRef = useRef(null), stash = useRef('');
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid }, setDraft);
@@ -30,6 +30,7 @@ function GroupView(p) {
   // Jump asked by the Mentions page: jumpTo, declared below, refuses a message the log hides.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m) : null;
+  if (kind === 'edit') a9[2].current = stash.current;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
   // Style compared as text: update clones the whole state, so the object changes on every update.
   var measured = useMemo(function () {
