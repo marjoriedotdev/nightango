@@ -3,6 +3,9 @@
 var EDIT_MAX = 9;
 // BetterChatango's limit for a group, counted on the body it builds and not on the typed text.
 var GROUP_MESSAGE_MAX = 2900;
+// From the @ on, like Discord. A Chatango name has 20 characters at most.
+var MENTION_TOKEN = /(?:^|\s)@([A-Za-z0-9_-]{0,20})$/;
+var MENTION_SUGGESTIONS = 8;
 var COMPOSER_MODES = {
   reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply' },
   edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit' },
@@ -18,9 +21,8 @@ function GroupView(p) {
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
   var a9 = useState(''), draft = a9[0], setDraft = a9[1];
-  var a11 = useState(''), completed = a11[0], setCompleted = a11[1];
-  var inputRef = useRef(null), stash = useRef(''), completion = useRef(null);
-  var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
+  var inputRef = useRef(null), stash = useRef('');
+  var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid }, setDraft);
   var log = useMessageLog();
   var count = g ? g.messages.length : 0;
@@ -49,32 +51,9 @@ function GroupView(p) {
     setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
     if (inputRef.current) inputRef.current.focus();
   }
-  function endCompletion() { if (!completion.current) return; completion.current = null; setCompleted(''); }
-  function completeMention(e) {
-    var el = e.target, c = completion.current;
-    if (e.key !== 'Tab' || e.shiftKey || e.nativeEvent.isComposing) { endCompletion(); return; }
-    // A single name: nothing to cycle through, the next Tab goes back to navigation.
-    if (c && c.names.length === 1) { endCompletion(); return; }
-    if (!c) {
-      var caret = el.selectionEnd, word = el.selectionStart === caret && /(?:^|\s)@([A-Za-z0-9_-]{1,20})$/.exec(el.value.slice(0, caret));
-      var names = word ? mentionCandidates(g, me, word[1]) : [];
-      if (!names.length) return;
-      // Like BetterChatango, the space that already follows the word is replaced with it.
-      c = completion.current = { start: caret - word[1].length - 1, end: caret + (el.value.charAt(caret) === ' ' ? 1 : 0), names: names, index: -1 };
-    }
-    e.preventDefault();
-    c.index = (c.index + 1) % c.names.length;
-    var inserted = '@' + c.names[c.index] + ' ', next = el.value.slice(0, c.start) + inserted + el.value.slice(c.end);
-    c.end = c.start + inserted.length;
-    // Value set on the field before setDraft: React finds it up to date and leaves the caret after the name.
-    el.value = next;
-    el.setSelectionRange(c.end, c.end);
-    setDraft(next);
-    setCompleted(c.names[c.index] + ', ' + (c.index + 1) + ' of ' + c.names.length);
-  }
   function onKeyDown(e) {
     media.onKeyDown(e);
-    if (!e.defaultPrevented) completeMention(e);
+    if (!e.defaultPrevented) mentions.onKeyDown(e);
   }
   function closeMode() { if (mode && mode.kind === 'edit') setDraft(stash.current); setMode(null); }
   function enter(kind) { return function (m) { closeMode(); setMode({ kind: kind, m: m }); }; }
@@ -143,8 +122,8 @@ function GroupView(p) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
     var left = GROUP_MESSAGE_MAX - measured;
-    composer = h(Frag, null, media.panel, h(T.Composer, {
-      placeholder: 'Message #' + g.id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
+    composer = h(Frag, null, media.panel, mentions.panel, h(T.Composer, {
+      placeholder: 'Message #' + g.id, value: draft, onChange: mentions.onChange, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
       hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
@@ -199,34 +178,97 @@ function GroupView(p) {
         h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: count + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
-      h('div', { className: 'composer-wrap', onMouseDown: endCompletion, onBlur: endCompletion },
-        composer,
-        h('p', { className: 'tc-sr', 'aria-live': 'polite' }, completed))),
+      h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
     column.open ? h(MembersPanel, { g: g }) : null,
     infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null);
 }
 
 /**
- * Lists the names that complete a mention.
- * Names that start with the input come first, then names that contain it.
+ * Lists the members that complete a mention, as many as the list shows.
+ * Names that start with the input come before names that contain it, each part by most recent message in the group then by name.
  * @param {Object} g Open group.
  * @param {string} me Signed-in user, never offered.
- * @param {string} typed Input after @.
+ * @param {string} typed Input after @, empty right after the @.
+ * @returns {Array<{name: string, handle: string}>} Member name and the name written after @.
  */
 function mentionCandidates(g, me, typed) {
   var q = typed.toLowerCase(), seen = Object.create(null), starts = [], contains = [];
-  var authors = g.messages.filter(function (m) { return m.kind === 'msg'; }).map(function (m) { return m.author; });
+  var authors = g.messages.filter(function (m) { return m.kind === 'msg'; }).map(function (m) { return m.author; }).reverse();
   seen[me.toLowerCase()] = true;
-  g.members.concat(authors).forEach(function (n) {
+  authors.concat(g.members).forEach(function (n, i) {
     var handle = mentionHandle(n), key = handle && handle.toLowerCase();
     if (!handle || seen[key]) return;
     seen[key] = true;
-    var at = key.indexOf(q);
-    if (at === 0) starts.push(handle); else if (at > 0) contains.push(handle);
+    var at = key.indexOf(q), c = { name: n, handle: handle, rank: Math.min(i, authors.length) };
+    if (at === 0) starts.push(c); else if (at > 0) contains.push(c);
   });
   // No case-insensitive duplicates: the comparator never gets two equal names.
-  function byName(a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }
-  return starts.sort(byName).concat(contains.sort(byName));
+  function order(a, b) { return a.rank - b.rank || (a.handle.toLowerCase() < b.handle.toLowerCase() ? -1 : 1); }
+  return starts.sort(order).concat(contains.sort(order)).slice(0, MENTION_SUGGESTIONS);
+}
+
+/**
+ * Suggests the members that complete the @name typed before the caret, from the @ on.
+ * Tab, Enter or a click replaces the name with the chosen one. Escape closes the list for this mention.
+ * @param {?Object} g Open group, absent once it is gone.
+ * @param {Object} inputRef Composer field.
+ * @param {string} value Composer text.
+ * @param {function(string)} setValue Writes the composer text.
+ * @returns {{onChange: Function, onKeyDown: Function, onCaret: Function, onBlur: Function, panel: Object}} Composer onChange, keys to handle before the composer's own, caret and focus events of composer-wrap, and suggestions to render in composer-wrap.
+ */
+function useMentionCompletion(g, inputRef, value, setValue) {
+  var app = useApp(), s = app.state;
+  var a = useState(null), caretAt = a[0], setCaretAt = a[1];
+  var b = useState({ key: '', index: 0 }), sel = b[0], setSel = b[1];
+  var c = useState(-1), closedAt = c[0], setClosedAt = c[1];
+  // Caret kept with the text it was read in: a text the view writes itself (edit, send, emoji) opens nothing.
+  var before = caretAt && caretAt.value === value ? value.slice(0, caretAt.caret) : '';
+  var m = MENTION_TOKEN.exec(before), start = m ? before.length - m[1].length - 1 : -1, key = m ? start + ' ' + m[1] : '';
+  var list = g && m && start !== closedAt ? mentionCandidates(g, s.me, m[1]) : [];
+  var open = list.length > 0, index = sel.key === key ? sel.index : 0;
+
+  function readCaret() {
+    var el = inputRef.current, text = el.value, caret = el.selectionStart === el.selectionEnd ? el.selectionEnd : -1;
+    setCaretAt(function (old) { return caret < 0 ? null : old && old.value === text && old.caret === caret ? old : { value: text, caret: caret }; });
+    if (caret < 0 || !MENTION_TOKEN.test(text.slice(0, caret))) setClosedAt(-1);
+  }
+  function accept(cand) {
+    var el = inputRef.current, inserted = '@' + cand.handle + ' ', caret = start + inserted.length;
+    // The rest of the word after the caret and the space that follows it are replaced too.
+    var next = value.slice(0, start) + inserted + value.slice(caretAt.caret).replace(/^[A-Za-z0-9_-]* ?/, '');
+    // Value set on the field before setValue: React finds it up to date and leaves the caret after the name.
+    el.value = next;
+    el.setSelectionRange(caret, caret);
+    setValue(next);
+    setCaretAt({ value: next, caret: caret });
+  }
+  function onKeyDown(e) {
+    if (!open || e.nativeEvent.isComposing) return;
+    var n = list.length;
+    if ((e.key === 'Tab' || e.key === 'Enter') && !e.shiftKey) accept(list[index]);
+    else if (e.key === 'Escape') setClosedAt(start);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') setSel({ key: key, index: (index + (e.key === 'ArrowDown' ? 1 : n - 1)) % n });
+    else return;
+    e.preventDefault();
+  }
+  var panel = open ? h('ul', { className: 'suggest', role: 'listbox', 'aria-label': 'Members' }, list.map(function (cand, i) {
+    var status = userOf(s, cand.name).status;
+    return h('li', {
+      key: cand.name, role: 'option', 'aria-selected': String(i === index), className: cx('suggest-item', status === 'offline' && 'suggest-item-off'),
+      // The field keeps focus: the click replaces the text without leaving it.
+      onMouseDown: function (ev) { ev.preventDefault(); }, onClick: function () { accept(cand); },
+      onMouseMove: function () { if (i !== index) setSel({ key: key, index: i }); }
+    }, h(T.Avatar, { name: cand.name, size: 24, status: status, ring: 'var(--raised)' }), h('span', { className: 'suggest-name' }, cand.handle), presenceSr(status), roleBadge(roleOf(g, cand.name)));
+  })) : null;
+  var said = open ? list[index].handle + ', ' + (index + 1) + ' of ' + list.length + '. Press Tab or Enter to insert it.' : '';
+  return {
+    onChange: function (v) { setValue(v); readCaret(); },
+    onKeyDown: onKeyDown,
+    // Events bubble from every control of composer-wrap: only those of the field move the caret.
+    onCaret: function (e) { if (e.target === inputRef.current) readCaret(); },
+    onBlur: function (e) { if (e.target === inputRef.current) setCaretAt(null); },
+    panel: h(Frag, null, panel, h('p', { className: 'tc-sr', 'aria-live': 'polite' }, said))
+  };
 }
 
 /**
