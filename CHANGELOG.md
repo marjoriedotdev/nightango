@@ -2,6 +2,12 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.27.1] - 2026-10-29
+
+### Fixed
+
+- Images uploaded to a chat show at full size instead of Chatango's blurry thumbnail. The star adds the full size image to your media.
+
 ## [0.27.0] - 2026-10-29
 
 ### Added
