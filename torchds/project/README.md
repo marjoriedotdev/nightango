@@ -11,6 +11,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - No emoji in the interface, no exclamation marks, no filler ("Oops", "Awesome").
 - Be honest about trade-offs where they affect trust. The login screen states that credentials are stored encrypted on BetterChatango servers.
 - Roles: next to a name, the short role is a `Badge` with its icon (Mod with a shield, Owner with a crown). The long role (Moderator) belongs in a sentence or a title. The viewer's own row carries a `You` badge, never "(you)" in text.
+- Traits of a person (Nightango developer, Premium) are an icon-only `Badge` next to the name in lists and messages, and a badge with its full text in the open profile.
 
 ## Color
 
