@@ -2,6 +2,17 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.27.0] - 2026-10-29
+
+### Added
+
+- Each group and private conversation keeps what you typed in the message field when you leave it, until you reload.
+- Settings, Appearance has a Same text size for everyone switch, on by default. Messages follow your text size, whatever size members picked. Mini profiles keep their sizes.
+
+### Fixed
+
+- On a member's Premium background, the badges in their profile and in Meet people take the Premium text color instead of Nightango orange.
+
 ## [0.26.0] - 2026-10-29
 
 ### Added
