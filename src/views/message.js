@@ -20,7 +20,7 @@ function memberStyles(u, styles, theme, highlighted, msgBg) {
     out.text = { color: ensureContrast(surf.body, bg, 4.5) };
     out.name = out.text;
   }
-  if (shown && msgBg && msgBg.image) out.image = { src: msgBg.image, opacity: msgBg.imageAlpha / 100, position: MSG_BG_ALIGN[msgBg.align] };
+  if (shown && msgBg && msgBg.image) out.image = { src: msgBg.image, opacity: msgBg.imageAlpha / 100, position: MSG_BG_ALIGN[msgBg.align], tile: msgBg.tile };
   if (styles.names && style.nameColor) out.name = { color: ensureContrast(style.nameColor, bg, 4.5) };
   if (styles.fonts) {
     if (style.font) out.text = Object.assign({}, out.text, { fontFamily: FONT_STACKS[style.font] || style.font });
@@ -111,11 +111,11 @@ function moreActionsButton(items, onOpenChange) {
  * @param {string} p.src Address of msgbg.jpg.
  * @param {number} p.opacity Opacity chosen by the member, never raised.
  * @param {string} p.position Image corner as a CSS position.
+ * @param {boolean} p.tile Repeats the image on both axes, as BetterChatango does.
  */
 function MessageBgImage(p) {
-  var st = useState(false), broken = st[0], setBroken = st[1];
-  if (broken) return null;
-  return h('img', { src: p.src, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer', style: { opacity: p.opacity, objectPosition: p.position }, onError: function () { setBroken(true); } });
+  // CSS background and not a no-referrer <img>, which cannot tile: the URL is always on ust.chatango.com (ADR-0004).
+  return h('div', { style: { backgroundImage: 'url("' + p.src + '")', backgroundPosition: p.position, backgroundRepeat: p.tile ? 'repeat' : 'no-repeat', opacity: p.opacity } });
 }
 
 /**
