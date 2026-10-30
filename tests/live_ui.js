@@ -111,8 +111,14 @@ const C = {
   socket(gid, frame) { sent.push([gid, frame]); },
   sendMessage(data, length, group, user) {
     if (length && styleProbe) styleAtBuild.push({ group, style: styleProbe() });
-    // Like BetterChatango, a PM body replaces a YouTube link with its <i> tag.
-    if (length) return group === 'private_message' ? '<n3366FF/><ipm' + String(++pmBuilds).padStart(5, '0') + '/><m v="1"><g x12s9900cc="4">' + data.replace(/https:\/\/youtu\.be\/([\w-]{11})\S*/, '<i s="vid://yt:$1" w="126" h="93"/>') + '</g></m>' : '<n000/><f x11000="0">' + data;
+    // Like BetterChatango, a PM body wraps the text in the emphasis of the style, uppercase, and replaces a YouTube link with its <i> tag.
+    if (length && group === 'private_message') {
+      const on = cls => C.user.style && d.querySelector('[data-preload="fonts"] ' + cls).previousElementSibling.checked;
+      const open = (on('.fa-bold') ? '<B>' : '') + (on('.fa-italic') ? '<I>' : '') + (on('.fa-underline') ? '<U>' : '') + (on('.fa-strikethrough') ? '\u2593' : '');
+      const close = (on('.fa-strikethrough') ? '\u2592' : '') + (on('.fa-underline') ? '</U>' : '') + (on('.fa-italic') ? '</I>' : '') + (on('.fa-bold') ? '</B>' : '');
+      return '<n3366FF/><ipm' + String(++pmBuilds).padStart(5, '0') + '/><m v="1"><g x12s9900cc="4">' + open + data.replace(/https:\/\/youtu\.be\/([\w-]{11})\S*/, '<i s="vid://yt:$1" w="126" h="93"/>') + close + '</g></m>';
+    }
+    if (length) return '<n000/><f x11000="0">' + data;
     calls.push(['pm', group, user, data]);
   },
   // Like BetterChatango's socketEvent: a group still in cache.connect is ignored, its promise never settles.
@@ -1429,13 +1435,42 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     officialReply: !!rexRow('From the official client').querySelector('button[aria-label="Reply"]'), contextLeft: !!$('.thread .tc-composer-context')
   };
   const PM_HEAD = '^msg:rex:<n3366FF\\/><ipm\\d{5}\\/><m v="1"><g x12s9900cc="4">';
+  // The own style is bold and struck: BetterChatango wraps the text in <B>▓…▒</B> (inject.js:5182-5187, 5207).
+  const PM_TEXT = t => '<B>\u2593' + t + '\u2592<\\/B><\\/g><\\/m>$';
   step('pm reply carries <r> after the <g> head, resolves live and from the history, and only targets a PM key',
     (rex.fromHistory || '').includes('Old question') && rex.answer.context.includes('Replying to') && rex.answer.context.includes('Old question')
-      && new RegExp(PM_HEAD + '<rqst00001\\/>Answer<\\/g><\\/m>$').test(rex.answer.frame)
-      && !!rex.answerKey && new RegExp(PM_HEAD + '<r' + rex.answerKey + '\\/>Follow-up<\\/g><\\/m>$').test(rex.followUp.frame)
+      && new RegExp(PM_HEAD + '<rqst00001\\/>' + PM_TEXT('Answer')).test(rex.answer.frame)
+      && !!rex.answerKey && new RegExp(PM_HEAD + '<r' + rex.answerKey + '\\/>' + PM_TEXT('Follow-up')).test(rex.followUp.frame)
       && (rex.answerLine || '').includes('Old question') && (rex.followLine || '').includes('Answer') && rex.missing === 'Original message not loaded'
       && !rex.officialReply && !rex.contextLeft,
     rex);
+
+  /* PM edit and quote: <e…/> at the place of <r…/> (inject.js:5236-5241), the quote before the typed text (inject.js:5245-5252), edit only on one's own keyed PM */
+  const rexMenu = async txt => { click(rexRow(txt).querySelector('button[aria-label="More actions"]')); await wait(30); };
+  const rexMenuItems = async txt => { await rexMenu(txt); const items = $$('.menu button').map(b => b.textContent); await rexMenu(txt); return items; };
+  const composeIn = async txt => {
+    const box = $('.thread .tc-composer textarea'), shown = { context: ($('.thread .tc-composer-context') || {}).textContent || '', note: ($('.thread .tc-composer-note') || {}).textContent || '', value: box.value };
+    type(box, txt); key(box, 'Enter'); await wait(50);
+    return shown;
+  };
+  const pmMenus = { otherOld: await rexMenuItems('Old question'), official: await rexMenuItems('From the official client') };
+  const pmBeforeEdit = frame('msg:rex:').length;
+  type($('.thread .tc-composer textarea'), 'kept draft');
+  await rexMenu('Answer'); click(menuItem('Edit message')); await wait(30);
+  const editShown = await composeIn('Answer fixed');
+  await until(() => !!rexRow('Answer fixed'));
+  const pmEdit = { frame: frame('msg:rex:').pop() || '', sentOnce: frame('msg:rex:').length === pmBeforeEdit + 1, rows: $$('.thread .tc-msg-text').filter(x => x.textContent.indexOf('Answer') === 0).map(x => x.textContent), edited: !!rexRow('Answer fixed') && rexRow('Answer fixed').textContent.includes('(edited)'), draftBack: $('.thread .tc-composer textarea').value };
+  type($('.thread .tc-composer textarea'), '');
+  await rexMenu('Old question'); click(menuItem('Quote message')); await wait(30);
+  const quoteShown = await composeIn('Yes');
+  const pmQuote = { frame: frame('msg:rex:').pop() || '' };
+  step('pm edit carries <e> after the <g> head and changes its original in place, pm quote goes before the text, edit only on own keyed pms',
+    pmMenus.otherOld.includes('Quote message') && !pmMenus.otherOld.includes('Edit message') && pmMenus.official.includes('Quote message')
+      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.note === 'Only visible to Nightango and BetterChatango users.'
+      && new RegExp(PM_HEAD + '<e' + rex.answerKey + '\\/>' + PM_TEXT('Answer fixed')).test(pmEdit.frame) && pmEdit.sentOnce
+      && JSON.stringify(pmEdit.rows) === JSON.stringify(['Answer fixed']) && pmEdit.edited && pmEdit.draftBack === 'kept draft'
+      && quoteShown.context.includes('Quoting') && !quoteShown.note && new RegExp(PM_HEAD + PM_TEXT('@rex: `Old question` Yes')).test(pmQuote.frame),
+    { pmMenus, editShown, pmEdit, quoteShown, pmQuote });
 
   /* PMs received offline: database opened before the private connection, msgoff right after OK, two identical "ok" 10 s apart in the history */
   pmRecords.push(

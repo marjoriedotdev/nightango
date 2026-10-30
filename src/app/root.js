@@ -147,7 +147,8 @@ function Root(props) {
     var focused = document.visibilityState === 'visible' && (typeof document.hasFocus !== 'function' || document.hasFocus());
     if (n.sound && (!p.soundFocusOnly || focused)) beep(p.volume);
     if (n.app && info.toast) toast(info.toast, info.action ? { action: info.action, icon: info.icon, clamp: kind === 'pm' } : { icon: info.icon, clamp: kind === 'pm' });
-    if (n.desktop && !focused) {
+    // BetterChatango already shows its own desktop alert for a mention when push_desktop is on, but none for a PM.
+    if (n.desktop && !focused && !(LIVE && kind === 'mentions' && liveBridge.setting('desktopMentions'))) {
       try { if (window.Notification && window.Notification.permission === 'granted') new window.Notification('Nightango', { body: info.toast }); } catch (e) { /* system notifications unavailable */ }
     }
   }
@@ -284,8 +285,10 @@ function Root(props) {
       }
     },
     sendDm: function (name, text, opts) {
-      var me = stateRef.current.me, replyKey = opts && opts.replyTo && opts.replyTo.key;
-      update(function (d) { d.dms[name].messages.push(pmMessage({ from: me, key: uid(), replyId: replyKey, text: text, ts: Date.now() })); });
+      opts = opts || {};
+      var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
+      update(function (d) { addSentPm(d, name, { from: me, key: uid(), replyId: replyKey, editId: opts.editKey, text: (opts.quote || '') + text, ts: Date.now() }); });
+      if (opts.editKey) return;
       var u = userOf(stateRef.current, name);
       if (u.status === 'offline' || u.blocked) return;
       setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
@@ -637,10 +640,11 @@ function Root(props) {
     // Editing an edit shown on its own targets its original, the only message visible to other members.
     actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. BetterChatango rejected it.'); };
     actions.sendDm = function (name, text, opts) {
-      var me = stateRef.current.me, replyKey = opts && opts.replyTo && opts.replyTo.key;
-      var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, replyKey);
-      if (!sent) { if (!(opts && opts.quiet)) toast('Private message not sent.'); return false; }
-      update(function (d) { pmConversation(d, name).messages.push(pmMessage({ from: me, key: sent.key, replyId: sent.replyId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() })); });
+      opts = opts || {};
+      var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
+      var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, { replyId: replyKey, editId: opts.editKey, quote: opts.quote });
+      if (!sent) { if (!opts.quiet) toast(opts.editKey ? 'Message not edited. BetterChatango rejected it.' : 'Private message not sent.'); return false; }
+      update(function (d) { addSentPm(d, name, { from: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
       return true;
     };
@@ -1132,6 +1136,8 @@ function Root(props) {
         Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
         if (JSON.stringify(stored) !== raw) storageSet(skinKey(op.me), stored);
         localRef.current = Object.assign(blankLocal(), stored);
+        // BetterChatango's "Mentioned in #g" title would come back 5 s later without the Nightango counter.
+        if (liveBridge.setting('tabTitleAlerts')) liveBridge.setSetting('tabTitleAlerts', false);
         update(function (d) {
           Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.auth = { loggedIn: true };
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n); });

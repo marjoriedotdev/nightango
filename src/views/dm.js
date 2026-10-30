@@ -149,7 +149,7 @@ function DmThread(p) {
   var asked = useRef(false);
   var len = convo.messages.length;
   var log = useMessageLog();
-  var rp = useState(null), replyTo = rp[0], setReplyTo = rp[1];
+  var draft = useDraft('dm:' + id), cm = useComposerMode(draft);
   var personActions = useProfileActions(id, null);
   // Search result: older pages load one by one until it is reached.
   useEffect(function () {
@@ -173,7 +173,8 @@ function DmThread(p) {
     var original = m.replyTo ? convo.messages.find(function (x) { return x.key === m.replyTo.key; }) : null;
     rows.push(h(DmMessageRow, {
       key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
-      original: original, onJump: function (o) { log.jumpTo(o.id); }, onReply: u.blocked ? null : setReplyTo
+      original: original, onJump: function (o) { log.jumpTo(o.id); }, onReply: u.blocked ? null : cm.enter('reply'), onQuote: u.blocked ? null : cm.enter('quote'),
+      onEdit: u.blocked ? null : function (x) { cm.edit(x, (x.editKeys || []).length); }
     }));
     prev = m;
   });
@@ -186,7 +187,7 @@ function DmThread(p) {
     };
   var bottom;
   if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
-  else bottom = h(DmComposer, { id: id, replyTo: replyTo, onCancelReply: function () { setReplyTo(null); } });
+  else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close });
   return h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
       h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
@@ -203,9 +204,9 @@ function DmThread(p) {
 }
 
 /**
- * Private message row with its Reply button and its local action menu.
- * A message without a PM key, sent by the official Chatango client, has no Reply: the reply could not point to it.
- * @param {{m: Object, peer: string, continued: boolean, highlight: boolean, original: ?Object, onJump: Function, onReply: ?Function}} p Message, conversation correspondent, follow-up of the previous message from the same author, highlight, loaded original of a reply, jump to it, and reply to the message (null when sending is not possible).
+ * Private message row with its Reply button and its action menu.
+ * A message without a PM key, sent by the official Chatango client, has neither Reply nor Edit: they could not point to it.
+ * @param {{m: Object, peer: string, continued: boolean, highlight: boolean, original: ?Object, onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message, conversation correspondent, follow-up of the previous message from the same author, highlight, loaded original of a reply, jump to it, and reply to, quote and edit the message (null when sending is not possible).
  */
 function DmMessageRow(p) {
   var app = useApp(), s = app.state, m = p.m;
@@ -213,7 +214,10 @@ function DmMessageRow(p) {
   var ms = memberStyles(userOf(s, m.from), s.prefs.styles, app.theme, false);
   // A sent PM gets its archive key only at the next OK: its remove entry appears only after that.
   var canRemove = !LIVE || !!m.archiveTs;
-  var items = [copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
+  var canEdit = !!p.onEdit && m.from === s.me && !!m.key, canQuote = !!p.onQuote && !!m.text && !!mentionHandle(m.from);
+  var items = [canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
+    canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
+    copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
     canRemove ? { divider: true } : null,
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
       app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(p.peer, LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
@@ -232,24 +236,27 @@ function DmMessageRow(p) {
 }
 
 /**
- * Private conversation composer with its draft, reply, emoticon and media picker, :name completion and file upload.
- * @param {{id: string, replyTo: ?Object, onCancelReply: Function}} p Conversation correspondent, message being replied to, and end of the reply.
+ * Private conversation composer with its reply, edit or quote, emoticon and media picker, :name completion and file upload.
+ * @param {{id: string, draft: Array, mode: ?Object, onCancelMode: Function}} p Conversation correspondent, draft (useDraft), mode (useComposerMode) and its end.
  */
 function DmComposer(p) {
-  var app = useApp(), id = p.id, reply = p.replyTo;
-  var d = useDraft('dm:' + id), draft = d[0], setDraft = d[1];
+  var app = useApp(), id = p.id, mode = p.mode, kind = mode && mode.kind;
+  var draft = p.draft[0], setDraft = p.draft[1];
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'dm', id: id }, setDraft);
   return h(Frag, null, media.panel, h(T.Composer, {
-    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status, attachment: attach.attachment, canSend: !attach.busy,
-    context: reply ? Object.assign({ author: reply.from, text: messagePreview(reply) }, COMPOSER_MODES.reply) : null, onCancelContext: p.onCancelReply,
+    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
+    // An edit changes only the text: the picked file waits for the next message.
+    onAttach: kind === 'edit' ? null : attach.onAttach, attachment: kind === 'edit' ? null : attach.attachment,
+    context: mode ? Object.assign({ author: mode.m.from, text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
     onSend: function (text) {
+      if (kind === 'edit') { if (text !== mode.m.text) app.actions.sendDm(id, text, { editKey: mode.m.key }); p.onCancelMode(); return; }
       if (runCommand(app, text, null)) return;
-      var opts = { replyTo: reply ? { key: reply.key } : null };
-      if (attach.file) { attach.send(text, opts, p.onCancelReply); return; }
+      var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(mode.m.from, mode.m.text) : null };
+      if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
       app.actions.sendDm(id, text, opts);
-      p.onCancelReply();
+      p.onCancelMode();
     }, beforeSend: h(MessageStyleButton, null)
   }), emoji.picker, attach.input);
 }

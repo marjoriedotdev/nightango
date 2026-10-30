@@ -38,7 +38,7 @@ function NotificationsPage() {
       }),
       h(T.SettingRow, { title: 'Only when Nightango is in focus', description: "Stay silent while you're in another tab or app.", control: pr.sw('soundFocusOnly') })),
     h(T.SettingsSection, { title: 'In the app' },
-      h(T.SettingRow, { title: 'Show mentions in the tab title', description: 'Adds a counter to the browser tab, for example (2) Nightango.', control: pr.sw('tabTitle') }),
+      h(T.SettingRow, { title: 'Show mentions in the tab title', description: 'Adds a counter to the browser tab, for example (2) Nightango.' + (LIVE ? " Nightango turns off BetterChatango's tab title alerts, also when you use BetterChatango on its own." : ''), control: pr.sw('tabTitle') }),
       h(T.SettingRow, { title: 'Mark new messages', description: "Draws a line above the first message you haven't read.", control: pr.sw('markNew') }),
       h(T.SettingRow, { title: 'Preview private messages', description: 'Shows the text in the alert instead of only the sender.', control: pr.sw('pmPreview') })));
 }

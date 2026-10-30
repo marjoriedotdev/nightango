@@ -121,7 +121,10 @@ function MessageText(p) {
    Never injected: the text is parsed again by the browser parser, then only a few formatting
    tags are rebuilt as React elements. Scripts, free styles and attributes are dropped. */
 var RICH_TAGS = { b: 'b', strong: 'b', i: 'i', em: 'i', u: 'u', s: 's', strike: 's', br: 'br', p: 'p', div: 'div', span: 'span', font: 'span', center: 'div', a: 'a', img: 'img' };
-var RICH_DROP = { script: 1, style: 1, iframe: 1, object: 1, embed: 1, noscript: 1, template: 1, svg: 1, math: 1, form: 1, input: 1, button: 1, textarea: 1, select: 1, link: 1, meta: 1, title: 1, head: 1 };
+var RICH_DROP = { script: 1, style: 1, iframe: 1, object: 1, embed: 1, noscript: 1, template: 1, svg: 1, math: 1, form: 1, input: 1, button: 1, select: 1, link: 1, meta: 1, head: 1 };
+// The parser keeps the content of these tags as raw text. BetterChatango only strips the tags, so the text is parsed again as HTML.
+var RICH_RCDATA = { title: 1, textarea: 1 };
+function richBody(html) { return new DOMParser().parseFromString('<!doctype html><body>' + html, 'text/html').body; }
 function richStyle(el, tag, ctx) {
   var st = {}, css = String(el.getAttribute('style') || '');
   var color = cssColor(el.getAttribute('color') || (/(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(css) || [])[1]);
@@ -147,6 +150,7 @@ function richNodes(node, ctx, key) {
     if (c.nodeType !== 1) return;
     var tag = c.tagName.toLowerCase();
     if (RICH_DROP[tag]) return;
+    if (RICH_RCDATA[tag]) { out = out.concat(richNodes(richBody(c.textContent), ctx, k)); return; }
     var as = RICH_TAGS[tag];
     if (!as) { out = out.concat(richNodes(c, ctx, k)); return; }
     if (as === 'br') { out.push(ctx.inline ? ' ' : h('br', { key: k })); return; }
@@ -183,15 +187,15 @@ function RichText(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var r = useState(false), revealed = r[0], setRevealed = r[1];
   var html = String(p.html || '').replace(/\r\n|\r|\n/g, '<br>');
-  var doc;
-  try { doc = new DOMParser().parseFromString('<!doctype html><body>' + html, 'text/html'); } catch (e) { return h('p', { className: 'about' }, p.html); }
+  var body;
+  try { body = richBody(html); } catch (e) { return h('p', { className: 'about' }, p.html); }
   var ctx = {
     bg: p.bg || SURFACE[app.theme].bg, inline: p.inline, link: p.link,
     images: safety.embedImages, blocked: function (src) { return !revealed && waitsForClick(safety, 'image', src); },
     reveal: function () { setRevealed(true); },
     onLink: function (url) { return warnOnLink(app, url); }
   };
-  var nodes = richNodes(doc.body, ctx, 'r');
+  var nodes = richNodes(body, ctx, 'r');
   return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich' }].concat(nodes));
 }
 var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
