@@ -36,14 +36,15 @@ function elapsedShort(ts) {
   return Math.floor(m / 1440) + ' d';
 }
 /**
- * Tells whether a version number X.Y.Z comes after another.
+ * Tells whether a version number X.Y.Z comes after another, which may be a beta X.Y.Z-beta.N.
  * @param {string} a Compared version.
  * @param {string} b Reference version.
  */
 function isNewerVersion(a, b) {
-  var x = a.split('.'), y = b.split('.');
+  var x = a.split('.'), y = b.split('-')[0].split('.');
   for (var i = 0; i < 3; i++) if (+x[i] !== +y[i]) return +x[i] > +y[i];
-  return false;
+  // A release comes after its own betas.
+  return b.indexOf('-') !== -1;
 }
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
