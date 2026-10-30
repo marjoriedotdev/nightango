@@ -2,6 +2,23 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.28.0-beta.1] - 2026-10-30
+
+### Added
+
+- The message field has a Media button in place of the paperclip, with three tabs. Upload picks a file that goes out with your next message, Library shows your BetterChatango media, Memes lists Imgflip's popular blank templates and inserts the link of the one you click.
+- In private conversations, Edit message on your own messages and Quote message on any message with text. While you reply or edit, the message field reminds you that people on other Chatango apps see it as a new message.
+
+### Changed
+
+- The Emoji button shows emoticons only. Your media library moves to the Media button.
+
+### Fixed
+
+- The tab title keeps the Nightango unread count after a mention or a private message. BetterChatango no longer rewrites it, even when you use it without Nightango.
+- With BetterChatango desktop notifications on, a mention shows one desktop notification instead of two.
+- Mini profiles written inside a title tag show their text instead of nothing.
+
 ## [0.27.1] - 2026-10-29
 
 ### Fixed
