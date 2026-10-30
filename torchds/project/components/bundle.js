@@ -371,7 +371,7 @@
     var value = props.value != null ? props.value : internal[0];
     var setValue = props.onChange || internal[1];
     var own = React.useRef(null), ref = props.inputRef || own;
-    var id = React.useId(), hintId = id + '-hint';
+    var id = React.useId(), hintId = id + '-hint', noteId = id + '-note';
     var blocked = props.canSend === false;
     var file = props.attachment;
     function send() {
@@ -405,11 +405,12 @@
       props.status ? h('div', { className: 'tc-composer-context', role: 'status' },
         h(Spinner, { size: 14 }),
         h('span', { className: 'tc-composer-context-text' }, props.status)) : null,
-      ctx ? h('div', { className: 'tc-composer-context' },
+      ctx ? h('div', { className: cx('tc-composer-context', ctx.note && 'tc-composer-context-noted') },
         h(Icon, { name: ctx.icon, size: 14 }),
         h('span', { className: 'tc-composer-context-text' },
           ctx.verb, ' ', h('strong', { style: { color: 'var(--text-2)', fontWeight: 600 } }, ctx.author), ' ', ctx.text),
         h(IconButton, { icon: 'x', label: ctx.cancelLabel, size: 24, iconSize: 13, onClick: props.onCancelContext })) : null,
+      ctx && ctx.note ? h('div', { id: noteId, className: 'tc-composer-note' }, h(Icon, { name: 'info', size: 14 }), ctx.note) : null,
       file ? h('div', { className: 'tc-composer-file' },
         h(ComposerThumb, { key: file.preview || '', src: file.preview, icon: file.icon }),
         h('span', { className: 'tc-composer-file-text' },
@@ -418,7 +419,7 @@
         file.onRemove ? h(IconButton, { icon: 'x', label: 'Remove ' + file.name, size: 24, iconSize: 13, onClick: file.onRemove }) : null) : null,
       h('label', { htmlFor: id, className: 'tc-sr' }, props.label || 'Message'),
       h('textarea', {
-        id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value, 'aria-describedby': props.hint ? hintId : undefined,
+        id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value, 'aria-describedby': [ctx && ctx.note ? noteId : '', props.hint ? hintId : ''].join(' ').trim() || undefined,
         onChange: function (e) { setValue(e.target.value); if (props.onTyping) props.onTyping(); },
         onKeyDown: function (e) {
           if (props.onKeyDown) props.onKeyDown(e);

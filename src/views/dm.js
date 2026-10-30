@@ -251,7 +251,6 @@ function DmComposer(p) {
     placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, onMedia: mediaPicker.onMedia, status: attach.status, canSend: kind === 'edit' || !attach.busy,
     attachment: kind === 'edit' ? null : attach.attachment,
     context: mode ? Object.assign({ author: mode.m.from, text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
-    hint: composerModeHint(kind),
     onSend: function (text) {
       if (kind === 'edit') { if (text !== mode.m.text) app.actions.sendDm(id, text, { editKey: mode.m.key }); p.onCancelMode(); return; }
       if (runCommand(app, text, null)) return;

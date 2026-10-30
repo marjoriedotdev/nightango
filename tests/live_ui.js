@@ -1462,7 +1462,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const rexMenu = async txt => { click(rexRow(txt).querySelector('button[aria-label="More actions"]')); await wait(30); };
   const rexMenuItems = async txt => { await rexMenu(txt); const items = $$('.menu button').map(b => b.textContent); await rexMenu(txt); return items; };
   const composeIn = async txt => {
-    const box = $('.thread .tc-composer textarea'), shown = { context: ($('.thread .tc-composer-context') || {}).textContent || '', hint: ($('.thread .tc-composer-hint') || {}).textContent || '', value: box.value };
+    const box = $('.thread .tc-composer textarea'), shown = { context: ($('.thread .tc-composer-context') || {}).textContent || '', note: ($('.thread .tc-composer-note') || {}).textContent || '', value: box.value };
     type(box, txt); key(box, 'Enter'); await wait(50);
     return shown;
   };
@@ -1479,10 +1479,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmQuote = { frame: frame('msg:rex:').pop() || '' };
   step('pm edit carries <e> after the <g> head and changes its original in place, pm quote goes before the text, edit only on own keyed pms',
     pmMenus.otherOld.includes('Quote message') && !pmMenus.otherOld.includes('Edit message') && pmMenus.official.includes('Quote message')
-      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.hint === 'Only visible to Nightango and BetterChatango users.'
+      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.note === 'Only visible to Nightango and BetterChatango users.'
       && new RegExp(PM_HEAD + '<e' + rex.answerKey + '\\/>' + PM_TEXT('Answer fixed')).test(pmEdit.frame) && pmEdit.sentOnce
       && JSON.stringify(pmEdit.rows) === JSON.stringify(['Answer fixed']) && pmEdit.edited && pmEdit.draftBack === 'kept draft'
-      && quoteShown.context.includes('Quoting') && !quoteShown.hint && new RegExp(PM_HEAD + PM_TEXT('@rex: `Old question` Yes')).test(pmQuote.frame),
+      && quoteShown.context.includes('Quoting') && !quoteShown.note && new RegExp(PM_HEAD + PM_TEXT('@rex: `Old question` Yes')).test(pmQuote.frame),
     { pmMenus, editShown, pmEdit, quoteShown, pmQuote });
 
   /* PMs received offline: database opened before the private connection, msgoff right after OK, two identical "ok" 10 s apart in the history */
