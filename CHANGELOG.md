@@ -2,6 +2,12 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.28.0-beta.4] - 2026-10-30
+
+### Removed
+
+- The Media button and its Memes tab. The paperclip attaches a file again, and your media library is back in the Media tab of the Emoji picker.
+
 ## [0.28.0-beta.3] - 2026-10-30
 
 ### Changed
