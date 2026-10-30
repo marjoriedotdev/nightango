@@ -61,7 +61,15 @@ The runner `tests/run.mjs` judges each suite on its exit code and on its output 
    - send the file directly to the user
    - merge into `main`: once the tests are green, the CI creates the `vX.Y.Z` tag from `@version` and the GitHub release with both userscripts attached. A `@version` that already has its release publishes nothing: no increment, no release. Do not push a tag by hand.
 
-The CI (`.github/workflows/ci.yml`) runs `pnpm test` on every push and pull request to `main`, then publishes the release on a push to `main`.
+The CI (`.github/workflows/ci.yml`) runs `pnpm test` on every push and pull request to `main` and `beta`, then publishes the release on a push to either branch.
+
+### Shipping a beta
+
+1. On the `beta` branch, set `@version` to `X.Y.Z-beta.N`, `X.Y.Z` being the next stable version, and add its section `## [X.Y.Z-beta.N] - YYYY-MM-DD` at the top of `CHANGELOG.md`.
+2. Push to `beta`: once the tests are green, the CI publishes the GitHub prerelease `vX.Y.Z-beta.N`. GitHub never marks it as latest, so the update check of stable users ignores it ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
+3. To ship the stable version, on `beta`: set `@version` to `X.Y.Z` and merge the `X.Y.Z-beta.N` sections of `CHANGELOG.md` into a single `## [X.Y.Z]` section, since stable users never saw the betas. A push to `beta` with a stable `@version` publishes nothing. Then open the pull request from `beta` to `main`.
+
+The CI refuses a `-beta` `@version` on `main` and in any pull request to `main`. A stable hotfix ships from `main` as usual, then `main` is merged into `beta`.
 
 ## Docs map
 

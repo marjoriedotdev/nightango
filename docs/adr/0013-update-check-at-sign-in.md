@@ -26,3 +26,4 @@ Guards:
 
 - GitHub gets the user's IP address once per sign-in.
 - Without an answer from GitHub (offline, rate limit), the user is not told about a new version until a later sign-in.
+- Betas (`vX.Y.Z-beta.N`, from the `beta` branch) are GitHub prereleases, which `releases/latest` skips. A beta user is told about stable releases only, the `X.Y.Z` that follows their beta included, never about the next beta.
