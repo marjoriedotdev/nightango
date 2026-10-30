@@ -4,42 +4,16 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ## [0.28.0-beta.4] - 2026-10-30
 
-### Removed
-
-- The Media button and its Memes tab. The paperclip attaches a file again, and your media library is back in the Media tab of the Emoji picker.
-
-## [0.28.0-beta.3] - 2026-10-30
-
-### Changed
-
-- "Only visible to Nightango and BetterChatango users." moves under the reply or edit line, across the full width, instead of beside the buttons.
-
-## [0.28.0-beta.2] - 2026-10-30
-
-### Changed
-
-- While you reply or edit, in a group or a private conversation, the message field shows an info icon and "Only visible to Nightango and BetterChatango users."
-
-### Fixed
-
-- On a phone, the Media picker opens on screen instead of past the left edge.
-
-## [0.28.0-beta.1] - 2026-10-30
-
 ### Added
 
-- The message field has a Media button in place of the paperclip, with three tabs. Upload picks a file that goes out with your next message, Library shows your BetterChatango media, Memes lists Imgflip's popular blank templates and inserts the link of the one you click.
-- In private conversations, Edit message on your own messages and Quote message on any message with text. While you reply or edit, the message field reminds you that people on other Chatango apps see it as a new message.
-
-### Changed
-
-- The Emoji button shows emoticons only. Your media library moves to the Media button.
+- You can now edit your own private messages and quote any private message, from the message menu, as you already could in groups.
+- When you reply to a message or edit one, a line under it reminds you that only Nightango and BetterChatango users see it as a reply or an edit. Other Chatango apps show it as a new message.
 
 ### Fixed
 
-- The tab title keeps the Nightango unread count after a mention or a private message. BetterChatango no longer rewrites it, even when you use it without Nightango.
-- With BetterChatango desktop notifications on, a mention shows one desktop notification instead of two.
-- Mini profiles written inside a title tag show their text instead of nothing.
+- After a mention or a private message, the tab title keeps your unread count. To do this, Nightango turns off BetterChatango's tab title alerts, so they also stay off when you use BetterChatango on its own.
+- If you turned on desktop notifications in BetterChatango, a mention now shows one notification instead of two.
+- Some mini profiles showed up blank. They now show their text.
 
 ## [0.27.1] - 2026-10-29
 
