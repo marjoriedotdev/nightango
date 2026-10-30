@@ -285,8 +285,10 @@ function Root(props) {
       }
     },
     sendDm: function (name, text, opts) {
-      var me = stateRef.current.me, replyKey = opts && opts.replyTo && opts.replyTo.key;
-      update(function (d) { d.dms[name].messages.push(pmMessage({ from: me, key: uid(), replyId: replyKey, text: text, ts: Date.now() })); });
+      opts = opts || {};
+      var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
+      update(function (d) { addSentPm(d, name, { from: me, key: uid(), replyId: replyKey, editId: opts.editKey, text: (opts.quote || '') + text, ts: Date.now() }); });
+      if (opts.editKey) return;
       var u = userOf(stateRef.current, name);
       if (u.status === 'offline' || u.blocked) return;
       setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
@@ -638,10 +640,11 @@ function Root(props) {
     // Editing an edit shown on its own targets its original, the only message visible to other members.
     actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. BetterChatango rejected it.'); };
     actions.sendDm = function (name, text, opts) {
-      var me = stateRef.current.me, replyKey = opts && opts.replyTo && opts.replyTo.key;
-      var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, replyKey);
-      if (!sent) { if (!(opts && opts.quiet)) toast('Private message not sent.'); return false; }
-      update(function (d) { pmConversation(d, name).messages.push(pmMessage({ from: me, key: sent.key, replyId: sent.replyId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() })); });
+      opts = opts || {};
+      var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
+      var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, { replyId: replyKey, editId: opts.editKey, quote: opts.quote });
+      if (!sent) { if (!opts.quiet) toast(opts.editKey ? 'Message not edited. BetterChatango rejected it.' : 'Private message not sent.'); return false; }
+      update(function (d) { addSentPm(d, name, { from: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
       return true;
     };

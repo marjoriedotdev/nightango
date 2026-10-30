@@ -12,16 +12,39 @@ var COMPOSER_MODES = {
   quote: { icon: 'quote', verb: 'Quoting', cancelLabel: 'Cancel quote' }
 };
 
+/**
+ * Reply, edit or quote mode of a composer.
+ * During an edit, the draft holds the edited text and the typed draft waits aside.
+ * @param {Array} draft useDraft result of the composer.
+ * @returns {{mode: ?{kind: string, m: Object}, setMode: Function, close: Function, enter: function(string): Function, edit: function(Object, number)}} Mode and its transitions.
+ */
+function useComposerMode(draft) {
+  var app = useApp();
+  var st = useState(null), mode = st[0], setMode = st[1], stash = useRef('');
+  if (mode && mode.kind === 'edit') draft[2].current = stash.current;
+  function close() { if (mode && mode.kind === 'edit') draft[1](stash.current); setMode(null); }
+  return {
+    mode: mode, setMode: setMode, close: close,
+    enter: function (kind) { return function (m) { close(); setMode({ kind: kind, m: m }); }; },
+    edit: function (m, edits) {
+      if (edits >= EDIT_MAX) { app.ui.toast("You can't edit this message again. BetterChatango allows " + EDIT_MAX + ' edits per message.'); return; }
+      if (!mode || mode.kind !== 'edit') stash.current = draft[0];
+      draft[1](m.text);
+      setMode({ kind: 'edit', m: m });
+    }
+  };
+}
+
 function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
-  var a3 = useState(null), mode = a3[0], setMode = a3[1];
   var a4 = useState('none'), channel = a4[0], setChannel = a4[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
   var a9 = useDraft('group:' + p.gid), draft = a9[0], setDraft = a9[1];
-  var inputRef = useRef(null), stash = useRef('');
+  var cm = useComposerMode(a9), mode = cm.mode, setMode = cm.setMode;
+  var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid }, setDraft);
   var log = useMessageLog();
@@ -29,8 +52,7 @@ function GroupView(p) {
   var q = search ? search.trim().toLowerCase() : '';
   // Jump asked by the Mentions page: jumpTo, declared below, refuses a message the log hides.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
-  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m) : null;
-  if (kind === 'edit') a9[2].current = stash.current;
+  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m.author, mode.m.text) : null;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
   // Style compared as text: update clones the whole state, so the object changes on every update.
   var measured = useMemo(function () {
@@ -56,15 +78,8 @@ function GroupView(p) {
     media.onKeyDown(e);
     if (!e.defaultPrevented) mentions.onKeyDown(e);
   }
-  function closeMode() { if (mode && mode.kind === 'edit') setDraft(stash.current); setMode(null); }
-  function enter(kind) { return function (m) { closeMode(); setMode({ kind: kind, m: m }); }; }
-  var reply = enter('reply'), quote = enter('quote');
-  function edit(m) {
-    if ((m.editCount || 0) >= EDIT_MAX) { app.ui.toast("You can't edit this message again. BetterChatango allows " + EDIT_MAX + ' edits per message.'); return; }
-    if (!mode || mode.kind !== 'edit') stash.current = draft;
-    setDraft(m.text);
-    setMode({ kind: 'edit', m: m });
-  }
+  var closeMode = cm.close, reply = cm.enter('reply'), quote = cm.enter('quote');
+  function edit(m) { cm.edit(m, m.editCount || 0); }
   function send(text) {
     if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
     if (runCommand(app, text, g.id)) return;

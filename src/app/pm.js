@@ -65,11 +65,32 @@ function pmConversation(d, name, extra) {
 function pmMessage(x) {
   // Edit without a loaded original: it takes the key of the original, which the archive and later edits target.
   var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
-  if (x.editId) m.edited = true;
+  if (x.editId) { m.edited = true; m.editKeys = x.key ? [x.key] : []; }
   if (x.replyId) m.replyTo = { key: x.replyId };
   return m;
 }
 function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
+/**
+ * Applies a PM edit to its original and counts it once.
+ * @param {Object} o Original message.
+ * @param {Object} x Edit, with its own PM key.
+ */
+function applyPmEdit(o, x) {
+  // The history replays on each OK the edits already applied live: their key keeps them from counting twice.
+  if (x.key && (o.editKeys || []).indexOf(x.key) < 0) o.editKeys = (o.editKeys || []).concat([x.key]);
+  applyEdit(o, x);
+}
+/**
+ * Shows a PM just sent in its conversation.
+ * Chatango does not send it back: an edit applies here to its original.
+ * @param {Object} d State being modified.
+ * @param {string} name Correspondent.
+ * @param {Object} x Sent message, with its PM key and the key of the original for an edit.
+ */
+function addSentPm(d, name, x) {
+  var c = pmConversation(d, name), o = pmEditTarget(c, x);
+  if (o) applyPmEdit(o, x); else c.messages.push(pmMessage(x));
+}
 /**
  * Receives a PM in its conversation: an edit applies to its original and a new message reopens the conversation.
  * @param {Object} d State being modified.
@@ -78,7 +99,7 @@ function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embe
  */
 function receivePm(d, x) {
   var c = pmConversation(d, x.from, { lastReadTs: 0 }), o = pmEditTarget(c, x);
-  if (o) { applyEdit(o, x); return true; }
+  if (o) { applyPmEdit(o, x); return true; }
   c.closed = false;
   c.messages.push(pmMessage(x));
   c.messages.sort(function (a, b) { return a.ts - b.ts; });
@@ -96,7 +117,7 @@ function mergePmHistory(c, list, onEntry) {
   list.forEach(function (x) {
     onEntry(x);
     var o = pmEditTarget(c, x);
-    if (o) { applyEdit(o, x); return; }
+    if (o) { applyPmEdit(o, x); return; }
     var m = pmMessage(x), i = pmShownIndex(shown, m);
     if (i >= 0) { shown[i].archiveTs = m.archiveTs; shown.splice(i, 1); return; }
     c.messages.push(m);

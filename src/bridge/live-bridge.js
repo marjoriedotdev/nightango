@@ -657,13 +657,21 @@ var liveBridge = (function () {
     var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
     var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
     body = head + ref + body.slice(head.length);
-    if (opts.quote) {
-      // BetterChatango places the quote right before the typed text: after the emphasis of its style, read from its checkboxes, and before the Markdown one.
-      var f = C.user.style ? styleFields() : null;
-      var at = head.length + (f ? (f.bold.checked ? '<b>' : '') + (f.italic.checked ? '<i>' : '') + (f.underline.checked ? '<u>' : '') : '').length;
-      body = body.slice(0, at) + esc(opts.quote) + body.slice(at);
-    }
+    if (opts.quote) body = withQuote(body, head.length, opts.quote, false);
     return { body: body, style: style };
+  }
+  /**
+   * Inserts a plain-text quote where BetterChatango places it, right before the typed text.
+   * @param {string} body Body built by BetterChatango.
+   * @param {number} start Index of the content, after the <f …> or <g …> head and its reference.
+   * @param {string} quote Plain-text quote.
+   * @param {boolean} pm True for a PM, whose style also opens the strikethrough.
+   */
+  function withQuote(body, start, quote, pm) {
+    // After the emphasis of the style, read from its checkboxes like sendMessage (inject.js:5182-5185), and before the Markdown one.
+    var f = C.user.style ? styleFields() : null;
+    var at = start + (f ? (f.bold.checked ? '<b>' : '') + (f.italic.checked ? '<i>' : '') + (f.underline.checked ? '<u>' : '') + (pm && f.strike.checked ? '\u2593' : '') : '').length;
+    return body.slice(0, at) + esc(quote) + body.slice(at);
   }
 
   /* Replies from the userscript vissle bridge, matched to requests by id */
@@ -768,27 +776,30 @@ var liveBridge = (function () {
       try { var built = groupBody(gid, text, opts); return built ? built.body.length : 0; } catch (e) { warn(e); return 0; }
     },
     /**
-     * Sends a private message or the reply to a private message.
+     * Sends a private message, or the reply, edit or quote of a private message.
      * @param {string} user Recipient.
      * @param {string} text Typed text.
      * @param {?Object} style Own style.
-     * @param {?string} replyKey PM key of the original for a reply.
-     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array, key: ?string, replyId: ?string}} Body built by BetterChatango parsed like a received PM, null if nothing was sent.
+     * @param {{replyId: ?string, editId: ?string, quote: ?string}=} opts PM key of the original for a reply or an edit, or plain-text quote.
+     * @returns {?{style: Object, text: string, parts: ?Array, embeds: Array, key: ?string, replyId: ?string, editId: ?string}} Body built by BetterChatango parsed like a received PM, null if nothing was sent.
      */
-    sendPm: function (user, text, style, replyKey) {
+    sendPm: function (user, text, style, opts) {
+      opts = opts || {};
       try {
         applyStyle(style);
         // Built once and sent as is: a second build would draw another <i…/> PM key than the one shown.
         var body = C.sendMessage(esc(text), true, 'private_message', user);
         if (typeof body !== 'string' || !body) return null;
-        if (replyKey) {
-          var head = /<g [^>]*>/.exec(body), at = head.index + head[0].length;
-          body = body.slice(0, at) + '<r' + encodeRef(replyKey) + '/>' + body.slice(at);
-        }
-        if (!send('private_message', 'msg:' + user + ':' + body, replyKey ? 'Your reply could not be sent.' : 'Your message failed to be delivered.')) return null;
+        var head = /<g [^>]*>/.exec(body), at = head.index + head[0].length;
+        // Like BetterChatango, an edit never carries a reply.
+        var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
+        body = body.slice(0, at) + ref + body.slice(at);
+        if (opts.quote) body = withQuote(body, at + ref.length, opts.quote, true);
+        var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
+        if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null;
         // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
-        return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId };
+        return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId, editId: parsed.editId };
       } catch (e) { warn(e); return null; }
     },
     /**
