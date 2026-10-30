@@ -11,6 +11,13 @@ var COMPOSER_MODES = {
   edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit' },
   quote: { icon: 'quote', verb: 'Quoting', cancelLabel: 'Cancel quote' }
 };
+/**
+ * Composer hint of a reply or an edit, which other Chatango apps show as a new message.
+ * @param {?string} kind Composer mode.
+ */
+function composerModeHint(kind) {
+  return kind === 'reply' || kind === 'edit' ? h(Frag, null, h(T.Icon, { name: 'info', size: 14 }), 'Only visible to Nightango and BetterChatango users.') : null;
+}
 
 /**
  * Reply, edit or quote mode of a composer.
@@ -140,7 +147,7 @@ function GroupView(p) {
     var left = GROUP_MESSAGE_MAX - measured;
     composer = h(Frag, null, media.panel, mentions.panel, h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: mentions.onChange, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
-      hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
+      hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : composerModeHint(kind),
       hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
