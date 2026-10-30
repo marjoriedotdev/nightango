@@ -165,11 +165,20 @@ const MSGBG = {
   pale: '<?xml version="1.0" ?><bgi bgc="336699" bgalp="0" useimg="1" ialp="-20" align="tl" tile="0" hasrec="0" isvid="0"/>'
 };
 const RELEASES_LATEST = 'https://api.github.com/repos/marjoriedotdev/nightango/releases/latest';
+// Imgflip get_memes reply: only the https i.imgflip.com images with a text name are offered.
+const MEMES = JSON.stringify({ success: true, data: { memes: [
+  { id: '1', name: 'Drake', url: 'https://i.imgflip.com/30b1gx.jpg', width: 1200, height: 1200, box_count: 2 },
+  { id: '2', name: 'Plain', url: 'http://i.imgflip.com/1ur9b0.jpg' },
+  { id: '3', name: 'Elsewhere', url: 'https://evil.test/a.jpg' },
+  { id: '4', name: 'Script', url: 'javascript:alert(1)//i.imgflip.com/a.jpg' },
+  { id: '5', name: 42, url: 'https://i.imgflip.com/22bdq6.jpg' },
+  { id: '6', name: 'Two buttons', url: 'https://i.imgflip.com/1g8my4.jpg' }
+] } });
 // vissle linked accounts: response body, null for a network failure, whoHold holds back the response.
 let whoBody = '{}', whoHold = null;
 w.fetch = (url, opts) => {
   const f = {}; if (opts && opts.body && opts.body.forEach) opts.body.forEach((v, k) => { f[k] = v; });
-  fetches.push({ url, f, credentials: opts && opts.credentials });
+  fetches.push({ url, f, credentials: opts && opts.credentials, referrerPolicy: opts && opts.referrerPolicy });
   let body = '', type = null, status = 200;
   if (/\/search$/.test(url)) body = searchBody;
   else if (/zoe\/mod1\.xml/.test(url)) body = '<?xml version="1.0"?><mod><body>' + ABOUT + '</body><s>F</s><b>' + ZOE_BIRTH + '</b><l c="FR">Lyon</l></mod>';
@@ -189,6 +198,7 @@ w.fetch = (url, opts) => {
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
   else if (url === RELEASES_LATEST) { body = '{"tag_name":"v99.0.0"}'; type = 'application/json'; }
+  else if (url === 'https://api.imgflip.com/get_memes') { body = MEMES; type = 'application/json'; }
   else if (/^https:\/\/api\.vissle\.me\/v1\/pmr\//.test(url)) { body = '{"pmr":true}'; type = 'application/json'; }
   else if (/^https:\/\/vissle\.me\/api\/v1\/who\//.test(url)) { if (whoBody === null) return Promise.reject(new w.TypeError('Failed to fetch')); body = whoBody; type = 'application/json'; }
   const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body), json: () => Promise.resolve(body).then(JSON.parse) };
@@ -485,9 +495,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   w.URL.createObjectURL = () => 'blob:preview';
   w.URL.revokeObjectURL = () => {};
   const pickFile = async name => {
-    const btn = $('button[aria-label="Attach media"]'), input = $('.composer-wrap input[type="file"]');
+    const btn = $('.composer-wrap button[aria-label="Media"]'), input = $('.composer-wrap input[type="file"]');
     if (!btn || !input) return;
-    click(btn);
+    click(btn); await until(() => !!$('.media-picker'));
+    const choose = byText('.media-picker button', 'Choose');
+    if (!choose) return;
+    click(choose); await wait(30);
     Object.defineProperty(input, 'files', { configurable: true, value: [new w.File(['x'], name, { type: 'image/png' })] });
     input.dispatchEvent(new w.Event('change', { bubbles: true })); await wait(30);
   };
@@ -1541,10 +1554,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* Media library import: only entries whose URL is an https image and whose name is text are written to the BetterChatango database */
   C.database.media = { transaction: mediaTransaction };
-  const mediaNames = () => $$('.emoji-picker .media-name').map(x => x.textContent);
-  const emojiButton = $('.thread .tc-composer button[aria-label="Emoji"]');
-  if (emojiButton) { click(emojiButton); await until(() => !!$('.emoji-picker')); }
-  const mediaTab = byText('.emoji-picker .tc-seg button', 'Media');
+  const mediaNames = () => $$('.media-picker .media-name').map(x => x.textContent);
+  const mediaButton = $('.thread .tc-composer button[aria-label="Media"]');
+  if (mediaButton) { click(mediaButton); await until(() => !!$('.media-picker')); }
+  const mediaTab = byText('.media-picker .tc-seg button', 'Library');
   if (mediaTab) { click(mediaTab); await until(() => mediaNames().includes('old')); }
   const mediaBefore = mediaRecords.length;
   chooseFile(JSON.stringify([
@@ -1552,16 +1565,41 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { url: 'javascript:alert(1)//x.test/a.png', name: 'script' },
     { url: 'http://x.test/dog.png', name: 'dog' },
     { url: 'https://x.test/bird.png', name: 42 }
-  ]), '.emoji-picker input[type="file"]');
+  ]), '.media-picker input[type="file"]');
   await until(() => !!byText('.toast .grow', 'Imported 1 image'));
   const mediaToast = (byText('.toast .grow', 'Imported 1 image') || {}).textContent || null;
   await until(() => mediaNames().includes('cat'));
-  const mediaImport = { picker: !!emojiButton, tab: !!mediaTab, toast: mediaToast, written: mediaRecords.slice(mediaBefore), listed: mediaNames() };
+  const mediaImport = { picker: !!mediaButton, tab: !!mediaTab, toast: mediaToast, written: mediaRecords.slice(mediaBefore), listed: mediaNames() };
   if (d.activeElement) key(d.activeElement, 'Escape');
-  await until(() => !$('.emoji-picker'));
+  await until(() => !$('.media-picker'));
   step('media import writes only https images with a text name',
     mediaImport.toast === 'Imported 1 image. 3 skipped.' && JSON.stringify(mediaImport.written) === JSON.stringify([{ url: 'https://x.test/cat.gif', name: 'cat' }])
       && JSON.stringify(mediaImport.listed) === '["cat","old"]', mediaImport);
+
+  /* Imgflip blank templates: one get_memes request without referrer per page, only https i.imgflip.com images with a text name, a click inserts the link */
+  const memesAsked = () => fetches.filter(x => x.url === 'https://api.imgflip.com/get_memes');
+  const memeNames = () => $$('.media-picker [aria-label="Meme templates"] .media-name').map(x => x.textContent);
+  const pmBox = () => $('.thread .tc-composer textarea');
+  const openMemes = async () => {
+    click($('.thread .tc-composer button[aria-label="Media"]')); await until(() => !!$('.media-picker'));
+    const tab = byText('.media-picker .tc-seg button', 'Memes');
+    if (tab) { click(tab); await until(() => memeNames().length > 0); }
+  };
+  const memesBefore = memesAsked().length;
+  type(pmBox(), 'Look ');
+  await openMemes();
+  const offered = memeNames();
+  const drake = $$('.media-picker .media-pick').find(x => x.textContent === 'Drake');
+  if (drake) { click(drake); await wait(30); }
+  const inserted = pmBox().value, pickedClosed = !$('.media-picker');
+  await openMemes();
+  const memes = { asked: memesAsked().slice(memesBefore).map(x => x.referrerPolicy), offered, inserted, closed: pickedClosed, again: memeNames() };
+  if (d.activeElement) key(d.activeElement, 'Escape');
+  await until(() => !$('.media-picker'));
+  type(pmBox(), '');
+  step('meme templates come from one get_memes request without referrer, only i.imgflip.com images, and a click inserts the link',
+    JSON.stringify(memes.asked) === '["no-referrer"]' && JSON.stringify(memes.offered) === '["Drake","Two buttons"]'
+      && memes.inserted === 'Look https://i.imgflip.com/30b1gx.jpg ' && memes.closed && JSON.stringify(memes.again) === '["Drake","Two buttons"]', memes);
 
   /* Removing a PM from the BetterChatango database: the record is read again before deletion, another member's record stays intact */
   const recordAt = ts => pmRecords.find(r => r.ts === ts);

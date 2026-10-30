@@ -160,6 +160,11 @@ function sampleVisits(q) {
   return SAMPLE_VISITS.filter(function (x) { return (q.get === 'all' || x.action === q.get) && (q.page === 1 || x.time < q.page); }).slice(0, VISIT_PAGE);
 }
 
+/* Sample blank meme templates of the prototype, in place of Imgflip's list. */
+var SAMPLE_MEMES = ['two buttons', 'distracted look', 'change my mind', 'this is fine', 'expanding brain', 'surprised face'].map(function (n) {
+  return { url: 'https://media.example/memes/' + n.replace(/ /g, '-') + '.jpg', name: n };
+});
+
 /* Sample media library of the prototype, in memory, with the calls the bridge makes on the BetterChatango database. */
 var sampleMedia = (function () {
   var list = ['wave', 'thumbs up', 'party', 'facepalm', 'coffee', 'cat nap', 'good night', 'popcorn'].map(function (n) {

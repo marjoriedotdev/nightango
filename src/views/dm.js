@@ -232,7 +232,7 @@ function DmMessageRow(p) {
 }
 
 /**
- * Private conversation composer with its draft, reply, emoticon and media picker, :name completion and file upload.
+ * Private conversation composer with its draft, reply, emoticon picker, media picker, :name completion and file upload.
  * @param {{id: string, replyTo: ?Object, onCancelReply: Function}} p Conversation correspondent, message being replied to, and end of the reply.
  */
 function DmComposer(p) {
@@ -241,8 +241,9 @@ function DmComposer(p) {
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'dm', id: id }, setDraft);
+  var mediaPicker = useMediaPicker(inputRef, setDraft, attach);
   return h(Frag, null, media.panel, h(T.Composer, {
-    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, onAttach: attach.onAttach, status: attach.status, attachment: attach.attachment, canSend: !attach.busy,
+    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, onMedia: mediaPicker.onMedia, status: attach.status, attachment: attach.attachment, canSend: !attach.busy,
     context: reply ? Object.assign({ author: reply.from, text: messagePreview(reply) }, COMPOSER_MODES.reply) : null, onCancelContext: p.onCancelReply,
     onSend: function (text) {
       if (runCommand(app, text, null)) return;
@@ -251,7 +252,7 @@ function DmComposer(p) {
       app.actions.sendDm(id, text, opts);
       p.onCancelReply();
     }, beforeSend: h(MessageStyleButton, null)
-  }), emoji.picker, attach.input);
+  }), emoji.picker, mediaPicker.picker, attach.input);
 }
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };
