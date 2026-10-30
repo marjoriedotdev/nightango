@@ -1479,7 +1479,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmQuote = { frame: frame('msg:rex:').pop() || '' };
   step('pm edit carries <e> after the <g> head and changes its original in place, pm quote goes before the text, edit only on own keyed pms',
     pmMenus.otherOld.includes('Quote message') && !pmMenus.otherOld.includes('Edit message') && pmMenus.official.includes('Quote message')
-      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.hint === 'People on other Chatango apps see this as a new message.'
+      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.hint === 'Only visible to Nightango and BetterChatango users.'
       && new RegExp(PM_HEAD + '<e' + rex.answerKey + '\\/>' + PM_TEXT('Answer fixed')).test(pmEdit.frame) && pmEdit.sentOnce
       && JSON.stringify(pmEdit.rows) === JSON.stringify(['Answer fixed']) && pmEdit.edited && pmEdit.draftBack === 'kept draft'
       && quoteShown.context.includes('Quoting') && !quoteShown.hint && new RegExp(PM_HEAD + PM_TEXT('@rex: `Old question` Yes')).test(pmQuote.frame),
