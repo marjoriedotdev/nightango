@@ -63,16 +63,17 @@ var FLOAT_UNPLACED = { position: 'fixed', visibility: 'hidden', top: 0, left: 0 
 function useFloating(anchorRef, floatRef, open, onClose, o) {
   useOutside(anchorRef, open, onClose, floatRef);
   var ps = useState(null), place = ps[0], setPlace = ps[1];
-  // Fixed position computed from the trigger, flipped if the layer would leave the screen.
+  // Fixed position computed from the trigger, flipped up or down if the layer would leave the screen.
   useLayoutEffect(function () {
     if (!open) { setPlace(null); return; }
     if (!anchorRef.current) return;
     var r = o.at ? { top: o.at.y, bottom: o.at.y, left: o.at.x, right: o.at.x } : anchorRef.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
     var mh = floatRef.current ? floatRef.current.offsetHeight : 0, up = o.up ? r.top - mh - 4 >= 8 || r.bottom + mh + 4 > vh : r.bottom + mh + 4 > vh - 8 && r.top - mh - 4 >= 8;
-    var mw = floatRef.current ? floatRef.current.offsetWidth : 0, left = o.align === 'left' && r.left + mw <= vw - 8;
+    var mw = floatRef.current ? floatRef.current.offsetWidth : 0;
     var st = { position: 'fixed' };
     if (up) st.bottom = (vh - r.top + 4) + 'px'; else st.top = (r.bottom + 4) + 'px';
-    if (left) st.left = Math.max(8, r.left) + 'px'; else st.right = Math.max(8, vw - r.right) + 'px';
+    // Slid along the screen edge rather than flipped to the other side of the trigger: on a phone, the flip pushed a wide layer off screen.
+    if (o.align === 'left') st.left = Math.max(8, Math.min(r.left, vw - 8 - mw)) + 'px'; else st.right = Math.max(8, Math.min(vw - r.right, vw - 8 - mw)) + 'px';
     setPlace(st);
   }, [open, o.at]);
   useEffect(function () {
