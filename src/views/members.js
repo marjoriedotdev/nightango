@@ -211,7 +211,8 @@ function WhoDialog(p) {
   function row(name) {
     var n = lower(name);
     // A name that is not an account has no photo and no profile: rendered as plain text.
-    return ACCOUNT_NAME.test(n) ? personCard(s, n, app.theme, function () { setOpen(n); }) : h('p', { key: name, className: 'about who-text' }, name);
+    // No status: Chatango only gives the presence of friends and group members, the others would all show online.
+    return ACCOUNT_NAME.test(n) ? personCard(s, n, app.theme, function () { setOpen(n); }, true) : h('p', { key: name, className: 'about who-text' }, name);
   }
   var lead = !res ? h('p', { className: 'startup' }, h(T.Spinner, null), 'Asking vissle')
     : h('p', { className: 'about' }, res.error || (total ? total + (total > 1 ? ' linked accounts' : ' linked account') + ' for ' + p.name + '.' : 'vissle has no linked accounts for ' + p.name + '.'));

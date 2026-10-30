@@ -15,14 +15,15 @@ function meetActive(f) {
  * @param {string} n Member name.
  * @param {string} theme Resolved theme.
  * @param {Function} onClick Opens the card.
+ * @param {boolean} [noStatus] True where Nightango has no presence for the account: no dot, neither online nor offline.
  */
-function personCard(s, n, theme, onClick) {
-  var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status, mini = miniStyleOf(s.prefs, u, theme);
+function personCard(s, n, theme, onClick, noStatus) {
+  var u = userOf(s, n), isMe = n === s.me, status = noStatus ? null : isMe ? s.meStatus : u.status, mini = miniStyleOf(s.prefs, u, theme);
   var about = u.aboutHtml ? h(RichText, { html: u.aboutHtml, inline: true, bg: mini ? mini.bg : null }) : u.about || null;
   return h('button', { key: n, type: 'button', className: 'conv person' + (mini ? ' mini-bg' : ''), style: mini ? { backgroundColor: mini.bg, color: mini.text } : null, onClick: onClick },
     h(T.Avatar, { name: n, size: 44, status: status, ring: mini ? mini.bg : 'var(--panel)' }),
     h('span', { className: 'conv-main' },
-      h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), presenceSr(status), youBadge(isMe), developerBadge(n), premiumBadge(u.premium)),
+      h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), status ? presenceSr(status) : null, youBadge(isMe), developerBadge(n), premiumBadge(u.premium)),
       personMetaLine(s, n),
       isProfilePending(n, u) ? h('span', { className: 'conv-about skel-about' }, h('span', { className: 'tc-sr' }, 'Loading profile'), h(T.Skeleton, { width: 220, height: 10 }), h(T.Skeleton, { width: 130, height: 10 }))
         : h('span', { className: 'conv-about' }, about || (u.profileMissing ? 'No public profile.' : null))));
