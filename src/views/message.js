@@ -130,10 +130,11 @@ function mentionHandle(name) {
 
 /**
  * Writes a message quote in BetterChatango's plain text format, to place before the typed text.
- * @param {Object} m Quoted message, with text and a mentionable author.
+ * @param {string} author Mentionable author of the quoted message.
+ * @param {string} text Quoted text.
  */
-function quoteOf(m) {
-  return '@' + mentionHandle(m.author) + ': `' + m.text.replace(/`/g, '').replace(/\n/g, ' ').trim() + '` ';
+function quoteOf(author, text) {
+  return '@' + mentionHandle(author) + ': `' + text.replace(/`/g, '').replace(/\n/g, ' ').trim() + '` ';
 }
 
 /**

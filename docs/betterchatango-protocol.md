@@ -186,11 +186,13 @@ One call excluded by the owner's decision (2026-10-23, #96): `GET https://api.vi
 - An edit is a new PM, with its own `<i…/>`, that carries `<e{ref}/>` before the content, in the same `msg:` body (`inject.js:5231-5241`). The ref is the key of the original, in the message reference format (see Sending).
 - On receipt, BetterChatango applies it to the original with the same key and the same author, and hides the edit message (`displayEdit`, `inject.js:5497-5536`). Nightango does the same, in real time and in the history merge (`app/root.js`): the original keeps its place and its timestamp, takes the text and media of the edit and shows "(edited)". In real time, an applied edit counts neither as an unread nor as a notification.
 - An edit whose original is not loaded is shown as a received PM, marked edited. It takes the key of the original, which the archive and the following edits target.
-- Nightango sends no PM edit.
+- Sending an edit (BetterChatango `sendMessage`, `inject.js:5236-5241`, Edit entry on one's own PM rows, `inject.js:8140-8142`): `msg:{name}:<n…/><i{id}/><m v="1"><g …><e{ref}/>{content}</g></m>`, the ref being the PM key of the original. The bridge inserts `<e…/>` right after `<g …>`, where BetterChatango puts it, never together with `<r…/>`. Failure text: "Your message could not be edited." Nightango offers "Edit message" on one's own PMs that carry a key, sends nothing if the text did not change, and refuses the tenth edit like groups (`inject.js:5466-5467`). Chatango does not send a PM back to its author: the sent edit applies to the local original through the same path as a received one.
+  - Edit count: each applied edit is counted once by its own PM key (`editKeys`), since each `OK` replays from the history the edits already applied live.
 - Reply (BetterChatango `sendMessage`, `inject.js:5253-5258`, Reply entry on every PM row, `inject.js:8128-8139`): `msg:{name}:<n…/><i{id}/><m v="1"><g …><r{ref}/>{content}</g></m>`. The ref is the PM key of the original, in the message reference format (see Sending). The bridge inserts `<r…/>` right after `<g …>`, where BetterChatango puts it. Failure text: "Your reply could not be sent."
   - Receiving (BetterChatango `displayReply`, `inject.js:5406-5455`, called for group rows and PM rows, `inject.js:8213-8222`): the original is shown above the reply only if it is loaded. The bridge passes `replyId` for `msg`, `msgoff` and the private history. Nightango looks for the message with this key in the conversation, otherwise shows "Original message not loaded".
   - A PM without a key, sent by the official Chatango client, has no Reply in Nightango: the reply could not point to it.
-  - How the official client renders `<r…/>` in a PM is not checked.
+  - How the official client renders `<r…/>` and `<e…/>` in a PM is not checked. The composer says in Reply and Edit mode: "People on other Chatango apps see this as a new message." (owner's decision, 2026-10-30).
+- Quote (BetterChatango `sendMessage`, `inject.js:5245-5252`, Quote entry on PM rows, `inject.js:8136-8138`): `` msg:{name}:<n…/><i{id}/><m v="1"><g …>{emphasis}@{name}: `{quoted}` {content}</g></m> ``, no reference. Same rules as the group quote (see Sending), except for the place: after `<g …>` and the openings of the style, read from the BetterChatango checkboxes, `<B>`, `<I>`, `<U>` (uppercase in a PM, `inject.js:5207`) then `▓` for the strikethrough (`inject.js:5185`). Failure text: "Your quote could not be sent." Nightango offers "Quote message" on every PM that has text, key or not.
 
 ### PM style
 
@@ -429,7 +431,7 @@ Chatango returns no request identifier. For three requests, the bridge waits for
 
 ### Private messages
 
-- `msg:{n}:{body}`, and the reply `msg:{n}:<n…/><i{id}/><m v="1"><g …><r{ref}/>{content}</g></m>` (`inject.js:5206`, `5253-5258`, see Sending and PM key and edits)
+- `msg:{n}:{body}`, the reply `msg:{n}:<n…/><i{id}/><m v="1"><g …><r{ref}/>{content}</g></m>`, the edit with `<e{ref}/>` at the same place, and the quote `` @{name}: `{quoted}` `` before the typed text (`inject.js:5206`, `5236-5258`, see Sending and PM key and edits)
 - `idle:0` or `idle:1`
 - `wladd:{n}`, `wldelete:{n}`
 - `block:{n}:{n}:S`, `unblock:{n}`
