@@ -52,16 +52,36 @@ function MediaStar(p) {
 }
 
 /**
- * Media tab of the picker.
+ * Grid of images to insert, a list of names when images are off.
+ * Thumbnails follow the message image rules, with "Show images" while some wait for the click.
+ * @param {{list: Array<{url: string, name: string}>, label: string, onPick: function(string), action: ?function(Object): Object}} p Images, accessible name of the list, insertion of the chosen address, and button added to each image.
+ */
+function MediaGrid(p) {
+  var safety = useApp().state.prefs.safety;
+  var r = useState(false), revealed = r[0], setRevealed = r[1];
+  if (!p.list.length) return null;
+  var grid = safety.embedImages, held = grid && p.list.some(function (e) { return !mediaThumbShown(safety, revealed, e.url); });
+  return h(Frag, null,
+    held ? h(T.Button, { size: 'sm', icon: 'image', onClick: function () { setRevealed(true); } }, 'Show images') : null,
+    h('ul', { className: grid ? 'media-grid' : 'media-list', 'aria-label': p.label }, p.list.map(function (e) {
+      return h('li', { key: e.url, className: 'media-item' },
+        h('button', { type: 'button', className: 'media-pick', title: e.url, onClick: function () { p.onPick(e.url); } },
+          grid ? h(MediaThumb, { url: e.url, shown: mediaThumbShown(safety, revealed, e.url) }) : null,
+          h('span', { className: 'media-name' }, e.name)),
+        p.action ? p.action(e) : null);
+    })));
+}
+
+/**
+ * Library tab of the Media picker.
  * It shows BetterChatango's media library by pages, with search by name and import and export in BetterChatango's format.
  * @param {{scrollRef: Object, onPick: function(string)}} p Scrolling area and insertion of the chosen address.
  */
 function MediaPanel(p) {
-  var app = useApp(), safety = app.state.prefs.safety, rev = app.state.mediaRev, toast = app.ui.toast;
+  var app = useApp(), rev = app.state.mediaRev, toast = app.ui.toast;
   var a = useState('name'), sort = a[0], setSort = a[1];
   var b = useState(''), query = b[0], setQuery = b[1];
   var c = useState({ list: [], more: false, loading: true, failed: false }), lib = c[0], setLib = c[1];
-  var r = useState(false), revealed = r[0], setRevealed = r[1];
   var sentinelRef = useRef(null), asked = useRef(0);
   var text = query.trim();
   function load(after) {
@@ -86,7 +106,6 @@ function MediaPanel(p) {
     });
   }
   if (lib.failed) return h('p', { className: 'media-note' }, 'BetterChatango could not open your media library. Reload the page and try again.');
-  var grid = safety.embedImages, held = lib.list.some(function (e) { return !mediaThumbShown(safety, revealed, e.url); });
   var note = !lib.list.length ? (lib.loading ? h(T.Spinner, { label: 'Loading media' })
     : h('p', { className: 'media-note' }, text ? 'No media matches your search.' : 'No media yet. Star an image in a message to add it here.')) : null;
   return h('div', { className: 'media-panel' },
@@ -97,15 +116,8 @@ function MediaPanel(p) {
         h('span', { className: 'grow' }),
         h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import'),
         h(T.Button, { size: 'sm', onClick: exportFile }, 'Export'))),
-    grid && held ? h(T.Button, { size: 'sm', icon: 'image', onClick: function () { setRevealed(true); } }, 'Show images') : null,
     note,
-    lib.list.length ? h('ul', { className: grid ? 'media-grid' : 'media-list', 'aria-label': 'Your media' }, lib.list.map(function (e) {
-      return h('li', { key: e.url, className: 'media-item' },
-        h('button', { type: 'button', className: 'media-pick', title: e.url, onClick: function () { p.onPick(e.url); } },
-          grid ? h(MediaThumb, { url: e.url, shown: mediaThumbShown(safety, revealed, e.url) }) : null,
-          h('span', { className: 'media-name' }, e.name)),
-        h(MediaStarButton, { url: e.url, saved: true }));
-    })) : null,
+    h(MediaGrid, { list: lib.list, label: 'Your media', onPick: p.onPick, action: function (e) { return h(MediaStarButton, { url: e.url, saved: true }); } }),
     lib.more ? h('div', { ref: sentinelRef, className: 'media-more' }, lib.loading ? h(T.Spinner, { label: 'Loading more media' }) : null) : null);
 }
 

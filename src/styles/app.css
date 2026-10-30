@@ -146,7 +146,7 @@ h1,h2,h3{text-wrap:balance}
 .menu hr{border:0;height:1px;background:var(--divider);margin:4px}
 .menu .swatch{width:10px;height:10px;border-radius:50%;flex:none}
 .menu .menu-presence{position:static;flex:none;width:13px;height:13px;--dot:13px;--presence-ring:transparent;background-clip:padding-box}
-.emoji-picker{z-index:70;width:min(340px,calc(100vw - 16px));max-height:min(360px,50vh);overflow-y:auto;padding:0 var(--space-2) var(--space-2);border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);animation:tc-fade-in var(--duration-base) var(--ease-out)}
+.picker{z-index:70;width:min(340px,calc(100vw - 16px));max-height:min(360px,50vh);overflow-y:auto;padding:0 var(--space-2) var(--space-2);border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);animation:tc-fade-in var(--duration-base) var(--ease-out)}
 .emoji-grid{display:flex;flex-wrap:wrap;gap:2px}
 .emoji-btn{min-width:var(--size-control-md);padding:0 var(--space-1);font-size:20px}
 .picker-tabs{position:sticky;top:0;z-index:1;padding:var(--space-2) 0;background:var(--raised)}
