@@ -33,9 +33,8 @@ src/
     members (list, profile card, linked accounts, ban, external link, profile link), dm (Chats and PM search, Friends),
     meet (Meet people), mentions (recent mentions from all groups, row of a message outside its message log),
     profile (summary shared by the card and the panel, full profile, panel), new-dm, message-style (own style),
-    emoji-picker (emoticon picker of the composers, layer and insertion shared with the media picker), attach (file upload of the composers),
-    media (BetterChatango media library: Library tab, star on message images, :name completion),
-    media-picker (media picker of the composers: Upload, Library and Memes tabs, Imgflip templates),
+    emoji-picker (emoticon and media picker of the composers), attach (file upload of the composers),
+    media (BetterChatango media library: Media tab, star on message images, :name completion),
     commands (/join, /leave, /chat and /help of the composers),
     discover, palette (Ctrl K), live-joined (joined, owned and recent groups), session (session loss dialog)
   settings/   settings
@@ -135,7 +134,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 - Composer drafts live outside the state, in memory only (`useDraft`, `core/ui.js`): a view saves its text when it leaves, keyed by `group:<id>` or `dm:<name>`, and gets it back on return. A reload drops them, which is also how live signs out. The prototype empties them at sign-in.
 - PM unreads come from the archive (`app/pm.js`): BetterChatango's history database in live, an in-memory archive in the prototype or when that database is missing. A conversation's `unread` is only a copy of it, written only by `app/pm.js` ([ADR-0012](adr/0012-pm-unread-from-history.md)).
 - Profiles read (mini profile, Premium background in `u.miniStyle`) and message backgrounds (`u.msgBg`) are cached with the user.
-- BetterChatango's media library stays out of the state: the Library tab of the Media picker, the stars and the completion read it through `Root`'s actions, in live from BetterChatango's `favorite_media` database (bridge), in the prototype from the sample media library (`sampleMedia`). Each write increments `mediaRev`, which makes them read it again (`docs/betterchatango-protocol.md`, Media library).
+- BetterChatango's media library stays out of the state: the Media tab, the stars and the completion read it through `Root`'s actions, in live from BetterChatango's `favorite_media` database (bridge), in the prototype from the sample media library (`sampleMedia`). Each write increments `mediaRev`, which makes them read it again (`docs/betterchatango-protocol.md`, Media library).
 - The Mentions page reads `mentionLog`: the last 100 group messages, live or from history, that mention the user, most recent first. The list lives only in the state and starts empty on each page load.
 
 ## Member content

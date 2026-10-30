@@ -13,7 +13,7 @@ function uploadKey(to) { return to.kind + ':' + to.id; }
  * Keeps the file picked in a composer until the next send, which uploads it through vissle and posts its link after the typed text.
  * @param {{kind: string, id: string}} to Group or PM of the composer.
  * @param {Function} setDraft Draft setter of the composer, which gets the text back if the send fails.
- * @returns {{onAttach: ?Function, status: ?string, busy: boolean, attachment: ?Object, file: ?File, send: Function, input: ?Object}} Opening of the file picker (Upload tab of the Media picker), null while a file is being sent, upload in progress, Composer attachment, picked file, send of the file with the text, and file field to render next to the composer.
+ * @returns {{onAttach: ?Function, status: ?string, busy: boolean, attachment: ?Object, file: ?File, send: Function, input: ?Object}} Attach media button action, upload in progress, Composer attachment, picked file, send of the file with the text, and picker to render next to the composer.
  */
 function useAttachMedia(to, setDraft) {
   var app = useApp(), inputRef = useRef(null), key = uploadKey(to);

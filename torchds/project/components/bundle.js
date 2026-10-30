@@ -430,7 +430,7 @@
       }),
       h('div', { className: 'tc-composer-bar' },
         props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', size: 30, iconSize: 16, onClick: props.onEmoji }) : null,
-        props.onMedia ? h(IconButton, { icon: 'image', label: 'Media', size: 30, iconSize: 16, onClick: props.onMedia }) : null,
+        props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach }) : null,
         props.hint ? h('span', { id: hintId, className: cx('tc-composer-hint', props.hintTone === 'warning' && 'tc-composer-hint-warning') },
           props.hintTone === 'warning' ? h(Icon, { name: 'alert', size: 14 }) : null, props.hint) : h('span', { style: { flex: 1 } }),
         props.aside || null,

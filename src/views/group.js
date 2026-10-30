@@ -54,8 +54,6 @@ function GroupView(p) {
   // Jump asked by the Mentions page: jumpTo, declared below, refuses a message the log hides.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m.author, mode.m.text) : null;
-  // An edit changes only the text: the picked file waits for the next message.
-  var mediaPicker = useMediaPicker(inputRef, setDraft, kind === 'edit' ? null : attach);
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
   // Style compared as text: update clones the whole state, so the object changes on every update.
   var measured = useMemo(function () {
@@ -146,8 +144,9 @@ function GroupView(p) {
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
       hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
-      onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, onMedia: mediaPicker.onMedia, status: attach.status,
-      attachment: kind === 'edit' ? null : attach.attachment,
+      onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
+      // An edit changes only the text: the picked file waits for the next message.
+      onAttach: kind === 'edit' ? null : attach.onAttach, attachment: kind === 'edit' ? null : attach.attachment,
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
@@ -161,7 +160,7 @@ function GroupView(p) {
             h('span', { className: 'hide-mobile' }, CHANNELS[channel].label), hiddenChans.length ? h(T.Icon, { name: 'eye-off', size: 12 }) : null, h(T.Icon, { name: 'chevron-down', size: 12, className: 'hide-mobile' }));
         }
       })
-    }), emoji.picker, mediaPicker.picker, attach.input);
+    }), emoji.picker, attach.input);
   }
 
   var waitingCount = LIVE && !g.membersLoaded && !g.liveCount;

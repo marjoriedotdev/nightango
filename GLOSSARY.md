@@ -130,16 +130,8 @@ Refusal of an account's PMs, on the private message side.
 ## Media
 
 **Media library**:
-Favorite images that BetterChatango keeps in this browser, shared by all its accounts, inserted into a message by their address. The interface says "Library", a tab of the Media picker, and "media" on the stars ("Add to media").
+Favorite images that BetterChatango keeps in this browser, shared by all its accounts, inserted into a message by their address. The interface says "Media".
 _Avoid_: favorites (reserved for groups), gallery
-
-**Media picker**:
-Layer opened by the Media button of a composer, with the Upload, Library and Memes tabs. It inserts an address or picks the file that leaves with the next message, and never sends on its own.
-_Avoid_: attach menu, gallery
-
-**Meme template**:
-Blank meme image listed by Imgflip, posted as it is by its link. Nightango adds no caption.
-_Avoid_: meme (for the posted image), GIF
 
 **Trusted host**:
 Exact host chosen by the user, whose links open without a warning and whose images, videos and audio load without a click. In live, the list is BetterChatango's (`safety.whitelist.domain`). The interface says "Trusted sites".
