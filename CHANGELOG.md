@@ -2,6 +2,16 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.28.0-beta.2] - 2026-10-30
+
+### Changed
+
+- While you reply or edit, in a group or a private conversation, the message field shows an info icon and "Only visible to Nightango and BetterChatango users."
+
+### Fixed
+
+- On a phone, the Media picker opens on screen instead of past the left edge.
+
 ## [0.28.0-beta.1] - 2026-10-30
 
 ### Added
