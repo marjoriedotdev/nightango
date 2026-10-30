@@ -14,10 +14,11 @@ Chatango profiles contain HTML and CSS written by their members (`mod1.xml`, `mo
 - Mini profile: `RichText` (`src/core/rich-text.js`) rebuilds an allowlist of tags as React elements.
 - Full profile: `fullProfileDoc` renders it in a `sandbox` `iframe` without `allow-scripts` or `allow-same-origin`, with a CSP policy in a `<meta>`.
 - Premium background: `custom_profile.css` is parsed by `parseMiniCss`, which keeps only hex colors and an `https` image from it. The CSS itself is never injected.
-- Message background: `msgbg.xml` is read by `parseMsgBg`, which keeps only a hex color, bounded opacities and an alignment from a closed list. The `msgbg.jpg` image is a `no-referrer` `<img>` whose URL comes from the member's name, never from the file.
+- Message background: `msgbg.xml` is read by `parseMsgBg`, which keeps only a hex color, bounded opacities and an alignment from a closed list. `parseMsgBg` also keeps the `tile` flag. The `msgbg.jpg` image is a CSS background of the row, tiled or not, whose URL comes from the member's name, never from the file.
 
 ## Consequences
 
 - The full profile reuses the colors and the background image of `custom_profile.css`, in the `<style>` of the iframe document: colors as checked hex, repeat from a closed list, `https` URL rejected if it contains `<`, `>`, a quote, a backslash, a parenthesis or a space. The document carries `<meta name="referrer" content="no-referrer">`, because a `srcdoc` otherwise inherits the parent's policy and the iframe's `referrerPolicy` attribute does not cover its subresources.
 - In the mini profile, the Premium background image is an `<img>` with `referrerPolicy="no-referrer"`, as a cover behind the header of the profile dialog, whose background and colors are the member's (hex colors, guaranteed contrast). `background-repeat` is not reproduced there, because a CSS background in the page would send the referrer. It is reproduced only in the full profile iframe.
+- The message background is the only member image loaded as a CSS background in the page, because an `<img>` cannot tile. Its URL is always `ust.chatango.com/…/msgbg.jpg`, built by BetterChatango from the member's name: the referrer then goes to Chatango, which already serves the page, and to no third-party host.
 - A new tag or property is added to the allowlist, never through a switch to raw HTML.

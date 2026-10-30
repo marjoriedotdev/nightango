@@ -825,7 +825,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const ytFrame = $('.log iframe');
   step('youtube embed loads on click', !ytBefore.raw && ytBefore.card && !ytBefore.media && !!ytFrame && ytFrame.getAttribute('src').indexOf('https://www.youtube-nocookie.com/embed/PLe_UgXBBCU') === 0 && ytBefore.font === '', [ytBefore, ytFrame && ytFrame.getAttribute('src')]);
 
-  /* Premium message background: msgbg.xml read once per member under "Message backgrounds", filtered values, image only when external media are not blocked */
+  /* Premium message background: msgbg.xml read once per member under "Message backgrounds", filtered values, image tiled per msgbg.xml only when external media are not blocked */
   const BG_PREMIUM = String(4 | 8), BG_TEXTS = ['Rosa first', 'Rosa again', 'Trap says hi', 'Pale says hi', 'Plain says hi', 'Nobg says hi', 'Guest says hi'];
   [['Rosa', BG_PREMIUM], ['Rosa', BG_PREMIUM], ['Trap', BG_PREMIUM], ['Pale', BG_PREMIUM], ['Plain', BG_PREMIUM], ['Nobg', '8'], ['', BG_PREMIUM]].forEach((x, i) =>
     g('b', 'test', [String(1700000290.1 + i), x[0], x[0] ? '' : 'visitor', 'u2' + i, 'UNIDBG' + i, 'tmpbg' + i, '4.4.4.' + i, x[1], '', '<n000/><f x11000="0">' + BG_TEXTS[i]]));
@@ -839,8 +839,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     click(byText('.tc-nav', 'Back to chat')); await until(() => !!$('.log'));
   };
   const bgLook = txt => {
-    const p = $$('.log .tc-msg-text').find(x => x.textContent === txt), r = p && p.closest('article'), img = r && r.querySelector('img[src*="msgbg"]');
-    return r ? [r.style.backgroundColor, img ? [img.getAttribute('src'), img.style.opacity, img.style.objectPosition, img.getAttribute('referrerpolicy'), img.getAttribute('alt'), img.getAttribute('loading')] : null] : null;
+    const p = $$('.log .tc-msg-text').find(x => x.textContent === txt), r = p && p.closest('article'), layer = r && r.querySelector('.tc-msg-bg > *');
+    return r ? [r.style.backgroundColor, layer ? [layer.style.backgroundImage, layer.style.opacity, layer.style.backgroundPosition, layer.style.backgroundRepeat] : null] : null;
   };
   const askedOff = ['rosa', 'trap', 'pale', 'plain'].map(bgAsked), ROSA = 'rgb(253, 243, 233)';
   await toggle('Appearance', 'Message backgrounds');
@@ -851,10 +851,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const shownBg = BG_TEXTS.map(bgLook), askedBg = ['rosa', 'trap', 'pale', 'plain', 'nobg'].map(bgAsked).concat(fetches.filter(x => /visitor\/msgbg/.test(x.url)).length), leaked = /evil\.test|onload/.test($('.log').innerHTML);
   await toggle('Safety', 'Block external media until I click');
   await toggle('Appearance', 'Message backgrounds');
-  const bgImg = (n, opacity, position) => ['https://ust.chatango.com/' + n + '/msgbg.jpg', opacity, position, 'no-referrer', '', 'lazy'];
+  const bgImg = (n, opacity, position, repeat) => ['url("https://ust.chatango.com/' + n + '/msgbg.jpg")', opacity, position, repeat];
   step('premium message backgrounds', JSON.stringify(askedOff) === '[0,0,0,0]'
     && JSON.stringify(blockedBg) === JSON.stringify([[ROSA, null], [ROSA, null], ['', null], ['', null]])
-    && JSON.stringify(shownBg) === JSON.stringify([[ROSA, bgImg('rosa', '0.4', 'right bottom')], [ROSA, bgImg('rosa', '0.4', 'right bottom')], ['', bgImg('trap', '1', 'left top')], ['', bgImg('pale', '0', 'left top')], ['', null], ['', null], ['', null]])
+    && JSON.stringify(shownBg) === JSON.stringify([[ROSA, bgImg('rosa', '0.4', 'right bottom', 'no-repeat')], [ROSA, bgImg('rosa', '0.4', 'right bottom', 'no-repeat')], ['', bgImg('trap', '1', 'left top', 'repeat')], ['', bgImg('pale', '0', 'left top', 'no-repeat')], ['', null], ['', null], ['', null]])
     && JSON.stringify(askedBg) === '[1,1,1,1,0,0]' && !leaked, { askedOff, blockedBg, shownBg, askedBg, leaked });
 
   /* Media typed as text: YouTube without a duplicate of its tag, link hidden behind its media, video and audio created only on click, http loaded as https, other extensions as links, failed player turned back into a link */
