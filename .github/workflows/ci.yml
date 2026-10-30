@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
   pull_request:
-    branches: [main]
+    branches: [main, beta]
 
 permissions:
   contents: read
@@ -21,11 +21,19 @@ jobs:
         with:
           node-version: 24
       - run: pnpm install --frozen-lockfile
+      # Every user is told about a release from main: a beta must not reach it, even through a pull request.
+      - name: Refuse a beta @version on main
+        if: (github.base_ref || github.ref_name) == 'main'
+        run: |
+          if grep -Eq '^// @version[[:space:]]+[^[:space:]]*-' src/loader/skin-loader.js; then
+            echo "::error::main publishes stable releases only: set @version to X.Y.Z in src/loader/skin-loader.js."
+            exit 1
+          fi
       - run: pnpm test
 
   release:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -43,16 +51,22 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       # One release per @version: a push without a version bump publishes nothing.
+      # The beta branch publishes prereleases only, which releases/latest skips (update check, ADR-0013).
       - name: Create release for @version
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           version=$(sed -n 's|^// @version[[:space:]]*||p' src/loader/skin-loader.js)
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$'; then
             echo "::error::Invalid @version '$version' in src/loader/skin-loader.js"
             exit 1
           fi
+          flags=
+          case "$GITHUB_REF_NAME/$version" in
+            beta/*-beta.*) flags='--prerelease --latest=false' ;;
+            beta/*) echo "@version $version is not a beta, nothing to publish from beta."; exit 0 ;;
+          esac
           tag="v$version"
           if gh release view "$tag" > /dev/null 2> view.err; then
             echo "Release $tag already exists, nothing to publish."
@@ -62,4 +76,4 @@ jobs:
             cat view.err
             exit 1
           fi
-          gh release create "$tag" dist/nightango.min.user.js dist/nightango.user.js --target "$GITHUB_SHA" --title "$tag" --generate-notes
+          gh release create "$tag" dist/nightango.min.user.js dist/nightango.user.js --target "$GITHUB_SHA" --title "$tag" --generate-notes $flags
