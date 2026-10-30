@@ -95,7 +95,7 @@ function parseChangelog(text) {
   text.split(/\r?\n/).forEach((line, i) => {
     const fail = (why) => { throw new Error(`CHANGELOG.md:${i + 1}: ${why}`); };
     let m;
-    if ((m = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$/.exec(line))) {
+    if ((m = /^## \[(\d+\.\d+\.\d+(?:-beta\.\d+)?)\] - (\d{4}-\d{2}-\d{2})$/.exec(line))) {
       release = { version: m[1], date: m[2], groups: [] };
       group = null;
       releases.push(release);
@@ -108,7 +108,7 @@ function parseChangelog(text) {
       if (group) group.items.push(m[1]);
       else if (release) fail('item outside a change type.');
     } else if (release && line.trim()) {
-      fail('expected a "## [x.y.z] - YYYY-MM-DD" heading, a "### Type" heading or a "- " item.');
+      fail('expected a "## [x.y.z] - YYYY-MM-DD" or "## [x.y.z-beta.n] - YYYY-MM-DD" heading, a "### Type" heading or a "- " item.');
     }
   });
   for (const r of releases) {
