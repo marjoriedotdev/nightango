@@ -27,6 +27,8 @@ Recovery.getDerivedStateFromError = function () { return { failed: true }; };
 Recovery.prototype.componentDidCatch = function (error) {
   // The error alone, never the component stack: the journal keeps its name and message only (ADR-0011).
   console.error('[torch-skin] interface stopped by an error, recovery screen shown:', error);
+  // Without a listener the bridge keeps every later operation for Root, for as long as BetterChatango stays open.
+  if (liveBridge) liveBridge.onOp(function () {});
 };
 Recovery.prototype.render = function () { return this.state.failed ? h(RecoveryScreen, null) : this.props.children; };
 
