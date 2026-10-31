@@ -2,6 +2,12 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.30.2] - 2026-10-31
+
+### Fixed
+
+- TikTok links now show their video thumbnail when Block external media until I click is off, or TikTok is one of your trusted sites. It never showed before: TikTok no longer gives it where Nightango looked for it.
+
 ## [0.30.1] - 2026-10-31
 
 ### Fixed
