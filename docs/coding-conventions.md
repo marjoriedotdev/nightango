@@ -68,4 +68,4 @@
 - Inject HTML or CSS written by a member ([ADR-0004](adr/0004-member-html-never-injected.md)).
 - Look up the activity of any profile other than the signed-in user's ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
 - Add a dependency without the user's explicit approval.
-- Load a media file, the YouTube oEmbed or a TikTok thumbnail before the click when the media settings ask for it.
+- Load a media file, the YouTube oEmbed or a TikTok post page before the click when the media settings ask for it.
