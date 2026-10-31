@@ -265,7 +265,10 @@ h1,h2,h3{text-wrap:balance}
 @media (pointer:coarse){.tc-input,.tc-composer textarea,.pal-input{font-size:16px}}
 .tc-seg button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 24px;text-align:center;color:var(--text-3)}
-.empty h2{margin:0;color:var(--text);font-family:var(--font-display);font-size:26px;line-height:30px;font-weight:400}
+.empty h2,.recovery h1{margin:0;color:var(--text);font-family:var(--font-display);font-size:26px;line-height:30px;font-weight:400}
+.recovery{height:100%;display:flex;background:var(--bg)}
+.recovery p{max-width:420px;margin:0;color:var(--text-2)}
+.recovery-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-2);margin-top:var(--space-2)}
 .skel-row{display:flex;align-items:center;gap:12px;padding:10px}
 .skel-lines{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .navlist .skel-row{gap:10px;height:var(--size-control-md);padding:0 10px}

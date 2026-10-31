@@ -51,7 +51,7 @@ src/
     live-state.js    live state built for Root: world at login, group, ban lists, session loss
     pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database)
     root.js          Root: state, actions, live actions, handleLiveOp
-    start.js         mounting
+    start.js         mounting, recovery screen after an interface error
   loader/
     skin-loader.js   sandbox-side userscript: header and @version, home page guard,
                      page code injection, vissle and TikTok bridges (GM_xmlhttpRequest)
@@ -116,6 +116,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 - That screen only gets a stylesheet, `<style id="torch-skin-login">` in `document.head`: `src/styles/login.css` after the tokens declared under `.login`, in the system theme, or the one chosen in Nightango once the `#torch-skin` host carries it (`body:has(> #torch-skin[data-theme])`). It recolors BetterChatango's `--theme-*` variables, so its menu and windows follow too. No script touches its form, and the stylesheet loads nothing ([ADR-0001](adr/0001-password-never-read.md)). BetterChatango replaces the whole document before showing its screen: a `MutationObserver` on `<html>` adds the stylesheet to the new document, before the first paint. If the interface cannot start, the stylesheet is removed and the screen goes back to its BetterChatango look.
 - Fields of that screen use 16px text on touch screens (`pointer: coarse`), like the interface fields: iOS Safari zooms into a field under 16px.
 - On sign-in, `window.__TORCH_SHOW__` hides the rest of the BetterChatango page and shows the host.
+- An error while rendering the interface or in one of its effects shows the recovery screen instead of an empty page: `Recovery` (`app/start.js`), an error boundary around `Root`. It offers Reload and, in live, Show BetterChatango, which calls `window.__TORCH_HIDE__` to remove the host and the hiding stylesheet. BetterChatango's connections keep running. The error goes to the console, so the diagnostic journal keeps its name and message only.
 - Dialogs, menus and notifications go through `Portal`, rendered in a `#layer` layer next to `#app`, so they do not distort the layout.
 - The interface fonts (Geist, Geist Mono, Instrument Serif) are embedded: woff2 files of the Latin subset in `torchds/project/fonts/`, under SIL OFL 1.1 (`OFL.txt`). The build encodes them as base64 `data:` URLs in the `@font-face` rules of `fonts.css`. `skin-page.js` puts these `@font-face` rules in a `<style id="torch-skin-fonts">` in `document.head` when the interface mounts: Chrome ignores a `@font-face` declared only in the shadow root. The hosted prototype gets the same `@font-face` rules in its stylesheet. The design system previews and the mockups link `fonts.css`. No external font request.
 
@@ -174,7 +175,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 
 - `smoke`: hosted prototype, loaded from `dist/nightango.html`.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
-- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
+- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal, recovery screen. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
 - `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
 - `live_login`: sign-in detection, on the concatenation of the sources of `src/bridge/`.

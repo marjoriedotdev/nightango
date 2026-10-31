@@ -12,8 +12,10 @@ const log = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 
 function page(userscript, url, before) {
-  const vc = new VirtualConsole(); const errors = [];
+  const vc = new VirtualConsole(); const errors = [], reloads = [];
   vc.on('error', e => errors.push(String(e && e.message || e)));
+  // jsdom does not navigate: a reload only reports itself as not implemented.
+  vc.on('jsdomError', e => { if (/^Not implemented: navigation/.test(e.message)) reloads.push(e.message); });
   const dom = new JSDOM('<!doctype html><html><head></head><body><h1>Chatango</h1><div class="login"></div></body></html>', { url, runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc });
   const w = dom.window;
   w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
@@ -30,7 +32,7 @@ function page(userscript, url, before) {
   });
   sandbox.window = sandbox.top = sandbox.self = sandbox;
   vm.runInContext(userscript, sandbox);
-  return { w, d: w.document, errors, injected, gm };
+  return { w, d: w.document, errors, reloads, injected, gm };
 }
 function fakeBetterChatango(w) {
   w.eval(`window.client = {
@@ -182,6 +184,31 @@ async function suite(userscript) {
   const kept = journal ? journal.entries() : [];
   step('journal keeps the latest 1000 events', kept.length === 1000 && kept[999].m === 'event 1099', kept.length);
   j.w.close();
+
+  /* Interface error: recovery screen instead of a blank page, BetterChatango back on request */
+  const r = page(userscript, 'https://st.chatango.com/');
+  await deliverReact(r.w);
+  fakeBetterChatango(r.w);
+  await wait(700);
+  // A view that fails to render: the sidebar draws the avatar of the signed-in account.
+  r.w.Torch.Avatar = () => { throw new r.w.TypeError('view failed'); };
+  r.w.client.user.name = 'Marjorie';
+  r.w.client.emit('clientLogin', r.w.client);
+  await wait(150);
+  const rHost = r.d.getElementById('torch-skin');
+  const screen = rHost ? rHost.shadowRoot.querySelector('.recovery') : null;
+  const action = label => screen ? [...screen.querySelectorAll('button')].find(b => b.textContent === label) : null;
+  step('render error shows the recovery screen', !!screen && rHost.style.display === 'block' && !!action('Reload') && !!action('Show BetterChatango'),
+    rHost ? rHost.shadowRoot.querySelector('#app').innerHTML.slice(0, 200) : null);
+  const rTexts = r.w.__TORCH_JOURNAL__.entries().map(x => x.m);
+  step('render error journaled by its name and message only',
+    rTexts.includes('[torch-skin] interface stopped by an error, recovery screen shown: TypeError: view failed') && !rTexts.some(m => /\bmarjorie\b/i.test(m)), rTexts.slice(-8));
+  if (action('Reload')) action('Reload').click();
+  step('Reload reloads the page', r.reloads.length === 1, r.reloads);
+  const hiddenBefore = !!r.d.getElementById('torch-skin-hide');
+  if (action('Show BetterChatango')) action('Show BetterChatango').click();
+  step('Show BetterChatango removes the overlay and the hiding stylesheet', hiddenBefore && !r.d.getElementById('torch-skin') && !r.d.getElementById('torch-skin-hide'));
+  r.w.close();
 }
 
 (async () => {
