@@ -360,8 +360,10 @@ var liveBridge = (function () {
     var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
     a.done = Promise.race([sock, cancelled]).then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) {
       settle();
+      var g = C.groups && C.groups[gid];
       // A late answer would give BetterChatango a second socket for this connection, and the frames of a left group.
-      if (a.socket) a.socket.close();
+      // Once ok registers it (inject.js:3185), the socket carries the group without inited, as in BetterChatango: closing it would restart the reconnection sequence.
+      if (a.socket && (left[gid] || !(g && g.socket === a.socket))) a.socket.close();
       note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e));
       throw e;
     });

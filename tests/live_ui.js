@@ -1754,11 +1754,31 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('automatic reconnect after a server drop, then after a failed attempt',
     auto1.test === 1 && auto1.pm === 1 && auto1.focus === 0 && auto2.test === 2 && auto2.pm === 1, { auto1, auto2 });
 
-  /* Hung attempt: without an answer, the bridge gives up after its timeout, and Try again starts a new attempt */
+  /* Slow inited: the socket registered on ok outlives the bridge timeout, and no new attempt starts */
   // A hidden page starts no automatic attempt: a loss or a failure leaves the banner on Try again.
   const hidePage = () => Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
   const showPage = () => { delete d.visibilityState; };
   const failedPhase = () => (connBanner() || {}).phase === 'failed';
+  click(byText('.tc-nav', 'test')); await wait(50);
+  connectHeld = true;
+  hidePage();
+  C.groups.test.socket.readyState = 3; await until(failedPhase, 3000);
+  showPage();
+  const slowFrom = { connects: connectsOf('test'), sockets: sockets.length, notes: journal.length };
+  const slowNotes = () => journal.slice(slowFrom.notes).map(e => e.m);
+  click(byText('.conn-banner button', 'Try again')); await wait(30);
+  const slowSocket = sockets[slowFrom.sockets];
+  if (slowSocket) { slowSocket.readyState = 1; slowSocket.receive('ok:marjorie::::1700000000:::0'); }
+  await until(() => slowNotes().some(m => m.startsWith('Could not connect to #test')), 15000);
+  // Past the next 2 s poll and the 3 s before a first automatic attempt.
+  await wait(5500);
+  const slow = { connects: connectsOf('test') - slowFrom.connects, socket: slowSocket ? slowSocket.readyState : null, cached: C.cache.connect.includes('test'), notes: slowNotes(), banner: connBanner() };
+  connectHeld = false;
+  step('a socket registered on ok stays open when its inited misses the bridge timeout, and no new attempt starts',
+    slow.connects === 1 && slow.socket === 1 && !slow.cached && slow.notes.some(m => m.startsWith('Could not connect to #test')) && !slow.notes.some(m => m.startsWith('Reconnecting to #test')) && !slow.banner,
+    slow);
+
+  /* Hung attempt: without an answer, the bridge gives up after its timeout, and Try again starts a new attempt */
   click(byText('.tc-nav', 'test')); await wait(50);
   connectHeld = true;
   hidePage();
