@@ -116,6 +116,10 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   await openMenu();
   pressBlank($('#blank')); await advance(0);
   step('a click outside closes the menu and focuses its button', !$('.menu') && focused() === trigger(), { menu: !!$('.menu'), focused: label(focused()) });
+  await openMenu();
+  $('#behind').focus();
+  key(focused(), 'Escape'); await advance(0);
+  step('a menu that lost the focus to the page closes without taking it back', !$('.menu') && label(focused()) === 'behind', { menu: !!$('.menu'), focused: label(focused()) });
 
   /* Dialogs: inert background and focus trap */
   await openMenu();

@@ -132,9 +132,10 @@ function MenuButton(p) {
   var ref = useRef(null), menuRef = useRef(null);
   function setOpen(n) { if (p.open == null) st[1](n); if (p.onOpenChange) p.onOpenChange(n); }
   function close() {
-    setOpen(false);
     var trigger = ref.current && ref.current.querySelector('button');
-    if (!trigger) return;
+    var held = menuRef.current && menuRef.current.contains(menuRef.current.getRootNode().activeElement);
+    setOpen(false);
+    if (!trigger || !held) return;
     // Before the menu leaves: its focused item would take the focus with it, to the page body.
     trigger.focus({ preventScroll: true });
     // A press on a spot that takes no focus clears it once the event is over: the button takes it back then.
