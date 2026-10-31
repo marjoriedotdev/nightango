@@ -182,6 +182,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `avatar`: avatars, on the design system bundle and the sources of `src/bridge/`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.
+- `allowed_calls`: every `fetch`, `client.post` and `GM_xmlhttpRequest` call site, the `@grant` and `@connect` of the userscript and the `credential` option, against the closed list of `docs/betterchatango-protocol.md` (Allowed HTTP calls), on the sources of `src/`.
 
 Test policy: [ADR-0009](adr/0009-test-only-complex-behaviour.md) and `docs/coding-conventions.md`.
 

@@ -99,6 +99,8 @@ This list is closed. It covers the calls that the application code (bridge, load
 - `GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` through `fetch`, without cookie or credential, once per page at sign-in, in live only: latest Nightango release, only `tag_name` read ([ADR-0013](adr/0013-update-check-at-sign-in.md)).
 - `GET https://www.tiktok.com/t/{code}/`, `https://vm.tiktok.com/{code}/` or `https://vt.tiktok.com/{code}/`, through the loader's `GM_xmlhttpRequest` bridge (`@connect tiktok.com`), with `anonymous: true`, one call per short TikTok link and per page, only on click on its "Play video" button, in live only. The loader rebuilds the URL from a short link it validates itself and replies with the post id read from the URL reached after the redirects (`finalUrl`, `responseURL` in Userscripts), never with the response body ([ADR-0014](adr/0014-tiktok-embed.md), see Media).
 
+The `allowed_calls` suite reads every `fetch`, `client.post` and `GM_xmlhttpRequest` call site of `src/`, with the `@grant` and `@connect` of the userscript, and fails on one that is not in this list, or on the `credential` option written anywhere in `src/`. A new call joins its table and this list together.
+
 ### Resources loaded by the loader and the interface
 
 These are not calls from the application code but resources that the browser loads through a tag. They carry neither password nor token. Adding one requires the same approval as a new call.
