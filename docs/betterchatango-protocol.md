@@ -275,7 +275,7 @@ On the private connection. Timestamps are in seconds. `None` or 0 means unknown.
 
 - Folder of a member: `https://ust.chatango.com/profileimg/{1st letter}/{2nd letter, or 1st if the name has only one}/{name}/`. For names that start with `_` or `-`, the path becomes `profileimg/sp/sp{name}/`.
 - Avatars: `thumb.jpg` (small) or `thumb_m.jpg` in this folder. Full picture: `full.jpg`, same path (`inject.js:226`).
-- Mini profile: `mod1.xml`, tags `b` (date of birth), `s`, `l`, `body` (URL-encoded) and `d` (Premium end).
+- Mini profile: `mod1.xml`, tags `b` (date of birth), `s`, `l`, `body` (URL-encoded) and `d` (Premium end). The bridge caches a read for 5 minutes. A 5xx response is a read failure, never cached: the next opening of the profile reads the file again. A 4xx or a non-XML 200 response counts as an account without a public profile, like BetterChatango, which reads any unparsable reply that way (`inject.js:938-953`).
 - Full profile: `mod2.xml`, tag `body`.
 - Message background: `msgbg.xml`, in the same folder but without the `sp/sp` prefix (BetterChatango `chatango.subdomain.msgbg`, `inject.js:229`), read by a plain `fetch` without `credential` (`inject.js:504`). Format: the attributes of the first element (`inject.js:509-514`), which are the fields of the BetterChatango background form (`client.html:404-458`): `bgc` (hex color without `#`), `bgalp` (color opacity, 0 to 100), `useimg` (0 or 1), `ialp` (image opacity, 0 to 100), `align` (`tl`, `tr`, `bl` or `br`), `tile` (0 or 1), `hasrec` and `isvid`. The image is `msgbg.jpg`, in the same folder (`inject.js:492`).
 

@@ -1095,7 +1095,11 @@ var liveBridge = (function () {
       var n = lower(name);
       if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.reject(new Error('Guests have no profile.'));
       return cached(profileCache, n, function () {
-        return fetch(CH.subdomain.mod1(n)).then(function (r) { return r.text(); }).then(function (xml) {
+        return fetch(CH.subdomain.mod1(n)).then(function (r) {
+          // Server error rejected: read as a missing profile, it would stay cached for the cache delay instead of being read again.
+          if (r.status >= 500) throw new Error('Chatango returned HTTP ' + r.status + ' for mod1.xml.');
+          return r.text();
+        }).then(function (xml) {
           var doc = new DOMParser().parseFromString(xml, 'text/xml');
           if (doc.querySelector('parsererror')) return { missing: true };
           var q = function (sel) { var el = doc.querySelector(sel); return el ? el.textContent.trim() : ''; };
