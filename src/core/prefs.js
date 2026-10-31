@@ -13,6 +13,7 @@ function defaultPrefs() {
     safety: { embedImages: true, embedVideos: true, proxyMedia: true, warnLinks: true, trustedHosts: [], showGuests: true, guestMessages: true, syncBlocked: true, ignoreMode: 'collapse' },
     a11y: { reduceMotion: false, underlineLinks: false },
     sky: { calm: false, south: false, moon: 'auto' },
+    customThemes: [],
     simulate: true
   };
 }

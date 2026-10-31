@@ -53,6 +53,11 @@ function storageGet(key) { try { var v = window.localStorage.getItem(key); retur
 function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable: preference not kept */ } }
 function storageMerge(key, patch) { storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
 /**
+ * Returns the kind of a stored JSON value: null, array, object, string, number or boolean.
+ * @param {*} v Value read from the storage.
+ */
+function kindOf(v) { return v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
+/**
  * Reads a JSON file chosen by the user.
  * @param {File} file Chosen file.
  * @returns {Promise} Parsed content, rejected if the file is unreadable or is not JSON.

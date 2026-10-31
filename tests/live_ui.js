@@ -229,6 +229,10 @@ d.addEventListener('torch-skin:tiktok-request', e => {
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:tiktok-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
 
+// Stored by an older or broken version: values of another type than the default, next to a phase index that replaces "auto".
+w.localStorage.setItem('torch-prototype-prefs', JSON.stringify({ notify: null, a11y: 'on', volume: '70', customThemes: { night: 1 }, sky: { calm: 'no', moon: 3 } }));
+w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold' }));
+
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
 w.eval(fs.readFileSync(S + '/torchds/project/components/bundle.js', 'utf8'));
@@ -286,6 +290,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !$('.log .tc-skeleton'));
   groupSkeleton.afterInit = !!$('.log .tc-skeleton');
   step('group opens', !!byText('h1', 'test'));
+  const storedPrefs = JSON.parse(w.localStorage.getItem('torch-prototype-prefs') || '{}');
+  const storedAccount = JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}');
+  step('stored values of another type load with their defaults, the others are kept, and sign-in completes',
+    !!storedPrefs.notify && storedPrefs.notify.pm.app === true && storedPrefs.a11y.reduceMotion === false && storedPrefs.volume === 70
+      && Array.isArray(storedPrefs.customThemes) && storedPrefs.sky.calm === false && storedPrefs.sky.moon === 3
+      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated') && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
+    { storedPrefs, storedAccount });
   step('announcement requested after init', frame('getannouncement').length >= 1);
   step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
   step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('bob') && x.textContent.includes('Admin')));

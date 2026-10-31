@@ -1146,6 +1146,7 @@ function Root(props) {
     switch (op.op) {
       case 'login': {
         var stored = storageGet(skinKey(op.me)) || {}, raw = JSON.stringify(stored);
+        stored = storedLocal(stored);
         var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
         // Lists from before the sync with BetterChatango: moved into its own lists, removed from local storage once all are accepted.
         Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
