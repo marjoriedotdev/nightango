@@ -270,7 +270,8 @@
     }
     return h('article', row('tc-msg', Object.assign({ marginTop: 6 }, reply ? { flexDirection: 'column' } : null)),
       bg, reply,
-      h('div', { style: { display: 'flex', gap: 12, minWidth: 0 } },
+      // Full row width as in a continued message: right-to-left text ends at the same edge in every row.
+      h('div', { style: { display: 'flex', flex: 1, gap: 12, minWidth: 0 } },
         props.avatar,
         h('div', { className: 'tc-msg-body' }, h('div', { className: 'tc-msg-head' }, author, props.meta, time), body)),
       actions);
