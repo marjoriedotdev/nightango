@@ -72,6 +72,7 @@ function Sidebar() {
   var onlineFriends = Object.keys(s.users).filter(function (n) { return n !== s.me && s.users[n].friend && s.users[n].status !== 'offline'; }).length;
   return h('nav', { className: 'sidebar', 'aria-label': 'Groups and messages' },
     h('div', { className: 'brand' },
+      app.season === 'halloween' ? h(SeasonSky) : null,
       h(BrandMark),
       h('span', { className: 'brand-name' }, 'Nightango'),
       h(MenuButton, {

@@ -22,6 +22,7 @@ export const APP_SOURCES = [
   'bridge/live-parse.js',
   'bridge/live-bridge.js',
   'views/login.js',
+  'views/season.js',
   'views/shell.js',
   'views/group.js',
   'views/message.js',

@@ -36,6 +36,14 @@ function elapsedShort(ts) {
   return Math.floor(m / 1440) + ' d';
 }
 /**
+ * Returns the season of a local date, or null outside every season: Halloween runs from October 24 to November 2.
+ * @param {Date} d Date read on the device.
+ */
+function seasonOf(d) {
+  var m = d.getMonth(), day = d.getDate();
+  return (m === 9 && day >= 24) || (m === 10 && day <= 2) ? 'halloween' : null;
+}
+/**
  * Tells whether a version number X.Y.Z comes after another, which may be a beta X.Y.Z-beta.N.
  * @param {string} a Compared version.
  * @param {string} b Reference version.

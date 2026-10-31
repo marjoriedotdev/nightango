@@ -71,6 +71,10 @@ The minified userscript the user installs in Tampermonkey, with the same file na
 **Design system**:
 Nightango's tokens, components and guidelines (torchds, namespace `window.Torch`), from which the interface is built.
 
+**Season**:
+A few days a year when the night of the interface changes, computed on the device: Halloween, from October 24 to November 2. Its palette, its decorations and the costumes on avatars are seen only by the reader and can be turned off in Appearance.
+_Avoid_: theme (the dark or light theme, chosen by the reader)
+
 ## Groups
 
 **Group**:
