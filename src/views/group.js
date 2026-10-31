@@ -299,20 +299,22 @@ function useMentionCompletion(g, inputRef, value, setValue) {
 function AnnouncementText(p) {
   var ref = useRef(null), id = React.useId();
   var open = useState(false), expanded = open[0], setExpanded = open[1];
-  var cut = useState(false), clipped = cut[0], setClipped = cut[1];
+  var size = useState(false), tall = size[0], setTall = size[1];
   // Measured only while collapsed: expanded, the text always fits.
   useLayoutEffect(function () {
     if (expanded) return;
     var el = ref.current;
-    function measure() { setClipped(el.scrollHeight > el.clientHeight); }
+    // scrollHeight keeps the natural height under the clamp. Half a line of slack: a line in a fallback font can be a little taller.
+    function measure() { setTall(el.scrollHeight > 3.5 * parseFloat(getComputedStyle(el).lineHeight)); }
     var ro = new ResizeObserver(measure);
     ro.observe(el);
     measure();
     return function () { ro.disconnect(); };
   }, [expanded]);
   return h(Frag, null,
-    h('span', { id: id, ref: ref, className: expanded ? 'ann-text' : 'ann-text ann-clamp' }, p.text),
-    expanded || clipped ? h('button', { type: 'button', className: 'linkbtn ann-more', 'aria-expanded': String(expanded), 'aria-controls': id, onClick: function () { setExpanded(!expanded); } }, expanded ? 'Show less' : 'Show more') : null);
+    // Clamped only when the text needs more than three lines: overflow:hidden cuts the stacked marks of Vietnamese and Thai.
+    h('span', { id: id, ref: ref, className: cx('ann-text', tall && !expanded && 'ann-clamp') }, p.text),
+    expanded || tall ? h('button', { type: 'button', className: 'linkbtn ann-more', 'aria-expanded': String(expanded), 'aria-controls': id, onClick: function () { setExpanded(!expanded); } }, expanded ? 'Show less' : 'Show more') : null);
 }
 
 /**
