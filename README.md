@@ -32,6 +32,7 @@ To update, paste the new release over the same script. Settings > What's new lis
 ## Privacy
 
 - Nightango never reads, stores, logs or sends your password. Sign-in happens on BetterChatango's screen.
+- Using Nightango means trusting vissle.me with your Chatango account: Nightango loads BetterChatango from vissle.me as published there, and BetterChatango handles the sign-in and keeps your credentials on its servers.
 - Every HTTP call Nightango makes is listed in [docs/betterchatango-protocol.md](docs/betterchatango-protocol.md#allowed-http-calls). Nothing outside that list is called.
 - Every Chatango frame it sends comes from BetterChatango's code or a reference library.
 - Member HTML is rebuilt from an allow list, never injected.
