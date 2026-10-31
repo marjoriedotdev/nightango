@@ -78,6 +78,17 @@ function onProfileLink(app, url, name, gid) {
     app.ui.openProfileLink({ url: url, name: name, gid: gid });
   };
 }
+/**
+ * Shows an http(s) address written by a member as a link that goes through the profile link handling or the link warning.
+ * @param {Object} app Application context.
+ * @param {string} url Link URL, also its text.
+ * @param {?string} gid Group of the message, null elsewhere.
+ * @param {*} [key] React key.
+ */
+function memberLink(app, url, gid, key) {
+  var profile = profileOfLink(url);
+  return h('a', { key: key, href: url, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: profile ? onProfileLink(app, url, profile, gid) : warnOnLink(app, url) }, url);
+}
 
 var EMPHASIS = ['b', 'i', 'u', 's'];
 
@@ -99,10 +110,7 @@ function MessageText(p) {
     return text.split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
       if (!s) return null;
       if (s.charAt(0) === '@' && s.length > 1) return mention(s, i);
-      if (/^https?:\/\//.test(s)) {
-        var profile = profileOfLink(s);
-        return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: profile ? onProfileLink(app, s, profile, p.gid || null) : warnOnLink(app, s) }, s);
-      }
+      if (/^https?:\/\//.test(s)) return memberLink(app, s, p.gid || null, i);
       return s;
     });
   }
