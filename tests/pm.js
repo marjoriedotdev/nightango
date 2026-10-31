@@ -16,8 +16,9 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
 /**
  * Loads the bridge and the PM module on a fake BetterChatango client whose history database is records or absent.
  * @param {?Array} records Database records, null for a browser without a database.
+ * @param {{storageFull: boolean, onWrite: Function}=} opts storageFull: local storage refuses every write and the unread migration has not run. onWrite: called when a database write completes.
  */
-function load(records) {
+function load(records, opts = {}) {
   const dom = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', url: 'https://st.chatango.com/' });
   const w = dom.window;
   // core evaluates with React and the Torch components, as in the app.
@@ -25,11 +26,15 @@ function load(records) {
   w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
   w.eval(fs.readFileSync(ROOT + '/torchds/project/components/bundle.js', 'utf8'));
   w.__TORCH_LIVE__ = true;
+  const journal = [];
+  w.__TORCH_JOURNAL__ = { add: (k, m) => journal.push(String(m)) };
   w.IDBKeyRange = keyRange;
   w.console.warn = (...a) => errors.push(a.join(' '));
+  // Like a full st.chatango.com origin: every write throws.
+  if (opts.storageFull) w.Storage.prototype.setItem = () => { throw new w.DOMException('The quota has been exceeded.', 'QuotaExceededError'); };
   // Migration of old unreads already done: only the test records count.
-  w.localStorage.setItem('torch-skin:' + ME, JSON.stringify({ pmReadMigrated: true }));
-  const transaction = records && fakePmDb(records);
+  else w.localStorage.setItem('torch-skin:' + ME, JSON.stringify({ pmReadMigrated: true }));
+  const transaction = records && fakePmDb(records, opts.onWrite);
   w.indexedDB = { open() { const req = {}; setTimeout(() => req.onerror(), 0); return req; } };
   w.eval(`
     window.client = { user: { name: '${ME}' }, groups: {}, event: { group: {}, private: {} }, database: { pm: ${records ? 'true' : 'false'} },
@@ -39,7 +44,7 @@ function load(records) {
   if (records) w.client.database.pm = { transaction };
   w.eval(code + '; window.mod = { liveBridge: liveBridge, betterChatangoPmArchive: betterChatangoPmArchive, memoryPmArchive: memoryPmArchive, syncPmUnread: syncPmUnread, readPm: readPm, mergePmHistory: mergePmHistory, pmRecordEntry: pmRecordEntry };');
   const d = { dms: {} };
-  return { w, m: w.mod, d, update: fn => fn(d) };
+  return { w, m: w.mod, d, journal, update: fn => fn(d) };
 }
 
 (async () => {
@@ -94,6 +99,21 @@ function load(records) {
   step('history merged once into a shown message, edit applied to its original',
     c.messages.length === 1 && c.messages[0].id === 'live1' && c.messages[0].archiveTs === records[0].ts && c.messages[0].text === 'First, fixed' && c.messages[0].edited && authors.length === 2,
     c.messages);
+
+  /* Local storage refusing the migration flag: the migration still runs once per page, a PM received afterwards stays unread */
+  const fullRecords = [record('gus', received('gus', '1700006000.5', '<n000/>Before Nightango'), 1)];
+  let fullWrites = 0;
+  t = load(fullRecords, { storageFull: true, onWrite: () => fullWrites++ });
+  await t.m.liveBridge.pmArchived();
+  const oldRead = !fullRecords[0].unread;
+  fullRecords.push(record('gus', received('gus', '1700006100.5', '<n000/>After sign-in'), 1));
+  t.d.dms = { gus: { messages: [], unread: 0 } };
+  await t.m.liveBridge.pmHistory(100);
+  await t.m.syncPmUnread(t.m.betterChatangoPmArchive(), t.update, ['gus']);
+  const migrationNotes = t.journal.filter(x => /unread migration/i.test(x));
+  step('unread migration runs once per page and is journaled when local storage refuses its flag',
+    oldRead && fullWrites === 1 && fullRecords[1].unread === 1 && t.d.dms.gus.unread === 1 && migrationNotes.length === 1,
+    { oldRead, fullWrites, records: fullRecords, unread: t.d.dms.gus.unread, journal: t.journal });
 
   console.log(log.join('\n'));
   console.log('ERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');

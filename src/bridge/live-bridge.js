@@ -528,6 +528,8 @@ var liveBridge = (function () {
       tx.onabort = function () { reject(tx.error); };
     });
   }
+  // Also kept for the page: if storage refuses the flag, each later open would mark every new PM read.
+  var pmReadMigrated = false;
   /**
    * Marks read once per account the messages archived before Nightango.
    * BetterChatango archived them all unread for lack of a private focus. Called by openPmDb before the private connection, it leaves that connection's msgoff unread.
@@ -535,8 +537,11 @@ var liveBridge = (function () {
    */
   function migrateUnread(db) {
     var key = skinKey(lower(C.user.name));
-    if (!db || (storageGet(key) || {}).pmReadMigrated) return db;
-    return markRead(db, null).then(function () { storageMerge(key, { pmReadMigrated: true }); }, warn).then(function () { return db; });
+    if (!db || pmReadMigrated || (storageGet(key) || {}).pmReadMigrated) return db;
+    pmReadMigrated = true;
+    return markRead(db, null).then(function () {
+      if (!storageMerge(key, { pmReadMigrated: true })) note('Could not save the unread migration: local storage refused the write');
+    }, warn).then(function () { return db; });
   }
   // String upper bound like BetterChatango: in IndexedDB order, a string comes after any timestamp.
   function targetRange(target) { return IDBKeyRange.bound([target, 1], [target, '']); }
