@@ -167,11 +167,12 @@ function DmThread(p) {
   }, [p.seek, len, convo.loadingOlder]);
 
   var u = userOf(s, id);
-  var rows = [], prev = null, lastDay = null;
+  var rows = [], prev = null, lastDay = null, byKey = Object.create(null);
+  convo.messages.forEach(function (m) { if (m.key && !byKey[m.key]) byKey[m.key] = m; });
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    var original = m.replyTo ? convo.messages.find(function (x) { return x.key === m.replyTo.key; }) : null;
+    var original = m.replyTo ? byKey[m.replyTo.key] || null : null;
     rows.push(h(DmMessageRow, {
       key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
       original: original, onJump: function (o) { log.jumpTo(o.id); }, onReply: u.blocked ? null : cm.enter('reply'), onQuote: u.blocked ? null : cm.enter('quote'),

@@ -75,7 +75,7 @@ function MessageRow(p) {
     : h(MessageContent, { m: m, style: textStyle, plain: ms.plain, gid: g.id });
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanRow) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
-  var original = m.replyTo && findMsg(g, m.replyTo.id);
+  var original = p.original;
   var reply = original ? { author: h(Person, { name: original.author, gid: g.id, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
     : m.replyTo ? { text: 'Original message not loaded' } : null;
   var authorBtn = handle

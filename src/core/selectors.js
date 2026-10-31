@@ -31,6 +31,7 @@ function isHiddenAuthor(state, name) { var u = userOf(state, name); return (u.ig
  * @param {string} text Message text.
  */
 function mentionsMe(me, text) { return new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(text); }
+function plainMsgId(id) { return String(id).replace(/^k:/, ''); }
 /**
  * Finds a loaded group message by its temporary or final id.
  * @param {Object} g Group in the state.
@@ -38,9 +39,19 @@ function mentionsMe(me, text) { return new RegExp('@' + me + '(?![A-Za-z0-9_-])'
  */
 function findMsg(g, id) {
   if (!g || !id) return null;
-  var plain = String(id).replace(/^k:/, '');
+  var plain = plainMsgId(id);
   for (var i = g.messages.length - 1; i >= 0; i--) { var x = g.messages[i]; if (x.id === plain || x.id === 'k:' + plain) return x; }
   return null;
+}
+/**
+ * Indexes the loaded messages of a group in one pass for repeated lookups.
+ * @param {Object} g Group in the state.
+ * @returns {function(?string): ?Object} Finds a message like findMsg.
+ */
+function msgFinder(g) {
+  var byId = Object.create(null);
+  g.messages.forEach(function (x) { byId[plainMsgId(x.id)] = x; });
+  return function (id) { return id ? byId[plainMsgId(id)] || null : null; };
 }
 var THREAD_MAX = 500;
 /**

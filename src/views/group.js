@@ -102,7 +102,7 @@ function GroupView(p) {
     log.jumpTo(o.id);
   }
 
-  var items = [], prev = null, lastDay = null, marker = false;
+  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g);
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
@@ -121,7 +121,7 @@ function GroupView(p) {
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted);
-    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: log.targetId === m.id, onReply: reply, onQuote: quote, onEdit: edit, onMention: mention, onJump: jumpTo }));
+    items.push(h(MessageRow, { key: m.id, m: m, g: g, original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, highlight: log.targetId === m.id, onReply: reply, onQuote: quote, onEdit: edit, onMention: mention, onJump: jumpTo }));
     prev = m;
   }
   var older = !LIVE || q ? null
