@@ -257,8 +257,17 @@ function Root(props) {
   }
 
   var mediaLib = LIVE ? liveBridge : sampleMedia;
-  // Post id per short TikTok link: the redirect is read once per page.
-  var tiktokPosts = useRef({});
+  // Post per short TikTok link and thumbnail per TikTok link, asked once per page.
+  var tiktokAsked = useRef({ posts: {}, thumbs: {} });
+  function tiktokPost(url) {
+    var posts = tiktokAsked.current.posts;
+    if (!posts[url]) {
+      // A failed resolution is asked again at the next click.
+      posts[url] = (LIVE ? liveBridge.tiktokPost(url) : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.')))
+        .catch(function (e) { delete posts[url]; throw e; });
+    }
+    return posts[url];
+  }
   // The stars and the Media tab read the media library again when this counter changes.
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
@@ -370,15 +379,22 @@ function Root(props) {
     /**
      * Finds the TikTok post a short link leads to.
      * @param {string} url Short TikTok link.
-     * @returns {Promise<string>} Post id, rejected with the text to show.
+     * @returns {Promise<{post: string, link: string}>} Post id and link, rejected with the text to show.
      */
-    tiktokPost: function (url) {
-      var cache = tiktokPosts.current;
-      if (!cache[url]) {
-        cache[url] = (LIVE ? liveBridge.tiktokPost(url) : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.')))
-          .catch(function (e) { delete cache[url]; throw e; });
+    tiktokPost: tiktokPost,
+    /**
+     * Reads the thumbnail of a TikTok post, resolving a short link first.
+     * A failure is kept for the page: the card stays without a thumbnail.
+     * @param {{id: ?string, url: string}} e TikTok media of a message.
+     * @returns {Promise<string>} https address of the thumbnail.
+     */
+    tiktokThumb: function (e) {
+      var thumbs = tiktokAsked.current.thumbs;
+      if (!thumbs[e.url]) {
+        thumbs[e.url] = !LIVE ? Promise.reject(new Error('TikTok thumbnails are not part of this prototype.'))
+          : (e.id ? Promise.resolve(e.url) : tiktokPost(e.url).then(function (r) { return r.link; })).then(liveBridge.tiktokThumb);
       }
-      return cache[url];
+      return thumbs[e.url];
     },
     /**
      * Adds an image to the media library under the name BetterChatango gives it or removes it.

@@ -22,7 +22,7 @@ Decisions that follow from these and must not be "fixed":
 - the diagnostic journal stays in the browser and observes neither socket sends nor frame contents ([ADR-0011](docs/adr/0011-diagnostic-journal.md))
 - PM unreads come only from BetterChatango's private history, the state keeps only a copy read back from it ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
 - the update check asks GitHub once per sign-in and never installs code on its own ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
-- TikTok is reached only on click: the player iframe, and for a short link one anonymous call through the loader that returns the post id only ([ADR-0014](docs/adr/0014-tiktok-embed.md)).
+- TikTok is reached on click, or for the thumbnail under the rules of the YouTube thumbnail: anonymous calls through the loader that return the post link or the thumbnail address only ([ADR-0014](docs/adr/0014-tiktok-embed.md)).
 
 ## Project preferences
 

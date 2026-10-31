@@ -2,6 +2,16 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.29.1] - 2026-10-31
+
+### Changed
+
+- TikTok links now show as a video card. When Block external media until I click is off, or TikTok is one of your trusted sites, the card shows the video's thumbnail.
+
+### Fixed
+
+- A TikTok link followed by text with no space in between now shows as a video too.
+
 ## [0.29.0] - 2026-10-31
 
 ### Added
