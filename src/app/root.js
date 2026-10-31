@@ -147,6 +147,7 @@ function Root(props) {
   useTabTitle(state);
   useShortcuts(stateRef, o.setPalette);
   useUpdateCheck(state.auth.loggedIn, toast);
+  var local = useLocalStore(state), localRef = local.ref;
 
   function nav(route) {
     update(function (d) {
@@ -554,7 +555,6 @@ function Root(props) {
   }, [state.auth.loggedIn, prefs.simulate]);
 
   /* ---------- Live mode: actions passed to Chatango by the BetterChatango client ---------- */
-  var localRef = useRef(blankLocal());
   var profilePending = useRef({}), msgBgPending = useRef({});
   // Name checked by New private message: its refusal shows in the dialog, not as a toast.
   var offlineCount = useRef(0);
@@ -1026,13 +1026,7 @@ function Root(props) {
   function handleLiveOp(op) {
     switch (op.op) {
       case 'login': {
-        var stored = storageGet(skinKey(op.me)) || {}, raw = JSON.stringify(stored);
-        stored = storedLocal(stored);
-        var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
-        // Lists from before the sync with BetterChatango: moved into its own lists, removed from local storage once all are accepted.
-        Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
-        if (JSON.stringify(stored) !== raw) storageSet(skinKey(op.me), stored);
-        localRef.current = Object.assign(blankLocal(), stored);
+        local.restore(op.me);
         // BetterChatango's "Mentioned in #g" title would come back 5 s later without the Nightango counter.
         if (liveBridge.setting('tabTitleAlerts')) liveBridge.setSetting('tabTitleAlerts', false);
         update(function (d) {
@@ -1295,24 +1289,6 @@ function Root(props) {
       default: break;
     }
   }
-  /* Closed conversations, hidden channels, members with a hidden style and own style, kept by account in this browser */
-  useEffect(function () {
-    if (!LIVE || !state.auth.loggedIn || !state.me) return;
-    var prev = localRef.current, o = blankLocal();
-    o.style = state.ownStyle;
-    // Local favorites, mutes and ignored members that BetterChatango has not accepted yet: kept for the next sign-in.
-    o.fav = prev.fav;
-    o.muted = prev.muted;
-    o.ignored = prev.ignored;
-    prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
-    Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
-    Object.keys(prev.channels).forEach(function (k) { if (!state.groups[k]) o.channels[k] = prev.channels[k]; });
-    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
-    prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
-    Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
-    // Merged with the storage: the bridge also sets the unread migration flag there.
-    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
-  });
   useBridgeOps(handleLiveOp, state.auth.loggedIn);
   useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);
   useEffect(function () {

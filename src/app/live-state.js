@@ -42,6 +42,45 @@ function storedLocal(stored) {
   return out;
 }
 function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
+/**
+ * Closed conversations, hidden channels, members with a hidden style and own style, kept by account in this browser in live.
+ * @param {Object} state Application state.
+ * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
+ */
+function useLocalStore(state) {
+  var localRef = useRef(blankLocal());
+  /**
+   * Reads the account data at sign-in.
+   * @param {string} me Signed-in account.
+   */
+  function restore(me) {
+    var stored = storageGet(skinKey(me)) || {}, raw = JSON.stringify(stored);
+    stored = storedLocal(stored);
+    var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
+    // Lists from before the sync with BetterChatango: moved into its own lists, removed from local storage once all are accepted.
+    Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
+    if (JSON.stringify(stored) !== raw) storageSet(skinKey(me), stored);
+    localRef.current = Object.assign(blankLocal(), stored);
+  }
+  useEffect(function () {
+    if (!LIVE || !state.auth.loggedIn || !state.me) return;
+    var prev = localRef.current, o = blankLocal();
+    o.style = state.ownStyle;
+    // Local favorites, mutes and ignored members that BetterChatango has not accepted yet: kept for the next sign-in.
+    o.fav = prev.fav;
+    o.muted = prev.muted;
+    o.ignored = prev.ignored;
+    prev.hidden.forEach(function (n) { if (!state.dms[n]) o.hidden.push(n); });
+    Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
+    Object.keys(prev.channels).forEach(function (k) { if (!state.groups[k]) o.channels[k] = prev.channels[k]; });
+    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
+    prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
+    Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
+    // Merged with the storage: the bridge also sets the unread migration flag there.
+    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
+  });
+  return { ref: localRef, restore: restore };
+}
 /** Key of a ban list entry: unid and IP, like removeblock. */
 function banKey(b) { return b.unid + ':' + b.ip; }
 function blankBanPage() { return { loaded: false, more: false, loading: false }; }
