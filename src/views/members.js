@@ -1,6 +1,6 @@
 /**
  * Member list of a group.
- * @param {{g: Object}} p Shown group.
+ * @param {{g: Object, scrollRef: Object}} p Shown group and ref of its scrolling area.
  */
 function MembersList(p) {
   var app = useApp(), s = app.state, g = p.g;
@@ -8,33 +8,55 @@ function MembersList(p) {
   var others = g.members.filter(function (n) { return !roleOf(g, n); });
   var on = others.filter(function (n) { return userOf(s, n).status !== 'offline' || n === s.me; });
   var off = others.filter(function (n) { return userOf(s, n).status === 'offline' && n !== s.me; });
-  var guests = guestsOf(g);
+  var guests = guestsOf(g), showGuests = s.prefs.safety.showGuests && guests.count;
+  var loading = LIVE && !g.membersLoaded;
+  var batch = useRowBatches(p.scrollRef, loading ? [] : staff.concat(on, off, showGuests ? guests.names : []), g.id);
+  var before = 0;
   function row(n) {
-    var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status;
-    return h('button', { key: n, type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, g.id); } },
-      h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
-      h('span', { className: 'grow', style: u.status === 'offline' && !isMe ? { color: 'var(--text-3)' } : null }, n),
-      presenceSr(status), youBadge(isMe), developerBadge(n), roleBadge(roleOf(g, n)));
+    var u = userOf(s, n), isMe = n === s.me;
+    return h(MemberRow, { key: n, name: n, gid: g.id, status: isMe ? s.meStatus : u.status, dim: u.status === 'offline' && !isMe, isMe: isMe, role: roleOf(g, n) });
   }
-  return LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
-    : h('div', { className: 'members-list' },
-      h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n); }),
-      h('h3', { className: 'mlabel' }, 'Online · ' + on.length), on.map(function (n) { return row(n); }),
-      off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
-      s.prefs.safety.showGuests && guests.count ? h(Frag, null,
-        h('h3', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + guests.count), guests.names.map(function (n) { return row(n); }),
-        g.guests ? h('p', { className: 'muted', style: { margin: 'var(--space-1) var(--space-2)' } }, g.guests + ' anonymous') : null) : null);
+  // Rows of a section within the rendered batches, null until they reach its first row: a heading never shows without its rows.
+  function rows(names) {
+    var from = before;
+    before += names.length;
+    return from > batch.limit || (names.length && from === batch.limit) ? null : names.slice(0, batch.limit - from).map(row);
+  }
+  if (loading) return h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }));
+  var staffRows = rows(staff), onRows = rows(on), offRows = rows(off), guestRows = showGuests ? rows(guests.names) : null;
+  return h('div', { className: 'members-list' },
+    h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staffRows,
+    onRows ? h('h3', { className: 'mlabel' }, 'Online · ' + on.length) : null, onRows,
+    off.length && offRows ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, offRows,
+    guestRows ? h(Frag, null,
+      h('h3', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + guests.count), guestRows,
+      g.guests && !batch.sentinel ? h('p', { className: 'muted', style: { margin: 'var(--space-1) var(--space-2)' } }, g.guests.toLocaleString('en-US') + ' anonymous') : null) : null,
+    batch.sentinel);
 }
+
+/**
+ * Row of the member list, rendered again only when its props change.
+ * @param {{name: string, gid: string, status: string, dim: boolean, isMe: boolean, role: ?string}} p Member, group, presence, dimmed when offline,
+ *   signed-in user and role in the group.
+ */
+var MemberRow = React.memo(function MemberRow(p) {
+  var app = useAppApi(), n = p.name;
+  return h('button', { type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, p.gid); } },
+    h(T.Avatar, { name: n, size: 28, status: p.status, ring: 'var(--panel)' }),
+    h('span', { className: 'grow', style: p.dim ? { color: 'var(--text-3)' } : null }, n),
+    presenceSr(p.status), youBadge(p.isMe), developerBadge(n), roleBadge(p.role));
+});
 
 /**
  * Member column of a group.
  * @param {{g: Object}} p Shown group.
  */
 function MembersPanel(p) {
+  var scrollRef = useRef(null);
   return h('aside', { className: 'col members', 'aria-label': 'Members of ' + p.g.id },
     useApp().season === 'halloween' ? h(SeasonWeb) : null,
     columnHeader('Members'),
-    h('div', { className: 'scroll' }, h(MembersList, { g: p.g })));
+    h('div', { ref: scrollRef, className: 'scroll' }, h(MembersList, { g: p.g, scrollRef: scrollRef })));
 }
 
 /**
@@ -42,15 +64,15 @@ function MembersPanel(p) {
  * @param {{g: Object, onClose: Function}} p Shown group and closing of the sheet.
  */
 function GroupInfoSheet(p) {
-  var g = p.g;
+  var g = p.g, scrollRef = useRef(null);
   return h(Dialog, { label: 'About #' + g.id, sheet: true, onClose: p.onClose },
     h('div', { className: 'topbar' },
       h('h2', { className: 'grow' }, g.id),
       h(T.IconButton, { icon: 'x', label: 'Close', onClick: p.onClose })),
-    h('div', { className: 'scroll' },
-      g.topic ? h('div', { className: 'kv' }, h('h3', null, 'Description'), h('p', { className: 'about' }, g.topic)) : null,
+    h('div', { ref: scrollRef, className: 'scroll' },
+      g.topic ? h('div', { className: 'kv' }, h('h3', null, 'Description'), h('p', { className: 'about', dir: 'auto' }, bidiText(g.topic))) : null,
       h('div', { className: 'kv' }, h('h3', null, 'Members')),
-      h(MembersList, { g: g })));
+      h(MembersList, { g: g, scrollRef: scrollRef })));
 }
 
 /* ---------- Member profile ---------- */
@@ -108,19 +130,21 @@ function whoItem(app, name) {
  * Offers to ignore a member or to stop ignoring them.
  * @param {Object} app Application context.
  * @param {string} name Member name.
+ * @param {boolean} ignored The member is ignored.
  */
-function ignoreItem(app, name) {
-  return { id: 'ignore', label: userOf(app.state, name).ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } };
+function ignoreItem(app, name, ignored) {
+  return { id: 'ignore', label: ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } };
 }
 
 /**
  * Offers to hide a member's style or to show it again.
  * @param {Object} app Application context.
  * @param {string} name Member name.
+ * @param {boolean} unstyled The member's style is hidden.
  * @param {boolean} [named] Label that names the member, for a message menu.
  */
-function styleItem(app, name, named) {
-  var label = (userOf(app.state, name).unstyled ? 'Show ' : 'Hide ') + (named ? name + "'s style" : 'style');
+function styleItem(app, name, unstyled, named) {
+  var label = (unstyled ? 'Show ' : 'Hide ') + (named ? name + "'s style" : 'style');
   return { id: 'style', label: label, icon: 'type', onSelect: function () { app.actions.toggleUser(name, 'unstyled'); } };
 }
 
@@ -154,8 +178,8 @@ function useProfileActions(name, gid) {
     },
     u.friend ? notifyOnlineItem(app, name) : null,
     whoItem(app, name),
-    styleItem(app, name),
-    ignoreItem(app, name),
+    styleItem(app, name, u.unstyled),
+    ignoreItem(app, name, u.ignored),
     {
       id: 'block', label: u.blocked ? 'Unblock' : 'Block…', icon: 'user-x', danger: !u.blocked, onSelect: function () {
         if (u.blocked) app.actions.toggleUser(name, 'blocked');

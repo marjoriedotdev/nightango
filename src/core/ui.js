@@ -1,18 +1,96 @@
 /* ---------- Context and UI primitives ---------- */
 var Ctx = React.createContext(null);
 function useApp() { return useContext(Ctx); }
+// The parts of the application context that stay the same object for the whole session.
+var ApiCtx = React.createContext(null);
+// Season whose decorations are shown, apart: an avatar reads it without rendering again on every state change.
+var SeasonCtx = React.createContext(null);
+/**
+ * Returns the parts of the application context that never change: actions, ui, nav, update, drafts, the state store, the minute clock and keepUsers (useShownUsers).
+ * A component that reads only them renders again for its own props and state only. Its state is the shown state at the time it is read, for handlers:
+ * a render takes what it shows from its props or useStatePart.
+ */
+function useAppApi() { return useContext(ApiCtx); }
+/**
+ * Returns a part of the shown state and renders again only when that part changes.
+ * @param {function(Object): *} part Reads the part: a value of the state, never an object built on each call.
+ */
+function useStatePart(part) {
+  var store = useAppApi().store;
+  return useSyncExternalStore(store.subscribe, function () { return part(store.shown()); });
+}
+/**
+ * Clock that ticks every minute on a single timer, running while something listens to it.
+ * @returns {{subscribe: function(Function): Function, now: function(): number}} Subscription, and time of the last tick.
+ */
+function minuteClock() {
+  var listeners = [], timer = null, now = Date.now();
+  return {
+    now: function () { return now; },
+    subscribe: function (l) {
+      if (!listeners.length) timer = setInterval(function () { now = Date.now(); listeners.forEach(function (f) { f(); }); }, MIN);
+      listeners.push(l);
+      return function () {
+        listeners = listeners.filter(function (x) { return x !== l; });
+        if (!listeners.length) clearInterval(timer);
+      };
+    }
+  };
+}
+/**
+ * Renders again on each tick of the minute clock of the application, which all relative times share.
+ */
+function useMinute() {
+  var clock = useAppApi().clock;
+  useSyncExternalStore(clock.subscribe, clock.now);
+}
+/**
+ * Keeps the members a component shows in the state while it shows them, even when nothing in the state refers to them (usePrunedUsers).
+ * @param {string[]} names Members shown.
+ */
+function useShownUsers(names) {
+  var keep = useAppApi().keepUsers;
+  useEffect(function () { return keep(names); }, [names.join(',')]);
+}
+/**
+ * Returns functions that keep their identity from one render to the next and call those of the latest render.
+ * @param {Object<string, Function>} fns Functions of this render, always the same keys.
+ */
+function useLatestCalls(fns) {
+  var latest = useRef(fns), calls = useRef(null);
+  latest.current = fns;
+  if (!calls.current) {
+    calls.current = {};
+    Object.keys(fns).forEach(function (k) { calls.current[k] = function () { return latest.current[k].apply(null, arguments); }; });
+  }
+  return calls.current;
+}
 
 /* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
-var layerNode = null;
-function layerRoot() {
-  if (layerNode && layerNode.isConnected) return layerNode;
-  var mountEl = window.__TORCH_MOUNT__ || document.getElementById('app');
-  layerNode = document.createElement('div');
-  layerNode.id = 'layer';
-  (mountEl && mountEl.parentNode ? mountEl.parentNode : document.body).appendChild(layerNode);
-  return layerNode;
+var LayerCtx = React.createContext(null);
+function appMount() { return window.__TORCH_MOUNT__ || document.getElementById('app'); }
+/**
+ * Gives the interface inside it its layer node and its stack of open dialogs.
+ * @param {{children: *}} p Interface.
+ */
+function Layers(p) {
+  var ref = useRef(null);
+  if (!ref.current) ref.current = { node: null, dialogs: [] };
+  return h(LayerCtx.Provider, { value: ref.current }, p.children);
 }
-function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot()); }
+/**
+ * Returns the layer node next to the mount point, created again once it has left the document.
+ * @param {{node: ?Element}} layer Layer given by Layers.
+ */
+function layerRoot(layer) {
+  if (layer.node && layer.node.isConnected) return layer.node;
+  var mountEl = appMount();
+  layer.node = document.createElement('div');
+  layer.node.id = 'layer';
+  (mountEl && mountEl.parentNode ? mountEl.parentNode : document.body).appendChild(layer.node);
+  return layer.node;
+}
+function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot(useContext(LayerCtx))); }
 
 function useOutside(ref, open, onClose, extraRef) {
   useEffect(function () {
@@ -35,7 +113,7 @@ var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
  * Requests the next page when a sentinel approaches the visible area.
  * @param {Object} rootRef Ref of the scrolling area.
  * @param {Object} sentinelRef Ref of the sentinel.
- * @param {boolean} enabled A next page can be requested.
+ * @param {*} enabled A next page can be requested when truthy. Another truthy value observes the sentinel again, which reports it at once if it is still in view.
  * @param {Function} onReach Request for the next page.
  * @param {string} margin Approach margin in rootMargin format.
  */
@@ -48,6 +126,44 @@ function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
     io.observe(sentinelRef.current);
     return function () { io.disconnect(); };
   }, [enabled]);
+}
+
+var ROW_BATCH = 100;
+/**
+ * Renders a long list in batches: the first rows, then one more batch each time the sentinel after them approaches the visible area.
+ * A rendered row stays rendered when rows are added or removed around it, until the list is reset.
+ * @param {Object} rootRef Ref of the scrolling area.
+ * @param {Array<string>} keys Keys of the rows in list order, empty while the list is not rendered.
+ * @param {string} reset Search, filter or tab of the list: a new value renders the first batch again.
+ * @returns {{limit: number, sentinel: ?Object}} Rows to render, and the element to place after them while rows are left.
+ */
+function useRowBatches(rootRef, keys, reset) {
+  var st = useState({ reset: reset, limit: ROW_BATCH }), batch = st[0], setBatch = st[1];
+  var sentinelRef = useRef(null), lastRef = useRef(null);
+  if (batch.reset !== reset) { batch = { reset: reset, limit: ROW_BATCH }; setBatch(batch); }
+  var last = lastRef.current && lastRef.current.reset === reset ? lastRef.current : null, limit = batch.limit, i;
+  if (last) {
+    var added = 0, was;
+    for (i = 0; i < keys.length; i++) if (last.at[keys[i]] === undefined) added++;
+    // Rows added above a rendered row would push it past the batch limit, out of the DOM with its focus and swipe.
+    for (i = keys.length - 1; i >= limit; i--) {
+      was = last.at[keys[i]];
+      // A row moved further down than rows were added, like a member gone offline, waits for its batch: following it would render every row above it.
+      if (was !== undefined && was < last.limit && i - was <= added) { limit = i + 1; break; }
+    }
+  }
+  useEffect(function () {
+    var at = Object.create(null);
+    keys.forEach(function (k, j) { at[k] = j; });
+    lastRef.current = { reset: reset, at: at, limit: limit };
+  });
+  var more = keys.length > limit;
+  // The limit as enabled: each batch observes the sentinel again, so a sentinel still in view loads the next batch.
+  useInfiniteScroll(rootRef, sentinelRef, more && limit, function () {
+    // Functional update: the observer keeps the callback of its limit, which can predate a reset to the same limit.
+    setBatch(function (b) { return { reset: b.reset, limit: Math.max(b.limit, limit) + ROW_BATCH }; });
+  }, LOAD_BELOW_MARGIN);
+  return { limit: limit, sentinel: more ? h('div', { ref: sentinelRef, 'aria-hidden': 'true', style: { height: 1 } }) : null };
 }
 
 var FLOAT_UNPLACED = { position: 'fixed', visibility: 'hidden', top: 0, left: 0 };
@@ -109,18 +225,18 @@ function useRightColumn(openFull) {
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
 
-// In memory only: a reload, which is also how live signs out, drops every draft.
-var drafts = {};
 /**
  * Composer text kept when leaving the conversation and given back on return.
+ * The drafts belong to Root, which gives them through the context.
  * @param {string} key Conversation, as group:<id> or dm:<name>.
  * @returns {Array} Text, its setter, and a ref to the text saved on leaving, which the view may replace after the call.
  */
 function useDraft(key) {
-  var a = useState(function () { return drafts[key] || ''; }), kept = useRef('');
+  var drafts = useApp().drafts;
+  var a = useState(function () { return drafts.current[key] || ''; }), kept = useRef('');
   kept.current = a[0];
   useEffect(function () {
-    return function () { if (kept.current) drafts[key] = kept.current; else delete drafts[key]; };
+    return function () { if (kept.current) drafts.current[key] = kept.current; else delete drafts.current[key]; };
   }, [key]);
   return [a[0], a[1], kept];
 }
@@ -130,9 +246,18 @@ function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
   function setOpen(n) { if (p.open == null) st[1](n); if (p.onOpenChange) p.onOpenChange(n); }
-  function close() { setOpen(false); }
+  function close() {
+    var trigger = ref.current && ref.current.querySelector('button');
+    var held = menuRef.current && menuRef.current.contains(menuRef.current.getRootNode().activeElement);
+    setOpen(false);
+    if (!trigger || !held) return;
+    // Before the menu leaves: its focused item would take the focus with it, to the page body.
+    trigger.focus({ preventScroll: true });
+    // A press on a spot that takes no focus clears it once the event is over: the button takes it back then.
+    setTimeout(function () { var a = trigger.getRootNode().activeElement; if (!a || a === document.body) trigger.focus({ preventScroll: true }); }, 0);
+  }
   var place = useFloating(ref, menuRef, open, close, { up: p.up, align: p.align, at: p.at });
-  function toggle() { setOpen(!open); }
+  function toggle() { if (open) close(); else setOpen(true); }
   function onKey(e) {
     if (!menuRef.current) return;
     var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button:not(:disabled)'));
@@ -205,21 +330,45 @@ function SkeletonRows(p) {
   return h('div', { role: 'status' }, h('span', { className: 'tc-sr' }, p.label), rows);
 }
 
-var openDialogs = [];
+/**
+ * Makes the interface behind the top dialog inert so that Tab and screen readers stay in it.
+ * The app and the dialogs under the top one become inert. Menus and toasts, above the dialogs, stay reachable.
+ * @param {{dialogs: Array}} layer Layer given by Layers.
+ */
+function syncInert(layer) {
+  // Dialogs that close in the same render have already lost their node: they no longer keep the app inert.
+  var layers = layer.dialogs.filter(function (r) { return r.current; }).map(function (r) { return r.current.closest('.overlay'); });
+  appMount().toggleAttribute('inert', layers.length > 0);
+  layers.forEach(function (el, i) { el.toggleAttribute('inert', i < layers.length - 1); });
+}
+/**
+ * Puts a modal layer on top of the open dialogs.
+ * @param {{dialogs: Array}} layer Layer given by Layers.
+ * @param {Object} ref Ref of the layer overlay or of an element inside it.
+ */
+function openModal(layer, ref) { layer.dialogs.push(ref); syncInert(layer); }
+/**
+ * Takes a modal layer out of the open dialogs.
+ * It comes before the focus goes back to where it was, since an element in an inert app takes no focus.
+ * @param {{dialogs: Array}} layer Layer given by Layers.
+ * @param {Object} ref Ref given to openModal.
+ */
+function closeModal(layer, ref) { layer.dialogs.splice(layer.dialogs.indexOf(ref), 1); syncInert(layer); }
 function Dialog(p) {
-  var ref = useRef(null);
+  var ref = useRef(null), layer = useContext(LayerCtx);
   useEffect(function () {
     var rootNode = ref.current ? ref.current.getRootNode() : document;
     var prev = rootNode.activeElement;
     var el = ref.current && ref.current.querySelector('[data-autofocus], input, textarea, select, button');
     if (el) el.focus();
-    openDialogs.push(ref);
+    openModal(layer, ref);
     function onKey(e) {
       // Every dialog listens on document: only the top one reacts.
-      if (openDialogs[openDialogs.length - 1] !== ref) return;
+      if (layer.dialogs[layer.dialogs.length - 1] !== ref) return;
       if (e.key === 'Escape' && p.onClose) { e.stopPropagation(); p.onClose(); }
       if (e.key === 'Tab' && ref.current) {
-        var f = ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        // A disabled control takes no focus: at either end of the list, Tab would leave the dialog past it.
+        var f = ref.current.querySelectorAll('button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])');
         if (!f.length) return;
         var first = f[0], last = f[f.length - 1];
         var active = rootNode.activeElement;
@@ -233,7 +382,7 @@ function Dialog(p) {
     document.addEventListener('keydown', onKey);
     if (blocking) document.addEventListener('keydown', onEscape, true);
     return function () {
-      openDialogs.splice(openDialogs.indexOf(ref), 1);
+      closeModal(layer, ref);
       document.removeEventListener('keydown', onKey);
       if (blocking) document.removeEventListener('keydown', onEscape, true);
       if (prev && prev.focus) prev.focus();
@@ -257,15 +406,38 @@ function ConfirmDialog(p) {
   });
 }
 
+var TOAST_MS = 4500, TOAST_ACTION_MS = 7000;
 function Toasts(p) {
   return h(Portal, null, h('div', { className: 'toasts', role: 'status', 'aria-live': 'polite' },
-    p.toasts.map(function (t) {
-      return h('div', { key: t.id, className: 'toast' },
-        t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
-        h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
-        t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
-        h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
-    })));
+    p.toasts.map(function (t) { return h(Toast, { key: t.id, toast: t, dismiss: p.dismiss }); })));
+}
+/**
+ * Notification that closes once its delay has run.
+ * The delay of a toast with an action waits while the toast is hovered or holds the focus, so that its action stays within reach.
+ * @param {{toast: Object, dismiss: function(string)}} p Notification and its closing by id.
+ */
+function Toast(p) {
+  var t = p.toast;
+  var a = useState(false), hovered = a[0], setHovered = a[1];
+  var b = useState(false), focused = b[0], setFocused = b[1];
+  var left = useRef(t.action ? TOAST_ACTION_MS : TOAST_MS);
+  var held = !!t.action && (hovered || focused);
+  useEffect(function () {
+    if (held) return;
+    var start = Date.now(), timer = setTimeout(function () { p.dismiss(t.id); }, left.current);
+    return function () { clearTimeout(timer); left.current -= Date.now() - start; };
+  }, [held]);
+  return h('div', {
+    className: 'toast',
+    onMouseEnter: function () { setHovered(true); }, onMouseLeave: function () { setHovered(false); },
+    onFocus: function () { setFocused(true); },
+    // The focus moving from one of its buttons to the other keeps the toast held.
+    onBlur: function (e) { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }
+  },
+    t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
+    h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
+    t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
+    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
 }
 
 var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;
@@ -364,7 +536,7 @@ function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + st
  * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Account name, shown name if it differs, group the card opens from, avatar size, presence and outline of its dot, avatar without the name, plain text for someone without an account.
  */
 function Person(p) {
-  var app = useApp(), label = p.label || p.name;
+  var app = useAppApi(), label = p.label || p.name;
   var avatar = h(T.Avatar, { name: p.name, size: p.size, status: p.status, ring: p.ring }), text = p.avatarOnly ? null : h('span', { className: 'namebtn' }, label);
   if (p.inert) return h('span', { className: 'person-tag' }, avatar, text);
   return h('button', { type: 'button', className: p.avatarOnly ? 'avatar-btn' : 'person-tag', 'aria-label': 'View ' + label + "'s profile", onClick: function () { app.ui.openProfile(p.name, p.gid || null); } }, avatar, text);

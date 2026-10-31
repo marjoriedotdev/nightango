@@ -11,8 +11,8 @@ w.__TORCH_LIVE__ = true;
 const { APP_SOURCES, concatSources, layerSources } = require('../scripts/build.mjs');
 const live = concatSources(S, layerSources('bridge'));
 const core = concatSources(S, APP_SOURCES.slice(0, 1)).split('\nvar useState')[0];
-// The wrapper reads the season from the app context: outside every season here.
-const app = 'function useApp() { return {}; }';
+// The wrapper reads the season from its own context: outside every season here.
+const app = 'var useContext = React.useContext, SeasonCtx = React.createContext(null);';
 w.eval('(function(){' + core + '\n' + app + '\n' + live.split('var liveBridge')[0] + '\nwindow.__T = T; window.__src = avatarSrc;})()');
 const check = (c, msg) => console.log((c ? 'ok  ' : 'FAIL') + ' ' + msg);
 check(w.__src('Marjorie', 36) === 'https://ust.chatango.com/profileimg/m/a/marjorie/thumb_m.jpg', 'url thumb_m');

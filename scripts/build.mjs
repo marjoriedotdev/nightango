@@ -11,6 +11,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 export const APP_SOURCES = [
   'core/globals.js',
   'core/util.js',
+  'core/draft.js',
   'core/colors.js',
   'core/roles.js',
   'core/sample-data.js',
@@ -61,6 +62,12 @@ export const APP_SOURCES = [
   'app/state.js',
   'app/live-state.js',
   'app/pm.js',
+  'app/overlays.js',
+  'app/inbox.js',
+  'app/actions.js',
+  'app/reconnection.js',
+  'app/simulation.js',
+  'app/live-ops.js',
   'app/root.js',
   'app/start.js'
 ];
@@ -218,6 +225,8 @@ const SHADOW_SELECTORS = [
   [':root {', ':host {']
 ];
 const JSON_ESCAPES = { '\\': '\\\\', '"': '\\"', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t' };
+// The hosted prototype hook hands the interface a state and reads it back: any script on st.chatango.com could define it.
+const PROTOTYPE_CODE = /[ \t]*\/\*PROTOTYPE\*\/[\s\S]*?\/\*END PROTOTYPE\*\/\r?\n/g;
 
 /**
  * Writes a JSON string literal limited to ASCII.
@@ -343,7 +352,7 @@ ${appJs}
     loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
     fontsLicense: read('torchds', 'project', 'fonts', 'OFL.txt'),
     bundleJs,
-    appJs
+    appJs: appJs.replace(PROTOTYPE_CODE, '')
   };
 
   mkdirSync(join(ROOT, 'dist'), { recursive: true });

@@ -18,7 +18,9 @@ function groupRights(group, name) {
  * @param {string} name Target member.
  */
 function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) && name !== me && roleOf(group, name) !== 'owner'; }
-function userOf(state, name) { return state.users[name] || { status: 'offline', about: '', style: {} }; }
+// One object for every unknown member: the rows that take its style as a prop keep the same props.
+var UNKNOWN_USER = { status: 'offline', about: '', style: {} };
+function userOf(state, name) { return state.users[name] || UNKNOWN_USER; }
 /**
  * Tells whether a member's messages are hidden: ignored member or blocked member when the block also applies in groups.
  * @param {Object} state Application state.
@@ -31,6 +33,7 @@ function isHiddenAuthor(state, name) { var u = userOf(state, name); return (u.ig
  * @param {string} text Message text.
  */
 function mentionsMe(me, text) { return new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(text); }
+function plainMsgId(id) { return String(id).replace(/^k:/, ''); }
 /**
  * Finds a loaded group message by its temporary or final id.
  * @param {Object} g Group in the state.
@@ -38,9 +41,30 @@ function mentionsMe(me, text) { return new RegExp('@' + me + '(?![A-Za-z0-9_-])'
  */
 function findMsg(g, id) {
   if (!g || !id) return null;
-  var plain = String(id).replace(/^k:/, '');
-  for (var i = g.messages.length - 1; i >= 0; i--) { var x = g.messages[i]; if (x.id === plain || x.id === 'k:' + plain) return x; }
+  var plain = plainMsgId(id), list = plainOf(g.messages);
+  for (var i = list.length - 1; i >= 0; i--) { var x = list[i]; if (x.id === plain || x.id === 'k:' + plain) return g.messages[i]; }
   return null;
+}
+/**
+ * Indexes the loaded messages of a group in one pass for repeated lookups.
+ * @param {Object} g Group in the state.
+ * @returns {function(?string): ?Object} Finds a message like findMsg.
+ */
+function msgFinder(g) {
+  var byId = Object.create(null);
+  g.messages.forEach(function (x) { byId[plainMsgId(x.id)] = x; });
+  return function (id) { return id ? byId[plainMsgId(id)] || null : null; };
+}
+var THREAD_MAX = 500;
+/**
+ * Drops the oldest messages of a group or a private conversation beyond THREAD_MAX.
+ * @param {{messages: Array, historyCapped: ?boolean}} t Group or conversation in the state being modified, messages sorted.
+ */
+function trimThread(t) {
+  if (t.messages.length <= THREAD_MAX) return;
+  t.messages.splice(0, t.messages.length - THREAD_MAX);
+  // Older pages stop: a group's get_more counter would skip the removed messages, a PM page would be trimmed at once.
+  t.historyCapped = true;
 }
 /**
  * Returns the guests of a group: names of the named guests and the total with anons included.

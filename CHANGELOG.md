@@ -2,6 +2,50 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.32.0] - 2026-10-31
+
+### Added
+
+- When Nightango runs into an error, a recovery screen replaces the blank page, with Reload and Show BetterChatango.
+- Links in a full profile are listed below it and open through the link warning.
+
+### Changed
+
+- Long announcements fold to three lines, with Show more to read the rest.
+- The private messages list and the members column show 100 rows at first, then more as you scroll.
+- Busy groups and long history pages update faster.
+- The diagnostic log is kept per account, and its banner says that issues on GitHub are public.
+- Menus give focus back to their button, toasts pause while you hover or focus them, and the page behind a dialog is out of reach.
+- Releases come with SHA256SUMS for both userscripts.
+
+### Fixed
+
+- A message sent while the connection is closed fails visibly instead of looking sent.
+- A connection attempt that hangs times out, and Leave cancels it.
+- A PM you send is filed in its own conversation.
+- PM unread counts survive a storage failure and imports with mixed-case names.
+- Long PM histories and conversation lists stay bounded.
+- The New messages button works in full groups.
+- Early messages from Chatango and settings saved by an older version no longer stop Nightango.
+- Member profile styles are read more strictly.
+- Visitors, TikTok and X ignore replies of an unexpected shape.
+- Long group names on Discover no longer run under the Open button.
+- Long links in announcements, bios and group descriptions wrap instead of running out of their box.
+- A long location wraps on profile cards.
+- Right-to-left text reads in its own direction in messages, bios, PM previews and Mentions, with names, links and quotes kept whole.
+- Counts agree with their noun: "1 guest", "1 member".
+- Times older than a month show in months and years: "4 y ago" instead of "1460 d ago".
+- A group header without a topic no longer shows a stray separator.
+- A group with no messages says so.
+- The Meet people search field says what it searches: "Username".
+- Mention badges stop at @99+.
+- Large numbers have thousands separators: "1,284 new".
+- Sidebar items keep their height when the list is long.
+
+### Security
+
+- Nightango refuses any request outside its published list of HTTP calls.
+
 ## [0.31.1] - 2026-10-31
 
 ### Fixed

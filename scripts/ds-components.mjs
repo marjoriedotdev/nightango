@@ -111,8 +111,8 @@ const COMPONENTS = [
     `  return h('div', { className: 'row' }, h(T.Badge, { icon: 'shield' }, 'Mod'), h(T.Badge, { icon: 'crown' }, 'Owner'), h(T.Badge, { tone: 'accent' }, 'Sensitive'), h(T.Badge, null, 'Friend'), h(T.Badge, { tone: 'accent', icon: 'code', label: 'Nightango developer' }), h(T.Badge, { tone: 'accent', icon: 'gem', label: 'Premium' }));`],
   ['CountBadge', 'Status', 56,
     'An accent pill with an unread or mention count.',
-    `Pass \`count\`; it renders nothing at zero and caps at 99+. Pass \`mention\` to prefix @ for mentions, which outrank plain unread counts. A plain unread state with no count uses the 6px \`tc-dot\` instead.`,
-    `  return h('div', { className: 'row' }, h(T.CountBadge, { count: 2 }), h(T.CountBadge, { count: 3, mention: true }), h(T.CountBadge, { count: 140 }));`],
+    `Pass \`count\`; it renders nothing at zero and caps at 99+. Pass \`mention\` to prefix @ for mentions, which outrank plain unread counts: @99+ at most. The accessible name keeps the exact count. A plain unread state with no count uses the 6px \`tc-dot\` instead.`,
+    `  return h('div', { className: 'row' }, h(T.CountBadge, { count: 2 }), h(T.CountBadge, { count: 3, mention: true }), h(T.CountBadge, { count: 140 }), h(T.CountBadge, { count: 140, mention: true }));`],
   ['Avatar', 'Identity', 80,
     'Profile picture or initials on a muted color derived from the username, with optional presence.',
     `Pass \`src\` to show a profile picture. The initials stay underneath and remain visible while it loads or if it fails (account without a picture, guest); a failed URL is not requested again on the same page. The picture fades in once loaded, and shows at once when the page already loaded it. Pass \`referrerPolicy: 'no-referrer'\` for a picture from another site than Chatango. \`onLoad\` is called each time the picture loads, to offer actions that need it, such as opening the full photo.

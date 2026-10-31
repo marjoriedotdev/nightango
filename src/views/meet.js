@@ -24,7 +24,7 @@ function personCard(s, n, theme, onClick, noStatus) {
     h(T.Avatar, { name: n, size: 44, status: status, ring: mini ? mini.bg : 'var(--panel)' }),
     h('span', { className: 'conv-main' },
       h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), status ? presenceSr(status) : null, youBadge(isMe), developerBadge(n), premiumBadge(u.premium)),
-      personMetaLine(s, n),
+      personMetaLine(n, u),
       isProfilePending(n, u) ? h('span', { className: 'conv-about skel-about' }, h('span', { className: 'tc-sr' }, 'Loading profile'), h(T.Skeleton, { width: 220, height: 10 }), h(T.Skeleton, { width: 130, height: 10 }))
         : h('span', { className: 'conv-about' }, about || (u.profileMissing ? 'No public profile.' : null))));
 }
@@ -139,7 +139,7 @@ function MeetPeople() {
     h('form', { onSubmit: function (e) { e.preventDefault(); run(f); }, noValidate: true, role: 'search', style: { padding: '12px 12px 6px', display: 'flex', flexDirection: 'column', gap: 8 } },
       h('div', { style: { display: 'flex', gap: 8 } },
         h('label', { htmlFor: 'meet-q', className: 'tc-sr' }, 'Search people'),
-        h('input', { id: 'meet-q', className: 'tc-input', type: 'search', style: { flex: 1, minWidth: 0 }, placeholder: 'Username or keyword', value: f.query, onChange: function (e) { var v = e.target.value; setF(function (x) { return Object.assign({}, x, { query: v }); }); } }),
+        h('input', { id: 'meet-q', className: 'tc-input', type: 'search', style: { flex: 1, minWidth: 0 }, placeholder: 'Username', value: f.query, onChange: function (e) { var v = e.target.value; setF(function (x) { return Object.assign({}, x, { query: v }); }); } }),
         h(T.Button, { icon: 'sliders', 'aria-label': 'Filters' + (active.length ? ', ' + active.length + ' active' : ''), onClick: function () { setFiltersOpen(true); } },
           'Filters', active.length ? h('span', { className: 'filter-count', 'aria-hidden': 'true' }, active.length) : null),
         h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', size: 34, iconSize: 15, className: 'hide-mobile', disabled: loading, onClick: function () { run(f); } })),

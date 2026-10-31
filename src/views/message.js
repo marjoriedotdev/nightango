@@ -31,62 +31,69 @@ function memberStyles(u, styles, theme, highlighted, msgBg) {
   return out;
 }
 
-function MessageRow(p) {
-  var app = useApp(), s = app.state, prefs = s.prefs, m = p.m, me = s.me, g = p.g;
+/**
+ * Group message row with its toolbar and its action menu.
+ * It reads the state only through its props: a change that leaves them alone, a presence for example, does not render it again.
+ * @param {{m: Object, gid: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, ignored: boolean, msgBg: (Object|null|undefined),
+ *   role: ?string, staff: boolean, canBan: boolean, seeIps: boolean, original: ?Object, continued: boolean, highlight: boolean,
+ *   onReply: Function, onQuote: Function, onEdit: Function, onMention: Function, onJump: Function}} p Message, group, signed-in user, preferences,
+ *   resolved theme, author's style, hidden style, ignore and message background (undefined while unread), author's role, whether the user is staff,
+ *   ban right on the author and IP right, loaded original of a reply, follow-up of the previous message from the same author, highlight, and actions.
+ */
+var MessageRow = React.memo(function MessageRow(p) {
+  var app = useAppApi(), prefs = p.prefs, m = p.m, me = p.me, gid = p.gid;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
-  var u = userOf(s, m.author);
   var mention = m.author !== me && mentionsMe(me, m.text);
   var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
   var chanRow = !!chanColor && !mention;
-  var ms = memberStyles(u, prefs.styles, app.theme, mention || chanRow, m.bg ? u.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
-  var bgUnknown = u.msgBg === undefined;
-  useEffect(function () { if (m.bg && prefs.styles.backgrounds && !u.unstyled && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, u.unstyled, bgUnknown]);
+  var ms = memberStyles({ style: p.style, unstyled: p.unstyled }, prefs.styles, p.theme, mention || chanRow, m.bg ? p.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
+  var bgUnknown = p.msgBg === undefined;
+  useEffect(function () { if (m.bg && prefs.styles.backgrounds && !p.unstyled && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, p.unstyled, bgUnknown]);
   var bgImage = ms.image && prefs.safety.embedImages && !prefs.safety.proxyMedia ? h(MessageBgImage, ms.image) : null;
-  var role = roleOf(g, m.author), myRole = roleOf(g, me);
   // Chatango lets only staff delete and ban, from a message received from the server.
-  var canDelete = isStaffRole(myRole);
-  var canBan = canBanMember(g, me, m.author) && (!LIVE || !!m.unid);
+  var canDelete = p.staff;
+  var canBan = p.canBan && (!LIVE || !!m.unid);
   // Like a reply, an edit waits for the message's final id.
   var canEdit = m.author === me && (!LIVE || liveBridge.delivered(m.id));
   var handle = m.author !== me ? mentionHandle(m.author) : null;
-  var showIp = LIVE && m.ip && groupRights(g, me).seeIps;
+  var showIp = LIVE && m.ip && p.seeIps;
   var canQuote = !!m.text && !!mentionHandle(m.author);
-  var deleteMessage = function () { app.actions.deleteMessage(g.id, m.id); };
+  var deleteMessage = function () { app.actions.deleteMessage(gid, m.id); };
   var menuItems = [
     canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
     handle ? { label: 'Mention ' + m.author, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
     canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
     copyTextItem(app, m),
     showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed.'); }); } } : null,
-    m.author !== me ? viewProfileItem(app, m.author, g.id) : null,
+    m.author !== me ? viewProfileItem(app, m.author, gid) : null,
     whoItem(app, m.author),
-    m.author !== me ? styleItem(app, m.author, true) : null,
+    m.author !== me ? styleItem(app, m.author, p.unstyled, true) : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,
-    canDelete ? { label: LIVE ? 'Delete message…' : 'Delete message', icon: 'trash', danger: true, onSelect: function () { if (LIVE) app.ui.confirm({ title: 'Delete this message?', body: 'Chatango removes it from #' + g.id + " for everyone. You can't undo this.", confirmLabel: 'Delete', danger: true, onConfirm: deleteMessage }); else deleteMessage(); } } : null,
-    LIVE && canBan ? { label: 'Delete all from ' + m.author + '…', icon: 'message-square-x', danger: true, onSelect: function () { app.ui.confirm({ title: 'Delete every message from ' + m.author + '?', body: 'Chatango removes their recent messages in #' + g.id + ' for everyone.', confirmLabel: 'Delete all', danger: true, onConfirm: function () { app.actions.deleteAllFrom(g.id, m.author, m); } }); } } : null,
-    m.author !== me ? ignoreItem(app, m.author) : null,
-    canBan ? banItem(app, m.author, g.id, m) : null
+    canDelete ? { label: LIVE ? 'Delete message…' : 'Delete message', icon: 'trash', danger: true, onSelect: function () { if (LIVE) app.ui.confirm({ title: 'Delete this message?', body: 'Chatango removes it from #' + gid + " for everyone. You can't undo this.", confirmLabel: 'Delete', danger: true, onConfirm: deleteMessage }); else deleteMessage(); } } : null,
+    LIVE && canBan ? { label: 'Delete all from ' + m.author + '…', icon: 'message-square-x', danger: true, onSelect: function () { app.ui.confirm({ title: 'Delete every message from ' + m.author + '?', body: 'Chatango removes their recent messages in #' + gid + ' for everyone.', confirmLabel: 'Delete all', danger: true, onConfirm: function () { app.actions.deleteAllFrom(gid, m.author, m); } }); } } : null,
+    m.author !== me ? ignoreItem(app, m.author, p.ignored) : null,
+    canBan ? banItem(app, m.author, gid, m) : null
   ];
   var actions = m.deleted ? null : h(Frag, null,
     h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: function () { p.onReply(m); } }),
     moreActionsButton(menuItems, setMenuOpen));
   var body = m.deleted
     ? h('p', { className: 'tc-msg-text deleted' }, m.deleted.by === m.author ? 'Message deleted' : 'Message deleted by ' + m.deleted.by)
-    : h(MessageContent, { m: m, style: textStyle, plain: ms.plain, gid: g.id });
+    : h(MessageContent, { m: m, style: textStyle, plain: ms.plain, gid: gid });
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanRow) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
-  var original = m.replyTo && findMsg(g, m.replyTo.id);
-  var reply = original ? { author: h(Person, { name: original.author, gid: g.id, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
+  var original = p.original;
+  var reply = original ? { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
     : m.replyTo ? { text: 'Original message not loaded' } : null;
   var authorBtn = handle
     ? h('button', { type: 'button', className: 'tc-msg-author namebtn namebtn-mention', title: 'Mention ' + m.author, style: nameStyle, onClick: function () { p.onMention(handle); } }, m.author)
     : authorName(m.author, nameStyle);
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
-    avatar: h(Person, { name: m.author, gid: g.id, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(role), developerBadge(m.author), chan), reply: reply, actions: actions,
+    avatar: h(Person, { name: m.author, gid: gid, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(p.role), developerBadge(m.author), chan), reply: reply, actions: actions,
     msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanRow && 'chan-msg'), style: rowStyle, background: bgImage
   }, body);
-}
+});
 
 /**
  * Offers to copy a message's text in a group or a PM.
@@ -191,8 +198,11 @@ function RevealButton(p) {
   return h('button', { type: 'button', className: 'embed-reveal', onClick: p.onClick }, h(T.Icon, { name: p.icon, size: 16 }), p.label, host ? h('span', null, host) : null);
 }
 
+function safetyPrefs(s) { return s.prefs.safety; }
+function clockPref(s) { return s.prefs.h24; }
+
 function VideoEmbed(p) {
-  var app = useApp(), safety = app.state.prefs.safety;
+  var app = useAppApi(), safety = useStatePart(safetyPrefs);
   var st = useState(false), playing = st[0], setPlaying = st[1];
   var watch = 'https://www.youtube.com/watch?v=' + p.id, thumb = 'https://i.ytimg.com/vi/' + p.id + '/hqdefault.jpg';
   if (!safety.embedVideos) return mediaLink(app, watch, 'msg-link', watch);
@@ -215,7 +225,7 @@ function VideoEmbed(p) {
  * @param {string} p.url Post or short link of the message.
  */
 function TikTokEmbed(p) {
-  var app = useApp(), safety = app.state.prefs.safety;
+  var app = useAppApi(), safety = useStatePart(safetyPrefs);
   var a = useState(p.id || null), post = a[0], setPost = a[1];
   var b = useState('idle'), phase = b[0], setPhase = b[1];
   var c = useState(null), thumb = c[0], setThumb = c[1];
@@ -257,7 +267,7 @@ function TikTokEmbed(p) {
  * @param {string} p.url Post link of the message.
  */
 function XPostEmbed(p) {
-  var app = useApp(), safety = app.state.prefs.safety;
+  var app = useAppApi(), safety = useStatePart(safetyPrefs);
   var a = useState(null), post = a[0], setPost = a[1];
   var b = useState('idle'), phase = b[0], setPhase = b[1];
   var preview = safety.embedX && !waitsForClick(safety, 'x', p.url);
@@ -283,8 +293,8 @@ function XPostEmbed(p) {
  * @param {Object} p.post Post read by the loader.
  */
 function XPostCard(p) {
-  var app = useApp(), post = p.post;
-  var when = post.time ? fmtTime(post.time, app.state.prefs.h24) + ' \u00b7 ' + new Date(post.time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : post.date;
+  var app = useAppApi(), h24 = useStatePart(clockPref), post = p.post;
+  var when = post.time ? fmtTime(post.time, h24) + ' \u00b7 ' + new Date(post.time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : post.date;
   return h('div', { className: 'embed-x' },
     h('div', { className: 'embed-x-head' },
       h(T.Avatar, { name: post.handle, src: post.avatar, size: 40, referrerPolicy: 'no-referrer' }),
@@ -301,7 +311,7 @@ function XPostCard(p) {
  * @param {string} p.link Post link, opened by the photo.
  */
 function XPostMedia(p) {
-  var app = useApp(), m = p.media;
+  var app = useAppApi(), m = p.media;
   var a = useState(!m.sensitive), revealed = a[0], setRevealed = a[1];
   var b = useState(false), playing = b[0], setPlaying = b[1];
   var c = useState(false), failed = c[0], setFailed = c[1];
@@ -323,7 +333,7 @@ function XPostMedia(p) {
  * @param {string} p.url https address of the file.
  */
 function FileEmbed(p) {
-  var app = useApp(), safety = app.state.prefs.safety, media = FILE_MEDIA[p.kind];
+  var app = useAppApi(), safety = useStatePart(safetyPrefs), media = FILE_MEDIA[p.kind];
   var st = useState(false), playing = st[0], setPlaying = st[1];
   var f = useState(false), failed = f[0], setFailed = f[1];
   if (!safety.embedVideos || failed) return mediaLink(app, p.url, 'msg-link', p.url);
@@ -332,7 +342,7 @@ function FileEmbed(p) {
 }
 
 function ImageEmbed(p) {
-  var app = useApp(), safety = app.state.prefs.safety;
+  var app = useAppApi(), safety = useStatePart(safetyPrefs);
   var st = useState(false), shown = st[0], setShown = st[1];
   if (!safety.embedImages) return mediaLink(app, p.url, 'msg-link', p.url);
   if (!shown && waitsForClick(safety, p.kind, p.url)) return h(RevealButton, { icon: 'image', label: 'Show image', url: p.url, onClick: function () { setShown(true); } });

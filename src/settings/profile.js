@@ -53,7 +53,7 @@ function VisibilitySection(p) {
  */
 function ProfilePreviewCard(p) {
   var mini = p.mini, cover = useMiniCover(mini), bg = mini ? mini.bg : 'var(--subtle)';
-  return h('div', { style: Object.assign(mini ? miniSkin(mini) : {}, { border: '1px solid var(--border)', borderRadius: 12, background: bg, overflow: 'hidden' }) },
+  return h('div', { style: Object.assign(mini ? miniSkin(mini) : {}, { border: '1px solid var(--border)', borderRadius: 12, background: bg, overflow: 'hidden', overflowWrap: 'anywhere' }) },
     h('div', { style: { height: 64, background: mini ? 'var(--hover-2)' : 'var(--selected)' } },
       cover.shown ? h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer', style: { display: 'block', width: '100%', height: '100%', objectFit: 'cover' } }) : null),
     h('div', { style: { padding: '0 18px 18px', marginTop: -32 } },

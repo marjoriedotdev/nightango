@@ -101,6 +101,11 @@
         }
         host.style.setProperty('display', 'block', 'important');
       };
+      // Show BetterChatango on the recovery screen: its page comes back with its connections still open.
+      window.__TORCH_HIDE__ = function () {
+        host.remove();
+        document.getElementById('torch-skin-hide').remove();
+      };
       window.__TORCH_LIVE__ = true;
       window.__TORCH_ROOT__ = host;
       window.__TORCH_MOUNT__ = mount;

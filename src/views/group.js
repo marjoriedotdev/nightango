@@ -55,17 +55,18 @@ function GroupView(p) {
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m.author, mode.m.text) : null;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
-  // Style compared as text: update clones the whole state, so the object changes on every update.
   var measured = useMemo(function () {
     return LIVE ? liveBridge.measure(p.gid, typed, { replyId: replyId, editId: editId, quote: quoted, style: s.ownStyle }) : typed.length;
-  }, [p.gid, typed, replyId, editId, quoted, JSON.stringify(s.ownStyle)]);
+  }, [p.gid, typed, replyId, editId, quoted, s.ownStyle]);
+  // Same functions for every render: the message rows render again only when their message or its context changes.
+  var calls = useLatestCalls({ reply: cm.enter('reply'), quote: cm.enter('quote'), edit: edit, mention: mention, jump: jumpTo });
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
   var rights = groupRights(g, me);
   var canClose = rights.closeGroup, canBroadcast = rights.broadcast;
-  var online = LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length;
-  var ann = g.settings.announcement;
+  var online = (LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length).toLocaleString('en-US');
+  var ann = g.settings.announcement, annText = LIVE ? ann.displayText : ann.text;
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
   // The sending channel is never hidden, even if it stays in the stored list.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
@@ -79,7 +80,7 @@ function GroupView(p) {
     media.onKeyDown(e);
     if (!e.defaultPrevented) mentions.onKeyDown(e);
   }
-  var closeMode = cm.close, reply = cm.enter('reply'), quote = cm.enter('quote');
+  var closeMode = cm.close;
   function edit(m) { cm.edit(m, m.editCount || 0); }
   function send(text) {
     if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
@@ -102,7 +103,7 @@ function GroupView(p) {
     log.jumpTo(o.id);
   }
 
-  var items = [], prev = null, lastDay = null, marker = false;
+  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g);
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
@@ -120,8 +121,13 @@ function GroupView(p) {
         prev = null; continue;
       }
     }
-    var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted);
-    items.push(h(MessageRow, { key: m.id, m: m, g: g, continued: cont, highlight: log.targetId === m.id, onReply: reply, onQuote: quote, onEdit: edit, onMention: mention, onJump: jumpTo }));
+    var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted), a = userOf(s, m.author);
+    items.push(h(MessageRow, {
+      key: m.id, m: m, gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg,
+      role: roleOf(g, m.author), staff: staff, canBan: canBanMember(g, me, m.author), seeIps: !!rights.seeIps,
+      original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, highlight: log.targetId === m.id,
+      onReply: calls.reply, onQuote: calls.quote, onEdit: calls.edit, onMention: calls.mention, onJump: calls.jump
+    }));
     prev = m;
   }
   var older = !LIVE || q ? null
@@ -130,6 +136,9 @@ function GroupView(p) {
     : g.historyCapped ? null
     : { status: 'more', loading: g.loadingMore, ready: g.inited && !g.loadingMore && g.conn === 'open', load: function () { app.actions.loadMore(g.id); } };
   if (q && !items.length) items.push(h('div', { key: 'none', className: 'empty' }, h('h2', null, 'No messages match'), h('p', null, 'Search looks at loaded messages in #' + g.id + '.')));
+  else if (!q && !older && !items.length) items.push(h('div', { key: 'none', className: 'empty' },
+    h('h2', null, count ? 'No messages to show' : 'No messages yet'),
+    h('p', null, count ? 'Your settings hide every loaded message in #' + g.id + '.' : 'Messages sent in #' + g.id + ' appear here.')));
 
   var composer;
   if (g.closed) {
@@ -169,9 +178,9 @@ function GroupView(p) {
       h('header', { className: 'topbar' },
         h(MobileNavButton, null),
         h('h1', null, g.id),
-        h('span', { className: 'vsep' }),
-        h('p', { className: 'topic' }, g.topic),
-        h('span', { className: 'grow only-mobile' }),
+        g.topic ? h(Frag, null, h('span', { className: 'vsep' }), h('p', { className: 'topic' }, g.topic)) : null,
+        // The topic pushes the buttons to the right on desktop: without one, this spacer does it.
+        h('span', { className: g.topic ? 'grow only-mobile' : 'grow' }),
         // On mobile only the number stays visible: the accessible name keeps "online".
         h('button', { type: 'button', className: 'pillbtn', 'aria-label': waitingCount ? undefined : online + ' online', 'aria-pressed': column.pressed == null ? undefined : String(column.pressed), onClick: column.toggle },
           h(T.Icon, { name: 'users', size: 16 }), waitingCount ? 'Members' : online, waitingCount ? null : h('span', { className: 'hide-mobile' }, ' online')),
@@ -188,12 +197,13 @@ function GroupView(p) {
         })),
       prefs.announcements && ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
         h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } },
-          LIVE ? ann.displayText : ann.text, LIVE && ann.embeds.length ? h(MessageEmbeds, { embeds: ann.embeds }) : null)) : null,
+          // The text as key: a new announcement shows collapsed.
+          h(AnnouncementText, { key: annText, text: annText }), LIVE && ann.embeds.length ? h(MessageEmbeds, { embeds: ann.embeds }) : null)) : null,
       search != null ? h('div', { className: 'searchbar' },
         h('label', { htmlFor: 'gsearch', className: 'tc-sr' }, 'Search messages'),
         h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
         h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
-      h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: count + ':' + !!search, newBelow: 'notify', older: older }),
+      h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
     column.open ? h(MembersPanel, { g: g }) : null,
@@ -286,6 +296,66 @@ function useMentionCompletion(g, inputRef, value, setValue) {
     onBlur: function (e) { if (e.target === inputRef.current) setCaretAt(null); },
     panel: h(Frag, null, panel, h('p', { className: 'tc-sr', 'aria-live': 'polite' }, said))
   };
+}
+
+/**
+ * Returns where a line of a wrapped text starts.
+ * @param {Element} el Element that holds the text.
+ * @param {number} n Line, from 1.
+ * @returns {number} Offset of the first character of the line in the text, or the text length when the text has fewer lines.
+ */
+function lineStart(el, n) {
+  var walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), range = document.createRange();
+  var at = 0, line = 0, bottom = -Infinity, node, i, r;
+  while ((node = walk.nextNode())) {
+    for (i = 0; i < node.length; i++) {
+      range.setStart(node, i); range.setEnd(node, i + 1);
+      r = range.getClientRects()[0];
+      // By the middle of the character: a fallback font can draw a box taller than the line.
+      if (r && (r.top + r.bottom) / 2 > bottom) {
+        if (++line === n) return at + i;
+        bottom = r.bottom;
+      }
+    }
+    at += node.length;
+  }
+  return at;
+}
+
+/**
+ * Shows the text of a group announcement cut to three lines with a button that shows the rest only when it does not fit.
+ * @param {{text: string}} p Shown text of the announcement.
+ */
+function AnnouncementText(p) {
+  var ref = useRef(null), moreRef = useRef(null), id = React.useId();
+  var open = useState(false), expanded = open[0], setExpanded = open[1];
+  var size = useState(false), tall = size[0], setTall = size[1];
+  var cut = useState(p.text.length), shown = cut[0], setShown = cut[1];
+  // Measured only while collapsed: expanded, the text always fits.
+  useLayoutEffect(function () {
+    if (expanded) return;
+    var el = ref.current;
+    // scrollHeight keeps the natural height under the clamp. Half a line of slack: a line in a fallback font can be a little taller.
+    function measure() {
+      var folds = el.scrollHeight > 3.5 * parseFloat(getComputedStyle(el).lineHeight);
+      // The button leaves with the overflow: focus moves to the text rather than falling back to the page.
+      if (!folds && moreRef.current && moreRef.current === el.getRootNode().activeElement) el.focus();
+      setTall(folds);
+      setShown(folds ? lineStart(el, 4) : p.text.length);
+    }
+    var ro = new ResizeObserver(measure);
+    ro.observe(el);
+    measure();
+    return function () { ro.disconnect(); };
+  }, [expanded]);
+  var folded = tall && !expanded;
+  return h(Frag, null,
+    // Clamped only when the text needs more than three lines: overflow:hidden cuts the stacked marks of Vietnamese and Thai.
+    h('span', { id: id, ref: ref, tabIndex: -1, className: cx('ann-text', folded && 'ann-clamp') },
+      folded ? p.text.slice(0, shown) : p.text,
+      // Transparent as well as clipped: a hidden line still draws the marks it stacks above its line box, inside the clip.
+      folded ? h('span', { className: 'ann-rest' }, p.text.slice(shown)) : null),
+    expanded || tall ? h('button', { ref: moreRef, type: 'button', className: 'linkbtn ann-more', 'aria-expanded': String(expanded), 'aria-controls': id, onClick: function () { setExpanded(!expanded); } }, expanded ? 'Show less' : 'Show more') : null);
 }
 
 /**

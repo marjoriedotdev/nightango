@@ -2,7 +2,7 @@ function GSAnnouncementLive(p) {
   var a = p.draft.announcement, loaded = !!p.g.live.annc, owner = p.myRole === 'owner';
   var canEdit = loaded && (owner || p.perms.editAnnouncement), canBroadcast = owner || p.perms.editRestrictions;
   function set(k, v) { p.edit(function (d) { d.announcement[k] = v; if (k === 'enabled' && v && !d.announcement.interval) d.announcement.interval = 15; }); }
-  var options = withCurrent([[15, '15 minutes'], [30, '30 minutes'], [60, '1 hour']], a.interval || null, function (v) { return v + ' minutes'; });
+  var options = withCurrent([[15, '15 minutes'], [30, '30 minutes'], [60, '1 hour']], a.interval || null, function (v) { return plural(v, 'minute', 'minutes'); });
   return h(Page, { title: 'Announcement', lede: 'Chatango posts the announcement in the chat at a regular interval.' },
     loaded ? null : h(T.Banner, { icon: 'info' }, 'Loading the announcement from Chatango.'),
     h(T.SettingsSection, null,
@@ -17,7 +17,7 @@ function GSAnnouncementLive(p) {
 function GSAutoModLive(p) {
   var am = p.draft.automod, owner = p.myRole === 'owner';
   var canNlp = owner || p.perms.automod, canBw = owner || p.perms.bannedWords, canRes = owner || p.perms.editRestrictions;
-  var slowOptions = withCurrent([[0, 'Off'], [5, '5 seconds'], [10, '10 seconds'], [30, '30 seconds'], [60, '1 minute']], am.slowMode, function (v) { return v + ' seconds'; });
+  var slowOptions = withCurrent([[0, 'Off'], [5, '5 seconds'], [10, '10 seconds'], [30, '30 seconds'], [60, '1 minute']], am.slowMode, function (v) { return plural(v, 'second', 'seconds'); });
   return h(Page, { title: 'AutoMod', lede: 'Filters Chatango applies before messages reach #' + p.g.id + '. Staff with the bypass permission are not filtered.' },
     h(AutoModFilters, { filters: am.filters, disabled: !canNlp, onChange: function (k, v) { p.edit(function (d) { d.automod.filters[k] = v; }); } }),
     h(T.SettingsSection, { title: 'Who can post' },
@@ -109,7 +109,7 @@ function GSBansLive(p) {
   function unbanButton(x) { return h(T.Button, { size: 'sm', onClick: function () { app.actions.unbanEntry(g.id, x); } }, 'Unban'); }
   return h(Page, {
     title: 'Bans', lede: 'Banned members cannot post. Chatango bans the account and the IP of one of their messages.',
-    aside: g.bans.length && (owner || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: g.live.banPage.more ? 'Everyone banned in #' + g.id + ' will be able to post again.' : g.bans.length + ' members will be able to post in #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
+    aside: g.bans.length && (owner || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: g.live.banPage.more ? 'Everyone banned in #' + g.id + ' will be able to post again.' : plural(g.bans.length, 'member', 'members') + ' will be able to post in #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
   },
     h(T.SettingsSection, { title: 'Ban someone', padded: true },
       h(T.TextField, {

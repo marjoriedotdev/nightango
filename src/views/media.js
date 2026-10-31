@@ -28,12 +28,14 @@ function MediaThumb(p) {
  * @param {{url: string, saved: boolean}} p Image address and whether it is in the media library.
  */
 function MediaStarButton(p) {
-  var app = useApp();
+  var app = useAppApi();
   return h(T.IconButton, {
     icon: 'star', label: p.saved ? 'Remove from media' : 'Add to media', size: 28, iconSize: 15, className: cx('media-star', p.saved && 'media-star-saved'),
     onClick: function () { app.actions.toggleMedia(p.url, p.saved); }
   });
 }
+
+function mediaRevOf(s) { return s.mediaRev; }
 
 /**
  * Star of a message image, shown once the media library says whether it holds the image.
@@ -41,7 +43,7 @@ function MediaStarButton(p) {
  * @param {{url: string}} p Image address.
  */
 function MediaStar(p) {
-  var app = useApp(), rev = app.state.mediaRev;
+  var app = useAppApi(), rev = useStatePart(mediaRevOf);
   var st = useState(null), saved = st[0], setSaved = st[1];
   useEffect(function () {
     var current = true;

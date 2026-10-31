@@ -20,7 +20,8 @@ function columnHeader(title) {
   return h('header', { className: 'topbar col-head' }, h('h2', { className: 'grow' }, title));
 }
 
-function Shell() {
+// Memoized: Root renders again for its toasts and dialogs, which leave the shell alone.
+var Shell = React.memo(function Shell() {
   var app = useApp(), r = app.state.route, main;
   if (r.view === 'settings') return h(SettingsView, { page: r.page });
   if (r.view === 'gsettings') return h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
@@ -33,7 +34,7 @@ function Shell() {
     h(Sidebar, null),
     h('div', { className: 'scrim', onClick: app.ui.closeNav }),
     main);
-}
+});
 
 // Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames).
 function BrandMark() {
@@ -88,7 +89,7 @@ function Sidebar() {
     h('div', { className: 'navlist' },
       h(T.NavItem, { icon: 'compass', label: 'Discover groups', active: r.view === 'discover', onClick: function () { app.nav({ view: 'discover' }); } }),
       h(T.NavItem, { icon: 'message', label: 'Private messages', active: r.view === 'dm' && !r.tab, count: unreadDmCount(s), onClick: function () { app.nav({ view: 'dm', id: null }); } }),
-      h(T.NavItem, { icon: 'users', label: 'Friends', active: r.view === 'dm' && r.tab === 'friends', trailing: onlineFriends ? h('span', { className: 'tc-msg-time' }, onlineFriends + ' online') : null, onClick: function () { app.nav({ view: 'dm', id: null, tab: 'friends' }); } }),
+      h(T.NavItem, { icon: 'users', label: 'Friends', active: r.view === 'dm' && r.tab === 'friends', trailing: onlineFriends ? h('span', { className: 'tc-msg-time' }, onlineFriends.toLocaleString('en-US') + ' online') : null, onClick: function () { app.nav({ view: 'dm', id: null, tab: 'friends' }); } }),
       h(T.NavItem, { icon: 'search', label: 'Meet people', active: r.view === 'dm' && r.tab === 'meet', onClick: function () { app.nav({ view: 'dm', id: null, tab: 'meet' }); } }),
       h(T.NavItem, { icon: 'at-sign', label: 'Mentions', active: r.view === 'mentions', onClick: function () { app.nav({ view: 'mentions' }); } }),
       favs.length ? section('favorites', 'Favorites', favs.map(groupItem)) : null,

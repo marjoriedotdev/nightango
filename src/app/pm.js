@@ -89,7 +89,9 @@ function applyPmEdit(o, x) {
  */
 function addSentPm(d, name, x) {
   var c = pmConversation(d, name), o = pmEditTarget(c, x);
-  if (o) applyPmEdit(o, x); else c.messages.push(pmMessage(x));
+  if (o) { applyPmEdit(o, x); return; }
+  c.messages.push(pmMessage(x));
+  trimThread(c);
 }
 /**
  * Receives a PM in its conversation: an edit applies to its original and a new message reopens the conversation.
@@ -103,6 +105,7 @@ function receivePm(d, x) {
   c.closed = false;
   c.messages.push(pmMessage(x));
   c.messages.sort(function (a, b) { return a.ts - b.ts; });
+  trimThread(c);
   return false;
 }
 /**
@@ -123,4 +126,66 @@ function mergePmHistory(c, list, onEntry) {
     c.messages.push(m);
   });
   c.messages.sort(function (a, b) { return a.ts - b.ts; });
+  trimThread(c);
+}
+
+// -- Private messages in live -------------------------------------------------
+// Chatango pushes no presence for a correspondent who is neither a friend nor connected since the last private connection.
+var PRESENCE_REFRESH = 5 * MIN;
+// Names per presence request, the page size of BetterChatango's Meet people.
+var PRESENCE_MAX = 40;
+/**
+ * Merges the BetterChatango private history into the conversations and keeps the presence of their correspondents up to date.
+ * @param {{state: Object, stateRef: Object, update: Function}} store Application state, its ref and its update.
+ * @param {Object} localRef Ref to the account data kept in this browser.
+ * @param {Object} pmArchive Ref to the PM archive.
+ * @returns {{loadHistory: function(boolean=), refreshPresence: function(boolean)}} Private history loading and presence refresh.
+ */
+function useLivePms(store, localRef, pmArchive) {
+  var state = store.state, stateRef = store.stateRef, update = store.update;
+  var presenceAt = useRef(0);
+  /**
+   * Merges the BetterChatango private history into the conversations on each OK and after an import without duplicates.
+   * @param {boolean=} imported True after an import, which may have added entries older than the loaded ones.
+   */
+  function loadPmHistory(imported) {
+    liveBridge.pmHistory(100).then(function (hist) {
+      var names = Object.keys(hist).filter(function (t) { return t !== stateRef.current.me; });
+      update(function (d) {
+        if (!d.auth.loggedIn) return;
+        d.pmLoaded = true;
+        d.pmHistoryRev++;
+        names.forEach(function (t) {
+          ensureLiveUser(d, t, localRef.current);
+          var c = pmConversation(d, t, { closed: localRef.current.hidden.indexOf(t) >= 0 });
+          // Set on the first OK: on a reconnection, the last 100 entries say nothing about the older pages already loaded. An import, however, can add some.
+          if (c.olderMore == null || (imported && hist[t].more)) c.olderMore = hist[t].more;
+          mergePmHistory(c, hist[t].list, pmAuthor(d, localRef.current));
+        });
+      });
+      // The conversation open in front of the user becomes read, the others take the unreads from the archive.
+      names.forEach(function (t) { if (isDmInView(stateRef.current, t)) readPm(pmArchive.current, update, t); });
+      syncPmUnread(pmArchive.current, update, names.filter(function (t) { return !isDmInView(stateRef.current, t); }));
+    });
+  }
+  /**
+   * Asks again for the presence of the listed correspondents who are not friends.
+   * @param {boolean} ifStale Only when the last request is older than PRESENCE_REFRESH.
+   */
+  function refreshPmPresence(ifStale) {
+    var s0 = stateRef.current;
+    // Before the friend list, a friend would get the approximate last online time of presence instead of the exact one of wl.
+    if (!s0.pmLoaded || !s0.friendsLoaded || (ifStale && Date.now() - presenceAt.current < PRESENCE_REFRESH)) return;
+    // The shown conversation follows its presence through connect, whose last online time is exact.
+    var shown = s0.route.view === 'dm' ? s0.route.id : null;
+    var names = listedDms(s0).filter(function (n) { return n !== s0.me && n !== shown && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
+    if (names.length && liveBridge.refreshPresence(names)) presenceAt.current = Date.now();
+  }
+  useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);
+  useEffect(function () {
+    if (!LIVE || !state.auth.loggedIn) return;
+    var timer = setInterval(function () { if (document.visibilityState === 'visible') refreshPmPresence(true); }, MIN);
+    return function () { clearInterval(timer); };
+  }, [state.auth.loggedIn]);
+  return { loadHistory: loadPmHistory, refreshPresence: refreshPmPresence };
 }

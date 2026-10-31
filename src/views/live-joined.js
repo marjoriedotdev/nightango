@@ -4,7 +4,7 @@ function GroupSection(p) {
     h('h2', { id: p.id, className: 'tc-section-title' }, p.title),
     p.names.length ? h('div', { className: 'cards small' }, p.names.map(function (k) {
       return h('article', { key: k, className: 'card row' }, h(T.Avatar, { name: k, square: true, size: 36 }),
-        h('span', { className: 'card-title' }, h('strong', null, k), h('span', null, s.groups[k].title)), h(GroupJoinButton, { group: s.groups[k] }));
+        h('span', { className: 'card-title' }, h('strong', { title: k }, k), h('span', null, s.groups[k].title)), h(GroupJoinButton, { group: s.groups[k] }));
     })) : h('p', { className: 'muted', style: { margin: 0 } }, p.empty));
 }
 function JoinedGroups() {

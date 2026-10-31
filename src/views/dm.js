@@ -17,6 +17,8 @@ function DMView(p) {
   var filters = [['all', 'All'], ['unread', 'Unread']];
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
   var term = section === 'chats' ? q.trim() : '', found = useDmSearch(term);
+  var scrollRef = useRef(null), loading = LIVE && !s.pmLoaded;
+  var batch = useRowBatches(scrollRef, section === 'chats' && !loading ? shown : [], section + ':' + tab + ':' + q);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
     h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
@@ -36,9 +38,10 @@ function DMView(p) {
         filters.map(function (t) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
-    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
-      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
-        shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
+    h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
+      loading ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
+        shown.length ? shown.slice(0, batch.limit).map(function (n) { return h(ChatRow, { key: n, name: n, user: userOf(s, n), convo: s.dms[n], me: s.me, active: n === id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
+        batch.sentinel,
         term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
   var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column, seek: p.seek })
@@ -108,7 +111,15 @@ function useDmSearch(term) {
 function hitExcerpt(text, term) {
   var at = text.toLowerCase().indexOf(term.toLowerCase()), end = at + term.length, start = Math.max(0, at - 30), space = text.indexOf(' ', start);
   if (start && space >= 0 && space < at) start = space + 1;
-  return h(Frag, null, (start ? '…' : '') + text.slice(start, at), h('mark', null, text.slice(at, end)), text.slice(end));
+  return h(Frag, null, start ? '…' : '', bidiText(text.slice(start), [at - start, end - start]));
+}
+/**
+ * "You:" label before the user's own message in a preview.
+ * @param {boolean} mine The user sent the message.
+ */
+function ownLabel(mine) {
+  // Isolated: dir="auto" on the preview reads the direction of the message, not of this label.
+  return mine ? h(Frag, null, h('bdi', null, 'You:'), ' ') : null;
 }
 /**
  * Messages section of the Chats search under the conversations.
@@ -122,7 +133,7 @@ function DmSearchHits(p) {
   else if (!found.list.length) body = h('p', { className: 'pal-empty' }, 'No message matches.');
   else body = h(Frag, null, found.list.map(function (hit) {
     return h(MessageEntry, {
-      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, hit.from === me ? 'You: ' : '', hitExcerpt(hit.text, found.query)),
+      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, ownLabel(hit.from === me), hitExcerpt(hit.text, found.query)),
       onClick: function () { app.nav({ view: 'dm', id: hit.target, seek: hit }); }
     });
   }), found.more ? h('p', { className: 'pal-empty' }, 'Showing the ' + DM_SEARCH_MAX + ' most recent matches. Refine your search to see others.') : null);
@@ -158,6 +169,7 @@ function DmThread(p) {
     var m = dmHitMessage(convo, seek);
     if (m) log.jumpTo(m.id);
     else if (convo.loadingOlder) return;
+    else if (convo.historyCapped) app.ui.toast('This message is still saved in this browser, but a conversation shows only its last ' + THREAD_MAX + ' messages.');
     else if (convo.olderMore && !failed) { asked.current = true; app.actions.loadOlderDm(id); return; }
     // Failed read: loadOlderDm already announced it.
     else if (!failed) app.ui.toast('This message is no longer saved in this browser.');
@@ -166,19 +178,21 @@ function DmThread(p) {
   }, [p.seek, len, convo.loadingOlder]);
 
   var u = userOf(s, id);
-  var rows = [], prev = null, lastDay = null;
+  var calls = useLatestCalls({ jump: function (o) { log.jumpTo(o.id); }, reply: cm.enter('reply'), quote: cm.enter('quote'), edit: function (x) { cm.edit(x, (x.editKeys || []).length); } });
+  var rows = [], prev = null, lastDay = null, byKey = Object.create(null);
+  convo.messages.forEach(function (m) { if (m.key && !byKey[m.key]) byKey[m.key] = m; });
   convo.messages.forEach(function (m) {
-    var dk = dayKey(m.ts);
+    var dk = dayKey(m.ts), a = userOf(s, m.from);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    var original = m.replyTo ? convo.messages.find(function (x) { return x.key === m.replyTo.key; }) : null;
+    var original = m.replyTo ? byKey[m.replyTo.key] || null : null;
     rows.push(h(DmMessageRow, {
-      key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
-      original: original, onJump: function (o) { log.jumpTo(o.id); }, onReply: u.blocked ? null : cm.enter('reply'), onQuote: u.blocked ? null : cm.enter('quote'),
-      onEdit: u.blocked ? null : function (x) { cm.edit(x, (x.editKeys || []).length); }
+      key: m.id, m: m, peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled,
+      continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
+      original: original, onJump: calls.jump, onReply: u.blocked ? null : calls.reply, onQuote: u.blocked ? null : calls.quote, onEdit: u.blocked ? null : calls.edit
     }));
     prev = m;
   });
-  var older = !LIVE || !s.pmLoaded ? null
+  var older = !LIVE || !s.pmLoaded || convo.historyCapped ? null
     : !convo.olderMore ? { status: 'start', text: 'This is the start of the messages saved in this browser.' }
     : {
       status: 'more', loading: convo.loadingOlder, ready: !convo.loadingOlder && !convo.olderFailed, load: function () { app.actions.loadOlderDm(id); },
@@ -193,31 +207,34 @@ function DmThread(p) {
       h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
       h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
       h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
-      h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(s, id)].filter(Boolean).join(' · ')),
+      h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
         label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
       })),
-    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: len, newBelow: 'follow', older: older }),
+    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom));
 }
 
 /**
- * Private message row with its Reply button and its action menu.
+ * Private message row with its Reply button and its action menu, rendered again only when its props change.
  * A message without a PM key, sent by the official Chatango client, has neither Reply nor Edit: they could not point to it.
- * @param {{m: Object, peer: string, continued: boolean, highlight: boolean, original: ?Object, onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message, conversation correspondent, follow-up of the previous message from the same author, highlight, loaded original of a reply, jump to it, and reply to, quote and edit the message (null when sending is not possible).
+ * @param {{m: Object, peer: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, continued: boolean, highlight: boolean, original: ?Object,
+ *   onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message, conversation correspondent, signed-in user, preferences, resolved theme,
+ *   author's style and hidden style, follow-up of the previous message from the same author, highlight, loaded original of a reply, jump to it,
+ *   and reply to, quote and edit the message (null when sending is not possible).
  */
-function DmMessageRow(p) {
-  var app = useApp(), s = app.state, m = p.m;
+var DmMessageRow = React.memo(function DmMessageRow(p) {
+  var app = useAppApi(), m = p.m, me = p.me, prefs = p.prefs;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
-  var ms = memberStyles(userOf(s, m.from), s.prefs.styles, app.theme, false);
+  var ms = memberStyles({ style: p.style, unstyled: p.unstyled }, prefs.styles, p.theme, false);
   // A sent PM gets its archive key only at the next OK: its remove entry appears only after that.
   var canRemove = !LIVE || !!m.archiveTs;
-  var canEdit = !!p.onEdit && m.from === s.me && !!m.key, canQuote = !!p.onQuote && !!m.text && !!mentionHandle(m.from);
+  var canEdit = !!p.onEdit && m.from === me && !!m.key, canQuote = !!p.onQuote && !!m.text && !!mentionHandle(m.from);
   var items = [canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
     canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
-    copyTextItem(app, m), m.from !== s.me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
+    copyTextItem(app, m), m.from !== me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
     canRemove ? { divider: true } : null,
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
       app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(p.peer, LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
@@ -229,11 +246,11 @@ function DmMessageRow(p) {
     p.onReply && m.key ? h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: function () { p.onReply(m); } }) : null,
     moreActionsButton(items, setMenuOpen));
   return h(T.Message, {
-    compact: s.prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, s.prefs.h24),
+    compact: prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, prefs.h24),
     avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row, reply: reply,
     actions: actions, msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open')
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
-}
+});
 
 /**
  * Private conversation composer with its reply, edit or quote, emoticon and media picker, :name completion and file upload.
@@ -255,7 +272,7 @@ function DmComposer(p) {
       if (runCommand(app, text, null)) return;
       var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(mode.m.from, mode.m.text) : null };
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
-      app.actions.sendDm(id, text, opts);
+      if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
       p.onCancelMode();
     }, beforeSend: h(MessageStyleButton, null)
   }), emoji.picker, attach.input);
@@ -281,11 +298,9 @@ function personStatus(s, name, gid) {
 }
 /**
  * Writes a person's ASL.
- * @param {Object} s Application state.
- * @param {string} name Member name.
+ * @param {Object} u Member in the state.
  */
-function personAsl(s, name) {
-  var u = userOf(s, name);
+function personAsl(u) {
   return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
 /**
@@ -299,39 +314,49 @@ function presenceSince(u) {
   return null;
 }
 /**
- * Idle or offline duration of a friend, refreshed every minute.
+ * Idle or offline duration of a friend, refreshed every minute by the clock all relative times share.
  * @param {{user: Object}} p Member in the state.
  */
 function PresenceTime(p) {
-  var tick = useState(0)[1];
-  useEffect(function () {
-    var timer = setInterval(function () { tick(function (n) { return n + 1; }); }, MIN);
-    return function () { clearInterval(timer); };
-  }, []);
+  useMinute();
   var x = presenceSince(p.user);
   return x ? h('time', { className: 'tc-msg-time conv-time', dateTime: new Date(x.ts).toISOString(), title: x.title + new Date(x.ts).toLocaleString('en-GB') }, x.text) : null;
 }
 /**
  * Info line of a person.
- * @param {Object} s Application state.
  * @param {string} n Member name.
+ * @param {Object} u Member in the state.
  */
-function personMetaLine(s, n) {
-  return h('span', { className: 'conv-meta' }, personAsl(s, n), isProfilePending(n, userOf(s, n)) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
+function personMetaLine(n, u) {
+  return h('span', { className: 'conv-meta' }, personAsl(u), isProfilePending(n, u) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
 }
+/**
+ * Loads the mini profiles of a list of people and keeps them in the state while the list shows them.
+ * @param {string[]} names People listed.
+ */
 function useProfiles(names) {
   var app = useApp();
+  useShownUsers(names);
   useEffect(function () { app.actions.loadProfiles(names); }, [names.join(',')]);
 }
-function personRow(s, n, onClick, current) {
-  var u = userOf(s, n), c = s.dms[n], last = c && c.messages[c.messages.length - 1];
-  return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': current === n ? 'page' : undefined, onClick: onClick },
+/**
+ * Row of a person in the Chats and Friends lists.
+ * @param {string} n Member name.
+ * @param {Object} u Member in the state.
+ * @param {?Object} c Conversation with the member, if any.
+ * @param {string} me Signed-in user.
+ * @param {Function} onClick Opens the conversation.
+ * @param {boolean} active The conversation is open.
+ */
+function personRow(n, u, c, me, onClick, active) {
+  var last = c && c.messages[c.messages.length - 1];
+  return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': active ? 'page' : undefined, onClick: onClick },
     h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
       h('span', { className: 'conv-name' }, n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
-      personMetaLine(s, n),
-      c ? h('span', { className: 'conv-prev' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet') : null,
+      personMetaLine(n, u),
+      c ? h('span', { className: 'conv-prev', dir: 'auto' }, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
 }
 
@@ -376,7 +401,7 @@ var SWIPE_REVEAL = 144;
  * @param {{name: string, actions: Array, children: *}} p Row member, row actions and main button.
  */
 function SwipeRow(p) {
-  var app = useApp(), n = p.name, actions = p.actions;
+  var app = useAppApi(), n = p.name, actions = p.actions;
   var m = useState(null), menu = m[0], setMenu = m[1];
   var w = useState(null), swipe = w[0], setSwipe = w[1];
   var rowRef = useRef(null), drag = useRef(null), swallow = useRef(false);
@@ -438,13 +463,14 @@ function SwipeRow(p) {
 }
 
 /**
- * Chats list row with its conversation actions.
- * @param {{name: string, current: string}} p Conversation member and open conversation.
+ * Chats list row with its conversation actions, rendered again only when its props change.
+ * @param {{name: string, user: Object, convo: Object, me: string, active: boolean}} p Conversation member, the member and the conversation in the state,
+ *   signed-in user, and whether the conversation is open.
  */
-function ChatRow(p) {
-  var app = useApp(), n = p.name;
-  return h(SwipeRow, { name: n, actions: convActions(app, n) }, personRow(app.state, n, function () { app.nav({ view: 'dm', id: n }); }, p.current));
-}
+var ChatRow = React.memo(function ChatRow(p) {
+  var app = useAppApi(), n = p.name;
+  return h(SwipeRow, { name: n, actions: convActions(app, n) }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active));
+});
 
 function FriendsList(p) {
   var app = useApp(), s = app.state;
@@ -460,7 +486,7 @@ function FriendsList(p) {
   useProfiles(friends);
   function section(label, names) {
     return names.length ? h(Frag, null, h('h3', { className: 'mlabel' }, label + ' · ' + names.length),
-      names.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(s, n, function () { app.actions.openDm(n, 'friends'); }, p.current)); })) : null;
+      names.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(n, s.users[n], s.dms[n], s.me, function () { app.actions.openDm(n, 'friends'); }, p.current === n)); })) : null;
   }
   function add(e) {
     e.preventDefault();

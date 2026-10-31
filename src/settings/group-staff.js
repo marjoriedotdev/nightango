@@ -66,7 +66,7 @@ function GSMembers(p) {
   var a = useState(''), q = a[0], setQ = a[1];
   var list = g.members.filter(function (n) { return !q || n.indexOf(q.toLowerCase()) >= 0; });
   var canMods = p.perms.manageMods;
-  return h(Page, { title: 'Members', lede: g.members.length + ' members and ' + guestsOf(g).count + ' guests right now.' },
+  return h(Page, { title: 'Members', lede: plural(g.members.length, 'member', 'members') + ' and ' + plural(guestsOf(g).count, 'guest', 'guests') + ' right now.' },
     h(T.TextField, { id: 'mem-q', label: 'Search members', type: 'search', value: q, onChange: function (e) { setQ(e.target.value); } }),
     h(T.SettingsSection, null, list.length ? list.map(function (n, i) {
       var r = p.draft.staff[n], isMe = n === s.me, status = isMe ? s.meStatus : userOf(s, n).status;
