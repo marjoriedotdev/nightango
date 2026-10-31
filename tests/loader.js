@@ -69,8 +69,8 @@ async function suite(userscript) {
   step('no overlay before BetterChatango is ready', !a.d.getElementById('torch-skin'));
   step('React loaded with integrity check', [...a.d.querySelectorAll('script[src*="cdnjs"]')].every(s => s.integrity.indexOf('sha384-') === 0 && s.crossOrigin === 'anonymous'));
   await deliverReact(a.w);
-  // BetterChatango replaces the whole document with its client, sign-in screen included.
-  a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div></body>';
+  // BetterChatango replaces the whole document with its client, sign-in screen and PM tab included.
+  a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div><span data-sidebar="private"></span></body>';
   await wait(20);
   const skin = a.d.getElementById('torch-skin-login');
   step('sign-in screen skinned in the new document, without loading anything',

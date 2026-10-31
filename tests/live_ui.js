@@ -20,6 +20,7 @@ const dom = new JSDOM(`<!doctype html><html><head></head><body>
     <span class="text-field font-face"><select class="font-face text-input">${Array.from({ length: 9 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select></span>
     <input type="checkbox" name="stylesOn">
   </form></div>
+  <span data-sidebar="private"></span>
   <div id="app"></div></body></html>`, { runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: vc, url: 'https://st.chatango.com/' });
 const w = dom.window, d = w.document;
 w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
@@ -117,7 +118,7 @@ const C = {
   // connect: BetterChatango opens its own PM screen.
   event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['betterChatangoPmScreen']); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
-  settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
+  settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] }, private_messages: { connect_start: true } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
   emit(ev, data) { d.dispatchEvent(new w.CustomEvent('chatango_' + ev, { detail: data })); },
   // Like BetterChatango, a sent PM is archived under client.private.focus, and not at all while it is false (inject.js:4633-4645).
@@ -176,6 +177,8 @@ const CH = {
   subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css', msgbg: (n, ext) => 'https://ust.chatango.com/' + n + '/msgbg.' + ext }, error: { creategroup: { groupexists: 'The group name is taken.' } }
 };
 const SB = { renderGroup(dt) { calls.push(['renderGroup', dt.group]); } };
+// Like BetterChatango, its PM tab opens its own PM screen (inject.js:10601).
+d.querySelector('[data-sidebar="private"]').onclick = () => { calls.push(['betterChatangoPmScreen']); };
 w.__betterChatangoRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'betterchatangoenv' } };
 const fetches = [];
 let searchHold = null;
@@ -289,6 +292,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const releaseAsks = fetches.filter(x => x.url === RELEASES_LATEST);
   step('newer release announced once at sign-in, without credentials', !!byText('.toast', 'Nightango 99.0.0 is available.') && releaseAsks.length === 1 && !releaseAsks[0].credentials, releaseAsks);
   step("BetterChatango's own oEmbed and message background requests muted", fetches.length === fetchesAtLogin, fetches.slice(fetchesAtLogin).map(x => x.url));
+  // Like BetterChatango 6 s after sign-in, with PMs at startup on (inject.js:1365-1369).
+  if (C.settings.privacy.private_messages.connect_start) d.querySelector('[data-sidebar="private"]').click();
+  const pmAtStartup = { screen: calls.filter(c => c[0] === 'betterChatangoPmScreen').length, setting: C.settings.privacy.private_messages.connect_start, stored: w.localStorage.getItem('settings') };
+  step("BetterChatango's PM screen stays closed after sign-in with PMs at startup on, and the setting keeps its value",
+    JSON.stringify(pmAtStartup) === JSON.stringify({ screen: 0, setting: true, stored: null }), pmAtStartup);
   SB.renderGroup({ group: 'test', header: 'Test' });
   g('ok', 'test', ['marjorie', '', '', '', '1700000000', '', 'alice,' + MOD + ';bob,' + (MOD | 2 | 16), String(64)]);
   await until(() => !!$('.log .tc-skeleton'));
