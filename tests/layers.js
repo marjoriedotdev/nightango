@@ -1,4 +1,4 @@
-// Layers of src/core/ui.js, mounted in a Shadow DOM as in live: focus given back by menus and toast delays.
+// Layers of src/core/ui.js, mounted in a Shadow DOM as in live: focus given back by menus, inert background of dialogs and toast delays.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { concatSources, layerSources } = require('../scripts/build.mjs');
@@ -22,8 +22,11 @@ const timers = new Map();
 w.Date.now = () => now;
 w.setTimeout = (fn, ms) => { timers.set(nextTimer, { at: now + (ms || 0), fn }); return nextTimer++; };
 w.clearTimeout = id => { timers.delete(id); };
+// Like a browser, an element under an inert ancestor takes no focus. jsdom ignores inert.
+const nativeFocus = w.HTMLElement.prototype.focus;
+w.HTMLElement.prototype.focus = function (o) { if (!this.closest('[inert]')) nativeFocus.call(this, o); };
 
-w.eval(concatSources(ROOT, layerSources('core')) + '; window.ui = { MenuButton: MenuButton, Toasts: Toasts };');
+w.eval(concatSources(ROOT, layerSources('core')) + '; window.ui = { MenuButton: MenuButton, Dialog: Dialog, Toasts: Toasts };');
 const ui = w.ui, R = w.React, h = R.createElement;
 
 // Like skin-page.js: #app in the shadow root of the host, the layer next to it.
@@ -38,12 +41,16 @@ w.__TORCH_MOUNT__ = mount;
 
 let api = null;
 function Harness() {
-  const [toasts, setToasts] = R.useState([]);
-  api = { setToasts };
+  const [outer, setOuter] = R.useState(false), [inner, setInner] = R.useState(false), [toasts, setToasts] = R.useState([]);
+  api = { setOuter, setInner, setToasts };
   return h(R.Fragment, null,
     h('p', { id: 'blank' }, 'Plain text'),
-    h(ui.MenuButton, { label: 'Message options', items: [{ label: 'Copy text', onSelect() {} }] }),
+    h(ui.MenuButton, { label: 'Message options', items: [{ label: 'Copy text', onSelect() {} }, { label: 'Open dialog', onSelect() { setOuter(true); } }] }),
     h('button', { type: 'button', id: 'behind' }, 'Behind'),
+    outer ? h(ui.Dialog, { title: 'Outer', onClose() { setOuter(false); } },
+      h('input', { id: 'outer-field' }),
+      h('button', { type: 'button', id: 'open-inner', onClick() { setInner(true); } }, 'Open inner')) : null,
+    inner ? h(ui.Dialog, { title: 'Inner', onClose() { setInner(false); } }, h('button', { type: 'button', id: 'inner-button' }, 'Inner button')) : null,
     h(ui.Toasts, { toasts, dismiss: id => setToasts(list => list.filter(t => t.id !== id)) }));
 }
 
@@ -88,6 +95,8 @@ function pressBlank(el) {
  */
 function hover(el, enter) { el.dispatchEvent(new w.MouseEvent(enter ? 'mouseover' : 'mouseout', { bubbles: true, composed: true, relatedTarget: enter ? null : d.body })); }
 const toast = txt => $$('.toast').find(t => t.textContent.includes(txt));
+const isInert = el => !!el && el.hasAttribute('inert');
+const overlayOf = title => { const dl = $$('.dialog').find(x => x.getAttribute('aria-label') === title); return dl && dl.closest('.overlay'); };
 async function openMenu() { click(trigger()); await flush(); }
 const log = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
@@ -107,6 +116,24 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   await openMenu();
   pressBlank($('#blank')); await advance(0);
   step('a click outside closes the menu and focuses its button', !$('.menu') && focused() === trigger(), { menu: !!$('.menu'), focused: label(focused()) });
+
+  /* Dialogs: inert background */
+  await openMenu();
+  click(menuItem('Open dialog')); await advance(0);
+  const one = { app: isInert(mount), outer: isInert(overlayOf('Outer')), focused: label(focused()) };
+  $('#open-inner').focus(); click($('#open-inner')); await advance(0);
+  const two = { app: isInert(mount), outer: isInert(overlayOf('Outer')), inner: isInert(overlayOf('Inner')), focused: label(focused()) };
+  key(focused(), 'Escape'); await advance(0);
+  const back = { app: isInert(mount), outer: isInert(overlayOf('Outer')), focused: label(focused()) };
+  step('a dialog makes the app inert, and the dialogs under the top one',
+    one.app && !one.outer && one.focused === 'outer-field' && two.app && two.outer && !two.inner && two.focused === 'inner-button' && back.app && !back.outer && back.focused === 'open-inner',
+    { one, two, back });
+  key(focused(), 'Escape'); await advance(0);
+  step('closing the last dialog frees the app and focuses the menu button again', !isInert(mount) && !$('.overlay') && focused() === trigger(), { app: isInert(mount), focused: label(focused()) });
+  api.setOuter(true); await flush();
+  $('#open-inner').focus(); click($('#open-inner')); await flush();
+  api.setOuter(false); api.setInner(false); await flush();
+  step('dialogs closed together free the app and focus what had the focus before them', !isInert(mount) && !$('.overlay') && focused() === trigger(), { app: isInert(mount), focused: label(focused()) });
 
   /* A toast with an action waits while it is hovered or focused */
   api.setToasts([{ id: 'a', text: 'alice was banned from #test.', action: { label: 'Undo', run() {} } }, { id: 'p', text: 'Message deleted.' }]);

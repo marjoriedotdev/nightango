@@ -87,6 +87,7 @@ function PhotoViewer(p) {
   useEffect(function () {
     var prev = ref.current.getRootNode().activeElement;
     ref.current.querySelector('button').focus();
+    openModal(ref);
     // Capture listener: Escape and Tab stop before the profile dialog open underneath.
     function onKey(e) {
       if (e.key !== 'Escape' && e.key !== 'Tab') return;
@@ -97,6 +98,7 @@ function PhotoViewer(p) {
     document.addEventListener('keydown', onKey, true);
     return function () {
       document.removeEventListener('keydown', onKey, true);
+      closeModal(ref);
       if (prev && prev.focus) prev.focus();
     };
   }, []);

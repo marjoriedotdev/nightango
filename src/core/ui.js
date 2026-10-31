@@ -4,9 +4,10 @@ function useApp() { return useContext(Ctx); }
 
 /* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
 var layerNode = null;
+function appMount() { return window.__TORCH_MOUNT__ || document.getElementById('app'); }
 function layerRoot() {
   if (layerNode && layerNode.isConnected) return layerNode;
-  var mountEl = window.__TORCH_MOUNT__ || document.getElementById('app');
+  var mountEl = appMount();
   layerNode = document.createElement('div');
   layerNode.id = 'layer';
   (mountEl && mountEl.parentNode ? mountEl.parentNode : document.body).appendChild(layerNode);
@@ -214,6 +215,27 @@ function SkeletonRows(p) {
 }
 
 var openDialogs = [];
+/**
+ * Makes the interface behind the top dialog inert so that Tab and screen readers stay in it.
+ * The app and the dialogs under the top one become inert. Menus and toasts, above the dialogs, stay reachable.
+ */
+function syncInert() {
+  // Dialogs that close in the same render have already lost their node: they no longer keep the app inert.
+  var layers = openDialogs.filter(function (r) { return r.current; }).map(function (r) { return r.current.closest('.overlay'); });
+  appMount().toggleAttribute('inert', layers.length > 0);
+  layers.forEach(function (el, i) { el.toggleAttribute('inert', i < layers.length - 1); });
+}
+/**
+ * Puts a modal layer on top of the open dialogs.
+ * @param {Object} ref Ref of the layer overlay or of an element inside it.
+ */
+function openModal(ref) { openDialogs.push(ref); syncInert(); }
+/**
+ * Takes a modal layer out of the open dialogs.
+ * It comes before the focus goes back to where it was, since an element in an inert app takes no focus.
+ * @param {Object} ref Ref given to openModal.
+ */
+function closeModal(ref) { openDialogs.splice(openDialogs.indexOf(ref), 1); syncInert(); }
 function Dialog(p) {
   var ref = useRef(null);
   useEffect(function () {
@@ -221,7 +243,7 @@ function Dialog(p) {
     var prev = rootNode.activeElement;
     var el = ref.current && ref.current.querySelector('[data-autofocus], input, textarea, select, button');
     if (el) el.focus();
-    openDialogs.push(ref);
+    openModal(ref);
     function onKey(e) {
       // Every dialog listens on document: only the top one reacts.
       if (openDialogs[openDialogs.length - 1] !== ref) return;
@@ -241,7 +263,7 @@ function Dialog(p) {
     document.addEventListener('keydown', onKey);
     if (blocking) document.addEventListener('keydown', onEscape, true);
     return function () {
-      openDialogs.splice(openDialogs.indexOf(ref), 1);
+      closeModal(ref);
       document.removeEventListener('keydown', onKey);
       if (blocking) document.removeEventListener('keydown', onEscape, true);
       if (prev && prev.focus) prev.focus();
