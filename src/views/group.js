@@ -65,7 +65,7 @@ function GroupView(p) {
   var rights = groupRights(g, me);
   var canClose = rights.closeGroup, canBroadcast = rights.broadcast;
   var online = LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length;
-  var ann = g.settings.announcement;
+  var ann = g.settings.announcement, annText = LIVE ? ann.displayText : ann.text;
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
   // The sending channel is never hidden, even if it stays in the stored list.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
@@ -191,7 +191,8 @@ function GroupView(p) {
         })),
       prefs.announcements && ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
         h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } },
-          LIVE ? ann.displayText : ann.text, LIVE && ann.embeds.length ? h(MessageEmbeds, { embeds: ann.embeds }) : null)) : null,
+          // The text as key: a new announcement shows collapsed.
+          h(AnnouncementText, { key: annText, text: annText }), LIVE && ann.embeds.length ? h(MessageEmbeds, { embeds: ann.embeds }) : null)) : null,
       search != null ? h('div', { className: 'searchbar' },
         h('label', { htmlFor: 'gsearch', className: 'tc-sr' }, 'Search messages'),
         h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
@@ -289,6 +290,29 @@ function useMentionCompletion(g, inputRef, value, setValue) {
     onBlur: function (e) { if (e.target === inputRef.current) setCaretAt(null); },
     panel: h(Frag, null, panel, h('p', { className: 'tc-sr', 'aria-live': 'polite' }, said))
   };
+}
+
+/**
+ * Shows the text of a group announcement cut to three lines with a button that shows the rest only when it does not fit.
+ * @param {{text: string}} p Shown text of the announcement.
+ */
+function AnnouncementText(p) {
+  var ref = useRef(null), id = React.useId();
+  var open = useState(false), expanded = open[0], setExpanded = open[1];
+  var cut = useState(false), clipped = cut[0], setClipped = cut[1];
+  // Measured only while collapsed: expanded, the text always fits.
+  useLayoutEffect(function () {
+    if (expanded) return;
+    var el = ref.current;
+    function measure() { setClipped(el.scrollHeight > el.clientHeight); }
+    var ro = new ResizeObserver(measure);
+    ro.observe(el);
+    measure();
+    return function () { ro.disconnect(); };
+  }, [expanded]);
+  return h(Frag, null,
+    h('span', { id: id, ref: ref, className: expanded ? 'ann-text' : 'ann-text ann-clamp' }, p.text),
+    expanded || clipped ? h('button', { type: 'button', className: 'linkbtn ann-more', 'aria-expanded': String(expanded), 'aria-controls': id, onClick: function () { setExpanded(!expanded); } }, expanded ? 'Show less' : 'Show more') : null);
 }
 
 /**

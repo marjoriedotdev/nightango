@@ -147,6 +147,8 @@ h1,h2,h3{text-wrap:balance}
 .notice .grow{min-width:200px}
 .searchbar{flex:none;display:flex;align-items:center;gap:8px;margin:12px 20px 0}
 .banner-wrap{flex:none;margin:12px 20px 0}
+.ann-text{display:block}
+.ann-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .conn-banner{flex:none;display:grid;grid-template-rows:1fr;margin:0 20px;transition:grid-template-rows var(--duration-base) var(--ease-out),opacity var(--duration-base) var(--ease-out);animation:conn-in var(--duration-base) var(--ease-out)}
 .conn-banner-leaving{grid-template-rows:0fr;opacity:0}
 @keyframes conn-in{from{grid-template-rows:0fr;opacity:0}}
