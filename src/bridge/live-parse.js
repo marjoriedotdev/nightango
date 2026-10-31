@@ -129,7 +129,7 @@ var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
  * Screens the records of an imported private history before any write.
  * @param {Array} records File content, untrusted.
  * @param {string} me Signed-in account.
- * @returns {{valid: Array, skipped: number, foreign: boolean}} Records to write, marked read, the number skipped, and true for another account's file, of which nothing is written.
+ * @returns {{valid: Array, skipped: number, foreign: boolean}} Records to write, target in lowercase and marked read, the number skipped, and true for another account's file, of which nothing is written.
  */
 function screenPmRecords(records, me) {
   var valid = [], skipped = 0, foreign = 0;
@@ -140,7 +140,7 @@ function screenPmRecords(records, me) {
     if (fields.length < 7) { skipped++; return; }
     var author = lower(fields[1]);
     if (author !== lower(r.target) && author !== lower(me)) { skipped++; foreign++; return; }
-    valid.push({ target: r.target, ts: r.ts, data: r.data, unread: 0 });
+    valid.push({ target: lower(r.target), ts: r.ts, data: r.data, unread: 0 });
   });
   // Another account's file: its received PMs pass the screening one by one, but none is written.
   if (skipped && foreign === skipped) return { valid: [], skipped: skipped, foreign: true };

@@ -1,4 +1,4 @@
-// PM conversations: unreads read from the archive (BetterChatango database or memory) and private history merge.
+// PM conversations: unreads read from the archive (BetterChatango database or memory), private history merge and import.
 const { JSDOM } = require('jsdom');
 const { concatSources, layerSources } = require('../scripts/build.mjs');
 const { keyRange, fakePmDb } = require('./fake-pm-db.js');
@@ -114,6 +114,24 @@ function load(records, opts = {}) {
   step('unread migration runs once per page and is journaled when local storage refuses its flag',
     oldRead && fullWrites === 1 && fullRecords[1].unread === 1 && t.d.dms.gus.unread === 1 && migrationNotes.length === 1,
     { oldRead, fullWrites, records: fullRecords, unread: t.d.dms.gus.unread, journal: t.journal });
+
+  /* Import of a correspondent name with capitals: the conversation reads older pages and removes an edited PM like any other */
+  const mixedRecords = [];
+  t = load(mixedRecords);
+  const fromIvan = (ts, body) => ({ target: 'Ivan', ts: parseFloat(ts), data: 'msg:Ivan:' + ME + ':unknown:' + ts + ':0:' + body, unread: 0 });
+  const imported = await t.m.liveBridge.importPm([
+    fromIvan('1700007000.5', '<n000/>Earlier'),
+    fromIvan('1700007010.5', '<n000/><iorig1111/>Original'),
+    fromIvan('1700007020.5', '<n000/><iedit2222/><m v="1"><g x12s000="0"><eorig1111/>Original, fixed</g></m>')
+  ]);
+  const ivan = (await t.m.liveBridge.pmHistory(100)).ivan || { list: [] };
+  const older = await t.m.liveBridge.pmOlder('ivan', 1700007010.5, 50);
+  const original = ivan.list.find(x => x.text === 'Original');
+  const removed = !!original && await t.m.liveBridge.removePm('ivan', original);
+  const left = mixedRecords.map(r => r.ts);
+  step('imported mixed-case conversation loads older pages and removes an edit with its original',
+    imported.added === 3 && ivan.list.length === 3 && JSON.stringify(older.list.map(x => x.text)) === '["Earlier"]' && removed && JSON.stringify(left) === '[1700007000.5]',
+    { imported, listed: ivan.list.length, older: older.list.map(x => x.text), removed, left });
 
   console.log(log.join('\n'));
   console.log('ERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
