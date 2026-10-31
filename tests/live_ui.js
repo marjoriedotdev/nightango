@@ -297,6 +297,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && Array.isArray(storedPrefs.customThemes) && storedPrefs.sky.calm === false && storedPrefs.sky.moon === 3
       && Object.keys(storedAccount).every(k => k === 'pmReadMigrated') && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
     { storedPrefs, storedAccount });
+  step('stored preferences without a version read as the current schema and saved with its version', storedPrefs.version === 1 && storedPrefs.sky.moon === 3, storedPrefs.version);
   step('announcement requested after init', frame('getannouncement').length >= 1);
   step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
   step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('bob') && x.textContent.includes('Admin')));
