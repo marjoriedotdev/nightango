@@ -63,6 +63,7 @@ export const APP_SOURCES = [
   'app/overlays.js',
   'app/inbox.js',
   'app/reconnection.js',
+  'app/simulation.js',
   'app/live-ops.js',
   'app/root.js',
   'app/start.js'
