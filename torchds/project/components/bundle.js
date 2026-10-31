@@ -218,6 +218,7 @@
       src ? h('img', { className: cx('tc-avatar-img', fadedSrc === src ? 'tc-fade-in' : !loadedAvatars[src] && 'tc-avatar-img-wait'), src: src, alt: '', loading: 'lazy', decoding: 'async', draggable: false,
         onLoad: function (e) { loadedAvatars[src] = true; if (e.currentTarget.classList.contains('tc-avatar-img-wait')) setFadedSrc(src); if (props.onLoad) props.onLoad(); },
         onError: function () { brokenAvatars[src] = true; failed(function (n) { return n + 1; }); } }) : null,
+      props.decor || null,
       props.status ? h('span', { className: 'tc-presence tc-presence-' + props.status, style: { width: dot, height: dot } }) : null);
   }
 
