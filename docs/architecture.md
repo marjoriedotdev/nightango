@@ -52,6 +52,7 @@ src/
     state.js         persisted preferences
     live-state.js    live state built for Root: world at login, group, ban lists, session loss
     pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database)
+    live-ops.js      useBridgeOps: each bridge operation goes to the handler of the latest render, those after login once it has rendered
     root.js          Root: state, actions, live actions, handleLiveOp
     start.js         mounting, recovery screen after an interface error
   loader/
@@ -71,7 +72,7 @@ torchds/project/     design system: tokens, components/bundle.js (namespace wind
 dist/                build outputs, not versioned
 ```
 
-`bridge/live-parse.js` contains only functions that read neither the BetterChatango client, nor `emit`, nor any variable of the bridge closure. A function that depends on this closure stays in `bridge/live-bridge.js`. The bridge keeps the steps specific to BetterChatango: waiting for Chatango's replies and their delays, requesting the announcement and reading a group's info after `inited`, the mention sound of a PM, the temporary `k:` message ids. It emits only facts to `Root`. Each listener receives an operation on its own: one that throws is logged to the console, so to the diagnostic journal, and stops neither the other listeners nor the step that emits, sign-in included (`deliverOp`). `Root` (`app/root.js`) applies them to the state, with `app/pm.js` for PMs and `app/live-state.js` for the live state it builds. The operations received after `login` wait for its first render, then go through `deliverOp` in their order: until then, they would read the signed-out state, which has no groups, users or route.
+`bridge/live-parse.js` contains only functions that read neither the BetterChatango client, nor `emit`, nor any variable of the bridge closure. A function that depends on this closure stays in `bridge/live-bridge.js`. The bridge keeps the steps specific to BetterChatango: waiting for Chatango's replies and their delays, requesting the announcement and reading a group's info after `inited`, the mention sound of a PM, the temporary `k:` message ids. It emits only facts to `Root`. Each listener receives an operation on its own: one that throws is logged to the console, so to the diagnostic journal, and stops neither the other listeners nor the step that emits, sign-in included (`deliverOp`). `Root` (`app/root.js`) applies them to the state, with `app/pm.js` for PMs and `app/live-state.js` for the live state it builds. The operations received after `login` wait for its first render, then go through `deliverOp` in their order: until then, they would read the signed-out state, which has no groups, users or route. `Root` subscribes once, and each operation runs the handler of its latest render (`useBridgeOps`, `app/live-ops.js`): a handler that reads the state directly still sees the current one.
 
 ## Concatenation
 
@@ -184,7 +185,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `pm`: PM unreads, private history reading, merge, import and pages up to the cap, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
-- `live_login`: sign-in detection, a listener that throws and the diagnostic journal kept per account, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal.
+- `live_login`: sign-in detection, a listener that throws and the diagnostic journal kept per account, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal. Then the operations after sign-in, held until the first render and handed to the latest handler (`useBridgeOps`), with React, `core/globals.js` and `app/live-ops.js`.
 - `avatar`: avatars, on the design system bundle and the sources of `src/bridge/`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.

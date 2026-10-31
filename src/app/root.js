@@ -1440,20 +1440,7 @@ function Root(props) {
     // Merged with the storage: the bridge also sets the unread migration flag there.
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
   });
-  // Operations received after login wait for its first render: until then they would read the signed-out state, without groups, users or route.
-  var heldOps = useRef(null);
-  function onLiveOp(op) {
-    if (heldOps.current) { heldOps.current.push(op); return; }
-    handleLiveOp(op);
-    if (op.op === 'login') heldOps.current = [];
-  }
-  useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(onLiveOp); }, []);
-  useEffect(function () {
-    var held = heldOps.current;
-    if (!held || !state.auth.loggedIn) return;
-    heldOps.current = null;
-    held.forEach(function (op) { deliverOp(handleLiveOp, op); });
-  }, [state.auth.loggedIn]);
+  useBridgeOps(handleLiveOp, state.auth.loggedIn);
   useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn) return;

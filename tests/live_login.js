@@ -3,6 +3,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const { concatSources, layerSources } = require('../scripts/build.mjs');
 const live = concatSources(process.argv[2], layerSources('bridge'));
 const journal = fs.readFileSync(process.argv[2] + '/src/loader/skin-journal.js', 'utf8');
+const react = ['react/umd/react.development.js', 'react-dom/umd/react-dom.development.js'].map(f => fs.readFileSync('node_modules/' + f, 'utf8'));
 // Starts a page with the journal, a fake BetterChatango and the bridge, its local storage filled from storage (key to value).
 function boot(storage) {
   // BetterChatango's client document holds its PM tab from the start (inject.js:10601).
@@ -63,6 +64,40 @@ async function signInPage(storage, name, marker) {
     w.client.user.name = 'Marjorie'; w.client.emit('clientLogin', w.client); await wait(50);
     const texts = w.__TORCH_JOURNAL__.entries().map(e => e.m);
     return { ok: ops.includes('login') && texts.includes('[torch-skin] could not apply the login operation: TypeError: listener failed'), ops, texts };
+  });
+
+  await run('operations after sign-in wait for the first render, then each one reaches the latest handler', async w => {
+    react.forEach(code => w.eval(code));
+    w.eval(concatSources(process.argv[2], ['core/globals.js', 'app/live-ops.js']));
+    const R = w.React, seen = [];
+    // Like Root, the handler reads the account of the render it comes from.
+    function Probe() {
+      const [me, setMe] = R.useState(null);
+      w.useBridgeOps(op => {
+        if (['login', 'session', 'online'].indexOf(op.op) < 0) return;
+        seen.push(op.op + ' as ' + (me || 'nobody'));
+        if (op.op === 'login') setMe(op.me);
+        if (op.op === 'session') throw new w.TypeError('handler failed');
+      }, !!me);
+      return null;
+    }
+    w.ReactDOM.createRoot(w.document.body.appendChild(w.document.createElement('div'))).render(R.createElement(Probe));
+    await wait(50);
+    w.dispatchEvent(new w.Event('online'));
+    w.client.user.name = 'Marjorie'; w.client.emit('clientLogin', w.client);
+    w.dispatchEvent(new w.Event('offline'));
+    w.dispatchEvent(new w.Event('online'));
+    const beforeRender = seen.slice();
+    await wait(50);
+    w.dispatchEvent(new w.Event('online'));
+    const texts = w.__TORCH_JOURNAL__.entries().map(e => e.m);
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    return {
+      ok: same(beforeRender, ['online as nobody', 'login as nobody'])
+        && same(seen, ['online as nobody', 'login as nobody', 'session as marjorie', 'online as marjorie', 'online as marjorie'])
+        && texts.includes('[torch-skin] could not apply the session operation: TypeError: handler failed'),
+      beforeRender, seen
+    };
   });
 
   /* Diagnostic journal kept per account: alice, then bob, then alice again on the same browser */
