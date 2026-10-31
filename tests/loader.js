@@ -12,8 +12,10 @@ const log = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 
 function page(userscript, url, before) {
-  const vc = new VirtualConsole(); const errors = [];
+  const vc = new VirtualConsole(); const errors = [], reloads = [];
   vc.on('error', e => errors.push(String(e && e.message || e)));
+  // jsdom does not navigate: a reload only reports itself as not implemented.
+  vc.on('jsdomError', e => { if (/^Not implemented: navigation/.test(e.message)) reloads.push(e.message); });
   const dom = new JSDOM('<!doctype html><html><head></head><body><h1>Chatango</h1><div class="login"></div></body></html>', { url, runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc });
   const w = dom.window;
   w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
@@ -30,7 +32,7 @@ function page(userscript, url, before) {
   });
   sandbox.window = sandbox.top = sandbox.self = sandbox;
   vm.runInContext(userscript, sandbox);
-  return { w, d: w.document, errors, injected, gm };
+  return { w, d: w.document, errors, reloads, injected, gm };
 }
 function fakeBetterChatango(w) {
   w.eval(`window.client = {
@@ -62,15 +64,17 @@ async function deliverReact(w) {
 
 async function suite(userscript) {
   /* Home page, BetterChatango absent: the script starts it */
-  const a = page(userscript, 'https://st.chatango.com/');
+  // A page script can define the hosted prototype hook, which hands the interface a state and reads it back.
+  let hookReads = 0;
+  const a = page(userscript, 'https://st.chatango.com/', w => Object.defineProperty(w, 'claude', { get() { hookReads++; return { hot: {} }; } }));
   const starts = a.d.querySelectorAll('script[src="' + START + '"]');
   step('starts BetterChatango once on the home page', starts.length === 1);
   step('shows the BetterChatango loading text', a.d.querySelector('h1').textContent === 'Loading...');
   step('no overlay before BetterChatango is ready', !a.d.getElementById('torch-skin'));
   step('React loaded with integrity check', [...a.d.querySelectorAll('script[src*="cdnjs"]')].every(s => s.integrity.indexOf('sha384-') === 0 && s.crossOrigin === 'anonymous'));
   await deliverReact(a.w);
-  // BetterChatango replaces the whole document with its client, sign-in screen included.
-  a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div></body>';
+  // BetterChatango replaces the whole document with its client, sign-in screen and PM tab included.
+  a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div><span data-sidebar="private"></span></body>';
   await wait(20);
   const skin = a.d.getElementById('torch-skin-login');
   step('sign-in screen skinned in the new document, without loading anything',
@@ -89,6 +93,7 @@ async function suite(userscript) {
     a.injected.some(t => t.indexOf('__TORCH_SKIN__') >= 0) && a.w.__TORCH_SKIN__ === true && a.w.__TORCH_LIVE__ === true
       && typeof a.w.client.event.group.getratelimit === 'function' && !!host2 && !!host2.shadowRoot.querySelector('#app').children.length,
     { injected: a.injected.length, skin: a.w.__TORCH_SKIN__, live: a.w.__TORCH_LIVE__ });
+  step('userscript leaves the prototype hook out', !/\bwindow\.claude\b|\bclaude\.hot\b/.test(userscript) && hookReads === 0, hookReads);
 
   /* vissle bridge: only the signed-in profile is queried, without cookies */
   const replies = [];
@@ -184,6 +189,31 @@ async function suite(userscript) {
       && xKeys('x5') === 'author,date,handle,id,link,media,text' && xReply('x5').link === 'https://x.com/clown/status/1700000000000000005'
       && JSON.stringify(xReply('x5').media) === JSON.stringify({ kind: 'photo', thumb: 'https://pbs.twimg.com/media/b.jpg', sensitive: true, width: 800, height: 600 }),
     { calls: xCalls.map(c => c.url), xs });
+
+  /* Bridges: a request the interface does not make gets an error reply, and no call leaves the sandbox */
+  const askedBefore = a.gm.length, vissleFrom = replies.length, tiktokFrom = tiktok.length, xFrom = xs.length;
+  const askVissle = detail => a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:vissle-request', { detail }));
+  const visit = fields => askVissle(JSON.stringify(Object.assign({ page: 1, order: 'desc', get: 'all' }, fields)));
+  askVissle('{"id":"m0",');
+  askVissle('null');
+  visit({ id: 'm1', get: 'everything' });
+  visit({ id: 'm2', order: 1 });
+  visit({ id: 'm3', page: '1' });
+  visit({ id: 'm4', page: -1 });
+  visit({ id: 'm5', page: { next: 1 } });
+  visit({ id: 7 });
+  a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:tiktok-request', { detail: 'https://vm.tiktok.com/ZMabc123/' }));
+  askTikTok('t4', ['https://vm.tiktok.com/ZMabc123/']);
+  a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:x-request', { detail: 'https://x.com/clown/status/1700000000000000006' }));
+  askX('x6', { href: 'https://x.com/clown/status/1700000000000000006' });
+  await wait(20);
+  const vissleRefused = replies.slice(vissleFrom), tiktokRefused = tiktok.slice(tiktokFrom), xRefused = xs.slice(xFrom);
+  step('bridges answer a malformed request with an error and make no call',
+    a.gm.length === askedBefore
+      && vissleRefused.length === 8 && vissleRefused.every(r => typeof r.error === 'string' && !('data' in r)) && ['m1', 'm2', 'm3', 'm4', 'm5'].every(id => vissleRefused.some(r => r.id === id))
+      && tiktokRefused.length === 2 && tiktokRefused.every(r => typeof r.error === 'string' && !('post' in r)) && tiktokRefused.some(r => r.id === 't4')
+      && xRefused.length === 2 && xRefused.every(r => typeof r.error === 'string' && !('text' in r)) && xRefused.some(r => r.id === 'x6'),
+    { calls: a.gm.slice(askedBefore).map(c => c.url), vissleRefused, tiktokRefused, xRefused });
   step('no page errors', a.errors.length === 0, a.errors);
   a.w.close();
 
@@ -219,6 +249,8 @@ async function suite(userscript) {
   /* Diagnostic journal: socket lifecycle, never the frame content */
   const j = page(userscript, 'https://st.chatango.com/', fakeSocket);
   const journal = j.w.__TORCH_JOURNAL__;
+  // The bridge does it on sign-in: from then on the log is saved for this account.
+  if (journal) journal.signIn('marjorie');
   const sock = new j.w.WebSocket('wss://c1.chatango.com:8081/');
   sock.fire('open');
   sock.fire('message', { data: 'OK\r\n\0' });
@@ -236,12 +268,49 @@ async function suite(userscript) {
     texts.includes('BetterChatango: conn closed: mygroup') && texts.includes('BetterChatango: unhandled frame weird') && texts.includes('TypeError: boom'), texts);
   step('journal keeps no frame or message text', journal && !texts.some(m => /secret/.test(m)), texts);
   j.w.dispatchEvent(new j.w.Event('pagehide'));
-  const stored = JSON.parse(j.w.localStorage.getItem('torch-skin:journal') || '[]');
+  const stored = JSON.parse(j.w.localStorage.getItem('torch-skin:journal:marjorie') || '[]');
   step('journal saved when the page is hidden', !!journal && stored.length === journal.entries().length);
   for (let i = 0; i < 1100; i++) if (journal) journal.add('test', 'event ' + i);
   const kept = journal ? journal.entries() : [];
   step('journal keeps the latest 1000 events', kept.length === 1000 && kept[999].m === 'event 1099', kept.length);
   j.w.close();
+
+  /* Interface error: recovery screen instead of a blank page, BetterChatango back on request */
+  const r = page(userscript, 'https://st.chatango.com/');
+  await deliverReact(r.w);
+  // BetterChatango's client document holds its PM tab, whose click method the bridge disables at sign-in.
+  r.d.body.insertAdjacentHTML('beforeend', '<span data-sidebar="private"></span>');
+  fakeBetterChatango(r.w);
+  // BetterChatango's PM handlers: connect opens its PM screen, DENIED shows its alert.
+  const bcPrivate = [];
+  r.w.client.event.private.connect = () => { bcPrivate.push('connect'); };
+  r.w.client.event.private.DENIED = () => { bcPrivate.push('DENIED'); };
+  await wait(700);
+  // A view that fails to render: the sidebar draws the avatar of the signed-in account.
+  r.w.Torch.Avatar = () => { throw new r.w.TypeError('view failed'); };
+  r.w.client.user.name = 'Marjorie';
+  r.w.client.emit('clientLogin', r.w.client);
+  await wait(150);
+  const rHost = r.d.getElementById('torch-skin');
+  const screen = rHost ? rHost.shadowRoot.querySelector('.recovery') : null;
+  const action = label => screen ? [...screen.querySelectorAll('button')].find(b => b.textContent === label) : null;
+  step('render error shows the recovery screen', !!screen && rHost.style.display === 'block' && !!action('Reload') && !!action('Show BetterChatango'),
+    rHost ? rHost.shadowRoot.querySelector('#app').innerHTML.slice(0, 200) : null);
+  const rTexts = r.w.__TORCH_JOURNAL__.entries().map(x => x.m);
+  step('render error journaled by its name and message only',
+    rTexts.includes('[torch-skin] interface stopped by an error, recovery screen shown: TypeError: view failed') && !rTexts.some(m => /\bmarjorie\b/i.test(m)), rTexts.slice(-8));
+  if (action('Reload')) action('Reload').click();
+  step('Reload reloads the page', r.reloads.length === 1, r.reloads);
+  const hiddenBefore = !!r.d.getElementById('torch-skin-hide');
+  const said = screen ? screen.textContent : '';
+  if (action('Show BetterChatango')) action('Show BetterChatango').click();
+  step('Show BetterChatango removes the overlay and the hiding stylesheet', hiddenBefore && !r.d.getElementById('torch-skin') && !r.d.getElementById('torch-skin-hide'));
+  // The bridge keeps BetterChatango's PM handlers, so a conversation opened there stays closed until a reload.
+  r.w.client.event.private.connect(r.w.client, null, 'private_message', ['bob', '0', 'online']);
+  r.w.client.event.private.DENIED(r.w.client, null, 'private_message', []);
+  step('recovery screen says private messages need a reload in BetterChatango',
+    /private messages/i.test(said) && /reload/i.test(said) && bcPrivate.length === 0, { said, bcPrivate });
+  r.w.close();
 }
 
 (async () => {

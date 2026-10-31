@@ -6,7 +6,12 @@ const errors = [];
 const vc = new VirtualConsole();
 vc.on('error', e => errors.push(String(e && e.message || e)));
 vc.on('jsdomError', e => errors.push('jsdom: ' + e.message));
-vc.on('warn', e => { if (!/act\(|ReactDOM.render|useLayoutEffect|\[torch-skin\]/.test(String(e))) errors.push('warn: ' + String(e).slice(0, 300)); });
+// The bridge only logs an operation that throws: the steps read these logs.
+const opFailures = [];
+vc.on('warn', e => {
+  if (/^\[torch-skin\] could not apply/.test(String(e))) opFailures.push(String(e));
+  if (!/act\(|ReactDOM.render|useLayoutEffect|\[torch-skin\]/.test(String(e))) errors.push('warn: ' + String(e).slice(0, 300));
+});
 
 const dom = new JSDOM(`<!doctype html><html><head></head><body>
   <input data-text-field="age" value="34"><select data-text-field="gender"><option value="?">?</option><option value="M" selected>M</option><option value="F">F</option></select>
@@ -20,6 +25,7 @@ const dom = new JSDOM(`<!doctype html><html><head></head><body>
     <span class="text-field font-face"><select class="font-face text-input">${Array.from({ length: 9 }, (_, i) => `<option value="${i}">${i}</option>`).join('')}</select></span>
     <input type="checkbox" name="stylesOn">
   </form></div>
+  <span data-sidebar="private"></span>
   <div id="app"></div></body></html>`, { runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: vc, url: 'https://st.chatango.com/' });
 const w = dom.window, d = w.document;
 w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
@@ -36,9 +42,15 @@ w.IntersectionObserver = function (cb, opts) {
 // jsdom has neither CSS.supports nor ResizeObserver: the message log takes the path without native anchoring or measuring.
 w.CSS = { supports: () => false };
 w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
+// The bridge polls BetterChatango's sockets every 2 s: the sign-in also runs a poll at a chosen moment.
+let pollSockets = null;
+const nativeSetInterval = w.setInterval;
+w.setInterval = (fn, ms) => { if (ms === 2000 && !pollSockets) pollSockets = fn; return nativeSetInterval.call(w, fn, ms); };
 
 /* ---------- Fake BetterChatango client ---------- */
 const sent = [], posts = [], calls = [];
+// Archive targets of the sent PMs, read by the bridge on reload.
+const sentPmArchive = [];
 // vissle response to a file upload (chatango/upload).
 let uploadReply = () => Promise.resolve('data:abc/f.png');
 let shown = 0;
@@ -46,6 +58,16 @@ w.__TORCH_LIVE__ = true;
 w.__TORCH_SHOW__ = () => { shown++; };
 w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
+// Diagnostic journal of the page code: the bridge gives it the account at sign-in and notes its connections there.
+const journal = [];
+w.__TORCH_JOURNAL__ = { limit: 1000, add: (k, m) => { journal.push({ t: Date.now(), k, m: String(m) }); }, signIn: noop, entries: () => journal.slice(), clear: () => { journal.length = 0; }, subscribe: () => noop };
+// Like a browser WebSocket: a frame reaches onmessage only while the socket is open.
+const sockets = [];
+w.WebSocket = function (url) { this.url = url; this.readyState = 0; sockets.push(this); };
+w.WebSocket.prototype.close = function () { this.readyState = 3; };
+w.WebSocket.prototype.receive = function (frame) { if (this.readyState === 1) this.onmessage({ data: frame }); };
+// Held: client.connect opens a socket like socketEvent, whose ok registers the group and whose inited settles the attempt.
+let connectHeld = false;
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
 const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
 // Record of the BetterChatango history database (saveMessage): key ts, the frame timestamp.
@@ -105,10 +127,14 @@ const C = {
   // connect: BetterChatango opens its own PM screen.
   event: { group: Object.fromEntries(groupHandlers.map(n => [n, noop])), private: Object.assign(Object.fromEntries(privHandlers.map(n => [n, noop])), { DENIED() { calls.push(['alert']); }, msg(c, s, room, data) { saveMessage(data); }, msgoff(c, s, room, data) { calls.push(['archive', !!C.database.pm]); saveMessage(data); }, connect() { calls.push(['betterChatangoPmScreen']); } }) },
   user: { name: '', avatar: { x0: 50, y0: 50, ts: 50 }, style: false }, groups: {}, focus: 'test',
-  settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
+  settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] }, private_messages: { connect_start: true } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
   emit(ev, data) { d.dispatchEvent(new w.CustomEvent('chatango_' + ev, { detail: data })); },
-  socket(gid, frame) { sent.push([gid, frame]); },
+  // Like BetterChatango, a sent PM is archived under client.private.focus, and not at all while it is false (inject.js:4633-4645).
+  socket(gid, frame) {
+    sent.push([gid, frame]);
+    if (gid === 'private_message' && frame.indexOf('msg:') === 0 && C.private.focus) sentPmArchive.push({ target: C.private.focus, frame });
+  },
   sendMessage(data, length, group, user) {
     if (length && styleProbe) styleAtBuild.push({ group, style: styleProbe() });
     // Like BetterChatango, a PM body wraps the text in the emphasis of the style, uppercase, and replaces a YouTube link with its <i> tag.
@@ -126,7 +152,17 @@ const C = {
   connect(gid) {
     if (C.cache.connect.includes(gid)) return new Promise(noop);
     C.cache.connect.push(gid);
-    calls.push(['connect', gid, !!C.database.pm]); if (gid !== 'private_message' && !C.groups[gid]) C.groups[gid] = fakeGroup(); return Promise.resolve({});
+    calls.push(['connect', gid, !!C.database.pm]);
+    if (connectHeld) return new Promise(resolve => {
+      const socket = new w.WebSocket('wss://s12.chatango.com:8080/');
+      socket.onmessage = e => {
+        const [name, ...data] = e.data.split(':');
+        C.event.group[name](C, socket, gid, data);
+        if (name === 'ok') C.groups[gid] = Object.assign(fakeGroup(), { socket });
+        if (name === 'inited') resolve(socket);
+      };
+    });
+    if (gid !== 'private_message' && !C.groups[gid]) C.groups[gid] = fakeGroup(); return Promise.resolve({});
   },
   setFocus(o) { calls.push(['focus', o.group]); }, disconnectFrom(gid) { calls.push(['disconnect', gid]); delete C.groups[gid]; },
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
@@ -150,6 +186,8 @@ const CH = {
   subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml', mod2: n => 'https://ust.chatango.com/' + n + '/mod2.xml', custom_profile: n => 'https://ust.chatango.com/' + n + '/custom_profile.css', msgbg: (n, ext) => 'https://ust.chatango.com/' + n + '/msgbg.' + ext }, error: { creategroup: { groupexists: 'The group name is taken.' } }
 };
 const SB = { renderGroup(dt) { calls.push(['renderGroup', dt.group]); } };
+// Like BetterChatango, its PM tab opens its own PM screen (inject.js:10601).
+d.querySelector('[data-sidebar="private"]').onclick = () => { calls.push(['betterChatangoPmScreen']); };
 w.__betterChatangoRefs = { client: C, chatango: CH, sidebar: SB, torch: { environment: 'betterchatangoenv' } };
 const fetches = [];
 let searchHold = null;
@@ -160,10 +198,22 @@ let ownMod2Status = 200;
 const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img src="x" onerror="alert(2)"><a href="javascript:alert(3)">bad</a> <a href="https://example.com/p">good</a> <font color="#ff0000" size="5">red</font>');
 // Chatango age, like BetterChatango: current year minus birth year.
 const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
-const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">');
+// Links of the full profile: a repeated address, another scheme, a Chatango profile, a trusted host, SVG, an image map,
+// a link that only a second parse of the serialized page creates (mutation XSS), and three shapes that make a link
+// only in the frame: a declarative shadow root, a nested frame document and an SVG animation, none of them listed.
+const FULL_LINKS = ['https://example.com/p', 'https://abe.chatango.com/', 'https://i.imgur.com/g', 'https://svg.example/', 'https://area.example/', 'https://smuggled.example/'];
+const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">'
+  + '<p><a href="https://example.com/p" target="_top">My site</a> <a href=" https://example.com/p ">again</a> <a href="javascript:alert(5)">Script link</a> <a href="https://abe.chatango.com/">abe</a> <a href="https://i.imgur.com/g">gallery</a></p>'
+  + '<svg><a href="https://svg.example/"><text>S</text></a></svg><map name="m"><area href="https://area.example/" alt="Area"></map>'
+  + '<div><template shadowrootmode="open"><a target="_self" href="https://shadow.example/">Shadow</a></template></div>'
+  + '<iframe srcdoc="<a href=https://nested.example/>Nested</a>"></iframe>'
+  + '<svg><a><animate attributeName="href" values="https://animated.example/" fill="freeze"/><text>Animated</text></a><a id="set-link"><text>Set</text></a><set href="#set-link" attributeName="xlink:href" to="https://set.example/"/></svg>'
+  + '<math><mtext><table><mglyph><style><a href="https://smuggled.example/">Smuggled</a>');
 // Premium background in the real custom_profile.css format (goddess account). Without a file, Chatango returns a JPEG image.
 const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
 const GODDESS_CSS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
+// Valid background past the size cap of the file: read as absent.
+const BULKY_CSS = GODDESS_CSS + '/*' + ' '.repeat(5000) + '*/';
 // Message background in the msgbg.xml format: attributes of the first element, fields of the BetterChatango background form. A response that is not text/xml means no background.
 const MSGBG = {
   rosa: '<?xml version="1.0" ?><bgi bgc="FFCC99" bgalp="100" useimg="1" ialp="40" align="br" tile="0" hasrec="0" isvid="0"/>',
@@ -186,11 +236,12 @@ w.fetch = (url, opts) => {
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent(saved ? saved.f.line : 'Old bio') + '</body><s>M</s><b>1990-01-01</b><l>Rouen</l><d>' + PREMIUM_END + '</d></mod>';
   }
   else if (/marjorie\/mod2\.xml/.test(url)) status = ownMod2Status;
-  else if (/\/(goddess|expired|sith|lost)\/mod1\.xml/.test(url)) {
+  else if (/\/(goddess|expired|sith|lost|bulky)\/mod1\.xml/.test(url)) {
     const end = /expired/.test(url) ? PREMIUM_END - 60 * 86400 : PREMIUM_END;
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent('Hi <a href="https://example.com/g">my page</a>') + '</body><s>F</s><b>1990-01-01</b><l>Paris</l><d>' + end + '</d></mod>';
   }
   else if (/goddess\/custom_profile\.css/.test(url)) { body = GODDESS_CSS; type = 'text/css'; }
+  else if (/bulky\/custom_profile\.css/.test(url)) { body = BULKY_CSS; type = 'text/css'; }
   else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
@@ -202,23 +253,24 @@ w.fetch = (url, opts) => {
   return searchHold && /\/search$/.test(url) ? searchHold.then(() => res) : Promise.resolve(res);
 };
 
-// vissle bridge of the simulated userscript: the response comes back by event, as from the sandbox.
+// vissle bridge of the simulated userscript: the response comes back by event, as from the sandbox. Without vissleReply, none comes back.
 const vissleReqs = [];
 let vissleReply = () => ({ action: 'activity', get: [] });
 d.addEventListener('torch-skin:vissle-request', e => {
-  const q = JSON.parse(e.detail);
+  const q = JSON.parse(e.detail), reply = vissleReply;
   vissleReqs.push(q);
-  setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: q.id, data: vissleReply(q) }) })), 0);
+  if (reply) setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: q.id, data: reply(q) }) })), 0);
 });
 
-// TikTok bridge of the simulated userscript: a post link or a short link ending in "ok" leads to a post with its cover, any other one to an error.
+// TikTok bridge of the simulated userscript: a post link or a short link ending in "ok" leads to a post with its cover, one ending in "odd" to a reply of another shape, any other one to an error.
 const tiktokReqs = [];
 const TIKTOK_THUMB = 'https://p16-sign.tiktokcdn.test/obj/';
 d.addEventListener('torch-skin:tiktok-request', e => {
   const q = JSON.parse(e.detail);
   tiktokReqs.push(q.url);
   const link = /\/video\//.test(q.url) ? q.url : /ok\/$/.test(q.url) ? 'https://www.tiktok.com/@clown/video/7400000000000000001' : null;
-  const out = link ? { post: link.split('/').pop(), link, thumb: TIKTOK_THUMB + link.split('/').pop() + '.jpg' } : { error: 'TikTok could not be reached. Open the link instead.' };
+  const out = link ? { post: link.split('/').pop(), link, thumb: TIKTOK_THUMB + link.split('/').pop() + '.jpg' }
+    : /odd\/$/.test(q.url) ? { post: 'player', link: 'https://www.tiktok.com/@clown/video/player' } : { error: 'TikTok could not be reached. Open the link instead.' };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:tiktok-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
 
@@ -234,6 +286,10 @@ d.addEventListener('torch-skin:x-request', e => {
   const out = media ? { author: 'Clown', handle: 'clown', text: 'Post ' + id + '\nsecond line', date: 'Oct 31, 2026', link: 'https://x.com/clown/status/' + id, media, avatar: X_AVATAR, time: X_TIME } : { error: 'X could not be reached. Open the link instead.' };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:x-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
+
+// Stored by an older or broken version: values of another type than the default, next to a phase index that replaces "auto".
+w.localStorage.setItem('torch-prototype-prefs', JSON.stringify({ notify: null, a11y: 'on', volume: '70', customThemes: { night: 1 }, sky: { calm: 'no', moon: 3 } }));
+w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold' }));
 
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
@@ -268,8 +324,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Sign-in and group */
   C.user.name = 'marjorie'; C.user.full = 'Marjorie';
   C.groups.test = fakeGroup();
+  C.groups.edits = fakeGroup();
   C.emit('clientLogin', C);
+  // Before the first signed-in render: a message in a group opened later, then the connection changes of a socket poll.
+  g('b', 'edits', ['1700000100.1', 'Alice', '', 'u1', 'UNID1', 'tmp0', '1.2.3.4', '0', '', '<n000/><f x11000="0">Sent before the first render']);
+  pollSockets();
   await wait(100);
+  const earlyFailures = opFailures.slice();
   step('overlay shown after login', shown === 1);
   const fetchesAtLogin = fetches.length;
   C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
@@ -278,6 +339,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const releaseAsks = fetches.filter(x => x.url === RELEASES_LATEST);
   step('newer release announced once at sign-in, without credentials', !!byText('.toast', 'Nightango 99.0.0 is available.') && releaseAsks.length === 1 && !releaseAsks[0].credentials, releaseAsks);
   step("BetterChatango's own oEmbed and message background requests muted", fetches.length === fetchesAtLogin, fetches.slice(fetchesAtLogin).map(x => x.url));
+  // Like BetterChatango 6 s after sign-in, with PMs at startup on (inject.js:1365-1369).
+  if (C.settings.privacy.private_messages.connect_start) d.querySelector('[data-sidebar="private"]').click();
+  const pmAtStartup = { screen: calls.filter(c => c[0] === 'betterChatangoPmScreen').length, setting: C.settings.privacy.private_messages.connect_start, stored: w.localStorage.getItem('settings') };
+  step("BetterChatango's PM screen stays closed after sign-in with PMs at startup on, and the setting keeps its value",
+    JSON.stringify(pmAtStartup) === JSON.stringify({ screen: 0, setting: true, stored: null }), pmAtStartup);
   SB.renderGroup({ group: 'test', header: 'Test' });
   g('ok', 'test', ['marjorie', '', '', '', '1700000000', '', 'alice,' + MOD + ';bob,' + (MOD | 2 | 16), String(64)]);
   await until(() => !!$('.log .tc-skeleton'));
@@ -287,6 +353,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !$('.log .tc-skeleton'));
   groupSkeleton.afterInit = !!$('.log .tc-skeleton');
   step('group opens', !!byText('h1', 'test'));
+  const storedPrefs = JSON.parse(w.localStorage.getItem('torch-prototype-prefs') || '{}');
+  const storedAccount = JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}');
+  step('stored values of another type load with their defaults, the others are kept, and sign-in completes',
+    !!storedPrefs.notify && storedPrefs.notify.pm.app === true && storedPrefs.a11y.reduceMotion === false && storedPrefs.volume === 70
+      && Array.isArray(storedPrefs.customThemes) && storedPrefs.sky.calm === false && storedPrefs.sky.moon === 3
+      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated') && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
+    { storedPrefs, storedAccount });
+  step('stored preferences without a version read as the current schema and saved with its version', storedPrefs.version === 1 && storedPrefs.sky.moon === 3, storedPrefs.version);
   step('announcement requested after init', frame('getannouncement').length >= 1);
   step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
   step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('bob') && x.textContent.includes('Admin')));
@@ -470,12 +544,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { whoReplies, calls: whoAsked().length });
 
   /* Message edit, like BetterChatango: <e…/> frame, history merge, deletion of edits */
-  C.groups.edits = fakeGroup();
   SB.renderGroup({ group: 'edits', header: 'Edits' });
   g('ok', 'edits', ['marjorie', '', '', '', '1700000000', '', '', '0']);
   g('inited', 'edits', []);
   await wait(50);
   click(byText('.tc-nav', 'edits')); await wait(50);
+  step('message and connection changes received before the first signed-in render applied without an error',
+    !!$$('.log .tc-msg-text').find(x => x.textContent === 'Sent before the first render') && !earlyFailures.length, earlyFailures);
   g('b', 'edits', ['1700000300.1', 'Marjorie', '', 'u0', 'UNID0', 'tmp30', '9.9.9.9', '0', '', '<n000/><f x11000="0">Mine typo']);
   g('u', 'edits', ['tmp30', 'A-B_C=']);
   await wait(50);
@@ -561,6 +636,29 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     !!byText('.toast', 'The file could not be uploaded. Try again.') && !linkFrames(failFrom).length && failKept.draft === 'Again' && failKept.chip && !!removeFile && !byText('.tc-composer', 'g.png'),
     { sent: linkFrames(failFrom), failKept, removed: !!removeFile });
 
+  /* Full group: at 500 messages each new one trims the oldest, so the count no longer changes */
+  click(byText('.tc-nav', 'edits')); await wait(50);
+  const fill = (i, text) => g('b', 'edits', [(1700000400 + i) + '.1', 'Dana', '', 'u7', 'UNID7', 'full' + i, '4.4.4.4', '0', '', '<n000/><f x11000="0">' + text]);
+  for (let i = 0; i < 500; i++) fill(i, 'Filler ' + i);
+  const logText = txt => !!$$('.log .tc-msg-text').find(x => x.textContent === txt);
+  await until(() => logText('Filler 499'));
+  const fullLog = $('.log');
+  const fullStart = { capped: logText('Filler 0') && !logText('Mine fixed') && !logText('Sent before the first render'), button: !!$('.jump') };
+  // jsdom has no layout: the test scrolls the column-reverse log itself, 0 is the bottom and a reader 10 px above it still counts as there.
+  const scrollLog = y => { const el = $('.log'); el.scrollTop = y; el.dispatchEvent(new w.Event('scroll')); };
+  scrollLog(-10);
+  fill(500, 'Arrives at the bottom'); await until(() => logText('Arrives at the bottom'));
+  const atBottom = { top: fullLog.scrollTop, button: !!$('.jump') };
+  scrollLog(-2000);
+  fill(501, 'Arrives below the reader'); await until(() => logText('Arrives below the reader'));
+  const scrolledUp = { top: fullLog.scrollTop, button: !!$('.jump'), trimmed: !logText('Filler 1') };
+  if ($('.jump')) { click($('.jump')); await wait(30); }
+  step('full group keeps a reader at the bottom there and shows New messages to a reader who scrolled up',
+    fullStart.capped && !fullStart.button && atBottom.top === 0 && !atBottom.button
+      && scrolledUp.top === -2000 && scrolledUp.button && scrolledUp.trimmed && fullLog.scrollTop === 0 && !$('.jump'),
+    { fullStart, atBottom, scrolledUp, after: fullLog.scrollTop });
+  click(byText('.tc-nav', 'test')); await wait(50);
+
   /* Warnings and connection */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
   step('BetterChatango notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
@@ -602,6 +700,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (historyTop) historyTop.cb(historyTop.targets.map(target => ({ isIntersecting: true, target })), historyTop);
   await wait(30);
   step('get_more uses BetterChatango counter', frame('get_more:').pop() === 'get_more:20:5', { observed: !!historyTop, frames: frame('get_more:') });
+  // The page reaches a reader scrolled up, and its sort brings the ban above, stamped with the local clock, to the end of the thread.
+  scrollLog(-2000);
+  const lastRow = () => $('.log .log-inner').lastElementChild.textContent;
+  g('i', 'test', ['1600000010.1', 'Ivy', '', 'u9', 'UNID9', 'O1=', '3.3.3.3', '0', '', '<n000/><f x11000="0">Older page']);
+  await until(() => logText('Older page'));
+  const olderPage = { top: $('.log').scrollTop, button: !!$('.jump'), last: lastRow() };
+  g('i', 'test', ['1600000000.1', 'Ivy', '', 'u9', 'UNID9', 'O2=', '3.3.3.3', '0', '', '<n000/><f x11000="0">Oldest page']);
+  await until(() => logText('Oldest page'));
+  const oldestPage = { top: $('.log').scrollTop, button: !!$('.jump'), last: lastRow() };
+  g('b', 'test', ['1700000260.1', 'Bob', '', 'u2', 'UNID2', 'tmp12', '5.6.7.8', '0', '', '<n000/><f x11000="0">After the older pages']);
+  await until(() => logText('After the older pages'));
+  const next = { top: $('.log').scrollTop, button: !!$('.jump') };
+  if ($('.jump')) { click($('.jump')); await wait(30); }
+  step('older history keeps a scrolled-up reader in place without New messages, the next message shows it',
+    olderPage.top === -2000 && !olderPage.button && olderPage.last === 'alice was banned'
+      && oldestPage.top === -2000 && !oldestPage.button && oldestPage.last === 'alice was banned'
+      && next.top === -2000 && next.button && $('.log').scrollTop === 0 && !$('.jump'),
+    { olderPage, oldestPage, next, after: $('.log').scrollTop });
   g('nomore', 'test', []); await until(() => d.body.textContent.includes('beginning of the history'));
   step('history end shown', d.body.textContent.includes('beginning of the history'));
 
@@ -815,7 +931,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('msg', ['dave', 'marjorie', 'unknown', '1700000300.5', '0', '<n3366FF/><m v="1"><g x12s9900cc="4">Hi</g></m>']); await until(() => !!styled('Hi').p);
   const live = styled('Hi');
   step('pm style rendered', styleOk(live), live.p && [live.p.style.cssText, live.name && live.name.style.cssText]);
-  const hiRecord = pmRecords.find(r => r.target === 'dave' && r.ts === 1700000300.5);
+  const hiRead = () => pmRecords.find(r => r.target === 'dave' && r.ts === 1700000300.5);
+  // The row can show before the read reaches the archive.
+  await until(() => !!hiRead() && hiRead().unread === 0);
+  const hiRecord = hiRead();
   step('pm received in the open conversation marked read after BetterChatango archives it', !!hiRecord && hiRecord.unread === 0, hiRecord);
   const sentBeforeFay = sent.length;
   click(byText('.conv', 'fay')); await wait(50);
@@ -844,6 +963,62 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const mine = styled('Mine');
   const minePms = frame('msg:fay:').filter(f => f.endsWith('>Mine</g></m>')).length;
   step('own pm carries own style', styleOk(mine) && minePms === 1, { minePms, style: mine.p && [mine.p.style.cssText, mine.name && mine.name.style.cssText] });
+
+  /* Connection not open: no frame leaves, nothing is added, the state stays and the failure shows */
+  const pmBox = () => $('.thread .tc-composer textarea'), fayTexts = () => $$('.thread .tc-msg-text').map(x => x.textContent);
+  const closedFrom = sent.length, fayShown = fayTexts(), statusBefore = $('.me-btn').getAttribute('aria-label');
+  C.private.socket.readyState = 3;
+  uploadReply = () => Promise.resolve('data:abc/f.png');
+  await pickFile('h.png');
+  type(pmBox(), 'Caption'); key(pmBox(), 'Enter');
+  await until(() => !!byText('.toast', 'The file was uploaded, but the message was not sent.'));
+  const lostUpload = { toast: !!byText('.toast', 'The file was uploaded, but the message was not sent.'), copy: !!byText('.toast button', 'Copy link'), draft: pmBox().value, otherToast: !!byText('.toast', 'Private message not sent') };
+  type(pmBox(), 'Lost words'); key(pmBox(), 'Enter'); await wait(30);
+  const lostPm = { draft: pmBox().value, toast: !!byText('.toast', "Private message not sent. Try again once you're reconnected to private messages.") };
+  type(pmBox(), '');
+  click(byText('.profile .mrow', 'Block')); await wait(30);
+  click(byText('.dialog-foot button', 'Block')); await wait(30);
+  const lostBlock = { toast: !!byText('.toast', "The block could not be sent. Try again once you're reconnected to private messages."), done: !!byText('.toast', 'fay blocked.'), composer: !!pmBox() };
+  click($('.me-btn')); await wait(30);
+  click(menuItem('Idle')); await wait(30);
+  const lostStatus = { toast: !!byText('.toast', 'Your status could not be changed.'), label: $('.me-btn').getAttribute('aria-label') };
+  const fayStill = fayTexts();
+  C.private.socket.readyState = 1;
+  click(byText('.tc-nav', 'test')); await wait(50);
+  C.groups.test.socket.readyState = 3;
+  type(editBox(), 'Lost in test'); key(editBox(), 'Enter'); await wait(30);
+  const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test.") };
+  C.groups.test.socket.readyState = 1;
+  step('pm, upload, block, status and group message on a connection that is not open send nothing, keep the text and the state, and say so',
+    !sent.slice(closedFrom).length && JSON.stringify(fayStill) === JSON.stringify(fayShown)
+      && lostUpload.toast && lostUpload.copy && lostUpload.draft === 'Caption https://vissle.me/abc/f.png' && !lostUpload.otherToast
+      && lostPm.draft === 'Lost words' && lostPm.toast
+      && lostBlock.toast && !lostBlock.done && lostBlock.composer
+      && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast,
+    { sent: sent.slice(closedFrom), fayShown, fayStill, lostUpload, lostPm, lostBlock, statusBefore, lostStatus, lostGroup });
+
+  /* Sent PM archived under its recipient: an upload lets the user switch to another PM or to a group before its link leaves */
+  const archivedUnder = text => sentPmArchive.filter(x => x.frame.includes(text)).map(x => x.target);
+  const pmLeft = text => frame('msg:fay:').some(f => f.includes(text));
+  const uploadThenShow = async (text, show) => {
+    uploadReply = () => new Promise(resolve => { releaseUpload = () => resolve('data:abc/f.png'); });
+    await pickFile('late.png');
+    type(pmBox(), text); key(pmBox(), 'Enter'); await wait(30);
+    click(show()); await wait(50);
+    const shownFocus = C.private.focus;
+    if (releaseUpload) releaseUpload();
+    await until(() => pmLeft(text));
+    return { left: pmLeft(text), archived: archivedUnder(text), shownFocus, focus: C.private.focus };
+  };
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  click(byText('.conv', 'fay')); await wait(50);
+  const toOtherPm = await uploadThenShow('Late for fay', () => byText('.conv', 'dave'));
+  click(byText('.conv', 'fay')); await wait(50);
+  const toGroup = await uploadThenShow('Late again', () => byText('.tc-nav', 'test'));
+  step('a pm that leaves after a switch to another pm or to a group is archived under its recipient, then BetterChatango gets back the shown conversation',
+    JSON.stringify(toOtherPm) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: 'dave', focus: 'dave' })
+      && JSON.stringify(toGroup) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: false, focus: false }),
+    { toOtherPm, toGroup });
 
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000270.1', 'Eve', '', 'u7', 'UNID7', 'tmp13', '9.9.9.9', '0', '', '<n000/><f x11000="2">Look at this']);
@@ -945,6 +1120,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && JSON.stringify(tiktokAfter.frames) === JSON.stringify(['7400000000000000000', '7400000000000000001'].map(id => 'https://www.tiktok.com/player/v1/' + id + '?autoplay=1&rel=0'))
       && JSON.stringify(tiktokAfter.link) === JSON.stringify(['https://vm.tiktok.com/ZMbad/']) && tiktokToast,
     { tiktokBefore, tiktokLoading, tiktokOpen, tiktokBlocked, tiktokBlockedEmbeds, tiktokAfter, tiktokReqs, tiktokToast });
+  g('b', 'test', ['1700000300.6', 'Eve', '', 'u7', 'UNID7', 'tmptiktokodd', '9.9.9.9', '0', '', '<n000/><f x11000="0">Puppies https://vm.tiktok.com/ZModd/']);
+  const oddTikTokRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Puppies') === 0); return p && p.closest('article'); };
+  await until(() => !!oddTikTokRow());
+  click(oddTikTokRow().querySelector('.embed-reveal'));
+  await until(() => !!oddTikTokRow().querySelector('.embeds a.msg-link, iframe'));
+  const oddTikTok = { frames: [...oddTikTokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: !!oddTikTokRow().querySelector('.embeds a.msg-link'), toast: !!byText('.toast', 'TikTok did not say which video this link leads to. Open the link instead.') };
+  step('a TikTok reply without a numeric post id turns back into a link', !oddTikTok.frames.length && oddTikTok.link && oddTikTok.toast, oddTikTok);
 
   /* X: buttons under proxyMedia, cards read once when media are not blocked, video and sensitive photo on click, failure asked again at the click then turned back into a link */
   const X_IDS = ['1700000000000000001', '1700000000000000002', '1700000000000000009'];
@@ -1073,6 +1255,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !$('.dialog') && !hiddenStored().includes('dave'));
   const reopened = { hidden: hiddenStored().includes('dave'), listed: listed('dave'), history: !!$('.thread') && $('.thread').textContent.includes('Hello & welcome') };
   step('close keeps history and reopens', !closed.listed && !closed.cleared && closed.hidden && back && !reopened.hidden && reopened.listed && reopened.history, { closed, back, reopened });
+  // Like BetterChatango's clearHistory before the private connection opens: client.database.pm is not set yet.
+  const clearHistory = C.private.clearHistory;
+  C.private.clearHistory = () => { throw new w.TypeError("Cannot read properties of undefined (reading 'transaction')"); };
+  const daveShown = () => (($('.thread') || {}).textContent || '').includes('Hello & welcome');
+  click($('.thread button[aria-label="Conversation options"]')); await wait(30);
+  click(menuItem('Delete conversation')); await wait(30);
+  click(byText('.dialog-foot button', 'Delete')); await wait(50);
+  const keptOne = { listed: listed('dave'), shown: daveShown(), toast: !!byText('.toast', 'BetterChatango could not delete this conversation. Try again in a moment.') };
+  click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
+  click(byText('.tc-nav', 'Privacy')); await until(() => !!byText('button', 'Delete all'));
+  click(byText('button', 'Delete all')); await wait(30);
+  click(byText('.dialog-foot button', 'Delete all')); await wait(50);
+  const keptAll = { toast: !!byText('.toast', 'BetterChatango could not delete your saved conversations. Try again in a moment.') };
+  click(byText('.tc-nav', 'Back to chat')); await until(daveShown);
+  Object.assign(keptAll, { dave: listed('dave'), fay: listed('fay'), shown: daveShown() });
+  C.private.clearHistory = clearHistory;
+  step('delete and delete all keep a conversation whose BetterChatango history was not cleared, and say so',
+    keptOne.listed && keptOne.shown && keptOne.toast && keptAll.toast && keptAll.dave && keptAll.fay && keptAll.shown, { keptOne, keptAll });
   click($('.thread button[aria-label="Conversation options"]')); await wait(30);
   click(menuItem('Delete conversation')); await wait(30);
   click(byText('.dialog-foot button', 'Delete')); await wait(50);
@@ -1139,11 +1339,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const frankOffline = !!frankRow && !!frankRow.querySelector('.tc-presence-offline');
   step('friends last online and order', JSON.stringify(seen.map(x => x[0])) === JSON.stringify(['zoe', 'frank', 'erin', 'abe']) && timeOf('erin') === '3 d ago' && timeOf('frank') === '10 min ago' && !timeOf('abe') && !timeOf('zoe')
     && seen.every(x => !/\b(Online|Idle|Offline|ago)\b/.test(x[1])) && frankOffline, { seen, frankOffline });
-  // Idle shown only after 3 minutes: kim reaches it during the test, through the switch timer.
-  pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.999']); pm('idleupdate', ['zoe', '0']); await until(() => !!convRow('kim'));
+  // Idle shown only after 3 minutes: kim reaches it during the test, through the switch timer, which fires a little early as timers can.
+  const setTimeout0 = w.setTimeout;
+  w.setTimeout = (fn, ms, ...args) => setTimeout0.call(w, fn, ms >= 20 ? ms - 20 : ms, ...args);
+  pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.99']); pm('idleupdate', ['zoe', '0']); await until(() => !!convRow('kim'));
   const presenceRow = n => { const r = $$('.convs .conv').find(x => x.querySelector('.conv-name').textContent === n); return r ? [(r.querySelector('.tc-presence') || {}).className || '', (r.querySelector('.conv-time') || {}).textContent || ''] : []; };
   const before3 = { ivy: presenceRow('ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
   await until(() => /tc-presence-idle/.test(presenceRow('kim')[0]));
+  w.setTimeout = setTimeout0;
   const after3 = presenceRow('kim');
   step('idle shown after three minutes with its duration', /tc-presence-idle/.test(before3.ivy[0]) && before3.ivy[1] === 'Idle 5 min'
     && /tc-presence-online/.test(before3.jade[0]) && !before3.jade[1] && /tc-presence-online/.test(before3.kim[0]) && /tc-presence-online/.test(before3.zoe[0]) && !before3.zoe[1]
@@ -1181,12 +1384,41 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const frameEl = $('iframe.fullprofile');
   const sd = frameEl ? frameEl.getAttribute('srcdoc') : '';
   step('full profile in an isolated frame', !!frameEl && !/allow-scripts|allow-same-origin/.test(frameEl.getAttribute('sandbox')) && sd.includes("default-src 'none'") && sd.includes('Zoe page'));
+  // Parsed like the frame parses its srcdoc: no element may keep an address, in any namespace.
+  const frameDoc = new w.DOMParser().parseFromString(sd, 'text/html');
+  const frameLinks = [...frameDoc.querySelectorAll('*')].filter(el => [...el.attributes].some(a => a.localName === 'href')).map(el => el.outerHTML);
+  // jsdom attaches no declarative shadow root, loads no nested srcdoc and runs no SVG animation: the browser would, so none may reach the frame.
+  const frameLate = [...frameDoc.querySelectorAll('template, iframe, [srcdoc], animate, set')].map(el => el.outerHTML);
+  step('full profile frame keeps the link text but can open nothing', !!frameEl && frameEl.getAttribute('sandbox') === '' && !frameLinks.length && !frameLate.length
+    && frameDoc.body.textContent.includes('My site again Script link abe gallery') && frameDoc.body.textContent.includes('AnimatedSet'),
+    { sandbox: frameEl && frameEl.getAttribute('sandbox'), frameLinks, frameLate });
+  const profileLinks = $$('.profile-links a').map(a => a.getAttribute('href'));
+  step('each http(s) link of the full profile listed once below the frame', !!byText('.profile-links h3', 'Links in this profile') && JSON.stringify(profileLinks) === JSON.stringify(FULL_LINKS), profileLinks);
   const loadImages = byText('.dialog-foot button', 'Load images');
   if (loadImages) { click(loadImages); await wait(30); }
   const sdLoaded = $('iframe.fullprofile') ? $('iframe.fullprofile').getAttribute('srcdoc') : '';
   step('full profile blocks external media until asked', sd.includes('img-src data:;') && !!loadImages && sdLoaded.includes('img-src https:'),
     { blocked: sd.includes('img-src data:;'), button: !!loadImages, loaded: sdLoaded.includes('img-src https:') });
-  click(byText('.dialog-foot button', 'Close')); await wait(30);
+  // Cancelable click, like the browser's: opens tells whether the browser would follow the link.
+  const followListed = async url => {
+    const a = $$('.profile-links a').find(x => x.getAttribute('href') === url);
+    const opens = !!a && a.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await wait(30);
+    const top = $$('.dialog').pop();
+    return { found: !!a, opens, top: top && top.getAttribute('aria-label'), text: top && top.textContent };
+  };
+  const warned = await followListed('https://example.com/p');
+  if (warned.top === 'This link leaves Nightango') { click(byText('.dialog-foot button', 'Cancel')); await wait(30); }
+  const trusted = await followListed('https://i.imgur.com/g');
+  step('full profile links go through the link warning, a trusted host opens directly',
+    warned.found && !warned.opens && warned.top === 'This link leaves Nightango' && warned.text.includes('https://example.com/p')
+      && trusted.found && trusted.opens && trusted.top === "zoe's profile", { warned: Object.assign({}, warned, { text: undefined }), trusted: Object.assign({}, trusted, { text: undefined }) });
+  const profileLink = await followListed('https://abe.chatango.com/');
+  const viewProfile = profileLink.top === 'abe.chatango.com' && byText('.dialog-foot button', 'View profile');
+  if (viewProfile) { click(viewProfile); await wait(60); }
+  const dialogsAfter = $$('.dialog').map(x => x.getAttribute('aria-label'));
+  step('a Chatango profile link of the full profile offers the profile, shown on top', profileLink.found && !profileLink.opens && !!viewProfile && JSON.stringify(dialogsAfter) === JSON.stringify(['Profile of abe']),
+    { profileLink: Object.assign({}, profileLink, { text: undefined }), dialogsAfter });
   key(d, 'Escape'); await wait(30);
 
   /* Refresh Meet people with the current filters */
@@ -1229,21 +1461,27 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && String(scrollSearches[1].f.f) === '80' && String(scrollSearches[1].f.t) === '120' && !byText('.convs button', 'Load more'),
     { observed, cards, requests: scrollSearches.map(x => [x.f.f, x.f.t]), loadMore: !!byText('.convs button', 'Load more') });
 
-  /* Mini profile Premium background: active Premium read from custom_profile.css, expired Premium never requested, JPEG or 404 response without a background */
-  searchBody = 'h=goddess;1:expired;1:sith;1:lost;1';
+  /* Mini profile Premium background: active Premium read from custom_profile.css, expired Premium never requested, JPEG, 404 or oversized file without a background */
+  const PREMIUM = ['goddess', 'expired', 'sith', 'lost', 'bulky'];
+  searchBody = 'h=' + PREMIUM.map(n => n + ';1').join(':');
   const personOf = n => $$('.conv.person').find(x => x.querySelector('.conv-name').textContent === n);
-  click(refreshBtn()); await until(() => ['goddess', 'expired', 'sith', 'lost'].every(n => !!personOf(n) && !personOf(n).querySelector('.tc-skeleton')));
+  click(refreshBtn()); await until(() => PREMIUM.every(n => !!personOf(n) && !personOf(n).querySelector('.tc-skeleton')));
   const cssAsked = n => fetches.some(x => x.url.indexOf('/' + n + '/custom_profile.css') >= 0);
-  const premiumCards = ['goddess', 'expired', 'sith', 'lost'].map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
+  const premiumCards = PREMIUM.map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
   if (personOf('goddess')) { click(personOf('goddess')); await wait(120); }
   const profileDialog = $('.dialog.profile-dialog');
   const aboutLink = profileDialog && profileDialog.querySelector('.about.rich a');
   const premiumAbout = profileDialog ? { bg: profileDialog.style.backgroundColor, text: profileDialog.style.color, link: aboutLink && aboutLink.style.color } : null;
   key(d, 'Escape'); await wait(30);
-  step('premium profile background', JSON.stringify(premiumCards) === JSON.stringify([['goddess', 'rgb(158, 159, 252)'], ['expired', ''], ['sith', ''], ['lost', '']])
-    && cssAsked('goddess') && !cssAsked('expired') && cssAsked('sith') && cssAsked('lost')
-    && !!premiumAbout && premiumAbout.bg === 'rgb(158, 159, 252)' && premiumAbout.text === 'rgb(61, 61, 60)' && premiumAbout.link === 'rgb(41, 62, 62)',
-    { premiumCards, css: ['goddess', 'expired', 'sith', 'lost'].map(cssAsked), premiumAbout });
+  if (personOf('bulky')) { click(personOf('bulky')); await wait(120); }
+  const bulkyDialog = $('.dialog.profile-dialog');
+  const bulkyAbout = bulkyDialog ? { bg: bulkyDialog.style.backgroundColor, about: (bulkyDialog.querySelector('.about.rich') || {}).textContent } : null;
+  key(d, 'Escape'); await wait(30);
+  step('premium profile background', JSON.stringify(premiumCards) === JSON.stringify([['goddess', 'rgb(158, 159, 252)'], ['expired', ''], ['sith', ''], ['lost', ''], ['bulky', '']])
+    && cssAsked('goddess') && !cssAsked('expired') && cssAsked('sith') && cssAsked('lost') && cssAsked('bulky')
+    && !!premiumAbout && premiumAbout.bg === 'rgb(158, 159, 252)' && premiumAbout.text === 'rgb(61, 61, 60)' && premiumAbout.link === 'rgb(41, 62, 62)'
+    && !!bulkyAbout && bulkyAbout.bg === '' && bulkyAbout.about === 'Hi my page',
+    { premiumCards, css: PREMIUM.map(cssAsked), premiumAbout, bulkyAbout });
   searchBody = SEARCH_BODY;
 
   /* Status */
@@ -1272,6 +1510,38 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   vissleReply = () => ({ error: 'This profile has tracking turned off.' });
   click(visitors().querySelector('button[aria-label="Refresh"]')); await until(() => visitors().textContent.includes('This profile has tracking turned off.'));
   step('own visitors list: vissle error shown as sent', vissleReqs[3].page === 1 && vissleReqs[3].get === 'like' && visitors().textContent.includes('This profile has tracking turned off.'), visitors().textContent);
+  // Each request starts by clearing the previous error: the shown text belongs to this reply.
+  const refreshVisitors = async reply => {
+    vissleReply = reply;
+    const refresh = () => visitors().querySelector('button[aria-label="Refresh"]');
+    click(refresh()); await wait(30); await until(() => !refresh().disabled);
+    return { text: visitors().textContent, rows: visitorRows().length };
+  };
+  const UNREADABLE = 'vissle.me sent an unreadable reply.', oddReplies = [];
+  for (const data of [null, 42, { action: 'activity' }, { get: [{ user: 'zoe' }] }, { get: [{ user: 'zoe', time: NOW, msg: { text: 'Hi' } }] }]) oddReplies.push(await refreshVisitors(() => data));
+  step('own visitors list: a reply of another shape shows the unreadable reply error', oddReplies.every(x => x.text.includes(UNREADABLE) && x.rows === 0), oddReplies);
+  // No reply, as without the sandbox half of the userscript: the bridge gives up on its own timer, which the test runs at once.
+  // The bridge sets this timer right before it sends the request.
+  const pageSetTimeout = w.setTimeout, pageTimers = [];
+  let giveUp = null;
+  const takeTimer = () => { giveUp = pageTimers[pageTimers.length - 1] || null; };
+  w.setTimeout = function () { const id = pageSetTimeout.apply(w, arguments); pageTimers.push({ id, fn: arguments[0] }); return id; };
+  d.addEventListener('torch-skin:vissle-request', takeTimer);
+  vissleReply = null;
+  const silentFrom = vissleReqs.length, visitorsRefresh = () => visitors().querySelector('button[aria-label="Refresh"]');
+  click(visitorsRefresh()); await wait(30);
+  w.setTimeout = pageSetTimeout;
+  d.removeEventListener('torch-skin:vissle-request', takeTimer);
+  // Replies the page cannot match to its request are ignored.
+  d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: 'activity' }));
+  d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: 'constructor', data: { get: [] } }) }));
+  await wait(30);
+  const silent = { asked: vissleReqs.length - silentFrom, loading: visitorsRefresh().disabled, timer: !!giveUp };
+  if (giveUp) { w.clearTimeout(giveUp.id); giveUp.fn(); }
+  await until(() => !visitorsRefresh().disabled);
+  silent.text = visitors().textContent;
+  step('own visitors list: a request without a reply ends on an error', silent.asked === 1 && silent.loading && silent.text.includes('vissle.me did not answer in time.'), silent);
+  vissleReply = () => ({ action: 'activity', get: [] });
   /* Unreadable full profile (server error): saving another field sends nothing, never an empty full profile */
   const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
   betterChatangoFull.value = ''; ownMod2Status = 500;
@@ -1573,8 +1843,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* PMs received offline: database opened before the private connection, msgoff right after OK, two identical "ok" 10 s apart in the history */
   pmRecords.push(
-    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000400.5:0:<n000/>ok', 1),
-    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000410.5:0:<n000/>ok', 1));
+    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000405.5:0:<n000/>ok', 1),
+    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000415.5:0:<n000/>ok', 1));
   C.database.pm = false;
   C.private.socket.readyState = 3; await wait(2300);
   w.dispatchEvent(new w.Event('online')); await wait(50);
@@ -1615,6 +1885,42 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const rheaAll = { texts: rheaTexts(), start: d.body.textContent.includes(PM_START) };
   step('older private history loads by pages', JSON.stringify(rheaFirst.texts) === JSON.stringify(pages(100)) && !rheaFirst.start && !!rheaTop
     && JSON.stringify(rheaAll.texts) === JSON.stringify(pages(130)) && rheaAll.start, { first: rheaFirst.texts.length, firstStart: rheaFirst.start, observed: !!rheaTop, all: rheaAll.texts.length, head: rheaAll.texts.slice(0, 3), allStart: rheaAll.start });
+
+  /* Message log at the 500 cap: a new message keeps the length, yet a PM still brings a scrolled-up reader back and a group still shows New messages */
+  const capTexts = () => $$('.log .tc-msg-text').map(x => x.textContent);
+  // jsdom does not scroll: the log reads a reader scrolled up and records each scrollTop it sets.
+  const scrollReaderUp = () => {
+    const el = $('.log'), at = { top: -2000, writes: [] };
+    Object.defineProperty(el, 'scrollTop', { configurable: true, get: () => at.top, set: v => { at.writes.push(v); at.top = v; } });
+    el.dispatchEvent(new w.Event('scroll'));
+    return at;
+  };
+  const capPm = i => pm('msg', ['tess', 'marjorie', 'unknown', (1700020000 + i) + '.5', '0', '<n000/>Cap ' + i]);
+  capPm(0); await until(() => !!byText('.conv', 'tess'));
+  click(byText('.conv', 'tess')); await until(() => capTexts().length === 1);
+  for (let i = 1; i < 500; i++) capPm(i);
+  await until(() => capTexts().length === 500, 30000);
+  let reader = scrollReaderUp();
+  capPm(500); await until(() => capTexts().includes('Cap 500'));
+  const capReceived = { rows: capTexts().length, first: capTexts()[0], writes: reader.writes };
+  reader = scrollReaderUp();
+  type($('.thread .tc-composer textarea'), 'Cap reply'); key($('.thread .tc-composer textarea'), 'Enter'); await until(() => capTexts().includes('Cap reply'));
+  const capSent = { rows: capTexts().length, first: capTexts()[0], writes: reader.writes };
+  C.groups.capped = fakeGroup();
+  SB.renderGroup({ group: 'capped', header: 'Capped' });
+  g('ok', 'capped', ['dana', '', '', '', '1700000000', '', '', '0']);
+  for (let i = 0; i < 500; i++) g('i', 'capped', [(1700030000 + i) + '.1', 'Dana', '', 'u7', 'UNID7', 'C' + i + '=', '4.4.4.4', '0', '', '<n000/><f x11000="0">Full ' + i]);
+  g('inited', 'capped', []);
+  await until(() => !!byText('.tc-nav', 'capped'), 30000);
+  click(byText('.tc-nav', 'capped')); await until(() => capTexts().length === 500);
+  reader = scrollReaderUp();
+  g('b', 'capped', ['1700030500.1', 'Dana', '', 'u7', 'UNID7', 'tmp500', '4.4.4.4', '0', '', '<n000/><f x11000="0">Full 500']);
+  await until(() => capTexts().includes('Full 500'));
+  const capGroup = { rows: capTexts().length, first: capTexts()[0], button: !!byText('.jump', 'New messages'), writes: reader.writes };
+  step('a message log at the cap follows a new PM for a scrolled-up reader and announces a new group message',
+    JSON.stringify(capReceived) === JSON.stringify({ rows: 500, first: 'Cap 1', writes: [0] }) && JSON.stringify(capSent) === JSON.stringify({ rows: 500, first: 'Cap 2', writes: [0] })
+      && JSON.stringify(capGroup) === JSON.stringify({ rows: 500, first: 'Full 1', button: true, writes: [] }),
+    { capReceived, capSent, capGroup });
 
   /* Private history import: only valid records of this account are written, as read, without overwriting an existing key */
   const chooseFile = (text, sel = 'input[type="file"]') => {
@@ -1716,7 +2022,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!byText('.conv', 'vera'));
   click(byText('.conv', 'vera')); await until(() => !!pmRow('Keep me'));
   const removeAsk = await removeFromBrowser('Remove me');
-  await until(() => !pmRow('Remove me'));
+  // The toast renders after the message log: the state and the toasts are separate updates.
+  await until(() => !pmRow('Remove me') && !!byText('.toast', 'Message removed from this browser.'));
   const removed = { ask: removeAsk, record: !!recordAt(1700003900.5), shown: !!pmRow('Remove me'), toast: !!byText('.toast', 'Message removed from this browser.') };
   await removeFromBrowser('Keep me');
   await until(() => !!byText('.toast', 'This message could not be removed.'));
@@ -1754,6 +2061,78 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   C.groups.test.socket.readyState = 1; await wait(2300);
   step('automatic reconnect after a server drop, then after a failed attempt',
     auto1.test === 1 && auto1.pm === 1 && auto1.focus === 0 && auto2.test === 2 && auto2.pm === 1, { auto1, auto2 });
+
+  /* Slow inited: the socket registered on ok outlives the bridge timeout, and no new attempt starts */
+  // A hidden page starts no automatic attempt: a loss or a failure leaves the banner on Try again.
+  const hidePage = () => Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
+  const showPage = () => { delete d.visibilityState; };
+  const failedPhase = () => (connBanner() || {}).phase === 'failed';
+  click(byText('.tc-nav', 'test')); await wait(50);
+  connectHeld = true;
+  hidePage();
+  C.groups.test.socket.readyState = 3; await until(failedPhase, 3000);
+  showPage();
+  const slowFrom = { connects: connectsOf('test'), sockets: sockets.length, notes: journal.length };
+  const slowNotes = () => journal.slice(slowFrom.notes).map(e => e.m);
+  click(byText('.conn-banner button', 'Try again')); await wait(30);
+  const slowSocket = sockets[slowFrom.sockets];
+  if (slowSocket) { slowSocket.readyState = 1; slowSocket.receive('ok:marjorie::::1700000000:::0'); }
+  await until(() => slowNotes().some(m => m.startsWith('Could not connect to #test')), 15000);
+  // Past the next 2 s poll and the 3 s before a first automatic attempt.
+  await wait(5500);
+  const slow = { connects: connectsOf('test') - slowFrom.connects, socket: slowSocket ? slowSocket.readyState : null, cached: C.cache.connect.includes('test'), notes: slowNotes(), banner: connBanner() };
+  connectHeld = false;
+  step('a socket registered on ok stays open when its inited misses the bridge timeout, and no new attempt starts',
+    slow.connects === 1 && slow.socket === 1 && !slow.cached && slow.notes.some(m => m.startsWith('Could not connect to #test')) && !slow.notes.some(m => m.startsWith('Reconnecting to #test')) && !slow.banner,
+    slow);
+
+  /* Hung attempt: without an answer, the bridge gives up after its timeout, and Try again starts a new attempt */
+  click(byText('.tc-nav', 'test')); await wait(50);
+  connectHeld = true;
+  hidePage();
+  C.groups.test.socket.readyState = 3; await until(failedPhase, 3000);
+  showPage();
+  const hungFrom = { connects: connectsOf('test'), sockets: sockets.length, notes: journal.length };
+  click(byText('.conn-banner button', 'Try again')); await wait(30);
+  const hungSocket = sockets[hungFrom.sockets];
+  hidePage();
+  await until(failedPhase, 15000);
+  showPage();
+  const hung = { connects: connectsOf('test') - hungFrom.connects, socket: hungSocket ? hungSocket.readyState : null, cached: C.cache.connect.includes('test'), notes: journal.slice(hungFrom.notes).map(e => e.m), banner: connBanner() };
+  connectHeld = false;
+  const tryAgain = byText('.conn-banner button', 'Try again');
+  if (tryAgain) { click(tryAgain); await wait(30); }
+  hung.retried = connectsOf('test') - hungFrom.connects;
+  C.groups.test.socket.readyState = 1; await until(() => !connBanner());
+  step('an attempt without an answer fails after the bridge timeout, closes its socket and is noted, then Try again starts a new one',
+    hung.connects === 1 && hung.socket === 3 && !hung.cached && hung.notes.includes('Could not connect to #test: no answer after 10 s') && hung.banner && hung.banner.phase === 'failed' && hung.retried === 2,
+    hung);
+
+  /* Leave during a reconnect: the socket still connecting closes, its frames stay out of the state, the BetterChatango focus stays off the group */
+  click(byText('.tc-nav', 'newroom')); await wait(50);
+  connectHeld = true;
+  hidePage();
+  C.groups.newroom.socket.readyState = 3; await until(failedPhase, 3000);
+  showPage();
+  const leaveFrom = { sockets: sockets.length, calls: calls.length };
+  click(byText('.conn-banner button', 'Try again')); await wait(30);
+  // Open and authenticated: Chatango has not answered yet.
+  const joining = sockets[leaveFrom.sockets];
+  if (joining) joining.readyState = 1;
+  click($('button[aria-label="Group options"]')); await wait(30);
+  click(menuItem('Leave group')); await wait(30);
+  click(byText('.dialog-foot button', 'Leave group')); await wait(50);
+  connectHeld = false;
+  if (joining) {
+    joining.receive('ok:marjorie::::1700000000:::0');
+    joining.receive('b:1700009000.1:Ivy::u9:UNID9:tmp90:9.9.9.9:0::<n000/><f x11000="0">@marjorie ghost of newroom');
+    joining.receive('inited');
+  }
+  await wait(100);
+  click(byText('.tc-nav', 'Mentions')); await wait(50);
+  const leftDuring = { socket: joining ? joining.readyState : null, focus: calls.slice(leaveFrom.calls).filter(c => c[0] === 'focus' && c[1] === 'newroom').length, ghost: d.body.textContent.includes('ghost of newroom'), listed: !!byText('.tc-nav', 'newroom') };
+  step('leaving a group during a reconnect closes its socket, keeps its later frames out of the state and the BetterChatango focus off it',
+    leftDuring.socket === 3 && !leftDuring.ghost && !leftDuring.focus && !leftDuring.listed, leftDuring);
 
   /* Session loss: signed in elsewhere, offline, connection lost, session expired */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };

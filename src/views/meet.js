@@ -24,7 +24,7 @@ function personCard(s, n, theme, onClick, noStatus) {
     h(T.Avatar, { name: n, size: 44, status: status, ring: mini ? mini.bg : 'var(--panel)' }),
     h('span', { className: 'conv-main' },
       h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, n), status ? presenceSr(status) : null, youBadge(isMe), developerBadge(n), premiumBadge(u.premium)),
-      personMetaLine(s, n),
+      personMetaLine(n, u),
       isProfilePending(n, u) ? h('span', { className: 'conv-about skel-about' }, h('span', { className: 'tc-sr' }, 'Loading profile'), h(T.Skeleton, { width: 220, height: 10 }), h(T.Skeleton, { width: 130, height: 10 }))
         : h('span', { className: 'conv-about' }, about || (u.profileMissing ? 'No public profile.' : null))));
 }

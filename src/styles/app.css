@@ -248,7 +248,7 @@ h1,h2,h3{text-wrap:balance}
 .profile-full{padding:0 var(--space-5) var(--space-2)}
 .about{margin:0;color:var(--text-body);font-size:13.5px;white-space:pre-wrap}
 .kv{display:flex;flex-direction:column;gap:6px;padding:14px 20px;border-top:1px solid var(--border)}
-.kv h3{margin:0 0 2px;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)}
+.kv h3,.profile-links h3{margin:0 0 2px;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)}
 .who-level{gap:0;padding-left:10px;padding-right:10px}
 .who-level h3{padding:0 10px 4px}
 .who-text{padding:6px 10px;overflow-wrap:anywhere}
@@ -310,7 +310,10 @@ h1,h2,h3{text-wrap:balance}
 @media (pointer:coarse){.tc-input,.tc-composer textarea,.pal-input{font-size:16px}}
 .tc-seg button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 24px;text-align:center;color:var(--text-3)}
-.empty h2{margin:0;color:var(--text);font-family:var(--font-display);font-size:26px;line-height:30px;font-weight:400}
+.empty h2,.recovery h1{margin:0;color:var(--text);font-family:var(--font-display);font-size:26px;line-height:30px;font-weight:400}
+.recovery{height:100%;display:flex;background:var(--bg)}
+.recovery p{max-width:420px;margin:0;color:var(--text-2)}
+.recovery-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-2);margin-top:var(--space-2)}
 .skel-row{display:flex;align-items:center;gap:12px;padding:10px}
 .skel-lines{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .navlist .skel-row{gap:10px;height:var(--size-control-md);padding:0 10px}
@@ -443,6 +446,7 @@ h1,h2,h3{text-wrap:balance}
 
 .about.rich p{margin:0 0 1em}.about.rich>p:last-child{margin-bottom:0}.about.rich img{border-radius:var(--radius-md)}
 .fullprofile{width:100%;height:min(60vh,560px);border:1px solid var(--border);border-radius:var(--radius-xl);background:#fff}
+.profile-links ul{display:flex;flex-direction:column;gap:var(--space-1);margin:6px 0 0;padding:0;list-style:none;font-size:13.5px}
 #layer{color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
 .menu.floating{position:fixed;z-index:70;top:auto;right:auto;bottom:auto;left:auto}
 .conv.person{align-items:flex-start}

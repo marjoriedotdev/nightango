@@ -81,12 +81,13 @@ function ProfilePhoto(p) {
  * @param {Function} p.onClose Closes the viewer.
  */
 function PhotoViewer(p) {
-  var ref = useRef(null), thumb = avatarSrc(p.name, 96);
+  var ref = useRef(null), layer = useContext(LayerCtx), thumb = avatarSrc(p.name, 96);
   var a = useState(profileImgSrc(p.name, 'full')), src = a[0], setSrc = a[1];
   var b = useState(false), loaded = b[0], setLoaded = b[1];
   useEffect(function () {
     var prev = ref.current.getRootNode().activeElement;
     ref.current.querySelector('button').focus();
+    openModal(layer, ref);
     // Capture listener: Escape and Tab stop before the profile dialog open underneath.
     function onKey(e) {
       if (e.key !== 'Escape' && e.key !== 'Tab') return;
@@ -97,6 +98,7 @@ function PhotoViewer(p) {
     document.addEventListener('keydown', onKey, true);
     return function () {
       document.removeEventListener('keydown', onKey, true);
+      closeModal(layer, ref);
       if (prev && prev.focus) prev.focus();
     };
   }, []);
@@ -112,7 +114,7 @@ function PhotoViewer(p) {
  * @param {string} name Member name.
  */
 function profileMeta(s, name) {
-  var asl = personAsl(s, name);
+  var asl = personAsl(userOf(s, name));
   if (asl) return h('span', { className: 'muted profile-line' }, asl);
   return isProfilePending(name, userOf(s, name)) ? h(T.Skeleton, { width: 120, height: 12 }) : null;
 }
@@ -143,6 +145,7 @@ function profileBadges(name, u) {
 function ProfileSummary(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), cover = useMiniCover(p.skin);
   var common = commonGroups(s, name);
+  useShownUsers([name]);
   useEffect(function () { if (!p.guest) app.actions.loadProfile(name); }, [name]);
   return h(Frag, null,
     cover.shown ? h('div', { className: 'profile-cover' }, h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer' })) : null,
@@ -171,14 +174,19 @@ function useFullProfileMedia() {
 }
 
 /**
- * Full profile shown in an isolated frame without scripts on the member's Premium background.
+ * Full profile shown in an isolated frame without scripts or links on the member's Premium background.
+ * Its links are listed below the frame, where they go through the link warning.
  * @param {string} p.name Member whose profile it is.
  * @param {string} p.html HTML written by the member.
  * @param {boolean} p.media Whether images are allowed, as given by useFullProfileMedia.
  */
 function FullProfileFrame(p) {
   var app = useApp(), mini = miniStyleOf(app.state.prefs, userOf(app.state, p.name), app.theme);
-  return h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(p.html, p.media, mini) });
+  var page = useMemo(function () { return unlinkFullProfile(p.html); }, [p.html]);
+  return h(Frag, null,
+    h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: '', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(page.html, p.media, mini) }),
+    page.links.length ? h('div', { className: 'profile-links' }, h('h3', null, 'Links in this profile'),
+      h('ul', null, page.links.map(function (url) { return h('li', { key: url }, memberLink(app, url, null)); }))) : null);
 }
 
 /** Full profile: the member's HTML page shown in an isolated frame without scripts. */
@@ -186,6 +194,7 @@ function FullProfileDialog(p) {
   var app = useApp(), s = app.state, u = userOf(s, p.name), media = useFullProfileMedia();
   var a = useState(LIVE ? null : ''), html = a[0], setHtml = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
+  useShownUsers([p.name]);
   useEffect(function () {
     if (!LIVE) return;
     if (isProfilePending(p.name, u)) app.actions.loadProfile(p.name);

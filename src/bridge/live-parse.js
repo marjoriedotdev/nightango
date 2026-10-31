@@ -133,7 +133,7 @@ var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
  * Screens the records of an imported private history before any write.
  * @param {Array} records File content, untrusted.
  * @param {string} me Signed-in account.
- * @returns {{valid: Array, skipped: number, foreign: boolean}} Records to write, marked read, the number skipped, and true for another account's file, of which nothing is written.
+ * @returns {{valid: Array, skipped: number, foreign: boolean}} Records to write, target in lowercase and marked read, the number skipped, and true for another account's file, of which nothing is written.
  */
 function screenPmRecords(records, me) {
   var valid = [], skipped = 0, foreign = 0;
@@ -144,7 +144,7 @@ function screenPmRecords(records, me) {
     if (fields.length < 7) { skipped++; return; }
     var author = lower(fields[1]);
     if (author !== lower(r.target) && author !== lower(me)) { skipped++; foreign++; return; }
-    valid.push({ target: r.target, ts: r.ts, data: r.data, unread: 0 });
+    valid.push({ target: lower(r.target), ts: r.ts, data: r.data, unread: 0 });
   });
   // Another account's file: its received PMs pass the screening one by one, but none is written.
   if (skipped && foreign === skipped) return { valid: [], skipped: skipped, foreign: true };
@@ -171,7 +171,7 @@ function emphasisParts(body) {
     if (part.text) parts.push(part);
   });
   while (parts.length && !(parts[0].text = parts[0].text.replace(/^\s+/, ''))) parts.shift();
-  while (parts.length && !(parts[parts.length - 1].text = parts[parts.length - 1].text.replace(/\s+$/, ''))) parts.pop();
+  while (parts.length && !(parts[parts.length - 1].text = trimEnd(parts[parts.length - 1].text))) parts.pop();
   return parts.some(function (x) { return EMPHASIS.some(function (m) { return x[m]; }); }) ? parts : null;
 }
 
@@ -255,20 +255,43 @@ function opaqueColor(value) {
   var v = String(value || '').trim(), f = /^(?:rgb|hsl)a?\(([^)]*)\)$/i.exec(v), p = f ? f[1].trim().split(/\s*[,\/]\s*|\s+/) : [];
   return p.length > 3 && parseFloat(p[3]) === 0 ? null : cssColor(v);
 }
+// The BetterChatango background form writes well under 1 KB: a larger custom_profile.css is read as absent.
+var MINI_CSS_MAX_LENGTH = 4096;
+/**
+ * Removes the comments of a style sheet and keeps an unclosed one as text.
+ * @param {string} css Style sheet.
+ */
+function cssWithoutComments(css) {
+  var out = '', at = 0, open, close;
+  while ((open = css.indexOf('/*', at)) >= 0 && (close = css.indexOf('*/', open + 2)) >= 0) {
+    out += css.slice(at, open);
+    at = close + 2;
+  }
+  return out + css.slice(at);
+}
 /**
  * Reads the Premium background of a mini profile without ever injecting its CSS.
  * @param {string} css Content of custom_profile.css.
  */
 function parseMiniCss(css) {
-  var rules = Object.create(null), re = /([^{}]+)\{([^}]*)\}/g, m, unsafe = /^(?:__proto__|constructor|prototype)$/;
-  css = String(css).replace(/\/\*[\s\S]*?\*\//g, '');
-  while ((m = re.exec(css))) {
+  var rules = Object.create(null), unsafe = /^(?:__proto__|constructor|prototype)$/, at = 0;
+  // Scanned with indexOf, not a pattern: the cost stays linear in the size of the file, braces and comments closed or not.
+  css = cssWithoutComments(String(css));
+  for (;;) {
+    var open = css.indexOf('{', at), start = open;
+    if (open < 0) break;
+    while (start > at && css.charAt(start - 1) !== '}') start--;
+    // A brace with no selector before it starts no rule: the next selector can begin right after it.
+    if (start === open) { at = open + 1; continue; }
+    var close = css.indexOf('}', open + 1);
+    if (close < 0) break;
+    at = close + 1;
     var decl = Object.create(null);
-    m[2].split(';').forEach(function (x) {
+    css.slice(open + 1, close).split(';').forEach(function (x) {
       var i = x.indexOf(':'), prop = x.slice(0, i).trim().toLowerCase();
       if (i > 0 && !unsafe.test(prop)) decl[prop] = x.slice(i + 1).replace(/!important/i, '').trim();
     });
-    m[1].split(',').forEach(function (sel) {
+    css.slice(start, open).split(',').forEach(function (sel) {
       sel = sel.trim().toLowerCase();
       if (!unsafe.test(sel)) rules[sel] = Object.assign(rules[sel] || Object.create(null), decl);
     });
@@ -310,6 +333,25 @@ function miniStyleOfForm(form) {
   return { bg: form.bg, text: form.text, link: form.link, image: form.image || null, repeat: repeat };
 }
 
+// -- Allowed requests ---------------------------------------------------------
+
+var CHATANGO_POST = /^https:\/\/chatango\.com\//;
+var VISSLE_UPLOAD = 'https://vissle.me/chatango/upload';
+/**
+ * Checks a client.post call against the allowed HTTP calls (docs/betterchatango-protocol.md).
+ * @param {string} url Target URL.
+ * @param {Object} item client.post options.
+ * @returns {string} Why the call is refused, empty if it is allowed.
+ */
+function postRefusal(url, item) {
+  var keys = Object.keys(item);
+  // Without an option, BetterChatango adds the Chatango token for every host of its list, vissle included.
+  if (!keys.length) return CHATANGO_POST.test(url) ? '' : 'a request without an option goes to chatango.com only';
+  if (keys.length === 1 && item.cookie === true) return '';
+  if (keys.length === 1 && item.key === true) return url === VISSLE_UPLOAD ? '' : 'the key option goes to the vissle upload only';
+  return 'options not allowed: ' + keys.join(', ');
+}
+
 // -- Profile ------------------------------------------------------------------
 
 /**
@@ -345,6 +387,22 @@ function parseMsgBg(xml, image) {
     imageAlpha: percent('ialp'),
     tile: root.getAttribute('tile') === '1'
   };
+}
+
+// -- Profile activity ---------------------------------------------------------
+
+/**
+ * Reads the items of a vissle activity reply in the shape visitorPage expects.
+ * @param {*} data JSON reply of track1/activity, forwarded by the loader.
+ * @returns {?Array} Items, null if the reply or one of its items has another shape.
+ */
+function parseVisits(data) {
+  var items = data && data.get;
+  if (!Array.isArray(items)) return null;
+  return items.every(function (x) {
+    return !!x && typeof x.user === 'string' && typeof x.time === 'number' && isFinite(x.time)
+      && [x.name, x.action, x.msg].every(function (v) { return v == null || typeof v === 'string'; });
+  }) ? items : null;
 }
 
 // -- Linked accounts ----------------------------------------------------------

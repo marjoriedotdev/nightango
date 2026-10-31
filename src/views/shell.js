@@ -20,7 +20,8 @@ function columnHeader(title) {
   return h('header', { className: 'topbar col-head' }, h('h2', { className: 'grow' }, title));
 }
 
-function Shell() {
+// Memoized: Root renders again for its toasts and dialogs, which leave the shell alone.
+var Shell = React.memo(function Shell() {
   var app = useApp(), r = app.state.route, main;
   if (r.view === 'settings') return h(SettingsView, { page: r.page });
   if (r.view === 'gsettings') return h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
@@ -33,7 +34,7 @@ function Shell() {
     h(Sidebar, null),
     h('div', { className: 'scrim', onClick: app.ui.closeNav }),
     main);
-}
+});
 
 // Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames).
 function BrandMark() {

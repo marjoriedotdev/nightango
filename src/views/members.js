@@ -10,11 +10,8 @@ function MembersList(p) {
   var off = others.filter(function (n) { return userOf(s, n).status === 'offline' && n !== s.me; });
   var guests = guestsOf(g);
   function row(n) {
-    var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status;
-    return h('button', { key: n, type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, g.id); } },
-      h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
-      h('span', { className: 'grow', style: u.status === 'offline' && !isMe ? { color: 'var(--text-3)' } : null }, n),
-      presenceSr(status), youBadge(isMe), developerBadge(n), roleBadge(roleOf(g, n)));
+    var u = userOf(s, n), isMe = n === s.me;
+    return h(MemberRow, { key: n, name: n, gid: g.id, status: isMe ? s.meStatus : u.status, dim: u.status === 'offline' && !isMe, isMe: isMe, role: roleOf(g, n) });
   }
   return LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
     : h('div', { className: 'members-list' },
@@ -25,6 +22,19 @@ function MembersList(p) {
         h('h3', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + guests.count), guests.names.map(function (n) { return row(n); }),
         g.guests ? h('p', { className: 'muted', style: { margin: 'var(--space-1) var(--space-2)' } }, g.guests + ' anonymous') : null) : null);
 }
+
+/**
+ * Row of the member list, rendered again only when its props change.
+ * @param {{name: string, gid: string, status: string, dim: boolean, isMe: boolean, role: ?string}} p Member, group, presence, dimmed when offline,
+ *   signed-in user and role in the group.
+ */
+var MemberRow = React.memo(function MemberRow(p) {
+  var app = useAppApi(), n = p.name;
+  return h('button', { type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, p.gid); } },
+    h(T.Avatar, { name: n, size: 28, status: p.status, ring: 'var(--panel)' }),
+    h('span', { className: 'grow', style: p.dim ? { color: 'var(--text-3)' } : null }, n),
+    presenceSr(p.status), youBadge(p.isMe), developerBadge(n), roleBadge(p.role));
+});
 
 /**
  * Member column of a group.
@@ -108,19 +118,21 @@ function whoItem(app, name) {
  * Offers to ignore a member or to stop ignoring them.
  * @param {Object} app Application context.
  * @param {string} name Member name.
+ * @param {boolean} ignored The member is ignored.
  */
-function ignoreItem(app, name) {
-  return { id: 'ignore', label: userOf(app.state, name).ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } };
+function ignoreItem(app, name, ignored) {
+  return { id: 'ignore', label: ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } };
 }
 
 /**
  * Offers to hide a member's style or to show it again.
  * @param {Object} app Application context.
  * @param {string} name Member name.
+ * @param {boolean} unstyled The member's style is hidden.
  * @param {boolean} [named] Label that names the member, for a message menu.
  */
-function styleItem(app, name, named) {
-  var label = (userOf(app.state, name).unstyled ? 'Show ' : 'Hide ') + (named ? name + "'s style" : 'style');
+function styleItem(app, name, unstyled, named) {
+  var label = (unstyled ? 'Show ' : 'Hide ') + (named ? name + "'s style" : 'style');
   return { id: 'style', label: label, icon: 'type', onSelect: function () { app.actions.toggleUser(name, 'unstyled'); } };
 }
 
@@ -154,8 +166,8 @@ function useProfileActions(name, gid) {
     },
     u.friend ? notifyOnlineItem(app, name) : null,
     whoItem(app, name),
-    styleItem(app, name),
-    ignoreItem(app, name),
+    styleItem(app, name, u.unstyled),
+    ignoreItem(app, name, u.ignored),
     {
       id: 'block', label: u.blocked ? 'Unblock' : 'Block…', icon: 'user-x', danger: !u.blocked, onSelect: function () {
         if (u.blocked) app.actions.toggleUser(name, 'blocked');

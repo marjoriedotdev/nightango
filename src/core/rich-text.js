@@ -20,7 +20,7 @@ function shownParts(m) {
     return Object.assign({}, part, { text: text });
   });
   shown[0].text = shown[0].text.replace(/^\s+/, '');
-  shown[shown.length - 1].text = shown[shown.length - 1].text.replace(/\s+$/, '');
+  shown[shown.length - 1].text = trimEnd(shown[shown.length - 1].text);
   return shown.filter(function (part) { return part.text; });
 }
 function messagePreview(m) {
@@ -78,6 +78,17 @@ function onProfileLink(app, url, name, gid) {
     app.ui.openProfileLink({ url: url, name: name, gid: gid });
   };
 }
+/**
+ * Shows an http(s) address written by a member as a link that goes through the profile link handling or the link warning.
+ * @param {Object} app Application context.
+ * @param {string} url Link URL, also its text.
+ * @param {?string} gid Group of the message, null elsewhere.
+ * @param {*} [key] React key.
+ */
+function memberLink(app, url, gid, key) {
+  var profile = profileOfLink(url);
+  return h('a', { key: key, href: url, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: profile ? onProfileLink(app, url, profile, gid) : warnOnLink(app, url) }, url);
+}
 
 var EMPHASIS = ['b', 'i', 'u', 's'];
 
@@ -86,7 +97,7 @@ var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
 
 /* Message text: emphasis (parseContent segments, absent without emphasis), quotes, mentions and links */
 function MessageText(p) {
-  var app = useApp();
+  var app = useAppApi();
   // Hidden style (plain): like BetterChatango, bold, italic and underline drop but strikethrough stays.
   var marks = p.plain ? ['s'] : EMPHASIS;
   function mention(s, key) {
@@ -99,10 +110,7 @@ function MessageText(p) {
     return text.split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
       if (!s) return null;
       if (s.charAt(0) === '@' && s.length > 1) return mention(s, i);
-      if (/^https?:\/\//.test(s)) {
-        var profile = profileOfLink(s);
-        return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: profile ? onProfileLink(app, s, profile, p.gid || null) : warnOnLink(app, s) }, s);
-      }
+      if (/^https?:\/\//.test(s)) return memberLink(app, s, p.gid || null, i);
       return s;
     });
   }
@@ -202,9 +210,50 @@ var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
 var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 // No < and no parenthesis: the URL ends up in a CSS background, in the full profile as in custom_profile.css.
 var SAFE_IMAGE_URL = /^https:\/\/[^<>"'\\()\s]+$/;
+var MATHML_NS = 'http://www.w3.org/1998/Math/MathML', SVG_NS = 'http://www.w3.org/2000/svg';
+/**
+ * Tells whether an element of a full profile can make a link only once the frame parses or shows it.
+ * @param {Element} el Element of the parsed member HTML.
+ */
+function makesLinkLater(el) {
+  // A declarative shadow root: the frame's parser attaches its content, which getElementsByTagName never visits.
+  if (el.localName === 'template') return true;
+  // Its srcdoc becomes a document of its own, and the CSP blocks every other frame source, so nothing shown is lost.
+  if (el.localName === 'iframe') return true;
+  return el.namespaceURI === SVG_NS && (el.localName === 'animate' || el.localName === 'set') && /(?:^|:)href$/i.test(String(el.getAttribute('attributeName')).trim());
+}
+/**
+ * Removes the address of every link of a full profile, parsed like the mini profile without running or loading anything.
+ * @param {string} html HTML written by the member.
+ * @returns {{html: string, links: Array<string>}} HTML whose links keep only their content, and their distinct http(s) addresses in page order.
+ */
+function unlinkFullProfile(html) {
+  var links = [], body = richBody(html), out;
+  function unlink() {
+    var found = false;
+    Array.prototype.slice.call(body.getElementsByTagName('*')).forEach(function (el) {
+      if (makesLinkLater(el)) { el.parentNode.removeChild(el); found = true; return; }
+      // Firefox follows an href on any MathML element.
+      if (el.localName !== 'a' && el.localName !== 'area' && el.namespaceURI !== MATHML_NS) return;
+      Array.prototype.slice.call(el.attributes).forEach(function (attr) {
+        if (attr.localName !== 'href') return;
+        var url = attr.value.trim();
+        if (/^https?:\/\//i.test(url) && links.indexOf(url) < 0) links.push(url);
+        el.removeAttributeNode(attr);
+        found = true;
+      });
+    });
+    return found;
+  }
+  unlink();
+  // Parsed again until a parse finds nothing to remove: a serialized tree can parse into new elements (mutation XSS).
+  // outerHTML: the frame's parser still merges the attributes of the member's <body> onto its own.
+  do { out = body.outerHTML; body = richBody(out); } while (unlink());
+  return { html: out, links: links };
+}
 /**
  * Builds the isolated document of a full profile.
- * @param {string} html HTML written by the member.
+ * @param {string} html HTML written by the member, its links removed by unlinkFullProfile.
  * @param {boolean} allowMedia Allows images, the member background included.
  * @param {?Object} [style] Member background as returned by miniStyleOf.
  */

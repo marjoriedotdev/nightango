@@ -28,11 +28,17 @@ function fakePmDb(records, onWrite) {
     const drop = rec => [records, seen].forEach(l => { const i = l.indexOf(rec); if (i >= 0) l.splice(i, 1); });
     const request = run => { const req = {}; pending++; requests++; setTimeout(() => { run(req); done(); }, 0); return req; };
     // Cursor in microtasks after a first task: a slow walk would make short waits fail under load.
-    const cursor = list => {
+    // Like IndexedDB, continue(key) on an index skips to the first record whose key reaches key in the cursor direction.
+    const cursor = (list, keyOf, prev) => {
       const req = {}; let i = 0; pending++; requests++;
+      const reached = (rec, key) => (prev ? -1 : 1) * keyCmp(keyOf(rec), key) >= 0;
       const read = () => {
         const rec = list[i];
-        req.onsuccess({ target: { result: rec ? { value: Object.assign({}, rec), update(v) { Object.assign(rec, v); }, delete() { drop(rec); }, continue() { i++; Promise.resolve().then(read); } } : null } });
+        req.onsuccess({ target: { result: rec ? { value: Object.assign({}, rec), update(v) { Object.assign(rec, v); }, delete() { drop(rec); }, continue(key) {
+          i++;
+          if (key !== undefined) while (list[i] && !reached(list[i], key)) i++;
+          Promise.resolve().then(read);
+        } } : null } });
         if (!rec) done();
       };
       setTimeout(read, 0); return req;
@@ -62,7 +68,7 @@ function fakePmDb(records, onWrite) {
       get: ts => request(req => { const rec = seen.find(r => r.ts === ts); req.onsuccess({ target: { result: rec && Object.assign({}, rec) } }); }),
       delete: ts => request(() => drop(seen.find(r => r.ts === ts))),
       openCursor: () => cursor(seen),
-      index: name => ({ openCursor: (range, dir) => { const list = byIndex(name, range); return cursor(dir === 'prev' ? list.reverse() : list); } }),
+      index: name => ({ openCursor: (range, dir) => { const list = byIndex(name, range); return cursor(dir === 'prev' ? list.reverse() : list, r => [r.target, r.ts], dir === 'prev'); } }),
       add(rec) { const req = {}; requests++; if (!adds.length) setTimeout(commit, 0); adds.push([rec, req]); return req; }
     });
     return tx;

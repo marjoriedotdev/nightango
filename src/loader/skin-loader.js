@@ -37,8 +37,20 @@
     out.id = id;
     document.dispatchEvent(new CustomEvent('torch-skin:' + channel + '-response', { detail: JSON.stringify(out) }));
   }
+  // Any script of the page can send a request: only a JSON object with a string id is read.
+  function request(e) {
+    var q = null;
+    try { q = JSON.parse(e.detail); } catch (x) { /* answered with an error by the caller */ }
+    return q && typeof q === 'object' && typeof q.id === 'string' ? q : null;
+  }
+  var VISSLE_GET = ['all', 'log', 'like', 'dislike', 'msg', 'refer'];
   document.addEventListener('torch-skin:vissle-request', function (e) {
-    var q = JSON.parse(e.detail);
+    var q = request(e);
+    // Only what the Visitors screen sends: page 1 or the time of its last row, newest first, one of its filters.
+    if (!q || typeof q.page !== 'number' || !(q.page >= 0 && isFinite(q.page)) || q.order !== 'desc' || VISSLE_GET.indexOf(q.get) < 0) {
+      reply('vissle', q ? q.id : undefined, { error: 'Nightango refused this activity request. Reload the page and try again.' });
+      return;
+    }
     // The queried profile is always the one of the BetterChatango session, never one the page would ask for.
     var me = accountName();
     if (!me) { reply('vissle', q.id, { error: 'Your BetterChatango account could not be read. Reload the page and try again.' }); return; }
@@ -64,8 +76,8 @@
   var TIKTOK_COVER = /"cover":"(https:[^"\s]+)"/;
   function tiktokPostLink(m) { return 'https://www.tiktok.com/@' + m[1] + '/' + m[2] + '/' + m[3]; }
   document.addEventListener('torch-skin:tiktok-request', function (e) {
-    var q = JSON.parse(e.detail), short = TIKTOK_SHORT.exec(q.url), post = TIKTOK_POST.exec(q.url), unknown = 'TikTok did not say which video this link leads to. Open the link instead.';
-    if (!short && !post) { reply('tiktok', q.id, { error: unknown }); return; }
+    var q = request(e), url = q && typeof q.url === 'string' ? q.url : '', short = TIKTOK_SHORT.exec(url), post = TIKTOK_POST.exec(url), unknown = 'TikTok did not say which video this link leads to. Open the link instead.';
+    if (!short && !post) { reply('tiktok', q ? q.id : undefined, { error: unknown }); return; }
     GM_xmlhttpRequest({
       method: 'GET', url: short ? 'https://' + short[1] + '/' + short[2] + '/' : tiktokPostLink(post), anonymous: true, timeout: 15000,
       onload: function (r) {
@@ -122,8 +134,8 @@
     return out;
   }
   document.addEventListener('torch-skin:x-request', function (e) {
-    var q = JSON.parse(e.detail), post = X_POST.exec(q.url);
-    if (!post) { reply('x', q.id, { error: 'X did not share this post. Open the link instead.' }); return; }
+    var q = request(e), post = q && typeof q.url === 'string' && X_POST.exec(q.url);
+    if (!post) { reply('x', q ? q.id : undefined, { error: 'X did not share this post. Open the link instead.' }); return; }
     var link = 'https://x.com/' + post[1] + '/status/' + post[2], card = null, extra = {}, error = null, left = 2;
     // The card waits for both replies: the media is a bonus, the text decides.
     function done() {
