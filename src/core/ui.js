@@ -249,7 +249,8 @@ function Dialog(p) {
       if (openDialogs[openDialogs.length - 1] !== ref) return;
       if (e.key === 'Escape' && p.onClose) { e.stopPropagation(); p.onClose(); }
       if (e.key === 'Tab' && ref.current) {
-        var f = ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        // A disabled control takes no focus: at either end of the list, Tab would leave the dialog past it.
+        var f = ref.current.querySelectorAll('button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])');
         if (!f.length) return;
         var first = f[0], last = f[f.length - 1];
         var active = rootNode.activeElement;

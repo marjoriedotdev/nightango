@@ -1,4 +1,4 @@
-// Layers of src/core/ui.js, mounted in a Shadow DOM as in live: focus given back by menus, inert background of dialogs and toast delays.
+// Layers of src/core/ui.js, mounted in a Shadow DOM as in live: focus given back by menus, focus trap and inert background of dialogs, toast delays.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { concatSources, layerSources } = require('../scripts/build.mjs');
@@ -47,7 +47,7 @@ function Harness() {
     h('p', { id: 'blank' }, 'Plain text'),
     h(ui.MenuButton, { label: 'Message options', items: [{ label: 'Copy text', onSelect() {} }, { label: 'Open dialog', onSelect() { setOuter(true); } }] }),
     h('button', { type: 'button', id: 'behind' }, 'Behind'),
-    outer ? h(ui.Dialog, { title: 'Outer', onClose() { setOuter(false); } },
+    outer ? h(ui.Dialog, { title: 'Outer', onClose() { setOuter(false); }, footer: h('button', { type: 'button', disabled: true }, 'Save') },
       h('input', { id: 'outer-field' }),
       h('button', { type: 'button', id: 'open-inner', onClick() { setInner(true); } }, 'Open inner')) : null,
     inner ? h(ui.Dialog, { title: 'Inner', onClose() { setInner(false); } }, h('button', { type: 'button', id: 'inner-button' }, 'Inner button')) : null,
@@ -117,7 +117,7 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   pressBlank($('#blank')); await advance(0);
   step('a click outside closes the menu and focuses its button', !$('.menu') && focused() === trigger(), { menu: !!$('.menu'), focused: label(focused()) });
 
-  /* Dialogs: inert background */
+  /* Dialogs: inert background and focus trap */
   await openMenu();
   click(menuItem('Open dialog')); await advance(0);
   const one = { app: isInert(mount), outer: isInert(overlayOf('Outer')), focused: label(focused()) };
@@ -128,6 +128,11 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   step('a dialog makes the app inert, and the dialogs under the top one',
     one.app && !one.outer && one.focused === 'outer-field' && two.app && two.outer && !two.inner && two.focused === 'inner-button' && back.app && !back.outer && back.focused === 'open-inner',
     { one, two, back });
+  key(focused(), 'Tab');
+  const wrapped = label(focused());
+  key(focused(), 'Tab', { shiftKey: true });
+  const wrappedBack = label(focused());
+  step('the focus trap skips a disabled last button', wrapped === 'outer-field' && wrappedBack === 'open-inner', { wrapped, wrappedBack });
   key(focused(), 'Escape'); await advance(0);
   step('closing the last dialog frees the app and focuses the menu button again', !isInert(mount) && !$('.overlay') && focused() === trigger(), { app: isInert(mount), focused: label(focused()) });
   api.setOuter(true); await flush();
