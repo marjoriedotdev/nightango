@@ -16,6 +16,8 @@ function useMessageLog() {
   useEffect(function () {
     if (!target) return;
     var row = logRef.current.querySelector('[data-msg-id=' + JSON.stringify(target.id) + ']');
+    // A busy group can trim the target between the jump and this render.
+    if (!row) { setTarget(null); return; }
     var still = reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     row.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
     row.tabIndex = -1;
