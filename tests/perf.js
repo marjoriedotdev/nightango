@@ -1,0 +1,157 @@
+// Cost of the live operations on a busy state: what an operation shares with the previous state.
+const fs = require('fs');
+const { JSDOM, VirtualConsole } = require('jsdom');
+const S = process.argv[2];
+const ME = 'marjorie';
+const MIN = 60000;
+const GROUPS = ['busy0', 'busy1', 'busy2', 'busy3'];
+// Messages of each group: the first three at the cap (THREAD_MAX), the last one below it, for a history page that stays.
+const SIZES = [500, 500, 500, 300];
+const MEMBERS = 350, AUTHORS = 120, FRIENDS = 40, CHATS = 30, STALE = 600;
+
+const errors = [];
+const log = [];
+function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+// At the limit, returns without an error: the next step judges and gives its detail.
+const until = async (cond, ms = 10000) => { for (const end = Date.now() + ms; !cond() && Date.now() < end;) await wait(10); };
+const noop = () => {};
+const react = ['react/umd/react.development.js', 'react-dom/umd/react-dom.development.js'].map(f => fs.readFileSync('node_modules/' + f, 'utf8'));
+const bundle = fs.readFileSync(S + '/torchds/project/components/bundle.js', 'utf8');
+const app = fs.readFileSync(S + '/dist/app.js', 'utf8');
+
+/**
+ * Opens the live interface on a fake BetterChatango client, started by the prototype hook that dist/app.js keeps.
+ * @param {{account: string, groups: string[], state: ?Object}} o Signed-in account (empty: no sign-in), groups of the client,
+ *   and state handed to the interface (null: signed-out start).
+ */
+function page(o) {
+  const vc = new VirtualConsole();
+  vc.on('error', e => errors.push(String(e && e.message || e)));
+  vc.on('jsdomError', e => errors.push('jsdom: ' + e.message));
+  vc.on('warn', e => { if (!/act\(|ReactDOM.render|useLayoutEffect|\[torch-skin\]/.test(String(e))) errors.push('warn: ' + String(e).slice(0, 300)); });
+  const dom = new JSDOM('<!doctype html><html><head></head><body><span data-sidebar="private"></span><div id="app"></div></body></html>',
+    { runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: vc, url: 'https://st.chatango.com/' });
+  const w = dom.window, d = w.document;
+  w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+  w.CSS = { supports: () => false };
+  w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
+  w.IntersectionObserver = function () { return { observe() {}, unobserve() {}, disconnect() {} }; };
+  w.HTMLElement.prototype.scrollIntoView = noop;
+  w.fetch = () => Promise.resolve({ ok: false, status: 404, headers: { get: () => null }, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+
+  const group = gid => ({ socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { owner: 'owner', information: { title: gid, description: '' } }, load: 5 });
+  const C = {
+    event: { group: { b: noop, i: noop, participant: noop, g_participants: noop }, private: { wlonline: noop, wloffline: noop } },
+    user: { name: o.account, avatar: { x0: 50, y0: 50, ts: 50 }, style: false },
+    groups: Object.fromEntries(o.groups.map(gid => [gid, group(gid)])), focus: o.groups[0],
+    settings: {
+      privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: false, favorite: [] }, private_messages: { connect_start: false } },
+      notifications: { muted: { groups: [] }, sound: {} }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: [] } }
+    },
+    on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
+    emit(ev, data) { d.dispatchEvent(new w.CustomEvent('chatango_' + ev, { detail: data })); },
+    socket: noop, sendMessage: (data, length) => length ? '<n000/><f x11000="0">' + data : undefined,
+    cache: { connect: [] }, connect: () => new Promise(noop), setFocus: noop, systemMessage: noop, setNotice: noop, renderYouTube: noop,
+    private: { focus: false, socket: { readyState: 0 }, premium: {} }, database: {}
+  };
+  w.__betterChatangoRefs = {
+    client: C, sidebar: { renderGroup: noop }, torch: { environment: 'betterchatangoenv' },
+    chatango: { getBackground: noop, getAnon: () => '!anon', path: p => 'https://chatango.com/' + p, subdomain: {}, error: {} }
+  };
+  w.__TORCH_LIVE__ = true;
+  w.__TORCH_SHOW__ = noop;
+  w.__TORCH_MOUNT__ = d.getElementById('app');
+  const hot = { read: null };
+  w.claude = { hot: { data: o.state ? { state: o.state } : {}, snapshot(read) { hot.read = read; } } };
+
+  react.forEach(code => w.eval(code));
+  w.eval(bundle);
+  w.eval(app);
+  return {
+    w, d, C,
+    // The interface has mounted and handed its state to the hook.
+    ready: () => !!hot.read,
+    state: () => hot.read().state,
+    group(name, room, data) { C.event.group[name](C, {}, room, data); }
+  };
+}
+
+/**
+ * Builds a busy live state from a signed-in one: groups at their message cap with hundreds of members, friends, conversations and thousands of known users.
+ * @param {Object} tpl State read right after sign-in, with one group.
+ * @param {Object} style Style of every member, the one their messages carry.
+ */
+function busyState(tpl, style) {
+  const s = JSON.parse(JSON.stringify(tpl)), base = s.groups.tpl, now = Date.now(), user = extra => Object.assign({ status: 'online', about: '', style, styleTs: 0, profileLoaded: true }, extra);
+  s.groups = {};
+  s.users = { [ME]: s.users[ME] };
+  GROUPS.forEach((gid, gi) => {
+    const g = JSON.parse(JSON.stringify(base));
+    Object.assign(g, { id: gid, title: gid, topic: gid, joined: true, inited: true, membersLoaded: true, conn: 'open', historyCapped: SIZES[gi] === 500, lastReadTs: now });
+    g.members = [ME];
+    for (let k = 0; k < MEMBERS; k++) { const n = 'm' + gi + 'x' + k; g.members.push(n); s.users[n] = user(); }
+    g.messages = [];
+    for (let k = 0; k < SIZES[gi]; k++) {
+      g.messages.push({ id: gid + '-' + k, kind: 'msg', author: 'm' + gi + 'x' + (k * 7 % AUTHORS), text: 'Message ' + k + ' with https://example.com/' + k, ts: now - 4 * 3600e3 + k * 20000, unid: 'U' + k, ip: '', channel: 'none', bg: false, embeds: [] });
+    }
+    s.groups[gid] = g;
+  });
+  for (let k = 0; k < FRIENDS; k++) s.users['f' + k] = user({ friend: true, status: 'offline', lastOn: now - (k + 2) * MIN });
+  s.dms = {};
+  for (let k = 0; k < CHATS; k++) {
+    const n = 'c' + k;
+    s.users[n] = user();
+    s.dms[n] = { messages: [{ id: 'pm' + k, from: n, key: 'k' + k, text: 'Hello ' + k, ts: now - k * MIN }], unread: 0, lastReadTs: now, olderMore: false };
+  }
+  // Seen once and referenced by nothing any more: former members, search results.
+  for (let k = 0; k < STALE; k++) s.users['gone' + k] = user({ status: 'offline' });
+  Object.assign(s, { route: { view: 'group', id: 'busy0' }, lastChat: { view: 'group', id: 'busy0' }, liveFocused: true, groupsSeen: true, pmLoaded: true, friendsLoaded: true });
+  return s;
+}
+
+// Group message frame from a member, at a given time in seconds.
+const msgFrame = (author, id, ts, text) => [String(ts), author, '', 'u1', 'UNID' + id, id, '', '0', '', '<n000/><f x11000="0">' + text];
+
+(async () => {
+  /* A signed-in state with one group, read back to keep the state shape of the build under test */
+  const first = page({ account: ME, groups: ['tpl'], state: null });
+  await until(() => first.ready() && !!first.state().groups && !!first.state().groups.tpl);
+  const tpl = first.state();
+  // The style of the test messages as the build reads it: members keep it from one message to the next.
+  first.group('b', 'tpl', msgFrame('probe', 'probe', Date.now() / 1000, 'Style'));
+  await until(() => !!first.state().users.probe);
+  const style = first.state().users.probe && first.state().users.probe.style;
+  step('template state signed in with its group', tpl.auth.loggedIn && !!tpl.groups.tpl && !!tpl.prefs && !!style, Object.keys(tpl.groups || {}));
+  first.w.close();
+
+  const t = page({ account: '', groups: GROUPS, state: busyState(tpl, style) });
+  await until(() => t.ready());
+  await wait(50);
+  step('busy state shown', t.d.querySelectorAll('.tc-msg').length >= 400 && !!t.d.querySelector('.members-list'), t.d.querySelectorAll('.tc-msg').length);
+  const s0 = t.state();
+  step('busy state size', Object.keys(s0.users).length > 2000 && GROUPS.every((gid, i) => s0.groups[gid].messages.length === SIZES[i]), Object.keys(s0.users).length);
+
+  /* One operation copies only what it touches */
+  t.group('b', 'busy0', msgFrame('m0x1', 'one', Date.now() / 1000, 'One more'));
+  await wait(50);
+  const s1 = t.state(), g0 = s0.groups.busy0, g1 = s1.groups.busy0;
+  const shared = {
+    otherGroups: GROUPS.slice(1).every(gid => s1.groups[gid] === s0.groups[gid]), users: s1.users === s0.users, dms: s1.dms === s0.dms, prefs: s1.prefs === s0.prefs,
+    group: g1 !== g0 && g1.messages[g1.messages.length - 1].text === 'One more' && g1.messages[0] === g0.messages[1] && g1.settings === g0.settings
+  };
+  step('a message in one group leaves the other groups, the users map and the messages it keeps shared', Object.values(shared).every(Boolean), shared);
+
+  /* A history page: the shown group and the users map stay shared */
+  const s2 = t.state();
+  const oldest = s2.groups.busy3.messages[0].ts / 1000;
+  for (let k = 0; k < 50; k++) t.group('i', 'busy3', msgFrame('m3x' + (k % AUTHORS), 'hist' + k, oldest - (k + 1) * 30, 'Earlier ' + k));
+  await wait(50);
+  const s3 = t.state(), page3 = s3.groups.busy3.messages;
+  const history = { length: page3.length, sorted: page3.every((m, i) => !i || page3[i - 1].ts <= m.ts), shown: s3.groups.busy0 === s2.groups.busy0, users: s3.users === s2.users };
+  step('a history page leaves the shown group and the users map shared', history.length === 350 && history.sorted && history.shown && history.users, history);
+
+  console.log(log.join('\n'));
+  console.log('ERRORS:', errors.length ? '\n' + [...new Set(errors)].slice(0, 15).join('\n---\n') : 'none');
+  process.exit(0);
+})().catch(e => { console.log(log.join('\n')); console.log('CRASH', e.stack); console.log('ERRORS:', [...new Set(errors)].slice(0, 10).join('\n---\n')); process.exit(1); });

@@ -915,7 +915,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('msg', ['dave', 'marjorie', 'unknown', '1700000300.5', '0', '<n3366FF/><m v="1"><g x12s9900cc="4">Hi</g></m>']); await until(() => !!styled('Hi').p);
   const live = styled('Hi');
   step('pm style rendered', styleOk(live), live.p && [live.p.style.cssText, live.name && live.name.style.cssText]);
-  const hiRecord = pmRecords.find(r => r.target === 'dave' && r.ts === 1700000300.5);
+  const hiRead = () => pmRecords.find(r => r.target === 'dave' && r.ts === 1700000300.5);
+  // The row can show before the read reaches the archive.
+  await until(() => !!hiRead() && hiRead().unread === 0);
+  const hiRecord = hiRead();
   step('pm received in the open conversation marked read after BetterChatango archives it', !!hiRecord && hiRecord.unread === 0, hiRecord);
   const sentBeforeFay = sent.length;
   click(byText('.conv', 'fay')); await wait(50);
@@ -1943,7 +1946,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!byText('.conv', 'vera'));
   click(byText('.conv', 'vera')); await until(() => !!pmRow('Keep me'));
   const removeAsk = await removeFromBrowser('Remove me');
-  await until(() => !pmRow('Remove me'));
+  // The toast renders after the message log: the state and the toasts are separate updates.
+  await until(() => !pmRow('Remove me') && !!byText('.toast', 'Message removed from this browser.'));
   const removed = { ask: removeAsk, record: !!recordAt(1700003900.5), shown: !!pmRow('Remove me'), toast: !!byText('.toast', 'Message removed from this browser.') };
   await removeFromBrowser('Keep me');
   await until(() => !!byText('.toast', 'This message could not be removed.'));

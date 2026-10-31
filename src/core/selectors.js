@@ -39,8 +39,8 @@ function plainMsgId(id) { return String(id).replace(/^k:/, ''); }
  */
 function findMsg(g, id) {
   if (!g || !id) return null;
-  var plain = plainMsgId(id);
-  for (var i = g.messages.length - 1; i >= 0; i--) { var x = g.messages[i]; if (x.id === plain || x.id === 'k:' + plain) return x; }
+  var plain = plainMsgId(id), list = plainOf(g.messages);
+  for (var i = list.length - 1; i >= 0; i--) { var x = list[i]; if (x.id === plain || x.id === 'k:' + plain) return g.messages[i]; }
   return null;
 }
 /**

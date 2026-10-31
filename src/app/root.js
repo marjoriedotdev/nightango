@@ -14,21 +14,50 @@ function fetchLatestVersion() {
 }
 
 /**
- * Application state, with a ref that handlers read and an update that clones it.
+ * Store of the application state: each update applies at once to a draft of the latest state, and the interface shows the result right away.
+ * @param {Object} initial First state.
+ * @returns {{shown: function(): Object, subscribe: Function, ref: {current: Object}, update: function(function(Object))}}
+ *   State shown by the interface and its subscription, ref to the latest state, and update.
+ */
+function appStore(initial) {
+  var ref = { current: initial }, shown = initial, listeners = [];
+  function flush() {
+    if (ref.current === shown) return;
+    shown = ref.current;
+    listeners.slice().forEach(function (l) { l(); });
+  }
+  return {
+    shown: function () { return shown; },
+    subscribe: function (l) {
+      listeners.push(l);
+      return function () { listeners = listeners.filter(function (x) { return x !== l; }); };
+    },
+    ref: ref,
+    update: function (fn) {
+      var draft = openDraft(ref.current);
+      // An update that throws changes nothing.
+      try { fn(draft.root); } catch (e) { draft.finish(); throw e; }
+      ref.current = draft.finish();
+      flush();
+    }
+  };
+}
+
+/**
+ * Application state, with a ref to the latest state that handlers read and its update.
  * @param {?Object} boot State handed by the prototype hook.
- * @returns {{state: Object, stateRef: Object, update: function(function(Object))}} State of this render, its ref and its update.
+ * @returns {{state: Object, stateRef: Object, update: function(function(Object))}} State of this render, ref to the latest state and its update.
  */
 function useAppState(boot) {
-  var st = useState(function () { return boot && boot.auth ? boot : initialState(); }), state = st[0], setState = st[1];
-  var stateRef = useRef(state); stateRef.current = state;
-  var update = useCallback(function (fn) { setState(function (prev) { var d = JSON.parse(JSON.stringify(prev)); fn(d); return d; }); }, []);
+  var store = useState(function () { return appStore(boot && boot.auth ? boot : initialState()); })[0];
+  var state = useSyncExternalStore(store.subscribe, store.shown);
   /*PROTOTYPE*/
   useEffect(function () {
     var hot = window.claude && window.claude.hot;
-    if (hot && hot.snapshot) hot.snapshot(function () { return { state: stateRef.current }; });
+    if (hot && hot.snapshot) hot.snapshot(function () { return { state: store.ref.current }; });
   }, []);
   /*END PROTOTYPE*/
-  return { state: state, stateRef: stateRef, update: update };
+  return { state: state, stateRef: store.ref, update: store.update };
 }
 
 /**

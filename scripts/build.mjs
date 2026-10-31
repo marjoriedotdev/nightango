@@ -11,6 +11,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 export const APP_SOURCES = [
   'core/globals.js',
   'core/util.js',
+  'core/draft.js',
   'core/colors.js',
   'core/roles.js',
   'core/sample-data.js',

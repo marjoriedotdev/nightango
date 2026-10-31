@@ -32,7 +32,8 @@
 
 ## State
 
-- The state of `Root` stays JSON-serializable: `update` clones it with `JSON.parse(JSON.stringify(...))`. No function, `Date`, `Map` or DOM node in the state.
+- The state of `Root` stays JSON-serializable: no function, `Date`, `Map` or DOM node in the state.
+- The state changes only through `update`, on a copy-on-write draft: a state object is never changed in place, and a draft kept after its update cannot be written.
 - Account-specific data goes into `torch-skin:<username>`, preferences into `torch-prototype-prefs`.
 
 ## Guards

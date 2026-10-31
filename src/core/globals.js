@@ -4,4 +4,4 @@ var T = Object.assign({}, window.Torch, {
   Avatar: function (p) { return h(window.Torch.Avatar, p.src !== undefined ? p : Object.assign({}, p, { src: p.square ? null : avatarSrc(p.name, p.size) })); }
 });
 var useState = React.useState, useEffect = React.useEffect, useLayoutEffect = React.useLayoutEffect, useRef = React.useRef,
-  useMemo = React.useMemo, useCallback = React.useCallback, useContext = React.useContext, Frag = React.Fragment;
+  useMemo = React.useMemo, useCallback = React.useCallback, useContext = React.useContext, useSyncExternalStore = React.useSyncExternalStore, Frag = React.Fragment;

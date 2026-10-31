@@ -52,6 +52,7 @@ function useLiveOps(k) {
         break;
       }
       case 'group': {
+        var unfocused = !stateRef.current.liveFocused;
         update(function (d) {
           if (!d.auth.loggedIn) return;
           var g = ensureLiveGroup(d, op.id, localRef.current);
@@ -63,7 +64,7 @@ function useLiveOps(k) {
           g.joined = !op.hidden;
           if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: Date.now() }; }
         });
-        if (!op.hidden && !stateRef.current.liveFocused) setTimeout(function () { var r = stateRef.current.route; if (r.view === 'group' && r.id === op.id) liveBridge.focus(op.id); }, 50);
+        if (!op.hidden && unfocused) setTimeout(function () { var r = stateRef.current.route; if (r.view === 'group' && r.id === op.id) liveBridge.focus(op.id); }, 50);
         break;
       }
       case 'msg': {
@@ -91,7 +92,7 @@ function useLiveOps(k) {
           if (!d.auth.loggedIn) return;
           var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, hm.author, localRef.current);
           mergeStyle(u, hs, hm.ts);
-          if (g.messages.some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return;
+          if (plainOf(g.messages).some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return;
           var o = editTarget(g, hm);
           // History received from newest to oldest: like BetterChatango, an original already edited keeps its text.
           if (o) { applyGroupEdit(o, hm, o.edited); return; }
@@ -105,10 +106,10 @@ function useLiveOps(k) {
         break;
       }
       case 'msgid': groupUpdate(update, op.gid, function (g, d) {
-        g.messages.forEach(function (x) {
-          if (x.id === op.tmp) x.id = op.id;
-          if (x.replyTo && x.replyTo.id === op.tmp) x.replyTo.id = op.id;
-          if (x.editIds) x.editIds = x.editIds.map(function (id) { return id === op.tmp ? op.id : id; });
+        plainOf(g.messages).forEach(function (x, i) {
+          if (x.id === op.tmp) g.messages[i].id = op.id;
+          if (x.replyTo && x.replyTo.id === op.tmp) g.messages[i].replyTo.id = op.id;
+          if (x.editIds && x.editIds.indexOf(op.tmp) >= 0) g.messages[i].editIds = x.editIds.map(function (id) { return id === op.tmp ? op.id : id; });
         });
         d.mentionLog.forEach(function (x) { if (x.gid === op.gid && x.id === op.tmp) x.id = op.id; });
       }); break;

@@ -179,6 +179,8 @@ function applyPresence(u, x) {
  */
 function mergeStyle(u, style, ts) {
   if (!style || ts <= u.styleTs) return;
+  // The time moves with the style only: a message that keeps the style leaves the member, and the users map, as they are.
+  if (Object.keys(style).every(function (k) { return u.style[k] === style[k]; })) return;
   u.style = Object.assign({}, u.style, style);
   u.styleTs = ts;
 }
@@ -230,10 +232,11 @@ function applyGroupEdit(o, m, keepText) {
  * @param {Object} o Original message, not in the message log yet.
  */
 function mergeEdits(g, o) {
-  var edits = g.messages.filter(function (x) { return x.editId === o.id && x.author === o.author; });
+  function isEdit(x) { return x.editId === o.id && x.author === o.author; }
+  var edits = plainOf(g.messages).filter(isEdit);
   if (!edits.length) return;
   edits.sort(function (a, b) { return a.ts - b.ts; }).forEach(function (e) { applyGroupEdit(o, e); });
-  g.messages = g.messages.filter(function (x) { return edits.indexOf(x) < 0; });
+  g.messages = g.messages.filter(function (x) { return !isEdit(x); });
 }
 /**
  * Adds a page of bans or unbans to its list.

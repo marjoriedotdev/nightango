@@ -55,10 +55,9 @@ function GroupView(p) {
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m.author, mode.m.text) : null;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
-  // Style compared as text: update clones the whole state, so the object changes on every update.
   var measured = useMemo(function () {
     return LIVE ? liveBridge.measure(p.gid, typed, { replyId: replyId, editId: editId, quote: quoted, style: s.ownStyle }) : typed.length;
-  }, [p.gid, typed, replyId, editId, quoted, JSON.stringify(s.ownStyle)]);
+  }, [p.gid, typed, replyId, editId, quoted, s.ownStyle]);
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
