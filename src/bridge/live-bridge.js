@@ -332,7 +332,7 @@ var liveBridge = (function () {
   /**
    * Starts a BetterChatango connection.
    * @param {string} gid Group or private_message.
-   * @returns {Promise} Settles with the attempt, rejected after CONNECT_TIMEOUT without an answer.
+   * @returns {Promise} Settles with the attempt, rejected after CONNECT_TIMEOUT without an answer or when the group is left.
    */
   function connect(gid) {
     // A second PM session opened during the first would send kickingoff to ours: only one attempt at a time.
@@ -360,13 +360,23 @@ var liveBridge = (function () {
     var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
     a.done = Promise.race([sock, cancelled]).then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) {
       settle();
-      // A late answer would give BetterChatango a second socket for this connection.
+      // A late answer would give BetterChatango a second socket for this connection, and the frames of a left group.
       if (a.socket) a.socket.close();
       note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e));
       throw e;
     });
     attempts[gid] = a;
     return a.done;
+  }
+  /**
+   * Starts a connection then runs its follow-up, unless the user left the group in between.
+   * @param {string} gid Group or private_message.
+   * @param {Function} then Follow-up of a successful attempt.
+   */
+  function connectThen(gid, then) {
+    try {
+      connect(gid).then(function () { if (!left[gid]) { try { then(); } catch (e) { warn(e); } } }, function (e) { if (!left[gid]) warn(e); });
+    } catch (e) { warn(e); }
   }
 
   /**
@@ -914,18 +924,22 @@ var liveBridge = (function () {
     join: function (gid) {
       delete left[gid];
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }
-      try { connect(gid).then(function () { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } }, warn); } catch (e) { warn(e); }
+      connectThen(gid, function () { C.setFocus({ group: gid }); });
     },
-    leave: function (gid) { left[gid] = true; note('Leaving #' + gid); try { C.disconnectFrom(gid); } catch (e) { warn(e); } },
+    leave: function (gid) {
+      left[gid] = true;
+      note('Leaving #' + gid);
+      // BetterChatango only closes an open socket that it registered on ok (inject.js:5714): cancelling the attempt closes the one still connecting.
+      if (attempts[gid]) attempts[gid].cancel(new Error('left the group'));
+      try { C.disconnectFrom(gid); } catch (e) { warn(e); }
+    },
     /**
      * Restarts a closed connection.
      * @param {string} gid Group or private_message.
      * @param {boolean=} background True for a group that is not shown: the BetterChatango focus stays on the shown group.
      */
     reconnect: function (gid, background) {
-      try {
-        connect(gid).then(function () { if (gid !== 'private_message' && !background) { try { C.setFocus({ group: gid, reload: true }); } catch (e) { warn(e); } } }, warn);
-      } catch (e) { warn(e); }
+      connectThen(gid, function () { if (gid !== 'private_message' && !background) C.setFocus({ group: gid, reload: true }); });
     },
     loadMore: function (gid) {
       var g = C.groups && C.groups[gid];

@@ -1780,6 +1780,32 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     hung.connects === 1 && hung.socket === 3 && !hung.cached && hung.notes.includes('Could not connect to #test: no answer after 10 s') && hung.banner && hung.banner.phase === 'failed' && hung.retried === 2,
     hung);
 
+  /* Leave during a reconnect: the socket still connecting closes, its frames stay out of the state, the BetterChatango focus stays off the group */
+  click(byText('.tc-nav', 'newroom')); await wait(50);
+  connectHeld = true;
+  hidePage();
+  C.groups.newroom.socket.readyState = 3; await until(failedPhase, 3000);
+  showPage();
+  const leaveFrom = { sockets: sockets.length, calls: calls.length };
+  click(byText('.conn-banner button', 'Try again')); await wait(30);
+  // Open and authenticated: Chatango has not answered yet.
+  const joining = sockets[leaveFrom.sockets];
+  if (joining) joining.readyState = 1;
+  click($('button[aria-label="Group options"]')); await wait(30);
+  click(menuItem('Leave group')); await wait(30);
+  click(byText('.dialog-foot button', 'Leave group')); await wait(50);
+  connectHeld = false;
+  if (joining) {
+    joining.receive('ok:marjorie::::1700000000:::0');
+    joining.receive('b:1700009000.1:Ivy::u9:UNID9:tmp90:9.9.9.9:0::<n000/><f x11000="0">@marjorie ghost of newroom');
+    joining.receive('inited');
+  }
+  await wait(100);
+  click(byText('.tc-nav', 'Mentions')); await wait(50);
+  const leftDuring = { socket: joining ? joining.readyState : null, focus: calls.slice(leaveFrom.calls).filter(c => c[0] === 'focus' && c[1] === 'newroom').length, ghost: d.body.textContent.includes('ghost of newroom'), listed: !!byText('.tc-nav', 'newroom') };
+  step('leaving a group during a reconnect closes its socket, keeps its later frames out of the state and the BetterChatango focus off it',
+    leftDuring.socket === 3 && !leftDuring.ghost && !leftDuring.focus && !leftDuring.listed, leftDuring);
+
   /* Session loss: signed in elsewhere, offline, connection lost, session expired */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
