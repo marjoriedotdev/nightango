@@ -215,6 +215,8 @@ async function suite(userscript) {
   /* Interface error: recovery screen instead of a blank page, BetterChatango back on request */
   const r = page(userscript, 'https://st.chatango.com/');
   await deliverReact(r.w);
+  // BetterChatango's client document holds its PM tab, whose click method the bridge disables at sign-in.
+  r.d.body.insertAdjacentHTML('beforeend', '<span data-sidebar="private"></span>');
   fakeBetterChatango(r.w);
   // BetterChatango's PM handlers: connect opens its PM screen, DENIED shows its alert.
   const bcPrivate = [];

@@ -58,9 +58,9 @@ w.__TORCH_LIVE__ = true;
 w.__TORCH_SHOW__ = () => { shown++; };
 w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
-// Diagnostic journal of the page code: the bridge notes its connections there.
+// Diagnostic journal of the page code: the bridge gives it the account at sign-in and notes its connections there.
 const journal = [];
-w.__TORCH_JOURNAL__ = { limit: 1000, add: (k, m) => { journal.push({ t: Date.now(), k, m: String(m) }); }, entries: () => journal.slice(), clear: () => { journal.length = 0; }, subscribe: () => noop };
+w.__TORCH_JOURNAL__ = { limit: 1000, add: (k, m) => { journal.push({ t: Date.now(), k, m: String(m) }); }, signIn: noop, entries: () => journal.slice(), clear: () => { journal.length = 0; }, subscribe: () => noop };
 // Like a browser WebSocket: a frame reaches onmessage only while the socket is open.
 const sockets = [];
 w.WebSocket = function (url) { this.url = url; this.readyState = 0; sockets.push(this); };
@@ -1810,7 +1810,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Message log at the 500 cap: a new message keeps the length, yet a PM still brings a scrolled-up reader back and a group still shows New messages */
   const capTexts = () => $$('.log .tc-msg-text').map(x => x.textContent);
   // jsdom does not scroll: the log reads a reader scrolled up and records each scrollTop it sets.
-  const scrolledUp = () => {
+  const scrollReaderUp = () => {
     const el = $('.log'), at = { top: -2000, writes: [] };
     Object.defineProperty(el, 'scrollTop', { configurable: true, get: () => at.top, set: v => { at.writes.push(v); at.top = v; } });
     el.dispatchEvent(new w.Event('scroll'));
@@ -1821,10 +1821,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.conv', 'tess')); await until(() => capTexts().length === 1);
   for (let i = 1; i < 500; i++) capPm(i);
   await until(() => capTexts().length === 500, 30000);
-  let reader = scrolledUp();
+  let reader = scrollReaderUp();
   capPm(500); await until(() => capTexts().includes('Cap 500'));
   const capReceived = { rows: capTexts().length, first: capTexts()[0], writes: reader.writes };
-  reader = scrolledUp();
+  reader = scrollReaderUp();
   type($('.thread .tc-composer textarea'), 'Cap reply'); key($('.thread .tc-composer textarea'), 'Enter'); await until(() => capTexts().includes('Cap reply'));
   const capSent = { rows: capTexts().length, first: capTexts()[0], writes: reader.writes };
   C.groups.capped = fakeGroup();
@@ -1834,7 +1834,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('inited', 'capped', []);
   await until(() => !!byText('.tc-nav', 'capped'), 30000);
   click(byText('.tc-nav', 'capped')); await until(() => capTexts().length === 500);
-  reader = scrolledUp();
+  reader = scrollReaderUp();
   g('b', 'capped', ['1700030500.1', 'Dana', '', 'u7', 'UNID7', 'tmp500', '4.4.4.4', '0', '', '<n000/><f x11000="0">Full 500']);
   await until(() => capTexts().includes('Full 500'));
   const capGroup = { rows: capTexts().length, first: capTexts()[0], button: !!byText('.jump', 'New messages'), writes: reader.writes };
