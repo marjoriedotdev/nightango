@@ -55,7 +55,8 @@ src/
     pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database)
     inbox.js         Mentions page log
     live-ops.js      useBridgeOps: each bridge operation goes to the handler of the latest render, those after login once it has rendered
-    root.js          Root: state, actions, live actions, handleLiveOp
+    root.js          Root, and its page hooks: state (useAppState), display preferences, idle members, tab title, Ctrl K, update check.
+                     Still in Root: actions, live actions, handleLiveOp
     start.js         mounting, recovery screen after an interface error
   loader/
     skin-loader.js   sandbox-side userscript: header and @version, home page guard,

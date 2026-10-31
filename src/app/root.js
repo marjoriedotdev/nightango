@@ -19,39 +19,30 @@ function fetchLatestVersion() {
   });
 }
 
-function Root(props) {
-  var st = useState(function () { return props.boot && props.boot.auth ? props.boot : initialState(); }), state = st[0], setState = st[1];
+/**
+ * Application state, with a ref that handlers read and an update that clones it.
+ * @param {?Object} boot State handed by the prototype hook.
+ * @returns {{state: Object, stateRef: Object, update: function(function(Object))}} State of this render, its ref and its update.
+ */
+function useAppState(boot) {
+  var st = useState(function () { return boot && boot.auth ? boot : initialState(); }), state = st[0], setState = st[1];
   var stateRef = useRef(state); stateRef.current = state;
-  // Only source of PM unreads: the BetterChatango database in live, an in-memory archive in the prototype or when that database is missing.
-  var pmArchive = useRef(null);
-  if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
   var update = useCallback(function (fn) { setState(function (prev) { var d = JSON.parse(JSON.stringify(prev)); fn(d); return d; }); }, []);
-  // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
-  var drafts = useRef({});
-  var u1 = useState([]), toasts = u1[0], setToasts = u1[1];
-  var u2 = useState(null), confirmCfg = u2[0], setConfirm = u2[1];
-  var u3 = useState(null), profile = u3[0], setProfile = u3[1];
-  var u4 = useState(null), linkUrl = u4[0], setLinkUrl = u4[1];
-  var u5 = useState(false), palette = u5[0], setPalette = u5[1];
-  var u6 = useState(null), create = u6[0], setCreate = u6[1];
-  var u7 = useState(false), newDm = u7[0], setNewDm = u7[1];
-  var u8 = useState(null), banCfg = u8[0], setBan = u8[1];
-  var u9 = useState(false), navOpen = u9[0], setNavOpen = u9[1];
-  var u11 = useState(null), fullProfile = u11[0], setFullProfile = u11[1];
-  var u12 = useState(null), profileLink = u12[0], setProfileLink = u12[1];
-  var u13 = useState({}), uploads = u13[0], setUploads = u13[1];
-  var u14 = useState(null), who = u14[0], setWho = u14[1];
-  var u10 = useState(0), themeTick = u10[1];
-  var prefs = state.prefs;
-
   /*PROTOTYPE*/
   useEffect(function () {
     var hot = window.claude && window.claude.hot;
     if (hot && hot.snapshot) hot.snapshot(function () { return { state: stateRef.current }; });
   }, []);
   /*END PROTOTYPE*/
+  return { state: state, stateRef: stateRef, update: update };
+}
 
-  /* Theme, accent and display preferences applied to the root */
+/**
+ * Applies the theme, accent and display preferences to the root, keeps the preferences in this browser and follows the system theme.
+ * @param {Object} prefs Preferences.
+ */
+function useDisplayPrefs(prefs) {
+  var rerender = useState(0)[1];
   useEffect(function () {
     var root = ROOT_EL;
     if (prefs.theme === 'dark' || prefs.theme === 'light') root.setAttribute('data-theme', prefs.theme);
@@ -73,32 +64,49 @@ function Root(props) {
   }, [prefs]);
   useEffect(function () {
     var mq; try { mq = window.matchMedia('(prefers-color-scheme: light)'); } catch (e) { return; }
-    function onChange() { themeTick(function (n) { return n + 1; }); }
+    function onChange() { rerender(function (n) { return n + 1; }); }
     if (mq.addEventListener) mq.addEventListener('change', onChange);
     return function () { if (mq.removeEventListener) mq.removeEventListener('change', onChange); };
   }, []);
+}
 
-  /* Switch to idle for members inactive for IDLE_DELAY */
+/**
+ * Switches to idle the members inactive for IDLE_DELAY.
+ * @param {?Object} users Members of the state.
+ * @param {Function} update State update.
+ */
+function useIdleStatus(users, update) {
   useEffect(function () {
-    if (!state.users) return;
+    if (!users) return;
     var next = Infinity;
-    Object.keys(state.users).forEach(function (n) { var u = state.users[n]; if (u.idleSince && u.status === 'online') next = Math.min(next, u.idleSince + IDLE_DELAY); });
+    Object.keys(users).forEach(function (n) { var u = users[n]; if (u.idleSince && u.status === 'online') next = Math.min(next, u.idleSince + IDLE_DELAY); });
     if (next === Infinity) return;
     var timer = setTimeout(function () {
       update(function (d) { Object.keys(d.users).forEach(function (n) { var u = d.users[n]; if (u.idleSince && u.status === 'online' && Date.now() - u.idleSince >= IDLE_DELAY) u.status = 'idle'; }); });
     }, Math.max(0, next - Date.now()));
     return function () { clearTimeout(timer); };
-  }, [state.users]);
+  }, [users]);
+}
 
-  /* Tab title */
+/**
+ * Shows the unread count and the account in the tab title.
+ * @param {Object} state Application state.
+ */
+function useTabTitle(state) {
   useEffect(function () {
     if (!state.auth.loggedIn) { document.title = 'Nightango'; return; }
     var n = unreadDmCount(state);
     Object.keys(state.groups).forEach(function (k) { n += state.groups[k].mentions || 0; });
-    document.title = (prefs.tabTitle && n ? '(' + n + ') ' : '') + (prefs.privacy.usernameInTitle ? state.me + ' | ' : '') + 'Nightango';
+    document.title = (state.prefs.tabTitle && n ? '(' + n + ') ' : '') + (state.prefs.privacy.usernameInTitle ? state.me + ' | ' : '') + 'Nightango';
   });
+}
 
-  /* Global keyboard shortcuts */
+/**
+ * Opens the command palette with Ctrl K or Cmd K once signed in.
+ * @param {Object} stateRef Ref to the application state.
+ * @param {function(boolean)} setPalette Opens the palette.
+ */
+function useShortcuts(stateRef, setPalette) {
   useEffect(function () {
     function onKey(e) {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K') && stateRef.current.auth.loggedIn) { e.preventDefault(); setPalette(true); }
@@ -106,22 +114,56 @@ function Root(props) {
     document.addEventListener('keydown', onKey);
     return function () { document.removeEventListener('keydown', onKey); };
   }, []);
+}
+
+/**
+ * Checks for a newer release once per page at sign-in and offers its download.
+ * @param {boolean} loggedIn Signed in.
+ * @param {Function} toast Shows a notification.
+ */
+function useUpdateCheck(loggedIn, toast) {
+  var updateChecked = useRef(false);
+  useEffect(function () {
+    if (!LIVE || !loggedIn || updateChecked.current) return;
+    updateChecked.current = true;
+    fetchLatestVersion().then(function (v) {
+      if (v && isNewerVersion(v, APP_VERSION)) toast('Nightango ' + v + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(RELEASES_URL + 'tag/v' + v, '_blank', 'noopener'); } } });
+    }).catch(function () { if (JOURNAL) JOURNAL.add('app', 'Update check failed'); });
+  }, [loggedIn]);
+}
+
+function Root(props) {
+  var store = useAppState(props.boot), state = store.state, stateRef = store.stateRef, update = store.update;
+  // Only source of PM unreads: the BetterChatango database in live, an in-memory archive in the prototype or when that database is missing.
+  var pmArchive = useRef(null);
+  if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
+  // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
+  var drafts = useRef({});
+  var u1 = useState([]), toasts = u1[0], setToasts = u1[1];
+  var u2 = useState(null), confirmCfg = u2[0], setConfirm = u2[1];
+  var u3 = useState(null), profile = u3[0], setProfile = u3[1];
+  var u4 = useState(null), linkUrl = u4[0], setLinkUrl = u4[1];
+  var u5 = useState(false), palette = u5[0], setPalette = u5[1];
+  var u6 = useState(null), create = u6[0], setCreate = u6[1];
+  var u7 = useState(false), newDm = u7[0], setNewDm = u7[1];
+  var u8 = useState(null), banCfg = u8[0], setBan = u8[1];
+  var u9 = useState(false), navOpen = u9[0], setNavOpen = u9[1];
+  var u11 = useState(null), fullProfile = u11[0], setFullProfile = u11[1];
+  var u12 = useState(null), profileLink = u12[0], setProfileLink = u12[1];
+  var u13 = useState({}), uploads = u13[0], setUploads = u13[1];
+  var u14 = useState(null), who = u14[0], setWho = u14[1];
+  var prefs = state.prefs;
+  useDisplayPrefs(prefs);
+  useIdleStatus(state.users, update);
+  useTabTitle(state);
+  useShortcuts(stateRef, setPalette);
 
   var toast = useCallback(function (text, opts) {
     var t = Object.assign({ id: uid(), text: text }, opts || {});
     setToasts(function (list) { return list.concat([t]).slice(-4); });
   }, []);
   function dismissToast(id) { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }
-
-  /* Newer release, checked once per page at sign-in */
-  var updateChecked = useRef(false);
-  useEffect(function () {
-    if (!LIVE || !state.auth.loggedIn || updateChecked.current) return;
-    updateChecked.current = true;
-    fetchLatestVersion().then(function (v) {
-      if (v && isNewerVersion(v, APP_VERSION)) toast('Nightango ' + v + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(RELEASES_URL + 'tag/v' + v, '_blank', 'noopener'); } } });
-    }).catch(function () { if (JOURNAL) JOURNAL.add('app', 'Update check failed'); });
-  }, [state.auth.loggedIn]);
+  useUpdateCheck(state.auth.loggedIn, toast);
 
   function nav(route) {
     update(function (d) {
