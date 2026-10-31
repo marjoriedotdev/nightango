@@ -11,7 +11,7 @@
     function stored(key) {
       try { var list = JSON.parse(localStorage.getItem(key)); return Array.isArray(list) ? list : null; } catch (e) { return null; }
     }
-    // The log shared by every account up to 0.29.0. The Array test spares an account named journal, whose data lives under the same key.
+    // The log shared by every account up to 0.31.1. The Array test spares an account named journal, whose data lives under the same key.
     if (stored(KEY)) localStorage.removeItem(KEY);
     function save() {
       clearTimeout(saveTimer);
