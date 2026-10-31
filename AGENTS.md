@@ -8,7 +8,7 @@ The version installed on the user's machine is in real use: every release touche
 
 Rules 1, 2, 4 and 6 have their ADR under `docs/adr/`, linked at the end of the rule. Rules 3 and 5 have none. Read the ADR before any change that comes close to it.
 
-1. **Password out of reach.** Our code never reads, stores, logs or transmits the password. Sign-in happens on the BetterChatango screen. Never call a BetterChatango function that adds the password to a request (in `client.post`, no `credential` option). The HTTP calls our code makes to Chatango, vissle, GitHub and TikTok are listed in `docs/betterchatango-protocol.md#allowed-http-calls`, and this list is closed. The resources loaded by the loader and the interface (React, fonts, BetterChatango script, media, avatars) are listed separately in the same section. [ADR-0001](docs/adr/0001-password-never-read.md)
+1. **Password out of reach.** Our code never reads, stores, logs or transmits the password. Sign-in happens on the BetterChatango screen. Never call a BetterChatango function that adds the password to a request (in `client.post`, no `credential` option). The HTTP calls our code makes to Chatango, vissle, GitHub, TikTok and X are listed in `docs/betterchatango-protocol.md#allowed-http-calls`, and this list is closed. The resources loaded by the loader and the interface (React, fonts, BetterChatango script, media, avatars) are listed separately in the same section. [ADR-0001](docs/adr/0001-password-never-read.md)
 2. **Sourced frame or nothing.** Every Chatango frame sent comes from BetterChatango's code or from a reference library (chadango, chatango-lib, ch.py). Without a source, the feature stays marked "not wired" and the interface says so. [ADR-0002](docs/adr/0002-no-invented-frames.md)
 3. **No fake success in live.** An action that is not actually sent is hidden or shown as unavailable.
 4. **Member HTML rebuilt, never injected.** Mini profile: `RichText` (allowlist rebuilt as React elements). Full profile: `sandbox` `iframe` without `allow-scripts` or `allow-same-origin`, CSP in a `<meta>` (`fullProfileDoc`). Mini profile CSS: parsed, never injected. [ADR-0004](docs/adr/0004-member-html-never-injected.md)
@@ -23,6 +23,7 @@ Decisions that follow from these and must not be "fixed":
 - PM unreads come only from BetterChatango's private history, the state keeps only a copy read back from it ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
 - the update check asks GitHub once per sign-in and never installs code on its own ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
 - TikTok is reached on click, or for the cover under the rules of the YouTube thumbnail: one anonymous call per link through the loader, which reads the post page and returns the post link and the cover address only ([ADR-0014](docs/adr/0014-tiktok-embed.md)).
+- X is reached under the same rules: per post, two anonymous calls through the loader, the documented oEmbed for the text and the undocumented syndication for the first media, which return the card fields only. `widgets.js` is never loaded ([ADR-0015](docs/adr/0015-x-embed.md)).
 
 ## Project preferences
 

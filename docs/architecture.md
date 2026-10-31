@@ -54,7 +54,7 @@ src/
     start.js         mounting
   loader/
     skin-loader.js   sandbox-side userscript: header and @version, home page guard,
-                     page code injection, vissle and TikTok bridges (GM_xmlhttpRequest)
+                     page code injection, vissle, TikTok and X bridges (GM_xmlhttpRequest)
     skin-page.js     page code: double start protection, starts BetterChatango, loads React (SRI),
                      waits for BetterChatango, mounts the Shadow DOM
     skin-journal.js  diagnostic journal, inserted by the build at the top of the page code (ADR-0011)
@@ -88,18 +88,18 @@ Tampermonkey runs `skin-loader.js` in a sandbox that sees neither BetterChatango
 ```
 Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
   guard: home page only                 ---->     inline <script> (page code as a JSON literal)
-  vissle and TikTok bridges                         skin-page.js: BetterChatango, React, Shadow DOM
+  vissle, TikTok and X bridges                      skin-page.js: BetterChatango, React, Shadow DOM
   (GM_xmlhttpRequest)                               application (bundle + src/)
         ^                                                 |
-        |  CustomEvent torch-skin:{vissle,tiktok}-request |
+        |  CustomEvent torch-skin:{bridge}-request        |
         +--------------------------------------------------+
-           CustomEvent torch-skin:{vissle,tiktok}-response
+           CustomEvent torch-skin:{bridge}-response, bridge: vissle, tiktok or x
 ```
 
-- Header: `@match https://st.chatango.com/*`, `@noframes`, `@grant GM_xmlhttpRequest`, `@connect vissle.me`, `@connect tiktok.com`, `@run-at document-idle`.
+- Header: `@match https://st.chatango.com/*`, `@noframes`, `@grant GM_xmlhttpRequest`, `@connect vissle.me`, `@connect tiktok.com`, `@connect publish.x.com`, `@connect cdn.syndication.twimg.com`, `@run-at document-idle`.
 - The loader stops outside the home page (`window.top !== window` or `pathname !== '/'`): st.chatango.com also serves the chat windows embedded in other sites.
 - The page code is injected by a `<script>` whose `textContent` is an ASCII-only JSON string literal. It is never parsed as HTML.
-- Only the vissle and TikTok bridges run in the sandbox. The page sends them its requests through `askLoader` (`live-bridge.js`), which matches the replies by id. The vissle bridge reads the queried profile from `client.user.name` through an inline probe injected on each request, which returns it through a synchronous `CustomEvent` (`torch-skin:account`), and ignores the one the page would ask for. No `unsafeWindow`: Userscripts (Safari) does not provide it ([ADR-0005](adr/0005-visitors-own-profile-only.md)). The TikTok bridge accepts only a short or post TikTok link, which it rebuilds, and replies with the post id and link and the cover address only ([ADR-0014](adr/0014-tiktok-embed.md)).
+- Only the vissle, TikTok and X bridges run in the sandbox. The page sends them its requests through `askLoader` (`live-bridge.js`), which matches the replies by id. The vissle bridge reads the queried profile from `client.user.name` through an inline probe injected on each request, which returns it through a synchronous `CustomEvent` (`torch-skin:account`), and ignores the one the page would ask for. No `unsafeWindow`: Userscripts (Safari) does not provide it ([ADR-0005](adr/0005-visitors-own-profile-only.md)). The TikTok bridge accepts only a short or post TikTok link, which it rebuilds, and replies with the post id and link and the cover address only ([ADR-0014](adr/0014-tiktok-embed.md)). The X bridge accepts only an X post link, which it rebuilds, parses the oEmbed `html` in an inert `DOMParser` document and replies with the card fields and the first media only ([ADR-0015](adr/0015-x-embed.md)).
 - `skin-page.js` protects itself from a double start (`window.__TORCH_SKIN__`), sets up the diagnostic journal (`skin-journal.js`, in place of `/*JOURNAL*/`) before any BetterChatango socket, watches for the BetterChatango sign-in screen, adds the BetterChatango startup script, loads React and ReactDOM from cdnjs with SRI, waits for BetterChatango's global objects, then mounts the interface.
 - If the startup fails, the original BetterChatango client stays in place.
 
@@ -149,7 +149,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 - Message background: under `styles.backgrounds`, the color taken from `msgbg.xml` by `parseMsgBg` colors the row of a group message marked `bg`, text and name at 4.5:1. The `msgbg.jpg` image is a CSS background behind the text (`background` slot of `T.Message`), at its natural size, placed according to the member's alignment, tiled if the member asks for it, only if `embedImages` is on and `proxyMedia` is off.
 - Hidden style: "Hide style", in a message menu or the actions on a person, marks the member `unstyled`. `memberStyles` then renders their rows, in groups and in PMs, as if `styles.names`, `styles.fonts` and `styles.backgrounds` were off for them alone, without reading their message background, and `MessageText` removes their bold, italic and underline, keeping strikethrough. Reference: BetterChatango's `/style name` (`inject.js:7308-7350`), which only affects messages already displayed and keeps nothing on reload.
 - Profile picture: the avatar of the profile dialog and panel, once its thumbnail has loaded, opens a full screen viewer of `full.jpg` as a `no-referrer` `<img>`, with a fallback to the thumbnail.
-- Member media: nothing is loaded before the click when `embedImages`, `embedVideos` or `proxyMedia` ask for it. A single test, `waitsForClick` (`core/rich-text.js`), decides that a media item waits for the click: never for a URL from a trusted host (`isTrustedUrl`), otherwise always for a video or audio file, and under `proxyMedia` for an image, the YouTube thumbnail, a media library thumbnail, a mini profile image or the Premium background image. Two intended exceptions: the message background image, always on `ust.chatango.com`, follows only `embedImages` and `proxyMedia` (`docs/betterchatango-protocol.md`, Resources loaded by the loader and the interface), and the full profile loads all its images at once through "Load images". `parseContent` also picks up YouTube links, images and video and audio files typed as text (`docs/betterchatango-protocol.md`, Media). A displayed image carries the media library star, "Add to media" or "Remove from media".
+- Member media: nothing is loaded before the click when `embedImages`, `embedVideos`, `embedX` or `proxyMedia` ask for it. A single test, `waitsForClick` (`core/rich-text.js`), decides that a media item waits for the click: never for a URL from a trusted host (`isTrustedUrl`), otherwise always for a video or audio file, and under `proxyMedia` for an image, the YouTube thumbnail, a TikTok or X post, a media library thumbnail, a mini profile image or the Premium background image. Two intended exceptions: the message background image, always on `ust.chatango.com`, follows only `embedImages` and `proxyMedia` (`docs/betterchatango-protocol.md`, Resources loaded by the loader and the interface), and the full profile loads all its images at once through "Load images". `parseContent` also picks up YouTube links, images and video and audio files typed as text (`docs/betterchatango-protocol.md`, Media). A displayed image carries the media library star, "Add to media" or "Remove from media".
 
 See [ADR-0004](adr/0004-member-html-never-injected.md).
 
@@ -175,7 +175,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 
 - `smoke`: hosted prototype, loaded from `dist/nightango.html`.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
-- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
+- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle, TikTok and X bridges, diagnostic journal. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
 - `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
 - `live_login`: sign-in detection, on the concatenation of the sources of `src/bridge/`.
