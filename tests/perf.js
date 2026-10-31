@@ -1,4 +1,4 @@
-// Cost of the live operations on a busy state: what an operation shares with the previous state.
+// Cost of the live operations on a busy state, read through counts: what an operation shares with the previous state and the renders it causes.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
@@ -8,6 +8,8 @@ const GROUPS = ['busy0', 'busy1', 'busy2', 'busy3'];
 // Messages of each group: the first three at the cap (THREAD_MAX), the last one below it, for a history page that stays.
 const SIZES = [500, 500, 500, 300];
 const MEMBERS = 350, AUTHORS = 120, FRIENDS = 40, CHATS = 30, STALE = 600;
+// Components whose renders are counted, by name.
+const COUNTED = ['Root', 'MessageRow'];
 
 const errors = [];
 const log = [];
@@ -22,8 +24,8 @@ const app = fs.readFileSync(S + '/dist/app.js', 'utf8');
 
 /**
  * Opens the live interface on a fake BetterChatango client, started by the prototype hook that dist/app.js keeps.
- * @param {{account: string, groups: string[], state: ?Object}} o Signed-in account (empty: no sign-in), groups of the client,
- *   and state handed to the interface (null: signed-out start).
+ * @param {{account: string, groups: string[], state: ?Object, paints: boolean}} o Signed-in account (empty: no sign-in), groups of the client,
+ *   state handed to the interface (null: signed-out start), animation frames run by the test instead of the browser.
  */
 function page(o) {
   const vc = new VirtualConsole();
@@ -39,6 +41,11 @@ function page(o) {
   w.IntersectionObserver = function () { return { observe() {}, unobserve() {}, disconnect() {} }; };
   w.HTMLElement.prototype.scrollIntoView = noop;
   w.fetch = () => Promise.resolve({ ok: false, status: 404, headers: { get: () => null }, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+  const paints = [];
+  if (o.paints) {
+    w.requestAnimationFrame = cb => { paints.push(cb); return paints.length; };
+    w.cancelAnimationFrame = id => { paints[id - 1] = null; };
+  }
 
   const group = gid => ({ socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { owner: 'owner', information: { title: gid, description: '' } }, load: 5 });
   const C = {
@@ -67,13 +74,30 @@ function page(o) {
 
   react.forEach(code => w.eval(code));
   w.eval(bundle);
+  // Counts the renders of the components named in COUNTED, plain or memoized: the app reads createElement and memo when it loads.
+  const renders = {};
+  const R = w.React, createElement = R.createElement, memo = R.memo, counted = new Map();
+  function counting(type) {
+    if (!counted.has(type)) counted.set(type, function (props) { renders[type.name] = (renders[type.name] || 0) + 1; return type(props); });
+    return counted.get(type);
+  }
+  R.createElement = function (type) {
+    if (typeof type === 'function' && !(type.prototype && type.prototype.isReactComponent) && COUNTED.includes(type.name)) arguments[0] = counting(type);
+    return createElement.apply(this, arguments);
+  };
+  R.memo = function (type, compare) { return memo(COUNTED.includes(type.name) ? counting(type) : type, compare); };
   w.eval(app);
   return {
     w, d, C,
     // The interface has mounted and handed its state to the hook.
     ready: () => !!hot.read,
     state: () => hot.read().state,
-    group(name, room, data) { C.event.group[name](C, {}, room, data); }
+    // Runs the animation frame the browser would show next.
+    paint() { paints.splice(0).forEach(cb => { if (cb) cb(w.performance.now()); }); },
+    group(name, room, data) { C.event.group[name](C, {}, room, data); },
+    private(name, data) { C.event.private[name](C, {}, 'private_message', data); },
+    count(name) { return renders[name] || 0; },
+    reset() { Object.keys(renders).forEach(k => { renders[k] = 0; }); }
   };
 }
 
@@ -112,10 +136,13 @@ function busyState(tpl, style) {
 
 // Group message frame from a member, at a given time in seconds.
 const msgFrame = (author, id, ts, text) => [String(ts), author, '', 'u1', 'UNID' + id, id, '', '0', '', '<n000/><f x11000="0">' + text];
+const nextTask = () => new Promise(r => setTimeout(r, 0));
+// Shows the next animation frame and lets React render it.
+const show = async t => { t.paint(); await nextTask(); };
 
 (async () => {
   /* A signed-in state with one group, read back to keep the state shape of the build under test */
-  const first = page({ account: ME, groups: ['tpl'], state: null });
+  const first = page({ account: ME, groups: ['tpl'], state: null, paints: false });
   await until(() => first.ready() && !!first.state().groups && !!first.state().groups.tpl);
   const tpl = first.state();
   // The style of the test messages as the build reads it: members keep it from one message to the next.
@@ -125,16 +152,16 @@ const msgFrame = (author, id, ts, text) => [String(ts), author, '', 'u1', 'UNID'
   step('template state signed in with its group', tpl.auth.loggedIn && !!tpl.groups.tpl && !!tpl.prefs && !!style, Object.keys(tpl.groups || {}));
   first.w.close();
 
-  const t = page({ account: '', groups: GROUPS, state: busyState(tpl, style) });
+  const t = page({ account: '', groups: GROUPS, state: busyState(tpl, style), paints: true });
   await until(() => t.ready());
-  await wait(50);
+  t.paint(); await wait(50);
   step('busy state shown', t.d.querySelectorAll('.tc-msg').length >= 400 && !!t.d.querySelector('.members-list'), t.d.querySelectorAll('.tc-msg').length);
   const s0 = t.state();
   step('busy state size', Object.keys(s0.users).length > 2000 && GROUPS.every((gid, i) => s0.groups[gid].messages.length === SIZES[i]), Object.keys(s0.users).length);
 
   /* One operation copies only what it touches */
   t.group('b', 'busy0', msgFrame('m0x1', 'one', Date.now() / 1000, 'One more'));
-  await wait(50);
+  t.paint(); await wait(50);
   const s1 = t.state(), g0 = s0.groups.busy0, g1 = s1.groups.busy0;
   const shared = {
     otherGroups: GROUPS.slice(1).every(gid => s1.groups[gid] === s0.groups[gid]), users: s1.users === s0.users, dms: s1.dms === s0.dms, prefs: s1.prefs === s0.prefs,
@@ -142,14 +169,41 @@ const msgFrame = (author, id, ts, text) => [String(ts), author, '', 'u1', 'UNID'
   };
   step('a message in one group leaves the other groups, the users map and the messages it keeps shared', Object.values(shared).every(Boolean), shared);
 
-  /* A history page: the shown group and the users map stay shared */
+  /* A burst of operations within one animation frame: one update, one render */
+  const BURST = 30;
+  t.reset();
+  let start = Date.now();
+  for (let k = 0; k < BURST; k++) {
+    t.group('b', 'busy0', msgFrame('m0x' + (k % AUTHORS), 'burst' + k, Date.now() / 1000, 'Burst ' + k));
+    await nextTask();
+  }
+  await show(t);
+  let perOp = (Date.now() - start) / BURST;
+  await wait(50);
+  const burst = { roots: t.count('Root'), rows: t.count('MessageRow'), shown: t.d.body.textContent.includes('Burst ' + (BURST - 1)), perOp };
+  step('a burst of messages within one animation frame gives one render', burst.roots === 1 && burst.shown, burst);
+
+  /* A history page arrives together: one update */
+  t.reset();
   const s2 = t.state();
+  start = Date.now();
   const oldest = s2.groups.busy3.messages[0].ts / 1000;
   for (let k = 0; k < 50; k++) t.group('i', 'busy3', msgFrame('m3x' + (k % AUTHORS), 'hist' + k, oldest - (k + 1) * 30, 'Earlier ' + k));
+  await show(t);
+  perOp = (Date.now() - start) / 50;
   await wait(50);
   const s3 = t.state(), page3 = s3.groups.busy3.messages;
-  const history = { length: page3.length, sorted: page3.every((m, i) => !i || page3[i - 1].ts <= m.ts), shown: s3.groups.busy0 === s2.groups.busy0, users: s3.users === s2.users };
-  step('a history page leaves the shown group and the users map shared', history.length === 350 && history.sorted && history.shown && history.users, history);
+  const history = { roots: t.count('Root'), rows: t.count('MessageRow'), length: page3.length, sorted: page3.every((m, i) => !i || page3[i - 1].ts <= m.ts), shown: s3.groups.busy0 === s2.groups.busy0, users: s3.users === s2.users, perOp };
+  step('a history page applies in one update without touching the shown group', history.roots === 1 && history.length === 350 && history.sorted && history.shown && history.users, history);
+
+  /* Presence: one render for the burst */
+  t.reset();
+  const s4 = t.state();
+  for (let k = 1; k <= 20; k++) { t.private('wloffline', ['m0x' + k, String(Math.floor(Date.now() / 1000) - 60)]); await nextTask(); }
+  t.paint(); await wait(50);
+  const s5 = t.state();
+  const presence = { roots: t.count('Root'), rows: t.count('MessageRow'), offline: s5.users.m0x1.status, groups: s5.groups === s4.groups };
+  step('a presence burst gives one render and leaves the groups shared', presence.roots === 1 && presence.offline === 'offline' && presence.groups, presence);
 
   console.log(log.join('\n'));
   console.log('ERRORS:', errors.length ? '\n' + [...new Set(errors)].slice(0, 15).join('\n---\n') : 'none');

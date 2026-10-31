@@ -300,5 +300,6 @@ function useLiveOps(k) {
       default: break;
     }
   }
-  useBridgeOps(handleLiveOp, k.store.state.auth.loggedIn);
+  // The operations of one animation frame make one render: a history page or a burst of presence included.
+  useBridgeOps(function (op) { k.store.inAnimationFrame(function () { handleLiveOp(op); }); }, k.store.state.auth.loggedIn);
 }

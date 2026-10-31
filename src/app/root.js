@@ -14,18 +14,25 @@ function fetchLatestVersion() {
 }
 
 /**
- * Store of the application state: each update applies at once to a draft of the latest state, and the interface shows the result right away.
+ * Store of the application state: each update applies at once to a draft of the latest state, and the interface shows the result right away,
+ * or on the next animation frame for the updates made in inAnimationFrame, so that the operations of one animation frame make one render.
  * @param {Object} initial First state.
- * @returns {{shown: function(): Object, subscribe: Function, ref: {current: Object}, update: function(function(Object))}}
- *   State shown by the interface and its subscription, ref to the latest state, and update.
+ * @returns {{shown: function(): Object, subscribe: Function, ref: {current: Object}, update: function(function(Object)), inAnimationFrame: function(Function)}}
+ *   State shown by the interface and its subscription, ref to the latest state, update, and scope whose updates wait for the next animation frame.
  */
 function appStore(initial) {
-  var ref = { current: initial }, shown = initial, listeners = [];
+  var ref = { current: initial }, shown = initial, batched = 0, pending = null, listeners = [];
   function flush() {
+    if (pending) { if (pending.frame) cancelAnimationFrame(pending.frame); else clearTimeout(pending.timer); pending = null; }
     if (ref.current === shown) return;
     shown = ref.current;
     listeners.slice().forEach(function (l) { l(); });
   }
+  // requestAnimationFrame does not run in a hidden tab: there the updates go out on the next timer.
+  function schedule() {
+    if (!pending) pending = document.visibilityState === 'visible' ? { frame: requestAnimationFrame(flush) } : { timer: setTimeout(flush, 0) };
+  }
+  document.addEventListener('visibilitychange', function () { if (pending && pending.frame && document.visibilityState !== 'visible') flush(); });
   return {
     shown: function () { return shown; },
     subscribe: function (l) {
@@ -38,7 +45,11 @@ function appStore(initial) {
       // An update that throws changes nothing.
       try { fn(draft.root); } catch (e) { draft.finish(); throw e; }
       ref.current = draft.finish();
-      flush();
+      if (batched) schedule(); else flush();
+    },
+    inAnimationFrame: function (fn) {
+      batched++;
+      try { fn(); } finally { batched--; }
     }
   };
 }
@@ -46,7 +57,8 @@ function appStore(initial) {
 /**
  * Application state, with a ref to the latest state that handlers read and its update.
  * @param {?Object} boot State handed by the prototype hook.
- * @returns {{state: Object, stateRef: Object, update: function(function(Object))}} State of this render, ref to the latest state and its update.
+ * @returns {{state: Object, stateRef: Object, update: function(function(Object)), inAnimationFrame: function(Function)}}
+ *   State of this render, ref to the latest state, update, and scope whose updates wait for the next animation frame.
  */
 function useAppState(boot) {
   var store = useState(function () { return appStore(boot && boot.auth ? boot : initialState()); })[0];
@@ -57,7 +69,7 @@ function useAppState(boot) {
     if (hot && hot.snapshot) hot.snapshot(function () { return { state: store.ref.current }; });
   }, []);
   /*END PROTOTYPE*/
-  return { state: state, stateRef: store.ref, update: store.update };
+  return { state: state, stateRef: store.ref, update: store.update, inAnimationFrame: store.inAnimationFrame };
 }
 
 /**
