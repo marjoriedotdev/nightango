@@ -184,7 +184,7 @@
 
   function CountBadge(props) {
     if (!props.count) return null;
-    var text = props.mention ? '@' + props.count : String(props.count > 99 ? '99+' : props.count);
+    var text = (props.mention ? '@' : '') + (props.count > 99 ? '99+' : props.count);
     var label = props.count + (props.mention ? (props.count > 1 ? ' mentions' : ' mention') : ' unread');
     return h('span', { className: 'tc-count', 'aria-label': label }, text);
   }

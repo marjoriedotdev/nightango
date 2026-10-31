@@ -12,7 +12,7 @@
 <script>
 var T = window.Torch, h = React.createElement;
 function Demo() {
-  return h('div', { className: 'row' }, h(T.CountBadge, { count: 2 }), h(T.CountBadge, { count: 3, mention: true }), h(T.CountBadge, { count: 140 }));
+  return h('div', { className: 'row' }, h(T.CountBadge, { count: 2 }), h(T.CountBadge, { count: 3, mention: true }), h(T.CountBadge, { count: 140 }), h(T.CountBadge, { count: 140, mention: true }));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
 </script>
