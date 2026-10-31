@@ -306,6 +306,25 @@ function miniStyleOfForm(form) {
   return { bg: form.bg, text: form.text, link: form.link, image: form.image || null, repeat: repeat };
 }
 
+// -- Allowed requests ---------------------------------------------------------
+
+var CHATANGO_POST = /^https:\/\/chatango\.com\//;
+var VISSLE_UPLOAD = 'https://vissle.me/chatango/upload';
+/**
+ * Checks a client.post call against the allowed HTTP calls (docs/betterchatango-protocol.md).
+ * @param {string} url Target URL.
+ * @param {Object} item client.post options.
+ * @returns {string} Why the call is refused, empty if it is allowed.
+ */
+function postRefusal(url, item) {
+  var keys = Object.keys(item);
+  // Without an option, BetterChatango adds the Chatango token for every host of its list, vissle included.
+  if (!keys.length) return CHATANGO_POST.test(url) ? '' : 'a request without an option goes to chatango.com only';
+  if (keys.length === 1 && item.cookie === true) return '';
+  if (keys.length === 1 && item.key === true) return url === VISSLE_UPLOAD ? '' : 'the key option goes to the vissle upload only';
+  return 'options not allowed: ' + keys.join(', ');
+}
+
 // -- Profile ------------------------------------------------------------------
 
 /**

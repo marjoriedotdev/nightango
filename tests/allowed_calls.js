@@ -1,6 +1,8 @@
-// Allowed HTTP calls (docs/betterchatango-protocol.md): every call site of src/ is on the closed list.
+// Allowed HTTP calls (docs/betterchatango-protocol.md): every call site of src/ is on the closed list, and the post helper refuses the rest.
 const fs = require('fs');
 const path = require('path');
+const { JSDOM, VirtualConsole } = require('jsdom');
+const { concatSources, layerSources } = require('../scripts/build.mjs');
 const S = process.argv[2];
 const log = [];
 /**
@@ -33,12 +35,13 @@ const ALLOWED = [
   { call: "post(CH.path('updateprofile'), …, {})", doc: '`client.post(url, form, {})`, to `chatango.com` only' },
   { call: "post(CH.path('updateprofile') + '?css', …, {})", doc: '`client.post(url, form, {})`, to `chatango.com` only' },
   { call: "post(CH.path('script/creategrouploginjs', 'st'), …, { cookie: true })", doc: '`client.post(url, form, { cookie: true })`' },
-  { call: "post('https://vissle.me/chatango/upload', …, { key: true })", doc: "`client.post('https://vissle.me/chatango/upload', form, { key: true })`, and this URL only" },
+  // VISSLE_UPLOAD: its value is checked below, through the post helper.
+  { call: 'post(VISSLE_UPLOAD, …, { key: true })', doc: "`client.post('https://vissle.me/chatango/upload', form, { key: true })`, and this URL only" },
   { call: "GM_xmlhttpRequest({ method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, … })", doc: "`POST https://vissle.me/track1/activity`, through the loader's `GM_xmlhttpRequest` bridge, with `anonymous: true`" },
   { call: "GM_xmlhttpRequest({ method: 'GET', url: 'https://' + link[1] + '/' + link[2] + '/', anonymous: true, … })", doc: "`GET https://www.tiktok.com/t/{code}/`, `https://vm.tiktok.com/{code}/` or `https://vt.tiktok.com/{code}/`, through the loader's `GM_xmlhttpRequest` bridge (`@connect tiktok.com`), with `anonymous: true`" },
   // The helpers themselves: their callers are listed above.
   { call: 'fetch(url)', within: 'memberFile' },
-  { call: 'C.post(url, form, item || {})', within: 'post' }
+  { call: 'C.post(url, form, item)', within: 'post' }
 ];
 // Hosts the userscript manager lets the loader reach, with the text of the allowed list that needs them.
 const CONNECT = { 'vissle.me': '`POST https://vissle.me/track1/activity`', 'tiktok.com': '(`@connect tiktok.com`)' };
@@ -132,7 +135,72 @@ step('the userscript grants GM_xmlhttpRequest only and connects only to the host
   JSON.stringify(tags('grant')) === '["GM_xmlhttpRequest"]' && JSON.stringify(tags('connect').sort()) === JSON.stringify(Object.keys(CONNECT).sort())
     && Object.values(CONNECT).every(t => LIST.includes(t)), { grant: tags('grant'), connect: tags('connect') });
 
-const failed = log.filter(l => l.startsWith('FAIL')).length;
-console.log(log.join('\n'));
-console.log('ERRORS: ' + (failed ? failed + ' failed' : 'none'));
-process.exit(failed ? 1 : 0);
+/* ---------- Post helper of the bridge ---------- */
+const posts = [], journal = [];
+const CH = { path: (p, sub) => 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p };
+const w = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', virtualConsole: new VirtualConsole() }).window;
+w.__TORCH_LIVE__ = true;
+w.__TORCH_JOURNAL__ = { add: (kind, text) => { journal.push(text); } };
+w.__betterChatangoRefs = {
+  chatango: CH,
+  client: {
+    user: { name: 'marjorie' }, groups: {}, event: { group: {}, private: {} }, on() {}, setProfile() {},
+    // Replies of the vissle upload, the group creation and the updateprofile forms.
+    post(url, form, item) {
+      posts.push([url, JSON.stringify(item)]);
+      return Promise.resolve(url === 'https://vissle.me/chatango/upload' ? 'data:abc/f.png' : /creategrouploginjs$/.test(url) ? 'groupcreated'
+        : form.get('action') === 'fullpic' ? 'pix:1' : 'x0=1&y0=2&ts=3&age=40&sex=M&loc=Paris');
+    }
+  }
+};
+w.eval(concatSources(S, layerSources('bridge')) + '; window.__bridge = liveBridge;');
+/**
+ * Lists the cases where postRefusal does not give the expected verdict.
+ * @param {Array<[string, Object, string]>} cases URL, options and refused or allowed.
+ */
+function wrongVerdicts(cases) {
+  const verdict = (url, item) => { try { return w.postRefusal(url, item) ? 'refused' : 'allowed'; } catch (e) { return 'CRASH ' + e.message; } };
+  return cases.filter(([url, item, want]) => verdict(url, item) !== want).map(([url, item]) => [url, item, verdict(url, item)]);
+}
+const PROFILE = 'https://chatango.com/updateprofile', UPLOAD = 'https://vissle.me/chatango/upload';
+
+(async () => {
+  const B = w.__bridge, file = new w.File(['moon'], 'moon.png', { type: 'image/png' });
+  const settle = p => p.then(() => 'sent', e => 'refused: ' + e.message);
+  const current = [
+    await settle(B.saveProfile({ age: 40, gender: 'M', location: 'Paris', about: 'Hi', full: '' })),
+    await settle(B.uploadAvatar(file)),
+    await settle(B.saveAvatarCrop({ x0: 1, y0: 2, ts: 3 })),
+    await settle(B.saveProfileStyle({ bg: '#ffffff', text: '#222222', link: '#0084ef', image: '', tileDown: false, tileAcross: false }, false)),
+    await settle(B.uploadFile(file)),
+    await settle(B.createGroup({ name: 'moonroom', title: 'Moon', description: 'Night', discovery: false }))
+  ];
+  step('the six current call sites reach BetterChatango with their target and options', current.every(r => r === 'sent') && JSON.stringify(posts) === JSON.stringify([
+    [PROFILE, '{}'], [PROFILE, '{}'], [PROFILE, '{}'], [PROFILE + '?css', '{}'], [UPLOAD, '{"key":true}'], ['https://st.chatango.com/script/creategrouploginjs', '{"cookie":true}']
+  ]), { current, posts });
+
+  // A host of BetterChatango's list outside chatango.com: without an option, it would get the Chatango token.
+  const before = posts.length;
+  CH.path = p => 'https://vissle.me/chatango/' + p;
+  const crop = await settle(B.saveAvatarCrop({ x0: 1, y0: 2, ts: 3 }));
+  step('a post the helper refuses never reaches BetterChatango and is noted in the journal',
+    posts.length === before && crop.startsWith('refused') && journal.some(t => t.startsWith('Refused a request to https://vissle.me/chatango/updateprofile: ')),
+    { posts: posts.slice(before), crop, journal });
+
+  const options = wrongVerdicts([
+    [PROFILE, { credential: 'u' }, 'refused'], [PROFILE, { cookie: true, credential: 'u' }, 'refused'], [PROFILE, { progress: true }, 'refused'],
+    [UPLOAD, { key: true, progress: true }, 'refused'], [PROFILE, { token: 'sid' }, 'refused'], [PROFILE, { cookie: true, key: true }, 'refused']
+  ]);
+  step('refuses the credential and progress options and any other option outside the list', !options.length, options);
+  const noOption = wrongVerdicts([['https://vissle.me/chatango/updateprofile', {}, 'refused'], ['https://chatango.com.vissle.me/updateprofile', {}, 'refused'], [UPLOAD, {}, 'refused']]);
+  step('refuses a post without an option to a host other than chatango.com', !noOption.length, noOption);
+  const key = wrongVerdicts([[PROFILE, { key: true }, 'refused'], ['https://vissle.me/chatango/updateprofile', { key: true }, 'refused'], [UPLOAD + '?to=moon', { key: true }, 'refused']]);
+  step('refuses the key option to any URL other than the vissle upload', !key.length, key);
+  const allowed = wrongVerdicts([[PROFILE, {}, 'allowed'], [PROFILE + '?css', {}, 'allowed'], [UPLOAD, { key: true }, 'allowed'], ['https://st.chatango.com/script/creategrouploginjs', { cookie: true }, 'allowed']]);
+  step('allows the targets and options of the six current call sites', !allowed.length, allowed);
+
+  const failed = log.filter(l => l.startsWith('FAIL')).length;
+  console.log(log.join('\n'));
+  console.log('ERRORS: ' + (failed ? failed + ' failed' : 'none'));
+  process.exit(failed ? 1 : 0);
+})().catch(e => { console.log('CRASH ' + (e && e.stack || e)); process.exit(1); });

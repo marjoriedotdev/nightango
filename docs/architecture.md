@@ -23,7 +23,7 @@ src/
     live-model.js    LIVE, JOURNAL, avatarSrc (and photo version of one's own account), vissle pagination, Chatango bits (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      emoticon table (EMOTICONS)
     live-parse.js    pure bridge functions: message content (parseContent, media), group frames,
-                     Premium background (parseMiniCss, background form), updateprofile response, message background (parseMsgBg), vissle activity replies (parseVisits), linked accounts (parseWho), presence, timestamps,
+                     Premium background (parseMiniCss, background form), allowed client.post calls (postRefusal), updateprofile response, message background (parseMsgBg), vissle activity replies (parseVisits), linked accounts (parseWho), presence, timestamps,
                      message references, private history records (reading, sorting an import),
                      media library entries (validation, page order, sorting an import)
     live-bridge.js   liveBridge: incoming and outgoing frames, warnings, connections,
@@ -107,7 +107,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 ## Diagnostic journal
 
 - `skin-journal.js` wraps the `WebSocket` constructor and the console, listens to the page lifecycle and to errors, and keeps the last 1,000 events in `localStorage` under `torch-skin:journal`. What it keeps and never keeps: [ADR-0011](adr/0011-diagnostic-journal.md).
-- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. The bridge records its connections, BetterChatango's warnings and a refused save of the unread migration flag in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
+- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. The bridge records its connections, BetterChatango's warnings, the requests its post helper refuses and a refused save of the unread migration flag in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
 
 ## Mounting and display
 

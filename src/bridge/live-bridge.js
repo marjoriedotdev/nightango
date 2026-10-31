@@ -462,10 +462,15 @@ var liveBridge = (function () {
     if (pmFocus && pmFocus !== connectTarget) connectPm(pmFocus);
   }
   function post(url, fields, item) {
+    var refused = postRefusal(url, item);
+    if (refused) {
+      note('Refused a request to ' + url.split(/[?#]/)[0] + ': ' + refused);
+      return Promise.reject(new Error('Nightango refused this request to protect your account. Nothing was sent.'));
+    }
     if (typeof C.post !== 'function') return Promise.reject(new Error('BetterChatango is not signed in yet.'));
     var form = new FormData();
     Object.keys(fields).forEach(function (k) { if (fields[k] !== undefined && fields[k] !== null) form.set(k, fields[k]); });
-    return C.post(url, form, item || {}).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
+    return C.post(url, form, item).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
   }
   var pmrCheck = null, pmrConnected = null;
   /**
@@ -1489,7 +1494,7 @@ var liveBridge = (function () {
     uploadFile: function (file) {
       var failed = 'The file could not be uploaded. Try again.';
       // Never progress: this BetterChatango branch posts the link in client.focus itself.
-      return post('https://vissle.me/chatango/upload', { filedata: file }, { key: true }).then(function (resp) {
+      return post(VISSLE_UPLOAD, { filedata: file }, { key: true }).then(function (resp) {
         var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
         if (path) return 'https://vissle.me/' + path[1];
         throw new Error(resp.split(':')[0] === 'unauthed' ? 'vissle did not accept your session. Reload the page and sign in again.' : failed);
