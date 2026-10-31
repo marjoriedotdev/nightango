@@ -297,7 +297,7 @@ function useMentionCompletion(g, inputRef, value, setValue) {
  * @param {{text: string}} p Shown text of the announcement.
  */
 function AnnouncementText(p) {
-  var ref = useRef(null), id = React.useId();
+  var ref = useRef(null), moreRef = useRef(null), id = React.useId();
   var open = useState(false), expanded = open[0], setExpanded = open[1];
   var size = useState(false), tall = size[0], setTall = size[1];
   // Measured only while collapsed: expanded, the text always fits.
@@ -305,7 +305,12 @@ function AnnouncementText(p) {
     if (expanded) return;
     var el = ref.current;
     // scrollHeight keeps the natural height under the clamp. Half a line of slack: a line in a fallback font can be a little taller.
-    function measure() { setTall(el.scrollHeight > 3.5 * parseFloat(getComputedStyle(el).lineHeight)); }
+    function measure() {
+      var folds = el.scrollHeight > 3.5 * parseFloat(getComputedStyle(el).lineHeight);
+      // The button leaves with the overflow: focus moves to the text rather than falling back to the page.
+      if (!folds && moreRef.current && moreRef.current === el.getRootNode().activeElement) el.focus();
+      setTall(folds);
+    }
     var ro = new ResizeObserver(measure);
     ro.observe(el);
     measure();
@@ -313,8 +318,8 @@ function AnnouncementText(p) {
   }, [expanded]);
   return h(Frag, null,
     // Clamped only when the text needs more than three lines: overflow:hidden cuts the stacked marks of Vietnamese and Thai.
-    h('span', { id: id, ref: ref, className: cx('ann-text', tall && !expanded && 'ann-clamp') }, p.text),
-    expanded || tall ? h('button', { type: 'button', className: 'linkbtn ann-more', 'aria-expanded': String(expanded), 'aria-controls': id, onClick: function () { setExpanded(!expanded); } }, expanded ? 'Show less' : 'Show more') : null);
+    h('span', { id: id, ref: ref, tabIndex: -1, className: cx('ann-text', tall && !expanded && 'ann-clamp') }, p.text),
+    expanded || tall ? h('button', { ref: moreRef, type: 'button', className: 'linkbtn ann-more', 'aria-expanded': String(expanded), 'aria-controls': id, onClick: function () { setExpanded(!expanded); } }, expanded ? 'Show less' : 'Show more') : null);
 }
 
 /**
