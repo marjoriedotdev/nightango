@@ -1456,7 +1456,8 @@ function Root(props) {
   var ui = {
     toast: toast,
     confirm: setConfirm,
-    openProfile: function (name, gid) { setProfile({ name: name, gid: gid }); },
+    // The full profile dialog covers the profile dialog: a profile opened from its links would stay hidden under it.
+    openProfile: function (name, gid) { setFullProfile(null); setProfile({ name: name, gid: gid }); },
     openFullProfile: function (name) { setFullProfile(name); },
     openWho: setWho,
     openLink: setLinkUrl,

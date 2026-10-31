@@ -169,7 +169,13 @@ let ownMod2Status = 200;
 const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img src="x" onerror="alert(2)"><a href="javascript:alert(3)">bad</a> <a href="https://example.com/p">good</a> <font color="#ff0000" size="5">red</font>');
 // Chatango age, like BetterChatango: current year minus birth year.
 const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
-const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">');
+// Links of the full profile: a repeated address, another scheme, a Chatango profile, a trusted host, SVG, an image map,
+// and a link that only a second parse of the serialized page creates (mutation XSS).
+const FULL_LINKS = ['https://example.com/p', 'https://abe.chatango.com/', 'https://i.imgur.com/g', 'https://svg.example/', 'https://area.example/', 'https://smuggled.example/'];
+const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">'
+  + '<p><a href="https://example.com/p" target="_top">My site</a> <a href=" https://example.com/p ">again</a> <a href="javascript:alert(5)">Script link</a> <a href="https://abe.chatango.com/">abe</a> <a href="https://i.imgur.com/g">gallery</a></p>'
+  + '<svg><a href="https://svg.example/"><text>S</text></a></svg><map name="m"><area href="https://area.example/" alt="Area"></map>'
+  + '<math><mtext><table><mglyph><style><a href="https://smuggled.example/">Smuggled</a>');
 // Premium background in the real custom_profile.css format (goddess account). Without a file, Chatango returns a JPEG image.
 const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
 const GODDESS_CSS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
@@ -1180,12 +1186,38 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const frameEl = $('iframe.fullprofile');
   const sd = frameEl ? frameEl.getAttribute('srcdoc') : '';
   step('full profile in an isolated frame', !!frameEl && !/allow-scripts|allow-same-origin/.test(frameEl.getAttribute('sandbox')) && sd.includes("default-src 'none'") && sd.includes('Zoe page'));
+  // Parsed like the frame parses its srcdoc: no element may keep an address, in any namespace.
+  const frameDoc = new w.DOMParser().parseFromString(sd, 'text/html');
+  const frameLinks = [...frameDoc.querySelectorAll('*')].filter(el => [...el.attributes].some(a => a.localName === 'href')).map(el => el.outerHTML);
+  step('full profile frame keeps the link text but can open nothing', !!frameEl && frameEl.getAttribute('sandbox') === '' && !frameLinks.length && frameDoc.body.textContent.includes('My site again Script link abe gallery'),
+    { sandbox: frameEl && frameEl.getAttribute('sandbox'), frameLinks });
+  const profileLinks = $$('.profile-links a').map(a => a.getAttribute('href'));
+  step('each http(s) link of the full profile listed once below the frame', !!byText('.profile-links h3', 'Links in this profile') && JSON.stringify(profileLinks) === JSON.stringify(FULL_LINKS), profileLinks);
   const loadImages = byText('.dialog-foot button', 'Load images');
   if (loadImages) { click(loadImages); await wait(30); }
   const sdLoaded = $('iframe.fullprofile') ? $('iframe.fullprofile').getAttribute('srcdoc') : '';
   step('full profile blocks external media until asked', sd.includes('img-src data:;') && !!loadImages && sdLoaded.includes('img-src https:'),
     { blocked: sd.includes('img-src data:;'), button: !!loadImages, loaded: sdLoaded.includes('img-src https:') });
-  click(byText('.dialog-foot button', 'Close')); await wait(30);
+  // Cancelable click, like the browser's: opens tells whether the browser would follow the link.
+  const followListed = async url => {
+    const a = $$('.profile-links a').find(x => x.getAttribute('href') === url);
+    const opens = !!a && a.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await wait(30);
+    const top = $$('.dialog').pop();
+    return { found: !!a, opens, top: top && top.getAttribute('aria-label'), text: top && top.textContent };
+  };
+  const warned = await followListed('https://example.com/p');
+  if (warned.top === 'This link leaves Nightango') { click(byText('.dialog-foot button', 'Cancel')); await wait(30); }
+  const trusted = await followListed('https://i.imgur.com/g');
+  step('full profile links go through the link warning, a trusted host opens directly',
+    warned.found && !warned.opens && warned.top === 'This link leaves Nightango' && warned.text.includes('https://example.com/p')
+      && trusted.found && trusted.opens && trusted.top === "zoe's profile", { warned: Object.assign({}, warned, { text: undefined }), trusted: Object.assign({}, trusted, { text: undefined }) });
+  const profileLink = await followListed('https://abe.chatango.com/');
+  const viewProfile = profileLink.top === 'abe.chatango.com' && byText('.dialog-foot button', 'View profile');
+  if (viewProfile) { click(viewProfile); await wait(60); }
+  const dialogsAfter = $$('.dialog').map(x => x.getAttribute('aria-label'));
+  step('a Chatango profile link of the full profile offers the profile, shown on top', profileLink.found && !profileLink.opens && !!viewProfile && JSON.stringify(dialogsAfter) === JSON.stringify(['Profile of abe']),
+    { profileLink: Object.assign({}, profileLink, { text: undefined }), dialogsAfter });
   key(d, 'Escape'); await wait(30);
 
   /* Refresh Meet people with the current filters */

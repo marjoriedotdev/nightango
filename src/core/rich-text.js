@@ -210,9 +210,38 @@ var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
 var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 // No < and no parenthesis: the URL ends up in a CSS background, in the full profile as in custom_profile.css.
 var SAFE_IMAGE_URL = /^https:\/\/[^<>"'\\()\s]+$/;
+var MATHML_NS = 'http://www.w3.org/1998/Math/MathML';
+/**
+ * Removes the address of every link of a full profile, parsed like the mini profile without running or loading anything.
+ * @param {string} html HTML written by the member.
+ * @returns {{html: string, links: Array<string>}} HTML whose links keep only their content, and their distinct http(s) addresses in page order.
+ */
+function unlinkFullProfile(html) {
+  var links = [], body = richBody(html), out;
+  function unlink() {
+    var found = false;
+    Array.prototype.forEach.call(body.getElementsByTagName('*'), function (el) {
+      // Firefox follows an href on any MathML element.
+      if (el.localName !== 'a' && el.localName !== 'area' && el.namespaceURI !== MATHML_NS) return;
+      Array.prototype.slice.call(el.attributes).forEach(function (attr) {
+        if (attr.localName !== 'href') return;
+        var url = attr.value.trim();
+        if (/^https?:\/\//i.test(url) && links.indexOf(url) < 0) links.push(url);
+        el.removeAttributeNode(attr);
+        found = true;
+      });
+    });
+    return found;
+  }
+  unlink();
+  // Parsed again until a parse finds no link: a serialized tree can parse into new elements (mutation XSS).
+  // outerHTML: the frame's parser still merges the attributes of the member's <body> onto its own.
+  do { out = body.outerHTML; body = richBody(out); } while (unlink());
+  return { html: out, links: links };
+}
 /**
  * Builds the isolated document of a full profile.
- * @param {string} html HTML written by the member.
+ * @param {string} html HTML written by the member, its links removed by unlinkFullProfile.
  * @param {boolean} allowMedia Allows images, the member background included.
  * @param {?Object} [style] Member background as returned by miniStyleOf.
  */
