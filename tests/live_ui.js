@@ -899,7 +899,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
 
   /* TikTok: post link played at once on click, short link resolved by the userscript at the click and only then, failure turned back into a link */
-  const TIKTOK_LINKS = ['https://www.tiktok.com/@clown/video/7400000000000000000?lang=en', 'https://www.tiktok.com/t/ZPLok/', 'https://vm.tiktok.com/ZMbad/', 'https://www.tiktok.com/@clown'];
+  const TIKTOK_LINKS = ['https://www.tiktok.com/@clown/video/7400000000000000000?lang=en', 'https://www.tiktok.com/t/ZPLok/....', 'https://vm.tiktok.com/ZMbad/', 'https://www.tiktok.com/@clown'];
   g('b', 'test', ['1700000300.5', 'Eve', '', 'u7', 'UNID7', 'tmptiktok', '9.9.9.9', '0', '', '<n000/><f x11000="0">Kitties ' + TIKTOK_LINKS.join(' ')]);
   const tiktokRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Kitties') === 0); return p && p.closest('article'); };
   await until(() => !!tiktokRow());
