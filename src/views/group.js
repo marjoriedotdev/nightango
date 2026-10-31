@@ -130,6 +130,9 @@ function GroupView(p) {
     : g.historyCapped ? null
     : { status: 'more', loading: g.loadingMore, ready: g.inited && !g.loadingMore && g.conn === 'open', load: function () { app.actions.loadMore(g.id); } };
   if (q && !items.length) items.push(h('div', { key: 'none', className: 'empty' }, h('h2', null, 'No messages match'), h('p', null, 'Search looks at loaded messages in #' + g.id + '.')));
+  else if (!q && !older && !items.length) items.push(h('div', { key: 'none', className: 'empty' },
+    h('h2', null, count ? 'No messages to show' : 'No messages yet'),
+    h('p', null, count ? 'Your settings hide every loaded message in #' + g.id + '.' : 'Messages sent in #' + g.id + ' appear here.')));
 
   var composer;
   if (g.closed) {
