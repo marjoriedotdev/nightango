@@ -810,9 +810,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('connect', ['fay', '1700000000', 'offline']);
   await until(() => !!$('.thread .topbar .tc-presence-offline'));
   const fayHead = { topic: ($('.thread .topbar .topic') || {}).textContent || '', offline: !!$('.thread .topbar .tc-presence-offline') };
-  const fayDays = +((/^Last online (\d+) days ago$/.exec(fayHead.topic) || [])[1]);
+  const fayYears = +((/^Last online (\d+) years? ago$/.exec(fayHead.topic) || [])[1]);
   step('opening a pm asks Chatango for the presence', JSON.stringify(fayFrames) === JSON.stringify([['private_message', 'connect:fay']]) && fayHead.offline
-    && Math.abs(fayDays - (Date.now() - 1700000000000) / 86400000) <= 1 && !calls.some(c => c[0] === 'betterChatangoPmScreen'), { fayFrames, fayHead, betterChatango: calls.filter(c => c[0] === 'betterChatangoPmScreen').length });
+    && Math.abs(fayYears - (Date.now() - 1700000000000) / (365.25 * 86400000)) <= 0.5 + 1 / 365.25 && !calls.some(c => c[0] === 'betterChatangoPmScreen'), { fayFrames, fayHead, betterChatango: calls.filter(c => c[0] === 'betterChatangoPmScreen').length });
   // Private connection back: BetterChatango builds a new client.private after its OK handler, and Chatango forgets the previous connect.
   const sentBeforeOk = sent.length;
   pm('OK', []); C.private.focus = false;

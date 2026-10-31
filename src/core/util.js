@@ -25,15 +25,28 @@ function ago(ts) {
   if (m < 1) return 'just now';
   if (m < 60) return m + ' min ago';
   var hrs = Math.round(m / 60);
-  if (hrs < 24) return hrs + (hrs === 1 ? ' hour ago' : ' hours ago');
-  var days = Math.round(hrs / 24);
-  return days + (days === 1 ? ' day ago' : ' days ago');
+  if (hrs < 24) return plural(hrs, 'hour', 'hours') + ' ago';
+  var span = daySpan(Math.round(hrs / 24));
+  return plural(span.n, span.unit, span.unit + 's') + ' ago';
 }
 function elapsedShort(ts) {
   var m = Math.floor((Date.now() - ts) / MIN);
   if (m < 60) return Math.max(m, 1) + ' min';
   if (m < 1440) return Math.floor(m / 60) + ' h';
-  return Math.floor(m / 1440) + ' d';
+  var span = daySpan(Math.floor(m / 1440));
+  return span.n + ' ' + { day: 'd', month: 'mo', year: 'y' }[span.unit];
+}
+/**
+ * Counts a number of days in days, in rounded months from 30 days, then in rounded years from 12 months.
+ * @param {number} days Number of days, 1 or more.
+ * @returns {{n: number, unit: string}} Count and its unit: day, month or year.
+ */
+function daySpan(days) {
+  if (days < 30) return { n: days, unit: 'day' };
+  // Rounded in both formats: the Friends list and the profile agree for the same date.
+  var months = Math.round(days / 30.4375);
+  if (months < 12) return { n: months, unit: 'month' };
+  return { n: Math.round(days / 365.25), unit: 'year' };
 }
 /**
  * Returns the season of a local date, or null outside every season: Halloween runs from October 24 to November 2.
