@@ -1,3 +1,11 @@
+/**
+ * Gives an operation to a listener: one that throws stops neither the other listeners nor the sequence that emits, sign-in included.
+ * @param {function(Object)} fn Listener.
+ * @param {Object} op Operation.
+ */
+function deliverOp(fn, op) {
+  try { fn(op); } catch (e) { console.warn('[torch-skin] could not apply the ' + op.op + ' operation:', e); }
+}
 var liveBridge = (function () {
   if (!LIVE) return null;
   var refs = window.__betterChatangoRefs || {};
@@ -21,12 +29,8 @@ var liveBridge = (function () {
 
   // A message shown before its final id keeps the temporary id k:{key}, which Chatango refers to by the key alone.
   function withTempIds(ids) { return ids.concat(ids.map(function (id) { return 'k:' + id; })); }
-  // A listener that throws stops neither the other listeners nor the sequence that emits, sign-in included.
-  function deliver(fn, op) {
-    try { fn(op); } catch (e) { console.warn('[torch-skin] could not apply the ' + op.op + ' operation:', e); }
-  }
-  function emit(op) { if (listeners.length) listeners.forEach(function (f) { deliver(f, op); }); else queue.push(op); }
-  function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(function (op) { deliver(fn, op); }); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
+  function emit(op) { if (listeners.length) listeners.forEach(function (f) { deliverOp(f, op); }); else queue.push(op); }
+  function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(function (op) { deliverOp(fn, op); }); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
   function note(text) { if (JOURNAL) JOURNAL.add('app', text); }
   function connName(gid) { return gid === 'private_message' ? 'private messages' : '#' + gid; }
   /**

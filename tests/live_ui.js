@@ -6,7 +6,12 @@ const errors = [];
 const vc = new VirtualConsole();
 vc.on('error', e => errors.push(String(e && e.message || e)));
 vc.on('jsdomError', e => errors.push('jsdom: ' + e.message));
-vc.on('warn', e => { if (!/act\(|ReactDOM.render|useLayoutEffect|\[torch-skin\]/.test(String(e))) errors.push('warn: ' + String(e).slice(0, 300)); });
+// The bridge only logs an operation that throws: the steps read these logs.
+const opFailures = [];
+vc.on('warn', e => {
+  if (/^\[torch-skin\] could not apply/.test(String(e))) opFailures.push(String(e));
+  if (!/act\(|ReactDOM.render|useLayoutEffect|\[torch-skin\]/.test(String(e))) errors.push('warn: ' + String(e).slice(0, 300));
+});
 
 const dom = new JSDOM(`<!doctype html><html><head></head><body>
   <input data-text-field="age" value="34"><select data-text-field="gender"><option value="?">?</option><option value="M" selected>M</option><option value="F">F</option></select>
@@ -36,6 +41,10 @@ w.IntersectionObserver = function (cb, opts) {
 // jsdom has neither CSS.supports nor ResizeObserver: the message log takes the path without native anchoring or measuring.
 w.CSS = { supports: () => false };
 w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
+// The bridge polls BetterChatango's sockets every 2 s: the sign-in also runs a poll at a chosen moment.
+let pollSockets = null;
+const nativeSetInterval = w.setInterval;
+w.setInterval = (fn, ms) => { if (ms === 2000 && !pollSockets) pollSockets = fn; return nativeSetInterval.call(w, fn, ms); };
 
 /* ---------- Fake BetterChatango client ---------- */
 const sent = [], posts = [], calls = [];
@@ -253,8 +262,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Sign-in and group */
   C.user.name = 'marjorie'; C.user.full = 'Marjorie';
   C.groups.test = fakeGroup();
+  C.groups.edits = fakeGroup();
   C.emit('clientLogin', C);
+  // Before the first signed-in render: a message in a group opened later, then the connection changes of a socket poll.
+  g('b', 'edits', ['1700000100.1', 'Alice', '', 'u1', 'UNID1', 'tmp0', '1.2.3.4', '0', '', '<n000/><f x11000="0">Sent before the first render']);
+  pollSockets();
   await wait(100);
+  const earlyFailures = opFailures.slice();
   step('overlay shown after login', shown === 1);
   const fetchesAtLogin = fetches.length;
   C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
@@ -455,12 +469,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { whoReplies, calls: whoAsked().length });
 
   /* Message edit, like BetterChatango: <e…/> frame, history merge, deletion of edits */
-  C.groups.edits = fakeGroup();
   SB.renderGroup({ group: 'edits', header: 'Edits' });
   g('ok', 'edits', ['marjorie', '', '', '', '1700000000', '', '', '0']);
   g('inited', 'edits', []);
   await wait(50);
   click(byText('.tc-nav', 'edits')); await wait(50);
+  step('message and connection changes received before the first signed-in render applied without an error',
+    !!$$('.log .tc-msg-text').find(x => x.textContent === 'Sent before the first render') && !earlyFailures.length, earlyFailures);
   g('b', 'edits', ['1700000300.1', 'Marjorie', '', 'u0', 'UNID0', 'tmp30', '9.9.9.9', '0', '', '<n000/><f x11000="0">Mine typo']);
   g('u', 'edits', ['tmp30', 'A-B_C=']);
   await wait(50);
