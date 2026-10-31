@@ -1019,18 +1019,25 @@ var liveBridge = (function () {
       return openPmDb().then(function (db) { return new Promise(function (resolve) {
         try {
           if (!db) { resolve({}); return; }
-          var out = {}, req = db.transaction(['messages'], 'readonly').objectStore('messages').openCursor();
+          // Index read from the end: each archived name gives its newest records first, then continue([name]) jumps to the previous name.
+          var kept = {}, name = null, count = 0, req = db.transaction(['messages'], 'readonly').objectStore('messages').index('target_ts_idx').openCursor(null, 'prev');
           req.onsuccess = function (e) {
             var cur = e.target.result;
             if (!cur) {
-              Object.keys(out).forEach(function (k) {
-                var list = out[k].sort(function (a, b) { return a.archiveTs - b.archiveTs; });
-                out[k] = { list: list.slice(-perTarget), more: list.length > perTarget };
+              // Only the kept records are parsed. A name archived with capitals joins its lowercase conversation.
+              var out = {};
+              Object.keys(kept).forEach(function (t) {
+                var list = kept[t].list.sort(function (a, b) { return a.ts - b.ts; });
+                out[t] = { list: list.slice(-perTarget).map(pmRecordEntry).filter(Boolean), more: kept[t].more || list.length > perTarget };
               });
               resolve(out); return;
             }
-            var v = cur.value || {}, target = lower(v.target), x = target && pmRecordEntry(v);
-            if (x) (out[target] = out[target] || []).push(x);
+            var v = cur.value, target = lower(v.target);
+            if (v.target !== name) { name = v.target; count = 0; }
+            if (!target) { cur.continue([name]); return; }
+            var k = kept[target] = kept[target] || { list: [], more: false };
+            if (count === perTarget) { k.more = true; cur.continue([name]); return; }
+            k.list.push(v); count++;
             cur.continue();
           };
           req.onerror = function () { resolve({}); };

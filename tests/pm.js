@@ -133,6 +133,27 @@ function load(records, opts = {}) {
     imported.added === 3 && ivan.list.length === 3 && JSON.stringify(older.list.map(x => x.text)) === '["Earlier"]' && removed && JSON.stringify(left) === '[1700007000.5]',
     { imported, listed: ivan.list.length, older: older.list.map(x => x.text), removed, left });
 
+  /* Reconnection on a large private history: only the kept records are parsed, the last 100 of each correspondent */
+  const big = [];
+  const archive = (target, n, from) => { for (let i = 0; i < n; i++) big.push(record(target, received(target, String(from + i) + '.5', '<n000/>' + target + ' ' + i), 0)); };
+  const texts = (target, from, to) => Array.from({ length: to - from }, (_, i) => target + ' ' + (from + i));
+  archive('ann', 1000, 1700100000);
+  archive('bob', 30, 1700200000);
+  // Archived under a name with capitals before imports lowercased it: one conversation with the lowercase records.
+  archive('Zoe', 70, 1700300000);
+  archive('zoe', 70, 1700300070);
+  t = load(big);
+  const parse = t.w.parseContent;
+  let parsed = 0;
+  t.w.parseContent = function () { parsed++; return parse.apply(this, arguments); };
+  const hist = await t.m.liveBridge.pmHistory(100);
+  const listed = target => hist[target] ? hist[target].list.map(x => x.text) : null;
+  step('reconnection on a large private history parses only the last 100 records of each correspondent',
+    parsed === 230 && JSON.stringify(listed('ann')) === JSON.stringify(texts('ann', 900, 1000)) && hist.ann.more
+      && JSON.stringify(listed('bob')) === JSON.stringify(texts('bob', 0, 30)) && !hist.bob.more
+      && JSON.stringify(listed('zoe')) === JSON.stringify(texts('Zoe', 40, 70).concat(texts('zoe', 0, 70))) && hist.zoe.more && !hist.Zoe,
+    { parsed, targets: Object.keys(hist), ann: (listed('ann') || []).slice(0, 2), bob: (listed('bob') || []).length, zoe: (listed('zoe') || []).slice(0, 2) });
+
   console.log(log.join('\n'));
   console.log('ERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   process.exit(0);

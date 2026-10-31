@@ -1609,8 +1609,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* PMs received offline: database opened before the private connection, msgoff right after OK, two identical "ok" 10 s apart in the history */
   pmRecords.push(
-    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000400.5:0:<n000/>ok', 1),
-    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000410.5:0:<n000/>ok', 1));
+    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000405.5:0:<n000/>ok', 1),
+    pmRecord('gus', 'msg:gus:marjorie:unknown:1700000415.5:0:<n000/>ok', 1));
   C.database.pm = false;
   C.private.socket.readyState = 3; await wait(2300);
   w.dispatchEvent(new w.Event('online')); await wait(50);
