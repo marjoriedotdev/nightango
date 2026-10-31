@@ -394,7 +394,8 @@ function Root(props) {
     tiktokThumb: function (e) {
       var thumbs = tiktokAsked.current.thumbs;
       if (!thumbs[e.url]) {
-        thumbs[e.url] = !LIVE ? Promise.reject(new Error('TikTok thumbnails are not part of this prototype.'))
+        // Prototype: a post link shows the sample thumbnail, a short link none.
+        thumbs[e.url] = !LIVE ? (e.id ? Promise.resolve(SAMPLE_TIKTOK_THUMB) : Promise.reject(new Error('Short TikTok links are not part of this prototype.')))
           : (e.id ? Promise.resolve(e.url) : tiktokPost(e.url).then(function (r) { return r.link; })).then(liveBridge.tiktokThumb);
       }
       return thumbs[e.url];

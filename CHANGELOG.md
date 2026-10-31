@@ -2,6 +2,12 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.30.1] - 2026-10-31
+
+### Fixed
+
+- A TikTok link without a thumbnail, for example while external media are blocked, shows as a Play video button again instead of a large empty card. The video card appears once its thumbnail has loaded.
+
 ## [0.30.0] - 2026-10-31
 
 ### Added

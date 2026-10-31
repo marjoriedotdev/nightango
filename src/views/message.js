@@ -209,6 +209,7 @@ function VideoEmbed(p) {
 /**
  * TikTok post in TikTok's embed player, which exists only after the click.
  * Its thumbnail is asked to TikTok only under the rules of the YouTube thumbnail.
+ * The vertical card shows only once the thumbnail has loaded: until then, and without one, a compact button.
  * A short link is resolved at the click, or before for the thumbnail: only its redirect gives the post id.
  * @param {?string} p.id Post id, absent for a short link.
  * @param {string} p.url Post or short link of the message.
@@ -218,6 +219,7 @@ function TikTokEmbed(p) {
   var a = useState(p.id || null), post = a[0], setPost = a[1];
   var b = useState('idle'), phase = b[0], setPhase = b[1];
   var c = useState(null), thumb = c[0], setThumb = c[1];
+  var d = useState(false), loaded = d[0], setLoaded = d[1];
   var preview = safety.embedVideos && !waitsForClick(safety, 'tiktok', p.url);
   useEffect(function () {
     if (!preview) return;
@@ -237,10 +239,15 @@ function TikTokEmbed(p) {
     setPhase('loading');
     app.actions.tiktokPost(p.url).then(function (r) { setPost(r.post); setPhase('playing'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
   }
-  var loading = phase === 'loading';
+  var loading = phase === 'loading', card = preview && thumb && loaded;
+  // Loaded hidden behind the button first: an empty vertical card would take the height of a video for nothing.
+  var img = preview && thumb ? h('img', {
+    src: thumb, alt: '', referrerPolicy: 'no-referrer', style: card ? null : { display: 'none' },
+    onLoad: function () { setLoaded(true); }, onError: function () { setThumb(null); setLoaded(false); }
+  }) : null;
+  if (!card) return h(Frag, null, h(RevealButton, { icon: 'play', label: loading ? 'Loading video' : 'Play video', url: p.url, onClick: loading ? null : play }), img);
   return h('button', { type: 'button', className: 'embed-video embed-tiktok', 'aria-label': 'Play video', 'aria-busy': loading ? 'true' : undefined, onClick: loading ? null : play },
-    preview && thumb ? h('img', { src: thumb, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer', onError: function () { setThumb(null); } }) : null,
-    h('span', { className: 'embed-play' }, loading ? h(T.Spinner, { size: 22, label: 'Loading video' }) : h(T.Icon, { name: 'play', size: 22 })));
+    img, h('span', { className: 'embed-play' }, loading ? h(T.Spinner, { size: 22, label: 'Loading video' }) : h(T.Icon, { name: 'play', size: 22 })));
 }
 
 /**
