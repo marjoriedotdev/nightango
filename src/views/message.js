@@ -163,6 +163,7 @@ function MessageEmbeds(p) {
   return h('div', { className: 'embeds' }, p.embeds.map(function (e, i) {
     if (e.kind === 'youtube') return h(VideoEmbed, { key: i, id: e.id });
     if (e.kind === 'tiktok') return h(TikTokEmbed, { key: i, id: e.id, url: e.url });
+    if (e.kind === 'x') return h(XPostEmbed, { key: i, id: e.id, url: e.url });
     return FILE_MEDIA[e.kind] ? h(FileEmbed, { key: i, kind: e.kind, url: e.url }) : h(ImageEmbed, { key: i, kind: e.kind, url: e.url });
   }));
 }
@@ -247,6 +248,63 @@ function TikTokEmbed(p) {
   if (!card) return h(Frag, null, h(RevealButton, { icon: 'play', label: loading ? 'Loading video' : 'Play video', url: p.url, onClick: loading ? null : play }), img);
   return h('button', { type: 'button', className: 'embed-video embed-tiktok', 'aria-label': 'Play video', 'aria-busy': loading ? 'true' : undefined, onClick: loading ? null : play },
     img, h('span', { className: 'embed-play' }, loading ? h(T.Spinner, { size: 22, label: 'Loading video' }) : h(T.Icon, { name: 'play', size: 22 })));
+}
+
+/**
+ * X post as a card: its text from X's oEmbed, its first photo or video from its syndication when X gives one.
+ * Read when shown only under the rules of the YouTube thumbnail, otherwise at the click.
+ * @param {string} p.id Post id.
+ * @param {string} p.url Post link of the message.
+ */
+function XPostEmbed(p) {
+  var app = useApp(), safety = app.state.prefs.safety;
+  var a = useState(null), post = a[0], setPost = a[1];
+  var b = useState('idle'), phase = b[0], setPhase = b[1];
+  var preview = safety.embedX && !waitsForClick(safety, 'x', p.url);
+  useEffect(function () {
+    if (!preview) return;
+    var current = true;
+    app.actions.xPost({ id: p.id, url: p.url }).then(function (r) { if (current) setPost(r); }, function () { /* without the post, the link stays a button */ });
+    return function () { current = false; };
+  }, [preview, p.id]);
+  if (!safety.embedX || phase === 'failed') return mediaLink(app, p.url, 'msg-link', p.url);
+  if (post && (preview || phase === 'shown')) return h(XPostCard, { post: post });
+  function show() {
+    setPhase('loading');
+    app.actions.xPost({ id: p.id, url: p.url }, true).then(function (r) { setPost(r); setPhase('shown'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
+  }
+  var loading = phase === 'loading';
+  return h(RevealButton, { icon: 'quote', label: loading ? 'Loading post' : 'Show post', url: p.url, onClick: loading ? null : show });
+}
+
+function XPostCard(p) {
+  var app = useApp(), post = p.post;
+  return h('div', { className: 'embed-x' },
+    h('div', { className: 'embed-x-head' }, h('span', { className: 'embed-x-author' }, post.author), h('span', null, '@' + post.handle)),
+    post.text ? h('p', { className: 'embed-x-text' }, post.text) : null,
+    post.media ? h(XPostMedia, { media: post.media, link: post.link }) : null,
+    h('div', { className: 'embed-x-foot' }, h('span', null, post.date), mediaLink(app, post.link, 'embed-x-open', 'Open on X')));
+}
+
+/**
+ * First photo or video of an X post. The video loads only after the click, a media X flags as sensitive waits for a click.
+ * @param {Object} p.media Media read by the loader: kind, thumb, video, width, height, sensitive.
+ * @param {string} p.link Post link, opened by the photo.
+ */
+function XPostMedia(p) {
+  var app = useApp(), m = p.media;
+  var a = useState(!m.sensitive), revealed = a[0], setRevealed = a[1];
+  var b = useState(false), playing = b[0], setPlaying = b[1];
+  var c = useState(false), failed = c[0], setFailed = c[1];
+  function fail() { setFailed(true); }
+  if (failed) return null;
+  if (!revealed) return h(RevealButton, { icon: 'eye-off', label: 'Show sensitive media', url: m.thumb, onClick: function () { setRevealed(true); } });
+  var size = m.width && m.height ? { aspectRatio: m.width + ' / ' + m.height } : null;
+  if (m.kind === 'photo') return mediaLink(app, p.link, 'embed-x-media', h('img', { src: m.thumb, alt: 'Photo', referrerPolicy: 'no-referrer', style: size, onError: fail }));
+  if (playing) return h('video', { className: 'embed-x-media embed-x-video', src: m.video, poster: m.thumb, controls: true, autoPlay: true, playsInline: true, style: size, onError: fail });
+  return h('button', { type: 'button', className: 'embed-x-media embed-x-poster', 'aria-label': 'Play video', style: size, onClick: function () { setPlaying(true); } },
+    h('img', { src: m.thumb, alt: '', referrerPolicy: 'no-referrer', onError: fail }),
+    h('span', { className: 'embed-play' }, h(T.Icon, { name: 'play', size: 22 })));
 }
 
 /**

@@ -10,7 +10,7 @@ function defaultPrefs() {
     },
     volume: 70, soundFocusOnly: true, tabTitle: true, markNew: true, pmPreview: true,
     privacy: { joinOwned: true, joinRecent: true, joinFavorites: true, usernameInTitle: false },
-    safety: { embedImages: true, embedVideos: true, proxyMedia: true, warnLinks: true, trustedHosts: [], showGuests: true, guestMessages: true, syncBlocked: true, ignoreMode: 'collapse' },
+    safety: { embedImages: true, embedVideos: true, embedX: true, proxyMedia: true, warnLinks: true, trustedHosts: [], showGuests: true, guestMessages: true, syncBlocked: true, ignoreMode: 'collapse' },
     a11y: { reduceMotion: false, underlineLinks: false },
     sky: { calm: false, south: false, moon: 'auto', season: true },
     simulate: true

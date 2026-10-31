@@ -276,8 +276,8 @@ function Root(props) {
   }
 
   var mediaLib = LIVE ? liveBridge : sampleMedia;
-  // Post page read once per TikTok link and per page: a failure is read again only at a click.
-  var tiktokPosts = useRef({});
+  // TikTok post pages and X posts: read once per post and per page, a failure is read again only at a click.
+  var tiktokPosts = useRef({}), xPosts = useRef({});
   // The stars and the Media tab read the media library again when this counter changes.
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
@@ -397,6 +397,18 @@ function Root(props) {
         // Prototype: a post link shows the sample cover, a short link turns back into a link.
         return LIVE ? liveBridge.tiktokPost(e.url) : e.id ? Promise.resolve({ post: e.id, link: e.url, thumb: SAMPLE_TIKTOK_THUMB })
           : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.'));
+      });
+    },
+    /**
+     * Reads an X post: its text and its first photo or video.
+     * @param {{id: string, url: string}} e X media of a message.
+     * @param {boolean} [click] The user clicked the link: a previous failure is read again.
+     * @returns {Promise<Object>} Author, handle, text, date, link and media of the post, rejected with the text to show.
+     */
+    xPost: function (e, click) {
+      return askOnce(xPosts.current, e.id, click, function () {
+        return LIVE ? liveBridge.xPost(e.url) : e.id === SAMPLE_X_POST.id ? Promise.resolve(SAMPLE_X_POST.card)
+          : Promise.reject(new Error('Only the sample X post is part of this prototype. Open the link instead.'));
       });
     },
     /**

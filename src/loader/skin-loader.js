@@ -8,6 +8,8 @@
 // @grant        GM_xmlhttpRequest
 // @connect      vissle.me
 // @connect      tiktok.com
+// @connect      publish.x.com
+// @connect      cdn.syndication.twimg.com
 // @run-at       document-idle
 // ==/UserScript==
 (function () {
@@ -76,6 +78,72 @@
       },
       onerror: function () { reply('tiktok', q.id, { error: 'TikTok could not be reached. Open the link instead.' }); },
       ontimeout: function () { reply('tiktok', q.id, { error: 'TikTok did not answer in time. Open the link instead.' }); }
+    });
+  });
+
+  /* Bridge to X: the oEmbed of a post and its first media, which the page cannot read across origins. */
+  // Any script of the page can send this event: only a post link goes out, rebuilt here, and only the fields of the card come back.
+  var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/(\w{1,15})\/status\/(\d{1,20})/;
+  var X_AUTHOR = /^https:\/\/(?:x|twitter)\.com\/(\w{1,15})$/;
+  var X_IMAGE = /^https:\/\/pbs\.twimg\.com\/[^\s"'<>]+$/, X_VIDEO = /^https:\/\/video\.twimg\.com\/[^\s"'<>]+$/;
+  // Up to 720p: the card is 420 pixels wide and the 1080p variant weighs about five times more.
+  var X_VIDEO_BITRATE = 2500000;
+  // Token that platform.twitter.com derives from the post id, as read in vercel/react-tweet (fetch-tweet.ts): not a secret.
+  function xToken(id) { return ((Number(id) / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, ''); }
+  // oEmbed blockquote: text in <p>, then the author and the date as the last link. Parsed inert, only text comes out.
+  function xText(html) {
+    var doc = new DOMParser().parseFromString(html, 'text/html'), p = doc.querySelector('blockquote > p'), dates = doc.querySelectorAll('blockquote > a');
+    if (!p) return null;
+    [].forEach.call(p.querySelectorAll('br'), function (br) { br.replaceWith('\n'); });
+    // pic.twitter.com links stand for the media, which the card shows or X opens.
+    [].forEach.call(p.querySelectorAll('a'), function (a) { if (/^pic\.(?:twitter|x)\.com\//.test(a.textContent)) a.remove(); });
+    return { text: p.textContent.trim(), date: dates.length ? dates[dates.length - 1].textContent.trim() : '' };
+  }
+  function xMedia(t) {
+    var m = t.mediaDetails && t.mediaDetails[0], o = m && m.original_info;
+    if (!m || !X_IMAGE.test(m.media_url_https || '')) return null;
+    var out = { kind: 'photo', thumb: m.media_url_https, sensitive: t.possibly_sensitive === true };
+    if (o && o.width > 0 && o.height > 0) { out.width = Math.round(o.width); out.height = Math.round(o.height); }
+    if (m.type === 'photo') return out;
+    var mp4 = ((m.video_info || {}).variants || []).filter(function (v) { return v.content_type === 'video/mp4' && X_VIDEO.test(v.url || ''); })
+      .sort(function (a, b) { return (b.bitrate || 0) - (a.bitrate || 0); });
+    var pick = mp4.filter(function (v) { return (v.bitrate || 0) <= X_VIDEO_BITRATE; })[0] || mp4[mp4.length - 1];
+    if (!pick) return null;
+    out.kind = 'video'; out.video = pick.url;
+    return out;
+  }
+  document.addEventListener('torch-skin:x-request', function (e) {
+    var q = JSON.parse(e.detail), post = X_POST.exec(q.url);
+    if (!post) { reply('x', q.id, { error: 'X did not share this post. Open the link instead.' }); return; }
+    var link = 'https://x.com/' + post[1] + '/status/' + post[2], card = null, media = null, error = null, left = 2;
+    // The card waits for both replies: the media is a bonus, the text decides.
+    function done() {
+      if (--left) return;
+      if (!card) { reply('x', q.id, { error: error }); return; }
+      if (media) card.media = media;
+      reply('x', q.id, card);
+    }
+    GM_xmlhttpRequest({
+      method: 'GET', url: 'https://publish.x.com/oembed?url=' + encodeURIComponent(link) + '&omit_script=true&dnt=true&hide_thread=true', anonymous: true, timeout: 15000,
+      onload: function (r) {
+        var o = null, body = null, author = null;
+        try { o = r.status === 200 ? JSON.parse(r.responseText) : null; } catch (x) { /* unreadable reply: no card */ }
+        if (o && typeof o.html === 'string') { body = xText(o.html); author = X_AUTHOR.exec(o.author_url || ''); }
+        if (body && author) card = { author: String(o.author_name || author[1]), handle: author[1], text: body.text, date: body.date, link: 'https://x.com/' + author[1] + '/status/' + post[2] };
+        else error = 'X did not share this post. Open the link instead.';
+        done();
+      },
+      onerror: function () { error = 'X could not be reached. Open the link instead.'; done(); },
+      ontimeout: function () { error = 'X did not answer in time. Open the link instead.'; done(); }
+    });
+    GM_xmlhttpRequest({
+      method: 'GET', url: 'https://cdn.syndication.twimg.com/tweet-result?id=' + post[2] + '&lang=en&token=' + xToken(post[2]), anonymous: true, timeout: 15000,
+      onload: function (r) {
+        // Undocumented reply: if X changes it, the card shows without media.
+        try { media = r.status === 200 ? xMedia(JSON.parse(r.responseText)) : null; } catch (x) { media = null; }
+        done();
+      },
+      onerror: done, ontimeout: done
     });
   });
 })();

@@ -674,7 +674,7 @@ var liveBridge = (function () {
     return body.slice(0, at) + esc(quote) + body.slice(at);
   }
 
-  /* Replies from the userscript bridges (vissle, TikTok), matched to requests by id */
+  /* Replies from the userscript bridges (vissle, TikTok, X), matched to requests by id */
   var loaderWaits = {};
   function onLoaderReply(e) {
     var r = JSON.parse(e.detail), wait = loaderWaits[r.id];
@@ -684,9 +684,10 @@ var liveBridge = (function () {
   }
   document.addEventListener('torch-skin:vissle-response', onLoaderReply);
   document.addEventListener('torch-skin:tiktok-response', onLoaderReply);
+  document.addEventListener('torch-skin:x-response', onLoaderReply);
   /**
    * Sends a request to a userscript bridge.
-   * @param {string} channel Bridge name: vissle or tiktok.
+   * @param {string} channel Bridge name: vissle, tiktok or x.
    * @param {Object} q Request fields.
    * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error.
    */
@@ -1372,6 +1373,14 @@ var liveBridge = (function () {
      * @returns {Promise<{post: string, link: string, thumb: ?string}>} Post id and link, and cover address if the page gives one, rejected with the text to show if TikTok does not give the post.
      */
     tiktokPost: function (url) { return askLoader('tiktok', { url: url }).then(function (r) { return { post: r.post, link: r.link, thumb: r.thumb || null }; }); },
+    /**
+     * Reads an X post through the userscript bridge: its oEmbed text and its first media.
+     * @param {string} url X post link.
+     * @returns {Promise<Object>} Author, handle, text, date and link of the post, and its media if X gives one, rejected with the text to show.
+     */
+    xPost: function (url) {
+      return askLoader('x', { url: url }).then(function (r) { return { author: r.author, handle: r.handle, text: r.text, date: r.date, link: r.link, media: r.media || null }; });
+    },
     /**
      * Uploads a file to vissle like the BetterChatango Upload dialog without BetterChatango posting its link.
      * @param {File} file Chosen file.
