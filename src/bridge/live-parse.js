@@ -343,6 +343,22 @@ function parseMsgBg(xml, image) {
   };
 }
 
+// -- Profile activity ---------------------------------------------------------
+
+/**
+ * Reads the items of a vissle activity reply in the shape visitorPage expects.
+ * @param {*} data JSON reply of track1/activity, forwarded by the loader.
+ * @returns {?Array} Items, null if the reply or one of its items has another shape.
+ */
+function parseVisits(data) {
+  var items = data && data.get;
+  if (!Array.isArray(items)) return null;
+  return items.every(function (x) {
+    return !!x && typeof x.user === 'string' && typeof x.time === 'number' && isFinite(x.time)
+      && [x.name, x.action, x.msg].every(function (v) { return v == null || typeof v === 'string'; });
+  }) ? items : null;
+}
+
 // -- Linked accounts ----------------------------------------------------------
 
 var WHO_LEVELS = ['definite', 'linked', 'strong', 'medium', 'weak'];

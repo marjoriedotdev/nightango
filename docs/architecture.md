@@ -23,7 +23,7 @@ src/
     live-model.js    LIVE, JOURNAL, avatarSrc (and photo version of one's own account), vissle pagination, Chatango bits (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      emoticon table (EMOTICONS)
     live-parse.js    pure bridge functions: message content (parseContent, media), group frames,
-                     Premium background (parseMiniCss, background form), updateprofile response, message background (parseMsgBg), linked accounts (parseWho), presence, timestamps,
+                     Premium background (parseMiniCss, background form), updateprofile response, message background (parseMsgBg), vissle activity replies (parseVisits), linked accounts (parseWho), presence, timestamps,
                      message references, private history records (reading, sorting an import),
                      media library entries (validation, page order, sorting an import)
     live-bridge.js   liveBridge: incoming and outgoing frames, warnings, connections,

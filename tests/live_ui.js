@@ -1308,6 +1308,16 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   vissleReply = () => ({ error: 'This profile has tracking turned off.' });
   click(visitors().querySelector('button[aria-label="Refresh"]')); await until(() => visitors().textContent.includes('This profile has tracking turned off.'));
   step('own visitors list: vissle error shown as sent', vissleReqs[3].page === 1 && vissleReqs[3].get === 'like' && visitors().textContent.includes('This profile has tracking turned off.'), visitors().textContent);
+  // Each request starts by clearing the previous error: the shown text belongs to this reply.
+  const refreshVisitors = async reply => {
+    vissleReply = reply;
+    const refresh = () => visitors().querySelector('button[aria-label="Refresh"]');
+    click(refresh()); await wait(30); await until(() => !refresh().disabled);
+    return { text: visitors().textContent, rows: visitorRows().length };
+  };
+  const UNREADABLE = 'vissle.me sent an unreadable reply.', oddReplies = [];
+  for (const data of [null, 42, { action: 'activity' }, { get: [{ user: 'zoe' }] }, { get: [{ user: 'zoe', time: NOW, msg: { text: 'Hi' } }] }]) oddReplies.push(await refreshVisitors(() => data));
+  step('own visitors list: a reply of another shape shows the unreadable reply error', oddReplies.every(x => x.text.includes(UNREADABLE) && x.rows === 0), oddReplies);
   /* Unreadable full profile (server error): saving another field sends nothing, never an empty full profile */
   const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
   betterChatangoFull.value = ''; ownMod2Status = 500;

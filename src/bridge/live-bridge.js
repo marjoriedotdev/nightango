@@ -1452,11 +1452,14 @@ var liveBridge = (function () {
     /**
      * Reads the activity of one's own profile recorded by vissle.me.
      * @param {{page: number, order: string, get: string}} q Cursor, order and filter of the requested page.
+     * @returns {Promise<Array>} Items read by parseVisits, rejected with the text to show.
      */
     visitors: function (q) {
       return askLoader('vissle', { page: q.page, order: q.order, get: q.get }).then(function (r) {
-        if (r.data.error) throw new Error(r.data.error);
-        return r.data.get;
+        if (r.data && typeof r.data.error === 'string') throw new Error(r.data.error);
+        var items = parseVisits(r.data);
+        if (!items) throw new Error('vissle.me sent an unreadable reply.');
+        return items;
       });
     },
     /**
