@@ -162,6 +162,7 @@ var FILE_MEDIA = { video: { icon: 'play', label: 'Play video', className: 'embed
 function MessageEmbeds(p) {
   return h('div', { className: 'embeds' }, p.embeds.map(function (e, i) {
     if (e.kind === 'youtube') return h(VideoEmbed, { key: i, id: e.id });
+    if (e.kind === 'tiktok') return h(TikTokEmbed, { key: i, id: e.id, url: e.url });
     return FILE_MEDIA[e.kind] ? h(FileEmbed, { key: i, kind: e.kind, url: e.url }) : h(ImageEmbed, { key: i, kind: e.kind, url: e.url });
   }));
 }
@@ -203,6 +204,31 @@ function VideoEmbed(p) {
   return h('button', { type: 'button', className: 'embed-video', 'aria-label': 'Play video', onClick: function () { setPlaying(true); } },
     waitsForClick(safety, 'youtube', thumb) ? null : h('img', { src: thumb, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' }),
     h('span', { className: 'embed-play' }, h(T.Icon, { name: 'play', size: 22 })));
+}
+
+/**
+ * TikTok post in TikTok's embed player, which exists only after the click.
+ * A short link is resolved at the click: only its redirect gives the post id.
+ * @param {?string} p.id Post id, absent for a short link.
+ * @param {string} p.url Link typed in the message.
+ */
+function TikTokEmbed(p) {
+  var app = useApp(), safety = app.state.prefs.safety;
+  var a = useState(p.id || null), post = a[0], setPost = a[1];
+  var b = useState('idle'), phase = b[0], setPhase = b[1];
+  if (!safety.embedVideos || phase === 'failed') return mediaLink(app, p.url, 'msg-link', p.url);
+  if (phase === 'playing') {
+    return h('iframe', {
+      className: 'embed-frame embed-tiktok', title: 'TikTok video', src: 'https://www.tiktok.com/player/v1/' + post + '?autoplay=1&rel=0',
+      allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen', allowFullScreen: true, referrerPolicy: 'strict-origin-when-cross-origin'
+    });
+  }
+  function play() {
+    if (post) { setPhase('playing'); return; }
+    setPhase('loading');
+    app.actions.tiktokPost(p.url).then(function (id) { setPost(id); setPhase('playing'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
+  }
+  return h(RevealButton, { icon: 'play', label: phase === 'loading' ? 'Loading video' : 'Play video', url: p.url, onClick: phase === 'loading' ? null : play });
 }
 
 /**

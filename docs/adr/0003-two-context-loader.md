@@ -3,6 +3,8 @@ status: accepted
 date: 2026-10
 ---
 
+Amended on 2026-10-31 by [ADR-0014](0014-tiktok-embed.md): the sandbox also holds the TikTok bridge (`@connect tiktok.com`, `torch-skin:tiktok-request` and `torch-skin:tiktok-response`).
+
 # Two-context loader: sandbox and page
 
 ## Context

@@ -674,15 +674,29 @@ var liveBridge = (function () {
     return body.slice(0, at) + esc(quote) + body.slice(at);
   }
 
-  /* Replies from the userscript vissle bridge, matched to requests by id */
-  var vissleWaits = {};
-  document.addEventListener('torch-skin:vissle-response', function (e) {
-    var r = JSON.parse(e.detail), wait = vissleWaits[r.id];
+  /* Replies from the userscript bridges (vissle, TikTok), matched to requests by id */
+  var loaderWaits = {};
+  function onLoaderReply(e) {
+    var r = JSON.parse(e.detail), wait = loaderWaits[r.id];
     if (!wait) return;
-    delete vissleWaits[r.id];
-    var err = r.error || r.data.error;
-    if (err) wait.reject(new Error(err)); else wait.resolve(r.data.get);
-  });
+    delete loaderWaits[r.id];
+    if (r.error) wait.reject(new Error(r.error)); else wait.resolve(r);
+  }
+  document.addEventListener('torch-skin:vissle-response', onLoaderReply);
+  document.addEventListener('torch-skin:tiktok-response', onLoaderReply);
+  /**
+   * Sends a request to a userscript bridge.
+   * @param {string} channel Bridge name: vissle or tiktok.
+   * @param {Object} q Request fields.
+   * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error.
+   */
+  function askLoader(channel, q) {
+    return new Promise(function (resolve, reject) {
+      var id = uid();
+      loaderWaits[id] = { resolve: resolve, reject: reject };
+      document.dispatchEvent(new CustomEvent('torch-skin:' + channel + '-request', { detail: JSON.stringify(Object.assign({ id: id }, q)) }));
+    });
+  }
 
   if (C && C.event && typeof C.on === 'function') {
     wrapTable(C.event.group, 'group');
@@ -1347,12 +1361,17 @@ var liveBridge = (function () {
      * @param {{page: number, order: string, get: string}} q Cursor, order and filter of the requested page.
      */
     visitors: function (q) {
-      return new Promise(function (resolve, reject) {
-        var id = uid();
-        vissleWaits[id] = { resolve: resolve, reject: reject };
-        document.dispatchEvent(new CustomEvent('torch-skin:vissle-request', { detail: JSON.stringify({ id: id, page: q.page, order: q.order, get: q.get }) }));
+      return askLoader('vissle', { page: q.page, order: q.order, get: q.get }).then(function (r) {
+        if (r.data.error) throw new Error(r.data.error);
+        return r.data.get;
       });
     },
+    /**
+     * Finds the TikTok post a short link leads to, through the userscript bridge.
+     * @param {string} url Short TikTok link.
+     * @returns {Promise<string>} Post id, rejected with the text to show if TikTok does not give it.
+     */
+    tiktokPost: function (url) { return askLoader('tiktok', { url: url }).then(function (r) { return r.post; }); },
     /**
      * Uploads a file to vissle like the BetterChatango Upload dialog without BetterChatango posting its link.
      * @param {File} file Chosen file.

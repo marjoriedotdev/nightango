@@ -81,7 +81,7 @@ Received frames only: nothing is sent.
 
 ## Allowed HTTP calls
 
-This list is closed. It covers the calls that the application code (bridge, loader, screens) makes itself to Chatango, vissle and GitHub, through `fetch`, `client.post` or `GM_xmlhttpRequest`. None of these calls carries the password ([ADR-0001](adr/0001-password-never-read.md)).
+This list is closed. It covers the calls that the application code (bridge, loader, screens) makes itself to Chatango, vissle, GitHub and TikTok, through `fetch`, `client.post` or `GM_xmlhttpRequest`. None of these calls carries the password ([ADR-0001](adr/0001-password-never-read.md)).
 
 - `client.post(url, form, {})`, to `chatango.com` only. Without an option, BetterChatango adds the Chatango token `s` to the form for any host in its list, vissle paths included (`inject.js:4748-4749`, list `inject.js:4687-4730`).
 - `client.post(url, form, { cookie: true })`.
@@ -93,6 +93,7 @@ This list is closed. It covers the calls that the application code (bridge, load
 - The search `chatango.com/search` with `credentials: 'include'`, as BetterChatango does.
 - `POST https://vissle.me/track1/activity`, through the loader's `GM_xmlhttpRequest` bridge, with `anonymous: true`.
 - `GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` through `fetch`, without cookie or credential, once per page at sign-in, in live only: latest Nightango release, only `tag_name` read ([ADR-0013](adr/0013-update-check-at-sign-in.md)).
+- `GET https://www.tiktok.com/t/{code}/`, `https://vm.tiktok.com/{code}/` or `https://vt.tiktok.com/{code}/`, through the loader's `GM_xmlhttpRequest` bridge (`@connect tiktok.com`), with `anonymous: true`, one call per short TikTok link and per page, only on click on its "Play video" button, in live only. The loader rebuilds the URL from a short link it validates itself and replies with the post id read from the URL reached after the redirects (`finalUrl`, `responseURL` in Userscripts), never with the response body ([ADR-0014](adr/0014-tiktok-embed.md), see Media).
 
 ### Resources loaded by the loader and the interface
 
@@ -100,6 +101,7 @@ These are not calls from the application code but resources that the browser loa
 
 - React and ReactDOM 18.3.1 from `cdnjs.cloudflare.com`, with SRI (`skin-page.js`).
 - The BetterChatango startup script, `https://vissle.me/client/start`, which in turn loads the BetterChatango page and code.
+- The `www.tiktok.com/player/v1/{id}` iframe (TikTok embed player), created only on click, with `autoplay=1&rel=0` ([ADR-0014](adr/0014-tiktok-embed.md)).
 - The `www.youtube-nocookie.com/embed/` iframe, created only on click. The `i.ytimg.com` thumbnail is shown if `embedVideos` is on and if `proxyMedia` is off or `i.ytimg.com` is trusted.
 - Message images and media library thumbnails (`chatango.com/pmmessageimg` or an https URL, with http loaded as https and `fp.chatango.com` on `ust.chatango.com` like BetterChatango, `inject.js:1112`, and an image uploaded to Chatango, `ust.chatango.com/um/…/img/t_{id}.jpg`, loaded at its full size `l_{id}.jpg`, the one BetterChatango opens, `inject.js:8317`) depending on `embedImages`, `proxyMedia` and the trusted hosts (see BetterChatango startup settings, Trusted hosts).
 - Message video (mp4, webm) and audio (mp3, ogg, wav) files, as an https URL from any host (http loaded as https, like images), in `<video>` or `<audio>`, depending on `embedVideos` and the trusted hosts: created only on click, or as soon as shown without autoplay for a trusted host.
@@ -239,6 +241,8 @@ On the private connection. Timestamps are in seconds. `None` or 0 means unknown.
 - YouTube links as text: BetterChatango turns a YouTube link into a `vid://yt:` tag only in PMs (`inject.js:5208-5211`). In groups, the link arrives as text and BetterChatango embeds it on rendering with the regex `(?:https?://(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|/\w+/|/)([\w-]{11})[^<\s]*)` (`inject.js:8256-8259`). `parseContent` applies the same regex to each link in the text and adds `{ kind: 'youtube', id }`, unless the message already carries this media, through a `vid://yt:` tag or another link. The link stays in the text. The `t=` and `list=` parameters are ignored. The rendering is that of the tag: thumbnail, and iframe on click.
 - Video and audio files: BetterChatango embeds `https?://….(mp4|wmv|webm)` as `<video controls>` without waiting for a click (`inject.js:8089`, `crawl` `1102-1134`), and the first `….(mp3|ogg|wav)` URL of a message as `<audio>` after a click, except for a host in its allowlist (`embedAudio`, `inject.js:6423-6642`). `parseContent` picks out in the text the https URLs that end with `.mp4` or `.webm` (`{ kind: 'video', url }`) and with `.mp3`, `.ogg` or `.wav` (`{ kind: 'audio', url }`), query and fragment allowed, case ignored. `http` URLs, `.wmv` and other extensions stay links. The link stays in the text.
 - With `embedVideos`, a video or audio file, whatever its host, is shown as a "Play video" or "Play audio" button followed by the host. The `<video controls>` or `<audio controls>` is created only on click, then starts. For a trusted host, it is created without a button and without autoplay. Without `embedVideos`, or if the file does not load, it stays a link that goes through the link warning. `<video>` and `<audio>` do not accept a `referrerPolicy` attribute: the host receives the referrer according to the page policy, as for the YouTube iframe. The button names the host before the click, which counts as consent.
+- TikTok links as text: BetterChatango does not embed them. `parseContent` adds `{ kind: 'tiktok', id, url }` for a post link `https?://(www.|m.)tiktok.com/@{user}/video/{id}` or `/photo/{id}`, and `{ kind: 'tiktok', url }` for a short link `tiktok.com/t/{code}/`, `vm.tiktok.com/{code}/` or `vt.tiktok.com/{code}/`, which does not carry the post id. A profile, tag or other TikTok link stays a link.
+- With `embedVideos`, a TikTok link is shown as a "Play video" button followed by the host, trusted host or not. On click, the TikTok embed player iframe is created and starts. For a short link, the click first asks the loader for the post id (see Allowed HTTP calls), and the button reads "Loading video" meanwhile. If TikTok gives no post id, a toast says why and the embed turns back into a link that goes through the link warning. Without `embedVideos`, it stays a link. The prototype has no loader: a short link there turns back into a link on click. TikTok's oEmbed is not used: its reply asks for TikTok's `embed.js` script in the page ([ADR-0014](adr/0014-tiktok-embed.md)).
 - Nightango reuses neither the oEmbed nor the BetterChatango `wsrv.nl` proxy (`inject.js:1116`).
 
 ### Emoticons

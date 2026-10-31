@@ -257,6 +257,8 @@ function Root(props) {
   }
 
   var mediaLib = LIVE ? liveBridge : sampleMedia;
+  // Post id per short TikTok link: the redirect is read once per page.
+  var tiktokPosts = useRef({});
   // The stars and the Media tab read the media library again when this counter changes.
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
@@ -365,6 +367,19 @@ function Root(props) {
     mediaPage: function (index, after, text) { return mediaLib.mediaPage(index, after, text); },
     searchMedia: function (text, count) { return mediaLib.searchMedia(text, count); },
     hasMedia: function (url) { return mediaLib.hasMedia(url); },
+    /**
+     * Finds the TikTok post a short link leads to.
+     * @param {string} url Short TikTok link.
+     * @returns {Promise<string>} Post id, rejected with the text to show.
+     */
+    tiktokPost: function (url) {
+      var cache = tiktokPosts.current;
+      if (!cache[url]) {
+        cache[url] = (LIVE ? liveBridge.tiktokPost(url) : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.')))
+          .catch(function (e) { delete cache[url]; throw e; });
+      }
+      return cache[url];
+    },
     /**
      * Adds an image to the media library under the name BetterChatango gives it or removes it.
      * @param {string} url Image URL.

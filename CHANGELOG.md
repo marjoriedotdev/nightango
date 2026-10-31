@@ -2,6 +2,13 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.29.0] - 2026-10-31
+
+### Added
+
+- TikTok links in messages now show a Play video button. TikTok's player opens only when you click it, short links included. If TikTok doesn't say which video a short link leads to, it stays a link.
+- Nightango now asks for access to tiktok.com, which it uses only to find the video behind a short TikTok link when you click Play video.
+
 ## [0.28.0] - 2026-10-30
 
 ### Added

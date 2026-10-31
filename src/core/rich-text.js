@@ -1,4 +1,4 @@
-var EMBED_LABEL = { youtube: 'Video', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
+var EMBED_LABEL = { youtube: 'Video', tiktok: 'Video', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
 /**
  * Returns the text segments of a message as shown, without the links it already shows as a media.
  * @param {{text: string, parts: ?Array, embeds: ?Array}} m Message read by parseContent.

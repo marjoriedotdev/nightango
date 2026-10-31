@@ -211,6 +211,15 @@ d.addEventListener('torch-skin:vissle-request', e => {
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: q.id, data: vissleReply(q) }) })), 0);
 });
 
+// TikTok bridge of the simulated userscript: a short link ending in "ok" leads to a post, any other one to an error.
+const tiktokReqs = [];
+d.addEventListener('torch-skin:tiktok-request', e => {
+  const q = JSON.parse(e.detail);
+  tiktokReqs.push(q.url);
+  const out = /ok\/$/.test(q.url) ? { post: '7400000000000000001' } : { error: 'TikTok could not be reached. Open the link instead.' };
+  setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:tiktok-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
+});
+
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
 w.eval(fs.readFileSync(S + '/torchds/project/components/bundle.js', 'utf8'));
@@ -888,6 +897,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(played.frames) === JSON.stringify(['dQw4w9WgXcQ', 'jNQXAC9IVRw'].map(id => 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1'))
     && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true], ['VIDEO', 'https://x.test/old.webm', true, true]])
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
+
+  /* TikTok: post link played at once on click, short link resolved by the userscript at the click and only then, failure turned back into a link */
+  const TIKTOK_LINKS = ['https://www.tiktok.com/@clown/video/7400000000000000000?lang=en', 'https://www.tiktok.com/t/ZPLok/', 'https://vm.tiktok.com/ZMbad/', 'https://www.tiktok.com/@clown'];
+  g('b', 'test', ['1700000300.5', 'Eve', '', 'u7', 'UNID7', 'tmptiktok', '9.9.9.9', '0', '', '<n000/><f x11000="0">Kitties ' + TIKTOK_LINKS.join(' ')]);
+  const tiktokRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Kitties') === 0); return p && p.closest('article'); };
+  await until(() => !!tiktokRow());
+  const tiktokBefore = { asked: tiktokReqs.length, links: [...tiktokRow().querySelectorAll('.tc-msg-text a')].map(a => a.getAttribute('href')), embeds: [...tiktokRow().querySelectorAll('.embeds > *')].map(x => x.className + ':' + x.textContent) };
+  [...tiktokRow().querySelectorAll('.embed-reveal')].forEach(click);
+  await until(() => tiktokRow().querySelectorAll('iframe').length === 2 && !!tiktokRow().querySelector('.embeds a.msg-link'));
+  const tiktokAfter = { asked: tiktokReqs, frames: [...tiktokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: [...tiktokRow().querySelectorAll('.embeds a.msg-link')].map(a => a.getAttribute('href')) };
+  const tiktokToast = !!byText('.toast', 'TikTok could not be reached. Open the link instead.');
+  step('tiktok links embed, short links resolve only on click',
+    tiktokBefore.asked === 0 && JSON.stringify(tiktokBefore.links) === JSON.stringify(['https://www.tiktok.com/@clown'])
+      && JSON.stringify(tiktokBefore.embeds) === JSON.stringify(['embed-reveal:Play videowww.tiktok.com', 'embed-reveal:Play videowww.tiktok.com', 'embed-reveal:Play videovm.tiktok.com'])
+      && JSON.stringify(tiktokAfter.asked) === JSON.stringify(['https://www.tiktok.com/t/ZPLok/', 'https://vm.tiktok.com/ZMbad/'])
+      && JSON.stringify(tiktokAfter.frames) === JSON.stringify(['7400000000000000000', '7400000000000000001'].map(id => 'https://www.tiktok.com/player/v1/' + id + '?autoplay=1&rel=0'))
+      && JSON.stringify(tiktokAfter.link) === JSON.stringify(['https://vm.tiktok.com/ZMbad/']) && tiktokToast,
+    { tiktokBefore, tiktokAfter, tiktokToast });
 
   /* Trusted host (BetterChatango list): under proxyMedia, only its image shows without a click, the host parsed like the browser does */
   const TRUST_LINKS = ['https://i.imgur.com/a.png', 'https://evil.example/b.png', 'https://i.imgur.com@evil.example/c.png'];
