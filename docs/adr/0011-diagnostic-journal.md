@@ -34,7 +34,7 @@ It never records:
 
 The journal keeps the last 1,000 events of each account in `localStorage` (`torch-skin:journal:<username>`), to survive the reload that often follows a connection loss on mobile. Until sign-in, the events of the page (page load, sign-in connections) stay in memory. On sign-in, the bridge gives the account name to the journal (`signIn`), which puts these events after the ones stored for that account and saves from then on. Another account signed in on the same browser starts from its own log. The log shared by every account up to 0.29.0 (`torch-skin:journal`) cannot be split by account: it is deleted at startup.
 
-It never leaves the browser: nothing is sent, the user copies it themselves.
+It never leaves the browser: nothing is sent, the user copies it themselves. The copy and the download keep group names, which are needed to diagnose a disconnection (owner decision of 2026-10-31, #55). The Diagnostics page says that GitHub issues are public and that the log lists the groups visited, so the user decides what to paste.
 
 ## Consequences
 
