@@ -37,23 +37,20 @@ function useMessageLog() {
 /**
  * Message log of a group or a PM.
  * It follows the bottom while the reader is there, keeps the reading position elsewhere and loads older pages at the top.
- * @param {{log: Object, label: string, rows: Array, firstTs: ?number, changeKey: *, newBelow: string, older: ?Object}} p Driver (useMessageLog), accessible name,
- *   rows, timestamp of the first loaded message, value whose change repositions the log, reaction to a change below a scrolled-up reader
+ * @param {{log: Object, label: string, rows: Array, lastId: ?string, changeKey: *, newBelow: string, older: ?Object}} p Driver (useMessageLog), accessible name,
+ *   rows, id of the last loaded message, other value whose change repositions the log, reaction to a change below a scrolled-up reader
  *   (follow: back to the bottom, notify: New messages button) and log head: null, {status: 'pending'} on the first load,
  *   {status: 'start', text} at the start of the history, or {status: 'more', loading, ready, load, retry} with retry called on every scroll if given.
  */
 function MessageLog(p) {
   var v = p.log.view, older = p.older, more = !!older && older.status === 'more';
-  var sentinelRef = useRef(null), seenFirstTs = useRef(null);
+  var sentinelRef = useRef(null);
   useInfiniteScroll(v.ref, sentinelRef, more && older.ready && !p.log.targetId, function () { older.load(); }, '200px 0px 0px 0px');
+  // The last id, not the count: a full group trims its oldest message for each new one, and history added at the top does not move the view (.log in column-reverse).
   useLayoutEffect(function () {
-    var el = v.ref.current;
-    // History added at the top does not move the view (.log in column-reverse): nothing to restore.
-    var olderAdded = p.firstTs < seenFirstTs.current;
-    seenFirstTs.current = p.firstTs;
-    if (v.atBottom.current || !olderAdded && p.newBelow === 'follow') el.scrollTop = 0;
-    else if (!olderAdded) v.setBelow(true);
-  }, [p.changeKey]);
+    if (v.atBottom.current || p.newBelow === 'follow') v.ref.current.scrollTop = 0;
+    else v.setBelow(true);
+  }, [p.lastId, p.changeKey]);
   useLogAnchor(v.ref);
   function onScroll() {
     // .log in column-reverse: scrollTop is 0 at the bottom and goes negative when scrolling up.

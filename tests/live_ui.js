@@ -576,6 +576,29 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     !!byText('.toast', 'The file could not be uploaded. Try again.') && !linkFrames(failFrom).length && failKept.draft === 'Again' && failKept.chip && !!removeFile && !byText('.tc-composer', 'g.png'),
     { sent: linkFrames(failFrom), failKept, removed: !!removeFile });
 
+  /* Full group: at 500 messages each new one trims the oldest, so the count no longer changes */
+  click(byText('.tc-nav', 'edits')); await wait(50);
+  const fill = (i, text) => g('b', 'edits', [(1700000400 + i) + '.1', 'Dana', '', 'u7', 'UNID7', 'full' + i, '4.4.4.4', '0', '', '<n000/><f x11000="0">' + text]);
+  for (let i = 0; i < 500; i++) fill(i, 'Filler ' + i);
+  const logText = txt => !!$$('.log .tc-msg-text').find(x => x.textContent === txt);
+  await until(() => logText('Filler 499'));
+  const fullLog = $('.log');
+  const fullStart = { capped: logText('Filler 0') && !logText('Mine fixed') && !logText('Sent before the first render'), button: !!$('.jump') };
+  // jsdom has no layout: the test scrolls the column-reverse log itself, 0 is the bottom and a reader 10 px above it still counts as there.
+  const scrollLog = y => { fullLog.scrollTop = y; fullLog.dispatchEvent(new w.Event('scroll')); };
+  scrollLog(-10);
+  fill(500, 'Arrives at the bottom'); await until(() => logText('Arrives at the bottom'));
+  const atBottom = { top: fullLog.scrollTop, button: !!$('.jump') };
+  scrollLog(-2000);
+  fill(501, 'Arrives below the reader'); await until(() => logText('Arrives below the reader'));
+  const scrolledUp = { top: fullLog.scrollTop, button: !!$('.jump'), trimmed: !logText('Filler 1') };
+  if ($('.jump')) { click($('.jump')); await wait(30); }
+  step('full group keeps a reader at the bottom there and shows New messages to a reader who scrolled up',
+    fullStart.capped && !fullStart.button && atBottom.top === 0 && !atBottom.button
+      && scrolledUp.top === -2000 && scrolledUp.button && scrolledUp.trimmed && fullLog.scrollTop === 0 && !$('.jump'),
+    { fullStart, atBottom, scrolledUp, after: fullLog.scrollTop });
+  click(byText('.tc-nav', 'test')); await wait(50);
+
   /* Warnings and connection */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
   step('BetterChatango notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
