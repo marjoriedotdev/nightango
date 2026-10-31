@@ -130,9 +130,17 @@ function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
   function setOpen(n) { if (p.open == null) st[1](n); if (p.onOpenChange) p.onOpenChange(n); }
-  function close() { setOpen(false); }
+  function close() {
+    setOpen(false);
+    var trigger = ref.current && ref.current.querySelector('button');
+    if (!trigger) return;
+    // Before the menu leaves: its focused item would take the focus with it, to the page body.
+    trigger.focus({ preventScroll: true });
+    // A press on a spot that takes no focus clears it once the event is over: the button takes it back then.
+    setTimeout(function () { var a = trigger.getRootNode().activeElement; if (!a || a === document.body) trigger.focus({ preventScroll: true }); }, 0);
+  }
   var place = useFloating(ref, menuRef, open, close, { up: p.up, align: p.align, at: p.at });
-  function toggle() { setOpen(!open); }
+  function toggle() { if (open) close(); else setOpen(true); }
   function onKey(e) {
     if (!menuRef.current) return;
     var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button:not(:disabled)'));
