@@ -95,7 +95,7 @@ This list is closed. It covers the calls that the application code (bridge, load
 - `GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential, `{name}` validated by `ACCOUNT_NAME` (`src/bridge/live-model.js`), one call per click on "Who is this": linked accounts of an account, shown to the user only ([ADR-0010](adr/0010-linked-accounts-on-request.md), see Linked accounts (vissle)). Source: `inject.js:7452-7477`.
 - The public GETs on `ust.chatango.com`: `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml`.
 - The search `chatango.com/search` with `credentials: 'include'`, as BetterChatango does.
-- `POST https://vissle.me/track1/activity`, through the loader's `GM_xmlhttpRequest` bridge, with `anonymous: true`.
+- `POST https://vissle.me/track1/activity`, through the loader's `GM_xmlhttpRequest` bridge, with `anonymous: true`, for the signed-in profile only and with the values the Visitors screen sends (see Profile activity (vissle)).
 - `GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` through `fetch`, without cookie or credential, once per page at sign-in, in live only: latest Nightango release, only `tag_name` read ([ADR-0013](adr/0013-update-check-at-sign-in.md)).
 - `GET https://www.tiktok.com/t/{code}/`, `https://vm.tiktok.com/{code}/` or `https://vt.tiktok.com/{code}/`, through the loader's `GM_xmlhttpRequest` bridge (`@connect tiktok.com`), with `anonymous: true`, one call per short TikTok link and per page, only on click on its "Play video" button, in live only. The loader rebuilds the URL from a short link it validates itself and replies with the post id read from the URL reached after the redirects (`finalUrl`, `responseURL` in Userscripts), never with the response body ([ADR-0014](adr/0014-tiktok-embed.md), see Media).
 
@@ -385,6 +385,7 @@ The formatting toolbar of the Profile page inserts only what all clients show.
 - Response: `{get:[{user, name?, action, time, msg?}]}`, or `{error}` in a 200 response.
 - Paging: 16 items per response, of which 15 are shown. Next page: `page` = `time` of the last shown item.
 - `get`: `all|log|like|dislike|msg|refer`. `order`: `desc|asc`.
+- Loader: the bridge reads only a request that is a JSON object with a string `id`, a `page` that is a non-negative number (1, or the `time` of the last shown item, which can have a fraction), `order` `desc` and a `get` from the list above: the values the Visitors screen sends. Any other request gets an error reply and vissle is not called. The `profile` sent by the page is ignored ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
 - No real time: the vissle socket.io refuses the st.chatango.com origin.
 
 ## Linked accounts (vissle)
