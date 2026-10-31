@@ -77,7 +77,7 @@ select.tc-input{padding:0 10px}
 .tc-moon-crater{fill:var(--moon-crater)}
 .tc-moon-limb{stop-color:var(--moon-limb)}
 
-.tc-nav{display:flex;align-items:center;gap:10px;width:100%;height:var(--size-control-md);padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);font:400 14px var(--font-sans);text-align:left;text-decoration:none;cursor:pointer;transition:background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
+.tc-nav{display:flex;flex:none;align-items:center;gap:10px;width:100%;height:var(--size-control-md);padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);font:400 14px var(--font-sans);text-align:left;text-decoration:none;cursor:pointer;transition:background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
 .tc-nav:hover{background:var(--hover);color:var(--text)}
 .tc-nav[aria-current="page"]{background:var(--selected);color:var(--text);font-weight:500}
 .tc-nav-unread{color:var(--text);font-weight:600}
