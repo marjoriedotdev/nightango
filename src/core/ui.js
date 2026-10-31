@@ -3,6 +3,8 @@ var Ctx = React.createContext(null);
 function useApp() { return useContext(Ctx); }
 // The parts of the application context that stay the same object for the whole session.
 var ApiCtx = React.createContext(null);
+// Season whose decorations are shown, apart: an avatar reads it without rendering again on every state change.
+var SeasonCtx = React.createContext(null);
 /**
  * Returns the parts of the application context that never change: actions, ui, nav, update, drafts, the state store and the minute clock.
  * A component that reads only them renders again for its own props and state only. Its state is the shown state at the time it is read, for handlers:

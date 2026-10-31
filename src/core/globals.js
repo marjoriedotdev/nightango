@@ -3,7 +3,7 @@ var React = window.React, ReactDOM = window.ReactDOM, h = React.createElement;
 // At Halloween, member avatars from 24px up wear a costume.
 var T = Object.assign({}, window.Torch, {
   Avatar: function (p) {
-    var costume = useApp().season === 'halloween' && !p.square && (p.size || 36) >= 24;
+    var costume = useContext(SeasonCtx) === 'halloween' && !p.square && (p.size || 36) >= 24;
     var extra = {};
     if (p.src === undefined) extra.src = p.square ? null : avatarSrc(p.name, p.size);
     if (costume) extra.decor = h(Costume, { name: p.name, color: p.color });

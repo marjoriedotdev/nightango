@@ -203,7 +203,7 @@ function Root(props) {
   var app = useMemo(function () {
     return { state: state, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: theme, season: season };
   }, [state, o.navOpen, act.uploads, theme, season]);
-  return h(Layers, null, h(ApiCtx.Provider, { value: api }, h(Ctx.Provider, { value: app },
+  return h(Layers, null, h(ApiCtx.Provider, { value: api }, h(SeasonCtx.Provider, { value: season }, h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
     state.auth.loggedIn && o.profile ? h(ProfileDialog, { name: o.profile.name, gid: o.profile.gid, onClose: function () { o.setProfile(null); } }) : null,
     state.auth.loggedIn && o.banCfg ? h(BanDialog, { name: o.banCfg.name, gid: o.banCfg.gid, msg: o.banCfg.msg, onClose: function () { o.setBan(null); } }) : null,
@@ -216,5 +216,5 @@ function Root(props) {
     state.auth.loggedIn && o.newDm ? h(NewDmDialog, { onClose: function () { o.setNewDm(false); } }) : null,
     o.confirmCfg ? h(ConfirmDialog, { confirm: o.confirmCfg, onClose: function () { o.setConfirm(null); } }) : null,
     state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
-    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast }))));
+    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast })))));
 }
