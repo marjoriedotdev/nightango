@@ -319,8 +319,13 @@ function PresenceTime(p) {
 function personMetaLine(n, u) {
   return h('span', { className: 'conv-meta' }, personAsl(u), isProfilePending(n, u) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
 }
+/**
+ * Loads the mini profiles of a list of people and keeps them in the state while the list shows them.
+ * @param {string[]} names People listed.
+ */
 function useProfiles(names) {
   var app = useApp();
+  useShownUsers(names);
   useEffect(function () { app.actions.loadProfiles(names); }, [names.join(',')]);
 }
 /**

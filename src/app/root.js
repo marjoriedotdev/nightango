@@ -188,7 +188,7 @@ function Root(props) {
   useShortcuts(store.stateRef, o.setPalette);
   useUpdateCheck(state.auth.loggedIn, o.toast);
   var local = useLocalStore(state);
-  usePrunedUsers(store, state.auth.loggedIn, [o.profile && o.profile.name, o.fullProfile, o.who, o.banCfg && o.banCfg.name]);
+  var keepUsers = usePrunedUsers(store, state.auth.loggedIn);
   var reconnection = useReconnection(store.stateRef, store.update);
   var pms = useLivePms(store, local.ref, inbox.pmArchive);
   var act = useActions({ store: store, toast: o.toast, setNavOpen: o.setNavOpen, inbox: inbox, drafts: drafts, localRef: local.ref, reconnection: reconnection, pms: pms });
@@ -197,7 +197,7 @@ function Root(props) {
 
   // nav, actions and ui keep their identity: the context changes only with what the views show.
   var api = useMemo(function () {
-    return { store: store.store, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, drafts: drafts, clock: minuteClock(), get state() { return store.store.shown(); } };
+    return { store: store.store, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, drafts: drafts, clock: minuteClock(), keepUsers: keepUsers, get state() { return store.store.shown(); } };
   }, []);
   var theme = resolvedTheme(state.prefs, VIEWER_THEME);
   var app = useMemo(function () {

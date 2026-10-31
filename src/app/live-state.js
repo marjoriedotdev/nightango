@@ -167,7 +167,7 @@ var PRUNE_EVERY = 5 * MIN;
 /**
  * Lists the members the state refers to: in a group (member, guest, author, staff), in a conversation, in Meet people, in Mentions or as a pending friend.
  * @param {Object} s Application state.
- * @param {string[]} shown Members shown outside the state, by an open dialog.
+ * @param {string[]} shown Members a view shows outside the state, kept by useShownUsers.
  * @returns {Object<string, boolean>} Referenced names.
  */
 function referencedUsers(s, shown) {
@@ -187,22 +187,29 @@ function referencedUsers(s, shown) {
 /**
  * Drops from the live state, on PRUNE_EVERY, the members nothing refers to any more: former members, authors of trimmed messages, search results.
  * Friends and the members the user ignores, blocks or shows without style stay, since their lists are read from the state.
+ * The members a view shows while nothing in the state refers to them stay too: the linked accounts of Who is this, a profile opened from them.
  * @param {{stateRef: Object, update: Function}} store Ref to the application state and its update.
  * @param {boolean} loggedIn Signed in.
- * @param {Array<?string>} shown Members shown by an open dialog.
+ * @returns {function(string[]): Function} Keeps members while a view shows them, and returns their release (useShownUsers).
  */
-function usePrunedUsers(store, loggedIn, shown) {
-  var shownRef = useRef(shown);
-  shownRef.current = shown;
+function usePrunedUsers(store, loggedIn) {
+  // Number of views showing each member: two views can show the same one, the first to close must not release it.
+  var shown = useRef(null);
+  if (!shown.current) shown.current = Object.create(null);
   useEffect(function () {
     if (!LIVE || !loggedIn) return;
     var timer = setInterval(function () {
-      var s = store.stateRef.current, kept = referencedUsers(s, shownRef.current.filter(Boolean));
+      var s = store.stateRef.current, kept = referencedUsers(s, Object.keys(shown.current));
       var gone = Object.keys(s.users).filter(function (n) { var u = s.users[n]; return !kept[n] && !u.friend && !u.ignored && !u.blocked && !u.unstyled; });
       if (gone.length) store.update(function (d) { gone.forEach(function (n) { delete d.users[n]; }); });
     }, PRUNE_EVERY);
     return function () { clearInterval(timer); };
   }, [loggedIn]);
+  return useCallback(function (names) {
+    var views = shown.current;
+    names.forEach(function (n) { views[n] = (views[n] || 0) + 1; });
+    return function () { names.forEach(function (n) { if (!--views[n]) delete views[n]; }); };
+  }, []);
 }
 /**
  * Applies a presence received from the bridge to a member.

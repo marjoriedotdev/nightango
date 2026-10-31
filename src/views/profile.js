@@ -145,6 +145,7 @@ function profileBadges(name, u) {
 function ProfileSummary(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), cover = useMiniCover(p.skin);
   var common = commonGroups(s, name);
+  useShownUsers([name]);
   useEffect(function () { if (!p.guest) app.actions.loadProfile(name); }, [name]);
   return h(Frag, null,
     cover.shown ? h('div', { className: 'profile-cover' }, h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer' })) : null,
@@ -193,6 +194,7 @@ function FullProfileDialog(p) {
   var app = useApp(), s = app.state, u = userOf(s, p.name), media = useFullProfileMedia();
   var a = useState(LIVE ? null : ''), html = a[0], setHtml = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
+  useShownUsers([p.name]);
   useEffect(function () {
     if (!LIVE) return;
     if (isProfilePending(p.name, u)) app.actions.loadProfile(p.name);

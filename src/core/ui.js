@@ -6,7 +6,7 @@ var ApiCtx = React.createContext(null);
 // Season whose decorations are shown, apart: an avatar reads it without rendering again on every state change.
 var SeasonCtx = React.createContext(null);
 /**
- * Returns the parts of the application context that never change: actions, ui, nav, update, drafts, the state store and the minute clock.
+ * Returns the parts of the application context that never change: actions, ui, nav, update, drafts, the state store, the minute clock and keepUsers (useShownUsers).
  * A component that reads only them renders again for its own props and state only. Its state is the shown state at the time it is read, for handlers:
  * a render takes what it shows from its props or useStatePart.
  */
@@ -43,6 +43,14 @@ function minuteClock() {
 function useMinute() {
   var clock = useAppApi().clock;
   useSyncExternalStore(clock.subscribe, clock.now);
+}
+/**
+ * Keeps the members a component shows in the state while it shows them, even when nothing in the state refers to them (usePrunedUsers).
+ * @param {string[]} names Members shown.
+ */
+function useShownUsers(names) {
+  var keep = useAppApi().keepUsers;
+  useEffect(function () { return keep(names); }, [names.join(',')]);
 }
 /**
  * Returns functions that keep their identity from one render to the next and call those of the latest render.

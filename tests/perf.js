@@ -16,6 +16,7 @@ const MEMBERS = 350, AUTHORS = 120, FRIENDS = 40, CHATS = 30, STALE = 600;
 const MS_PER_OP = 40, MS_PER_HISTORY_OP = 8;
 // Components whose renders are counted, by name.
 const COUNTED = ['Root', 'MessageRow', 'MemberRow', 'ChatRow'];
+const ZOE_PROFILE = '<?xml version="1.0"?><mod><body>Hello from zoe</body><s>F</s><b>1995-01-01</b><l c="FR">Lyon</l></mod>';
 
 const errors = [];
 const log = [];
@@ -46,7 +47,12 @@ function page(o) {
   w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
   w.IntersectionObserver = function () { return { observe() {}, unobserve() {}, disconnect() {} }; };
   w.HTMLElement.prototype.scrollIntoView = noop;
-  w.fetch = () => Promise.resolve({ ok: false, status: 404, headers: { get: () => null }, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+  // vissle links zoe to every account, and zoe has a mini profile: everything else is missing.
+  w.fetch = url => {
+    const who = /^https:\/\/vissle\.me\/api\/v1\/who\//.test(url), zoe = /\/zoe\/mod1\.xml$/.test(url);
+    const body = who ? { target: url.split('/').pop(), definite: ['zoe'] } : zoe ? ZOE_PROFILE : '';
+    return Promise.resolve({ ok: who || zoe, status: who || zoe ? 200 : 404, headers: { get: () => null }, text: () => Promise.resolve(body), json: () => Promise.resolve(who ? body : {}) });
+  };
   const paints = [];
   if (o.paints) {
     w.requestAnimationFrame = cb => { paints.push(cb); return paints.length; };
@@ -75,7 +81,7 @@ function page(o) {
   };
   w.__betterChatangoRefs = {
     client: C, sidebar: { renderGroup: noop }, torch: { environment: 'betterchatangoenv' },
-    chatango: { getBackground: noop, getAnon: () => '!anon', path: p => 'https://chatango.com/' + p, subdomain: {}, error: {} }
+    chatango: { getBackground: noop, getAnon: () => '!anon', path: p => 'https://chatango.com/' + p, subdomain: { mod1: n => 'https://ust.chatango.com/' + n + '/mod1.xml' }, error: {} }
   };
   w.__TORCH_LIVE__ = true;
   w.__TORCH_SHOW__ = noop;
@@ -248,6 +254,30 @@ const show = async t => { t.paint(); await nextTask(); };
     unreferenced: names.filter(n => !refs.has(n)).slice(0, 5), lost: ['m3x5', 'm3x110', 'f3', 'c4', ME].filter(n => !s6.users[n])
   };
   step('members that nothing refers to any more leave the users map, the others stay', users.timers === 1 && !users.unreferenced.length && !users.lost.length && users.after <= users.before - STALE, users);
+
+  /* A member shown by an open dialog stays: Who is this, and the profile opened from it, keep their mini profile */
+  const dialog = label => [...t.d.querySelectorAll('#layer .dialog')].find(x => x.getAttribute('aria-label') === label);
+  const zoeCard = () => dialog('Who is m0x1') && [...dialog('Who is m0x1').querySelectorAll('.conv.person')].find(x => x.querySelector('.conv-name').textContent === 'zoe');
+  const loaded = el => !!el && el.textContent.includes('Lyon') && !el.querySelector('.tc-skeleton');
+  [...t.d.querySelectorAll('.tc-msg')].find(x => x.textContent.includes('One more')).querySelector('button[aria-label="More actions"]').click();
+  await wait(30);
+  const whoItem = [...t.d.querySelectorAll('.menu button')].find(x => x.textContent.includes('Who is this'));
+  if (whoItem) whoItem.click();
+  await until(() => loaded(zoeCard()), 3000);
+  if (zoeCard()) zoeCard().click();
+  await until(() => loaded(dialog('Profile of zoe')), 3000);
+  const opened = { card: loaded(zoeCard()), profile: loaded(dialog('Profile of zoe')) };
+  prune.forEach(x => x.fn());
+  t.paint(); await wait(200);
+  const kept = { card: loaded(zoeCard()), profile: loaded(dialog('Profile of zoe')), user: !!t.state().users.zoe };
+  const close = dialog('Who is m0x1') && [...dialog('Who is m0x1').querySelectorAll('.dialog-foot button')].find(x => x.textContent === 'Close');
+  if (close) close.click();
+  await wait(50);
+  prune.forEach(x => x.fn());
+  t.paint(); await wait(50);
+  const closed = { open: !!dialog('Who is m0x1') || !!dialog('Profile of zoe'), user: !!t.state().users.zoe };
+  step('people shown by Who is this and the profile opened from it keep their profile through the pruning, and leave once closed',
+    opened.card && opened.profile && kept.card && kept.profile && kept.user && !closed.open && !closed.user, { opened, kept, closed });
 
   /* Relative times: one shared minute timer */
   const minuteTimers = () => t.intervals.filter(x => x.running && x.ms === MIN).length;
