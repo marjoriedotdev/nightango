@@ -343,7 +343,7 @@ The formatting toolbar of the Profile page inserts only what all clients show.
 ## Meet people
 
 - POST to `chatango.path('search')` with `credentials: 'include'`.
-- Fields: `ami`, `ama`, `imc` (0 all, 1 photos, 2 characters), `s` (B, M or F), `ss`, `o` (1 = online only), `h5=1`, `f` and `t` (start and end index range, chadango `people_query.go`).
+- Fields: `ami`, `ama`, `imc` (0 all, 1 photos, 2 characters), `s` (B, M or F), `ss` (searched username, `Username` in chadango `people_query.go`, BetterChatango `inject.js:9352`), `o` (1 = online only), `h5=1`, `f` and `t` (start and end index range, chadango `people_query.go`).
 - Response: `h=name;…:name;…`.
 - Paging: the next page starts from `meet.next`, which is `f` of the previous page plus the number of names received. The number of shown results does not work, because it drops duplicates. A page of fewer than 40 names ends the list.
 - The results contain the signed-in account. Nightango keeps it and marks it "You".
