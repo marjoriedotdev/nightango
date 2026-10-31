@@ -262,13 +262,29 @@ d.addEventListener('torch-skin:vissle-request', e => {
   if (reply) setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: q.id, data: reply(q) }) })), 0);
 });
 
-// TikTok bridge of the simulated userscript: a short link ending in "ok" leads to a post, one ending in "odd" to a reply of another shape, any other one to an error.
+// TikTok bridge of the simulated userscript: a post link or a short link ending in "ok" leads to a post with its cover, one ending in "odd" to a reply of another shape, any other one to an error.
 const tiktokReqs = [];
+const TIKTOK_THUMB = 'https://p16-sign.tiktokcdn.test/obj/';
 d.addEventListener('torch-skin:tiktok-request', e => {
   const q = JSON.parse(e.detail);
   tiktokReqs.push(q.url);
-  const out = /ok\/$/.test(q.url) ? { post: '7400000000000000001' } : /odd\/$/.test(q.url) ? { post: 'player' } : { error: 'TikTok could not be reached. Open the link instead.' };
+  const link = /\/video\//.test(q.url) ? q.url : /ok\/$/.test(q.url) ? 'https://www.tiktok.com/@clown/video/7400000000000000001' : null;
+  const out = link ? { post: link.split('/').pop(), link, thumb: TIKTOK_THUMB + link.split('/').pop() + '.jpg' }
+    : /odd\/$/.test(q.url) ? { post: 'player', link: 'https://www.tiktok.com/@clown/video/player' } : { error: 'TikTok could not be reached. Open the link instead.' };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:tiktok-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
+});
+
+// X bridge of the simulated userscript: post ...1 has a video, post ...2 a sensitive photo, any other one fails.
+const xReqs = [];
+const X_AVATAR = 'https://pbs.twimg.com/profile_images/1/clown_bigger.jpg', X_TIME = Date.UTC(2026, 9, 31, 12, 34);
+const X_THUMB = 'https://pbs.twimg.com/media/', X_VIDEO = 'https://video.twimg.com/ext_tw_video/1/pu/vid/1280x720/a.mp4';
+d.addEventListener('torch-skin:x-request', e => {
+  const q = JSON.parse(e.detail), id = q.url.split('/status/')[1].split(/[?#]/)[0];
+  xReqs.push(id);
+  const media = id.endsWith('1') ? { kind: 'video', thumb: X_THUMB + id + '.jpg', video: X_VIDEO, width: 1280, height: 720, sensitive: false }
+    : id.endsWith('2') ? { kind: 'photo', thumb: X_THUMB + id + '.jpg', width: 800, height: 600, sensitive: true } : null;
+  const out = media ? { author: 'Clown', handle: 'clown', text: 'Post ' + id + '\nsecond line', date: 'Oct 31, 2026', link: 'https://x.com/clown/status/' + id, media, avatar: X_AVATAR, time: X_TIME } : { error: 'X could not be reached. Open the link instead.' };
+  setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:x-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
 
 // Stored by an older or broken version: values of another type than the default, next to a phase index that replaces "auto".
@@ -1072,30 +1088,87 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true], ['VIDEO', 'https://x.test/old.webm', true, true]])
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
 
-  /* TikTok: post link played at once on click, short link resolved by the userscript at the click and only then, failure turned back into a link */
-  const TIKTOK_LINKS = ['https://www.tiktok.com/@clown/video/7400000000000000000?lang=en', 'https://www.tiktok.com/t/ZPLok/', 'https://vm.tiktok.com/ZMbad/', 'https://www.tiktok.com/@clown'];
+  /* TikTok: compact button until a cover has loaded, link read through the userscript when shown only if external media are not blocked, read once and reused at the click, failure asked again at the click then turned back into a link */
+  const TIKTOK_LINKS = ['https://www.tiktok.com/@clown/video/7400000000000000000?lang=en', 'https://www.tiktok.com/t/ZPLok/....', 'https://vm.tiktok.com/ZMbad/', 'https://www.tiktok.com/@clown'];
   g('b', 'test', ['1700000300.5', 'Eve', '', 'u7', 'UNID7', 'tmptiktok', '9.9.9.9', '0', '', '<n000/><f x11000="0">Kitties ' + TIKTOK_LINKS.join(' ')]);
   const tiktokRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Kitties') === 0); return p && p.closest('article'); };
   await until(() => !!tiktokRow());
-  const tiktokBefore = { asked: tiktokReqs.length, links: [...tiktokRow().querySelectorAll('.tc-msg-text a')].map(a => a.getAttribute('href')), embeds: [...tiktokRow().querySelectorAll('.embeds > *')].map(x => x.className + ':' + x.textContent) };
+  const tiktokThumbs = () => [...tiktokRow().querySelectorAll('.embed-tiktok img')].map(x => x.getAttribute('src'));
+  const tiktokEmbeds = () => [...tiktokRow().querySelectorAll('.embeds > *')].map(x => x.className + (x.style.display === 'none' ? ':hidden' : ''));
+  const tiktokBefore = { asked: tiktokReqs.slice(), links: [...tiktokRow().querySelectorAll('.tc-msg-text a')].map(a => a.getAttribute('href')), embeds: tiktokEmbeds(), thumbs: tiktokThumbs() };
+  await toggle('Safety', 'Block external media until I click');
+  await until(() => tiktokRow().querySelectorAll('.embeds img').length === 2);
+  const tiktokLoading = tiktokEmbeds();
+  // jsdom loads no image: the test fires their load event.
+  [...tiktokRow().querySelectorAll('.embeds img')].forEach(x => x.dispatchEvent(new w.Event('load')));
+  await until(() => tiktokThumbs().length === 2);
+  const tiktokOpen = { asked: tiktokReqs.slice().sort(), thumbs: tiktokThumbs(), embeds: tiktokEmbeds() };
+  await toggle('Safety', 'Block external media until I click');
+  const tiktokBlocked = tiktokThumbs();
+  const tiktokBlockedEmbeds = tiktokEmbeds();
   [...tiktokRow().querySelectorAll('.embed-reveal')].forEach(click);
   await until(() => tiktokRow().querySelectorAll('iframe').length === 2 && !!tiktokRow().querySelector('.embeds a.msg-link'));
-  const tiktokAfter = { asked: tiktokReqs, frames: [...tiktokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: [...tiktokRow().querySelectorAll('.embeds a.msg-link')].map(a => a.getAttribute('href')) };
+  const tiktokAfter = { asked: tiktokReqs.length, frames: [...tiktokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: [...tiktokRow().querySelectorAll('.embeds a.msg-link')].map(a => a.getAttribute('href')) };
   const tiktokToast = !!byText('.toast', 'TikTok could not be reached. Open the link instead.');
-  step('tiktok links embed, short links resolve only on click',
-    tiktokBefore.asked === 0 && JSON.stringify(tiktokBefore.links) === JSON.stringify(['https://www.tiktok.com/@clown'])
-      && JSON.stringify(tiktokBefore.embeds) === JSON.stringify(['embed-reveal:Play videowww.tiktok.com', 'embed-reveal:Play videowww.tiktok.com', 'embed-reveal:Play videovm.tiktok.com'])
-      && JSON.stringify(tiktokAfter.asked) === JSON.stringify(['https://www.tiktok.com/t/ZPLok/', 'https://vm.tiktok.com/ZMbad/'])
+  const TIKTOK_POST0 = 'https://www.tiktok.com/@clown/video/7400000000000000000';
+  const REVEALS = Array(3).fill('embed-reveal');
+  step('tiktok cards: thumbnail only when media are not blocked and loaded, short links resolved once, player on click',
+    JSON.stringify(tiktokBefore) === JSON.stringify({ asked: [], links: ['https://www.tiktok.com/@clown'], embeds: REVEALS, thumbs: [] })
+      && JSON.stringify(tiktokLoading) === JSON.stringify(['embed-reveal', ':hidden', 'embed-reveal', ':hidden', 'embed-reveal'])
+      && JSON.stringify(tiktokOpen) === JSON.stringify({ asked: ['https://vm.tiktok.com/ZMbad/', TIKTOK_POST0, 'https://www.tiktok.com/t/ZPLok/'], thumbs: [TIKTOK_THUMB + '7400000000000000000.jpg', TIKTOK_THUMB + '7400000000000000001.jpg'], embeds: ['embed-video embed-tiktok', 'embed-video embed-tiktok', 'embed-reveal'] })
+      && tiktokBlocked.length === 0 && JSON.stringify(tiktokBlockedEmbeds) === JSON.stringify(REVEALS) && tiktokAfter.asked === 4 && tiktokReqs[3] === 'https://vm.tiktok.com/ZMbad/'
       && JSON.stringify(tiktokAfter.frames) === JSON.stringify(['7400000000000000000', '7400000000000000001'].map(id => 'https://www.tiktok.com/player/v1/' + id + '?autoplay=1&rel=0'))
       && JSON.stringify(tiktokAfter.link) === JSON.stringify(['https://vm.tiktok.com/ZMbad/']) && tiktokToast,
-    { tiktokBefore, tiktokAfter, tiktokToast });
-  g('b', 'test', ['1700000300.7', 'Eve', '', 'u7', 'UNID7', 'tmptiktokodd', '9.9.9.9', '0', '', '<n000/><f x11000="0">Puppies https://vm.tiktok.com/ZModd/']);
+    { tiktokBefore, tiktokLoading, tiktokOpen, tiktokBlocked, tiktokBlockedEmbeds, tiktokAfter, tiktokReqs, tiktokToast });
+  g('b', 'test', ['1700000300.6', 'Eve', '', 'u7', 'UNID7', 'tmptiktokodd', '9.9.9.9', '0', '', '<n000/><f x11000="0">Puppies https://vm.tiktok.com/ZModd/']);
   const oddTikTokRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Puppies') === 0); return p && p.closest('article'); };
   await until(() => !!oddTikTokRow());
   click(oddTikTokRow().querySelector('.embed-reveal'));
   await until(() => !!oddTikTokRow().querySelector('.embeds a.msg-link, iframe'));
   const oddTikTok = { frames: [...oddTikTokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: !!oddTikTokRow().querySelector('.embeds a.msg-link'), toast: !!byText('.toast', 'TikTok did not say which video this link leads to. Open the link instead.') };
   step('a TikTok reply without a numeric post id turns back into a link', !oddTikTok.frames.length && oddTikTok.link && oddTikTok.toast, oddTikTok);
+
+  /* X: buttons under proxyMedia, cards read once when media are not blocked, video and sensitive photo on click, failure asked again at the click then turned back into a link */
+  const X_IDS = ['1700000000000000001', '1700000000000000002', '1700000000000000009'];
+  const X_LINKS = ['https://fxtwitter.com/clown/status/' + X_IDS[0] + '?a=lAo9&s=19', 'https://twitter.com/clown/status/' + X_IDS[1] + '?s=20', 'https://mobile.twitter.com/clown/status/' + X_IDS[2]];
+  g('b', 'test', ['1700000300.7', 'Eve', '', 'u7', 'UNID7', 'tmpx', '9.9.9.9', '0', '', '<n000/><f x11000="0">Posts ' + X_LINKS.join(' ')]);
+  const xRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent === 'Posts'); return p && p.closest('article'); };
+  await until(() => !!xRow());
+  const xEmbeds = () => [...xRow().querySelectorAll('.embeds > *')].map(x => x.className);
+  const xBefore = { asked: xReqs.slice(), embeds: xEmbeds() };
+  await toggle('Safety', 'Block external media until I click');
+  await until(() => xRow().querySelectorAll('.embed-x').length === 2);
+  const xOpen = {
+    asked: xReqs.slice().sort(), embeds: xEmbeds(),
+    text: [...xRow().querySelectorAll('.embed-x-text')].map(x => x.textContent),
+    poster: [...xRow().querySelectorAll('.embed-x-poster img')].map(x => x.getAttribute('src')), videos: xRow().querySelectorAll('video').length,
+    photos: xRow().querySelectorAll('a.embed-x-media img').length, sensitive: !!byText('.embed-reveal', 'Show sensitive media'),
+    avatars: [...xRow().querySelectorAll('.embed-x-head .tc-avatar-img')].map(x => x.getAttribute('src') + ' ' + x.getAttribute('referrerpolicy')),
+    logos: [...xRow().querySelectorAll('a.embed-x-logo')].map(a => a.getAttribute('href') + ' ' + a.querySelector('svg').getAttribute('aria-label')),
+    times: [...xRow().querySelectorAll('a.embed-x-date time')].map(t => t.getAttribute('datetime') + ' ' + / \u00b7 31 Oct 2026$/.test(t.textContent))
+  };
+  click(xRow().querySelector('.embed-x-poster'));
+  click(byText('.embed-reveal', 'Show sensitive media'));
+  await until(() => !!xRow().querySelector('video') && !!xRow().querySelector('a.embed-x-media img'));
+  const xVideo = xRow().querySelector('video'), xPhoto = xRow().querySelector('a.embed-x-media');
+  const xPlayed = { video: xVideo && [xVideo.getAttribute('src'), xVideo.autoplay, xVideo.controls], photo: xPhoto && [xPhoto.getAttribute('href'), xPhoto.querySelector('img').getAttribute('src')] };
+  await toggle('Safety', 'Block external media until I click');
+  const xBlocked = xEmbeds();
+  [...xRow().querySelectorAll('.embed-reveal')].forEach(click);
+  await until(() => xRow().querySelectorAll('.embed-x').length === 2 && !!xRow().querySelector('.embeds a.msg-link'));
+  const xAfter = { asked: xReqs.slice(), embeds: xEmbeds(), toast: !!byText('.toast', 'X could not be reached. Open the link instead.') };
+  await toggle('Safety', 'Embed X posts');
+  const xOff = [...xRow().querySelectorAll('.embeds > a')].map(a => a.getAttribute('href'));
+  await toggle('Safety', 'Embed X posts');
+  const X_REVEALS = Array(3).fill('embed-reveal');
+  step('x cards: mirrors included, read once when media are not blocked, video and sensitive photo on click, failure turned back into a link',
+    JSON.stringify(xBefore) === JSON.stringify({ asked: [], embeds: X_REVEALS })
+      && JSON.stringify(xOpen) === JSON.stringify({ asked: X_IDS, embeds: ['embed-x', 'embed-x', 'embed-reveal'], text: X_IDS.slice(0, 2).map(id => 'Post ' + id + '\nsecond line'), poster: [X_THUMB + X_IDS[0] + '.jpg'], videos: 0, photos: 0, sensitive: true, avatars: Array(2).fill(X_AVATAR + ' no-referrer'), logos: X_IDS.slice(0, 2).map(id => 'https://x.com/clown/status/' + id + ' Open on X'), times: Array(2).fill(new Date(X_TIME).toISOString() + ' true') })
+      && JSON.stringify(xPlayed) === JSON.stringify({ video: [X_VIDEO, true, true], photo: ['https://x.com/clown/status/' + X_IDS[1], X_THUMB + X_IDS[1] + '.jpg'] })
+      && JSON.stringify(xBlocked) === JSON.stringify(X_REVEALS)
+      && JSON.stringify(xAfter) === JSON.stringify({ asked: X_IDS.concat(X_IDS[2]), embeds: ['embed-x', 'embed-x', 'msg-link'], toast: true })
+      && JSON.stringify(xOff) === JSON.stringify(['https://fxtwitter.com/clown/status/' + X_IDS[0], 'https://twitter.com/clown/status/' + X_IDS[1], 'https://mobile.twitter.com/clown/status/' + X_IDS[2]]),
+    { xBefore, xOpen, xPlayed, xBlocked, xAfter, xOff, xReqs });
 
   /* Trusted host (BetterChatango list): under proxyMedia, only its image shows without a click, the host parsed like the browser does */
   const TRUST_LINKS = ['https://i.imgur.com/a.png', 'https://evil.example/b.png', 'https://i.imgur.com@evil.example/c.png'];

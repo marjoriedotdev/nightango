@@ -38,13 +38,15 @@ const ALLOWED = [
   // VISSLE_UPLOAD: its value is checked below, through the post helper.
   { call: 'post(VISSLE_UPLOAD, …, { key: true })', doc: "`client.post('https://vissle.me/chatango/upload', form, { key: true })`, and this URL only" },
   { call: "GM_xmlhttpRequest({ method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, … })", doc: "`POST https://vissle.me/track1/activity`, through the loader's `GM_xmlhttpRequest` bridge, with `anonymous: true`" },
-  { call: "GM_xmlhttpRequest({ method: 'GET', url: 'https://' + link[1] + '/' + link[2] + '/', anonymous: true, … })", doc: "`GET https://www.tiktok.com/t/{code}/`, `https://vm.tiktok.com/{code}/` or `https://vt.tiktok.com/{code}/`, through the loader's `GM_xmlhttpRequest` bridge (`@connect tiktok.com`), with `anonymous: true`" },
+  { call: "GM_xmlhttpRequest({ method: 'GET', url: short ? 'https://' + short[1] + '/' + short[2] + '/' : tiktokPostLink(post), anonymous: true, … })", doc: "`GET` of the post page of a TikTok link: `https://www.tiktok.com/t/{code}/`, `https://vm.tiktok.com/{code}/` or `https://vt.tiktok.com/{code}/` for a short link, whose redirect leads to the post page, `https://www.tiktok.com/@{user}/video|photo/{id}` for a post link. Through the loader's `GM_xmlhttpRequest` bridge (`@connect tiktok.com`), with `anonymous: true`" },
+  { call: "GM_xmlhttpRequest({ method: 'GET', url: 'https://publish.x.com/oembed?url=' + encodeURIComponent(link) + '&omit_script=true&dnt=true&hide_thread=true', anonymous: true, … })", doc: "`https://publish.x.com/oembed?url={link}&omit_script=true&dnt=true&hide_thread=true` (documented, `@connect publish.x.com`)" },
+  { call: "GM_xmlhttpRequest({ method: 'GET', url: 'https://cdn.syndication.twimg.com/tweet-result?id=' + post[2] + '&lang=en&token=' + xToken(post[2]), anonymous: true, … })", doc: "`https://cdn.syndication.twimg.com/tweet-result?id={id}&lang=en&token={token}`" },
   // The helpers themselves: their callers are listed above.
   { call: 'fetch(url)', within: 'memberFile' },
   { call: 'C.post(url, form, item)', within: 'post' }
 ];
 // Hosts the userscript manager lets the loader reach, with the text of the allowed list that needs them.
-const CONNECT = { 'vissle.me': '`POST https://vissle.me/track1/activity`', 'tiktok.com': '(`@connect tiktok.com`)' };
+const CONNECT = { 'vissle.me': '`POST https://vissle.me/track1/activity`', 'tiktok.com': '(`@connect tiktok.com`)', 'publish.x.com': '`@connect publish.x.com`', 'cdn.syndication.twimg.com': '`@connect cdn.syndication.twimg.com`' };
 
 /**
  * Blanks the comments of a source and keeps its offsets and lines.

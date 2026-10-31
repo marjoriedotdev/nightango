@@ -762,7 +762,7 @@ var liveBridge = (function () {
     return body.slice(0, at) + esc(quote) + body.slice(at);
   }
 
-  /* Replies from the userscript bridges (vissle, TikTok), matched to requests by id */
+  /* Replies from the userscript bridges (vissle, TikTok, X), matched to requests by id */
   // Longer than the GM_xmlhttpRequest timeout of the loader, whose own reply says more.
   var LOADER_WAIT = 20000;
   // Any script of the page can send a reply: one that is not JSON or matches no request is ignored.
@@ -778,9 +778,10 @@ var liveBridge = (function () {
   }
   document.addEventListener('torch-skin:vissle-response', onLoaderReply);
   document.addEventListener('torch-skin:tiktok-response', onLoaderReply);
+  document.addEventListener('torch-skin:x-response', onLoaderReply);
   /**
    * Sends a request to a userscript bridge.
-   * @param {string} channel Bridge name: vissle or tiktok.
+   * @param {string} channel Bridge name: vissle, tiktok or x.
    * @param {Object} q Request fields.
    * @param {string} late Text to show if the bridge does not reply.
    * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error or does not come.
@@ -1492,14 +1493,25 @@ var liveBridge = (function () {
       });
     },
     /**
-     * Finds the TikTok post a short link leads to, through the userscript bridge.
-     * @param {string} url Short TikTok link.
-     * @returns {Promise<string>} Post id, rejected with the text to show if TikTok does not give it.
+     * Reads the post page of a TikTok link through the userscript bridge.
+     * @param {string} url Short or post TikTok link.
+     * @returns {Promise<{post: string, link: string, thumb: ?string}>} Post id and link, and cover address if the page gives one, rejected with the text to show if TikTok does not give the post.
      */
     tiktokPost: function (url) {
       return askLoader('tiktok', { url: url }, 'TikTok did not answer in time. Open the link instead.').then(function (r) {
-        if (typeof r.post !== 'string' || !/^\d+$/.test(r.post)) throw new Error('TikTok did not say which video this link leads to. Open the link instead.');
-        return r.post;
+        if (typeof r.post !== 'string' || !/^\d+$/.test(r.post) || typeof r.link !== 'string') throw new Error('TikTok did not say which video this link leads to. Open the link instead.');
+        return { post: r.post, link: r.link, thumb: typeof r.thumb === 'string' ? r.thumb : null };
+      });
+    },
+    /**
+     * Reads an X post through the userscript bridge: its oEmbed text and its first media.
+     * @param {string} url X post link.
+     * @returns {Promise<Object>} Author, handle, text, date and link of the post, and its author picture, time and media if X gives them, rejected with the text to show.
+     */
+    xPost: function (url) {
+      return askLoader('x', { url: url }, 'X did not answer in time. Open the link instead.').then(function (r) {
+        if (typeof r.text !== 'string' || typeof r.link !== 'string') throw new Error('X did not share this post. Open the link instead.');
+        return { author: r.author, handle: r.handle, text: r.text, date: r.date, link: r.link, avatar: r.avatar || null, time: r.time || null, media: r.media || null };
       });
     },
     /**

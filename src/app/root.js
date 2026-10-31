@@ -75,9 +75,12 @@ function useAppState(boot) {
 /**
  * Applies the theme, accent and display preferences to the root, keeps the preferences in this browser and follows the system theme.
  * @param {Object} prefs Preferences.
+ * @returns {?string} Season whose decorations are shown, null outside one or when they are turned off.
  */
 function useDisplayPrefs(prefs) {
   var rerender = useState(0)[1];
+  // Read on each render: a page left open past November 2 loses its decorations without a reload.
+  var season = prefs.sky.season ? seasonOf(new Date()) : null;
   useEffect(function () {
     var root = ROOT_EL;
     if (prefs.theme === 'dark' || prefs.theme === 'light') root.setAttribute('data-theme', prefs.theme);
@@ -95,14 +98,16 @@ function useDisplayPrefs(prefs) {
     root.classList.toggle('underline-links', !!prefs.a11y.underlineLinks);
     root.classList.toggle('calm-sky', !!prefs.sky.calm);
     root.classList.toggle('moon-south', !!prefs.sky.south);
+    root.classList.toggle('season-halloween', season === 'halloween');
     storageSet(PREFS_KEY, prefs);
-  }, [prefs]);
+  }, [prefs, season]);
   useEffect(function () {
     var mq; try { mq = window.matchMedia('(prefers-color-scheme: light)'); } catch (e) { return; }
     function onChange() { rerender(function (n) { return n + 1; }); }
     if (mq.addEventListener) mq.addEventListener('change', onChange);
     return function () { if (mq.removeEventListener) mq.removeEventListener('change', onChange); };
   }, []);
+  return season;
 }
 
 /**
@@ -177,7 +182,7 @@ function Root(props) {
   var drafts = useRef({});
   var o = useOverlays();
   var inbox = useInbox(store.stateRef, store.update, o.toast, o.setNavOpen);
-  useDisplayPrefs(state.prefs);
+  var season = useDisplayPrefs(state.prefs);
   useIdleStatus(state.users, store.update);
   useTabTitle(state);
   useShortcuts(store.stateRef, o.setPalette);
@@ -196,8 +201,8 @@ function Root(props) {
   }, []);
   var theme = resolvedTheme(state.prefs, VIEWER_THEME);
   var app = useMemo(function () {
-    return { state: state, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: theme };
-  }, [state, o.navOpen, act.uploads, theme]);
+    return { state: state, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: theme, season: season };
+  }, [state, o.navOpen, act.uploads, theme, season]);
   return h(Layers, null, h(ApiCtx.Provider, { value: api }, h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
     state.auth.loggedIn && o.profile ? h(ProfileDialog, { name: o.profile.name, gid: o.profile.gid, onClose: function () { o.setProfile(null); } }) : null,

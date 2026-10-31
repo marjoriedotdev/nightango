@@ -65,9 +65,9 @@
 
 - Read, store, log or transmit the password, or call a BetterChatango function that adds it to a request ([ADR-0001](adr/0001-password-never-read.md)).
 - Send a Chatango frame without a source in BetterChatango or in a reference library ([ADR-0002](adr/0002-no-invented-frames.md)).
-- Make, from the app code, an HTTP call to Chatango, vissle, GitHub or TikTok outside the closed list in `docs/betterchatango-protocol.md` (section Allowed HTTP calls).
+- Make, from the app code, an HTTP call to Chatango, vissle, GitHub, TikTok or X outside the closed list in `docs/betterchatango-protocol.md` (section Allowed HTTP calls).
 - Add a resource loaded by the loader or the interface (script, stylesheet, font, iframe) outside the list in the same section without the user's approval.
 - Inject HTML or CSS written by a member ([ADR-0004](adr/0004-member-html-never-injected.md)).
 - Look up the activity of any profile other than the signed-in user's ([ADR-0005](adr/0005-visitors-own-profile-only.md)).
 - Add a dependency without the user's explicit approval.
-- Load a media file or the YouTube oEmbed before the click when the media settings ask for it.
+- Load a media file, the YouTube oEmbed, a TikTok post page or an X post before the click when the media settings ask for it.

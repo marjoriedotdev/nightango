@@ -26,6 +26,22 @@ function lastMessageOf(g, name) {
   for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
   return null;
 }
+/**
+ * Returns the reading of a post asked once per page, read again at a click after a failure.
+ * @param {Object} asked Readings already asked, by key.
+ * @param {string} key Post the reading is for.
+ * @param {boolean} click The user clicked the link.
+ * @param {Function} read Starts the reading and returns its promise.
+ */
+function askOnce(asked, key, click, read) {
+  var entry = asked[key];
+  if (!entry || (click && entry.failed)) {
+    entry = asked[key] = { failed: false, promise: read() };
+    entry.promise.catch(function () { entry.failed = true; });
+  }
+  return entry.promise;
+}
+
 function wordList(v) { return String(v || '').split(/[,\n]/).map(function (x) { return x.trim(); }).filter(Boolean).join(','); }
 
 /**
@@ -60,8 +76,8 @@ function useActions(k) {
   }
 
   var mediaLib = LIVE ? liveBridge : sampleMedia;
-  // Post id per short TikTok link: the redirect is read once per page.
-  var tiktokPosts = useRef({});
+  // TikTok post pages and X posts: read once per post and per page, a failure is read again only at a click.
+  var tiktokPosts = useRef({}), xPosts = useRef({});
   // The stars and the Media tab read the media library again when this counter changes.
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
@@ -171,17 +187,29 @@ function useActions(k) {
     searchMedia: function (text, count) { return mediaLib.searchMedia(text, count); },
     hasMedia: function (url) { return mediaLib.hasMedia(url); },
     /**
-     * Finds the TikTok post a short link leads to.
-     * @param {string} url Short TikTok link.
-     * @returns {Promise<string>} Post id, rejected with the text to show.
+     * Reads the post of a TikTok link and its cover.
+     * @param {{id: ?string, url: string}} e TikTok media of a message.
+     * @param {boolean} [click] The user clicked the link: a previous failure is read again.
+     * @returns {Promise<{post: string, link: string, thumb: ?string}>} Post id and link, and cover address if TikTok gives one, rejected with the text to show.
      */
-    tiktokPost: function (url) {
-      var cache = tiktokPosts.current;
-      if (!cache[url]) {
-        cache[url] = (LIVE ? liveBridge.tiktokPost(url) : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.')))
-          .catch(function (e) { delete cache[url]; throw e; });
-      }
-      return cache[url];
+    tiktokPost: function (e, click) {
+      return askOnce(tiktokPosts.current, e.url, click, function () {
+        // Prototype: a post link shows the sample cover, a short link turns back into a link.
+        return LIVE ? liveBridge.tiktokPost(e.url) : e.id ? Promise.resolve({ post: e.id, link: e.url, thumb: SAMPLE_TIKTOK_THUMB })
+          : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.'));
+      });
+    },
+    /**
+     * Reads an X post: its text and its first photo or video.
+     * @param {{id: string, url: string}} e X media of a message.
+     * @param {boolean} [click] The user clicked the link: a previous failure is read again.
+     * @returns {Promise<Object>} Author, handle, text, date, link and media of the post, rejected with the text to show.
+     */
+    xPost: function (e, click) {
+      return askOnce(xPosts.current, e.id, click, function () {
+        return LIVE ? liveBridge.xPost(e.url) : e.id === SAMPLE_X_POST.id ? Promise.resolve(SAMPLE_X_POST.card)
+          : Promise.reject(new Error('Only the sample X post is part of this prototype. Open the link instead.'));
+      });
     },
     /**
      * Adds an image to the media library under the name BetterChatango gives it or removes it.
