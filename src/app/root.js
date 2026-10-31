@@ -1,5 +1,4 @@
 /* ---------- Root ---------- */
-var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
 // Chatango pushes no presence for a correspondent who is neither a friend nor connected since the last private connection.
 var PRESENCE_REFRESH = 5 * MIN;
@@ -155,29 +154,6 @@ function Root(props) {
     }
   }
 
-  /**
-   * Records for the Mentions page a group message that mentions the user with the newest first.
-   * @param {Object} d State being modified.
-   * @param {string} gid Group of the message.
-   * @param {Object} m Received message.
-   */
-  function logMention(d, gid, m) {
-    // An edit shown on its own joins its original when the original arrives: only the original enters the list.
-    if (m.kind !== 'msg' || m.editId || m.author === d.me || userOf(d, m.author).ignored || !mentionsMe(d.me, m.text)) return;
-    if (d.mentionLog.some(function (x) { return x.gid === gid && x.id === m.id; })) return;
-    d.mentionLog.push({ gid: gid, id: m.id, author: m.author, text: messagePreview(m), ts: m.ts });
-    d.mentionLog.sort(function (a, b) { return b.ts - a.ts; });
-    d.mentionLog.splice(MENTION_MAX);
-  }
-  /**
-   * Removes the messages of a group from the Mentions page.
-   * @param {Object} d State being modified.
-   * @param {string} gid Target group.
-   * @param {?string[]} ids Removed messages, null for the whole group.
-   */
-  function dropMentions(d, gid, ids) {
-    d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && ids.indexOf(x.id) < 0); });
-  }
   /**
    * Sets the sample world of the prototype with its mentions recorded like those of the live history.
    * @param {Object} d State being modified.
@@ -560,7 +536,6 @@ function Root(props) {
   // Automatic reconnections in progress, by connection: attempts made and timer of the next one.
   var retries = useRef({});
   var presenceAt = useRef(0);
-  function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -704,7 +679,7 @@ function Root(props) {
       update(function (d) { d.ownStyle = style; });
     };
     actions.joinGroup = function (gid) {
-      update(function (d) { ensureLiveGroup(d, gid).joined = true; });
+      update(function (d) { ensureLiveGroup(d, gid, localRef.current).joined = true; });
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
@@ -738,13 +713,13 @@ function Root(props) {
       if (pending[name] && pending[name] !== true) return pending[name];
       var run = liveBridge.fetchProfile(name).then(function (pr) {
         update(function (d) {
-          var u = ensureLiveUser(d, name);
+          var u = ensureLiveUser(d, name, localRef.current);
           u.profileLoaded = true; u.profileMissing = !!pr.missing;
           if (!pr.missing) { u.age = pr.age; u.gender = pr.gender; u.location = pr.location; u.aboutHtml = pr.about; u.premium = pr.premium; u.miniStyle = pr.mini; }
         });
       }, function () {
         // The card keeps what is already known: only an explicit opening requests it again.
-        update(function (d) { ensureLiveUser(d, name).profileFailed = true; });
+        update(function (d) { ensureLiveUser(d, name, localRef.current).profileFailed = true; });
       }).then(function () { delete pending[name]; });
       pending[name] = run;
       return run;
@@ -759,7 +734,7 @@ function Root(props) {
       pending[name] = true;
       liveBridge.fetchMsgBg(name).then(function (bg) {
         delete pending[name];
-        update(function (d) { ensureLiveUser(d, name).msgBg = bg; });
+        update(function (d) { ensureLiveUser(d, name, localRef.current).msgBg = bg; });
       });
     };
     /** Mini profiles of a result list with four requests at a time to spare Chatango. */
@@ -788,7 +763,7 @@ function Root(props) {
           if (d.meet.token !== token) return;
           var prev = more ? d.meet.results : [];
           var fresh = names.filter(function (n) { return prev.indexOf(n) < 0; });
-          fresh.forEach(function (n) { ensureUnseenUser(d, n); });
+          fresh.forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
           d.meet = { results: prev.concat(fresh), next: from + names.length, loading: false, error: null, done: names.length < 40, filters: f, token: token };
         });
       }, function (e) {
@@ -804,7 +779,7 @@ function Root(props) {
       update(function (d) { Object.assign(d.dms[name], { loadingOlder: true, olderFailed: false }); });
       liveBridge.pmOlder(name, Math.min.apply(null, keys), 50).then(function (page) {
         // An older page changes no unread counter.
-        update(function (d) { var c = d.dms[name]; mergePmHistory(c, page.list, pmAuthor(d)); c.olderMore = page.more; c.loadingOlder = false; });
+        update(function (d) { var c = d.dms[name]; mergePmHistory(c, page.list, pmAuthor(d, localRef.current)); c.olderMore = page.more; c.loadingOlder = false; });
       }, function (e) {
         warn(e);
         update(function (d) { Object.assign(d.dms[name], { loadingOlder: false, olderFailed: true }); });
@@ -826,7 +801,7 @@ function Root(props) {
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
       if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('BetterChatango could not save its ignore list. Reload the page and try again.'); return; }
-      update(function (d) { ensureLiveUser(d, name)[key] = !was; });
+      update(function (d) { ensureLiveUser(d, name, localRef.current)[key] = !was; });
       toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
     actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
@@ -883,156 +858,30 @@ function Root(props) {
     actions.requestGroupSettings = function (gid) { liveBridge.requestSettings(gid); };
     actions.requestBans = function (gid) {
       // The response to the first page replaces the list, even if a next page was awaited.
-      groupUpdate(gid, function (g) { g.live.banPage.loading = false; g.live.banSearch = null; });
+      groupUpdate(update, gid, function (g) { g.live.banPage.loading = false; g.live.banSearch = null; });
       liveBridge.banList(gid, 'block', '0');
     };
     actions.requestUnbans = function (gid) { liveBridge.banList(gid, 'unblock', '0'); };
     actions.moreBans = function (gid, kind) {
       var rows = banListOf(stateRef.current.groups[gid], kind).rows, last = rows[rows.length - 1];
       // A row added live has no Chatango timestamp: the page then starts again from the newest.
-      if (liveBridge.banList(gid, kind, last && last.ts || '0')) groupUpdate(gid, function (g) { banListOf(g, kind).page.loading = true; });
+      if (liveBridge.banList(gid, kind, last && last.ts || '0')) groupUpdate(update, gid, function (g) { banListOf(g, kind).page.loading = true; });
     };
     actions.searchBans = function (gid, query) {
-      if (liveBridge.searchBans(gid, query)) groupUpdate(gid, function (g) { g.live.banSearch = { query: query, status: 'pending', ban: null, code: '' }; });
+      if (liveBridge.searchBans(gid, query)) groupUpdate(update, gid, function (g) { g.live.banSearch = { query: query, status: 'pending', ban: null, code: '' }; });
     };
-    actions.clearBanSearch = function (gid) { groupUpdate(gid, function (g) { g.live.banSearch = null; }); };
+    actions.clearBanSearch = function (gid) { groupUpdate(update, gid, function (g) { g.live.banSearch = null; }); };
     actions.saveGroupSettings = function (gid, draft, base) { return saveLiveSettings(stateRef.current.groups[gid], draft, base || stateRef.current.groups[gid].settings); };
   }
 
-  function ensureLiveGroup(d, gid) {
-    var g = d.groups[gid];
-    if (!g) {
-      g = d.groups[gid] = liveGroup(gid, gid);
-      g.favorite = (liveBridge.favoriteGroups() || []).indexOf(gid) >= 0;
-      g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
-      g.hiddenChannels = localRef.current.channels[gid] || [];
-    }
-    return g;
-  }
-  function ensureLiveUser(d, name) {
-    var u = d.users[name];
-    if (!u) {
-      u = d.users[name] = { status: 'online', about: '', style: {} };
-      if ((liveBridge.ignoredUsers() || []).indexOf(name) >= 0) u.ignored = true;
-      if (localRef.current.unstyled.indexOf(name) >= 0) u.unstyled = true;
-    }
-    return u;
-  }
-  /**
-   * Adds a member the state does not know yet as offline by default while their status is unknown.
-   * @param {Object} d State being modified.
-   * @param {string} name Target member.
-   */
-  function ensureUnseenUser(d, name) {
-    if (!d.users[name]) ensureLiveUser(d, name).status = 'offline';
-  }
-  /**
-   * Counts as online a member present in a group except a friend whose presence comes from the private connection.
-   * @param {Object} d State being modified.
-   * @param {string} name Target member.
-   */
-  function ensurePresentUser(d, name) {
-    var u = ensureLiveUser(d, name);
-    if (u.status === 'offline' && !u.friend) u.status = 'online';
-  }
-  /**
-   * Applies a presence received from the bridge to a member.
-   * @param {Object} u Member in the state.
-   * @param {{status: string, lastOn: number, idleSince: number}} x Received presence.
-   */
-  function applyPresence(u, x) {
-    // Before IDLE_DELAY, an idle member stays shown as online: only idleSince keeps the inactivity.
-    u.idleSince = x.status === 'idle' ? x.idleSince || u.idleSince || Date.now() : 0;
-    u.status = x.status === 'idle' && Date.now() - u.idleSince < IDLE_DELAY ? 'online' : x.status;
-    if (x.lastOn) u.lastOn = x.lastOn;
-  }
-  /**
-   * Merges the style of a message into the member's style.
-   * @param {Object} u Member in the state.
-   * @param {?Object} style Style read in the message.
-   * @param {number} ts Message timestamp in milliseconds.
-   */
-  function mergeStyle(u, style, ts) {
-    if (!style || ts <= u.styleTs) return;
-    u.style = Object.assign({}, u.style, style);
-    u.styleTs = ts;
-  }
   function setOwnStyle(style) {
     update(function (d) {
-      var u = ensureLiveUser(d, d.me);
+      var u = ensureLiveUser(d, d.me, localRef.current);
       // Merged without mergeStyle: the local clock can lag behind the server timestamp of received messages.
       u.style = Object.assign({}, u.style, style);
       u.styleTs = Math.max(u.styleTs || 0, Date.now());
     });
   }
-  /** Translates the Chatango state of a group (flags, moderators, announcement) into the interface model. */
-  function deriveLive(g) {
-    var L = g.live, F = GROUP_FLAG, f = L.flags, s = g.settings, staff = {};
-    if (L.owner) staff[L.owner] = 'owner';
-    Object.keys(L.mods).forEach(function (n) { if (n !== L.owner) staff[n] = roleOfFlags(L.mods[n]); });
-    s.staff = staff;
-    s.modFlags = Object.assign({}, L.mods);
-    if (L.owner) delete s.modFlags[L.owner];
-    s.media = { links: !(f & F.NOLINKS), images: !(f & F.NOIMAGES), videos: !(f & F.NOVIDEOS) };
-    s.automod = Object.assign({}, s.automod, {
-      filters: Object.assign({}, s.automod.filters, { nonsense: !!(f & (F.NLP_SINGLEMSG | F.NLP_NGRAM)), nonsenseMode: f & F.NLP_NGRAM ? 'Advanced' : 'Basic', repeat: !!(f & F.NLP_MSGQUEUE) }),
-      proxies: !!(f & F.NO_PROXIES),
-      slowMode: L.rate,
-      banned: L.bw ? { part: L.bw.part, whole: L.bw.whole } : null
-    });
-    s.announcement = Object.assign({}, s.announcement, { broadcast: !!(f & F.BROADCAST_MODE) },
-      L.annc ? { enabled: L.annc.enabled, text: L.annc.text, displayText: L.annc.displayText, embeds: L.annc.embeds, interval: Math.round(L.annc.interval / 60), intervalSec: L.annc.interval } : null);
-    g.closed = !!(f & F.IS_CLOSED);
-  }
-  function withReply(g, m) {
-    if (m.replyId) { var o = findMsg(g, m.replyId); m.replyTo = { id: o ? o.id : m.replyId }; }
-    delete m.replyId;
-    return m;
-  }
-  function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
-  /**
-   * Applies a group edit to the original while keeping its count and its ids.
-   * @param {Object} o Original message.
-   * @param {{id: string, text: string, parts: ?Array, embeds: ?Array}} m Edit message.
-   * @param {boolean=} keepText True to count the edit without replacing the text.
-   */
-  function applyGroupEdit(o, m, keepText) {
-    o.editCount = (o.editCount || 0) + 1;
-    o.editIds = (o.editIds || []).concat([m.id]);
-    if (!keepText) applyEdit(o, m);
-  }
-  /**
-   * Folds into an original that arrived after them its edits shown on their own with the newest last.
-   * @param {Object} g Group in the state.
-   * @param {Object} o Original message, not in the message log yet.
-   */
-  function mergeEdits(g, o) {
-    var edits = g.messages.filter(function (x) { return x.editId === o.id && x.author === o.author; });
-    if (!edits.length) return;
-    edits.sort(function (a, b) { return a.ts - b.ts; }).forEach(function (e) { applyGroupEdit(o, e); });
-    g.messages = g.messages.filter(function (x) { return edits.indexOf(x) < 0; });
-  }
-  /**
-   * Adds a page of bans or unbans to its list.
-   * @param {{rows: Array, page: Object}} list List read by banListOf, updated in place.
-   * @param {{list: Array, more: boolean}} op Page received from the bridge.
-   */
-  function receiveBanPage(list, op) {
-    // Only the next page requested by Nightango is appended: a BetterChatango reload starts again from the first page.
-    var next = list.page.loading, known = {};
-    if (!next) list.rows.splice(0);
-    list.rows.forEach(function (b) { known[banKey(b)] = true; });
-    var fresh = op.list.filter(function (b) { return !known[banKey(b)]; });
-    list.rows.push.apply(list.rows, fresh);
-    list.page.more = op.more && (!next || fresh.length > 0);
-    list.page.loaded = true;
-    list.page.loading = false;
-  }
-  /**
-   * Keeps the author's style of each merged private history entry.
-   * @param {Object} d State being modified.
-   */
-  function pmAuthor(d) { return function (x) { mergeStyle(ensureLiveUser(d, x.from), x.style, x.ts); }; }
   /**
    * Merges the BetterChatango private history into the conversations on each OK and after an import without duplicates.
    * @param {boolean=} imported True after an import, which may have added entries older than the loaded ones.
@@ -1045,11 +894,11 @@ function Root(props) {
         d.pmLoaded = true;
         d.pmHistoryRev++;
         names.forEach(function (t) {
-          ensureLiveUser(d, t);
+          ensureLiveUser(d, t, localRef.current);
           var c = pmConversation(d, t, { closed: localRef.current.hidden.indexOf(t) >= 0 });
           // Set on the first OK: on a reconnection, the last 100 entries say nothing about the older pages already loaded. An import, however, can add some.
           if (c.olderMore == null || (imported && hist[t].more)) c.olderMore = hist[t].more;
-          mergePmHistory(c, hist[t].list, pmAuthor(d));
+          mergePmHistory(c, hist[t].list, pmAuthor(d, localRef.current));
         });
       });
       // The conversation open in front of the user becomes read, the others take the unreads from the archive.
@@ -1070,7 +919,6 @@ function Root(props) {
     var names = listedDms(s0).filter(function (n) { return n !== s0.me && n !== shown && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
     if (names.length && liveBridge.refreshPresence(names)) presenceAt.current = Date.now();
   }
-  function groupUpdate(gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
   /**
    * Restarts the closed connections with automatic attempts for each one that fails.
    */
@@ -1164,7 +1012,7 @@ function Root(props) {
         if (liveBridge.setting('tabTitleAlerts')) liveBridge.setSetting('tabTitleAlerts', false);
         update(function (d) {
           Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.auth = { loggedIn: true };
-          (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n); });
+          (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
           Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
           d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
         });
@@ -1175,7 +1023,7 @@ function Root(props) {
       case 'group': {
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          var g = ensureLiveGroup(d, op.id);
+          var g = ensureLiveGroup(d, op.id, localRef.current);
           d.groupsSeen = true;
           if (op.ready) { g.inited = true; g.membersLoaded = true; }
           if (op.title) { g.title = op.title; g.topic = op.title; }
@@ -1193,7 +1041,7 @@ function Root(props) {
           // Edit: applied to the original if it is loaded, otherwise shown as an edited message that keeps its reference.
           update(function (d) {
             if (!d.auth.loggedIn) return;
-            var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, m.author), o = editTarget(g, m);
+            var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, m.author, localRef.current), o = editTarget(g, m);
             mergeStyle(u, style, m.ts);
             if (o) { applyGroupEdit(o, m); return; }
             m.edited = true;
@@ -1202,7 +1050,7 @@ function Root(props) {
           break;
         }
         delete m.editId;
-        update(function (d) { if (!d.auth.loggedIn) return; ensureLiveGroup(d, op.gid); mergeStyle(ensureLiveUser(d, m.author), style, m.ts); });
+        update(function (d) { if (!d.auth.loggedIn) return; ensureLiveGroup(d, op.gid, localRef.current); mergeStyle(ensureLiveUser(d, m.author, localRef.current), style, m.ts); });
         receiveGroup(op.gid, m);
         break;
       }
@@ -1210,7 +1058,7 @@ function Root(props) {
         var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style;
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          var g = ensureLiveGroup(d, op.gid), u = ensureLiveUser(d, hm.author);
+          var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, hm.author, localRef.current);
           mergeStyle(u, hs, hm.ts);
           if (g.messages.some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return;
           var o = editTarget(g, hm);
@@ -1225,7 +1073,7 @@ function Root(props) {
         });
         break;
       }
-      case 'msgid': groupUpdate(op.gid, function (g, d) {
+      case 'msgid': groupUpdate(update, op.gid, function (g, d) {
         g.messages.forEach(function (x) {
           if (x.id === op.tmp) x.id = op.id;
           if (x.replyTo && x.replyTo.id === op.tmp) x.replyTo.id = op.id;
@@ -1233,64 +1081,64 @@ function Root(props) {
         });
         d.mentionLog.forEach(function (x) { if (x.gid === op.gid && x.id === op.tmp) x.id = op.id; });
       }); break;
-      case 'del': groupUpdate(op.gid, function (g, d) {
+      case 'del': groupUpdate(update, op.gid, function (g, d) {
         // An edit shown on its own disappears with its original, even when the original is not loaded.
         g.messages = g.messages.filter(function (x) { return !(x.editId && op.ids.indexOf(x.editId) >= 0); });
         g.messages.forEach(function (x) { if (op.ids.indexOf(x.id) >= 0) x.deleted = { by: 'staff' }; });
         dropMentions(d, op.gid, op.ids);
       }); break;
-      case 'cleared': groupUpdate(op.gid, function (g, d) {
+      case 'cleared': groupUpdate(update, op.gid, function (g, d) {
         g.messages = [{ id: uid(), kind: 'system', text: 'All messages in #' + g.id + ' were cleared.', ts: Date.now() }];
         dropMentions(d, op.gid, null);
       }); break;
-      case 'members': groupUpdate(op.gid, function (g, d) {
+      case 'members': groupUpdate(update, op.gid, function (g, d) {
         var list = op.names.slice(); if (list.indexOf(d.me) < 0) list.push(d.me);
         g.members = list; g.membersLoaded = true;
-        list.forEach(function (n) { ensurePresentUser(d, n); });
+        list.forEach(function (n) { ensurePresentUser(d, n, localRef.current); });
       }); break;
-      case 'guests': groupUpdate(op.gid, function (g, d) {
+      case 'guests': groupUpdate(update, op.gid, function (g, d) {
         g.guestNames = op.names; g.guests = op.anons;
-        op.names.forEach(function (n) { ensurePresentUser(d, n); });
+        op.names.forEach(function (n) { ensurePresentUser(d, n, localRef.current); });
       }); break;
-      case 'member': groupUpdate(op.gid, function (g, d) {
-        if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensurePresentUser(d, op.name); }
+      case 'member': groupUpdate(update, op.gid, function (g, d) {
+        if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensurePresentUser(d, op.name, localRef.current); }
         if (op.action === 0 && op.name !== d.me) g.members = g.members.filter(function (n) { return n !== op.name; });
       }); break;
-      case 'count': groupUpdate(op.gid, function (g) { g.liveCount = op.n; }); break;
+      case 'count': groupUpdate(update, op.gid, function (g) { g.liveCount = op.n; }); break;
       case 'room': update(function (d) {
         if (!d.auth.loggedIn) return;
-        var g = ensureLiveGroup(d, op.gid);
+        var g = ensureLiveGroup(d, op.gid, localRef.current);
         g.live.owner = op.owner; g.live.mods = op.mods; g.live.flags = op.flags;
         deriveLive(g);
       }); break;
-      case 'mods': groupUpdate(op.gid, function (g) { g.live.mods = op.mods; deriveLive(g); }); break;
-      case 'flags': groupUpdate(op.gid, function (g) { g.live.flags = op.flags; deriveLive(g); }); break;
+      case 'mods': groupUpdate(update, op.gid, function (g) { g.live.mods = op.mods; deriveLive(g); }); break;
+      case 'flags': groupUpdate(update, op.gid, function (g) { g.live.flags = op.flags; deriveLive(g); }); break;
       case 'inited':
-        groupUpdate(op.gid, function (g) { g.inited = true; });
+        groupUpdate(update, op.gid, function (g) { g.inited = true; });
         break;
-      case 'info': groupUpdate(op.gid, function (g) {
+      case 'info': groupUpdate(update, op.gid, function (g) {
         if (op.title) { g.title = op.title; g.topic = op.description && op.description !== 'No description' ? op.description : op.title; }
         g.settings.overview.title = op.title || g.settings.overview.title;
         g.settings.overview.description = op.description && op.description !== 'No description' ? op.description : '';
       }); break;
-      case 'denied': groupUpdate(op.gid, function (g) { g.inited = true; g.membersLoaded = true; }); break;
-      case 'histEnd': groupUpdate(op.gid, function (g) { g.historyDone = true; g.loadingMore = false; }); break;
-      case 'moreLoaded': groupUpdate(op.gid, function (g) { g.loadingMore = false; }); break;
-      case 'annc': groupUpdate(op.gid, function (g) { g.live.annc = { mode: op.mode, enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
-      case 'anncPost': if (op.text || op.embeds.length) groupUpdate(op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', annc: true, text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
-      case 'bw': groupUpdate(op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
-      case 'rate': groupUpdate(op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;
-      case 'bans': groupUpdate(op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
+      case 'denied': groupUpdate(update, op.gid, function (g) { g.inited = true; g.membersLoaded = true; }); break;
+      case 'histEnd': groupUpdate(update, op.gid, function (g) { g.historyDone = true; g.loadingMore = false; }); break;
+      case 'moreLoaded': groupUpdate(update, op.gid, function (g) { g.loadingMore = false; }); break;
+      case 'annc': groupUpdate(update, op.gid, function (g) { g.live.annc = { mode: op.mode, enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
+      case 'anncPost': if (op.text || op.embeds.length) groupUpdate(update, op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', annc: true, text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
+      case 'bw': groupUpdate(update, op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
+      case 'rate': groupUpdate(update, op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;
+      case 'bans': groupUpdate(update, op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;
-        groupUpdate(op.gid, function (g) {
+        groupUpdate(update, op.gid, function (g) {
           if (!g.bans.some(function (b) { return b.unid === op.ban.unid && b.ip === op.ban.ip; })) g.bans.unshift(op.ban);
           g.messages.push({ id: uid(), kind: 'ban', user: op.ban.name, ts: Date.now() });
         });
         if (mine) toast(op.ban.name + ' was banned from #' + op.gid + '.', { action: { label: 'Undo', run: function () { liveBridge.unban(op.gid, op.ban); } } });
         break;
       }
-      case 'unbanned': groupUpdate(op.gid, function (g) {
+      case 'unbanned': groupUpdate(update, op.gid, function (g) {
         function gone(b) { return op.list.some(function (x) { return x.unid === b.unid && x.ip === b.ip; }); }
         g.bans = g.bans.filter(function (b) { return !gone(b); });
         var s = g.live.banSearch;
@@ -1298,12 +1146,12 @@ function Root(props) {
         if (g.live.unbanPage.loaded) g.live.unbans = op.list.concat(g.live.unbans.filter(function (b) { return !gone(b); }));
       }); break;
       // A response that arrives after the timeout stays valid, but not after Clear search.
-      case 'banSearch': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
-      case 'banSearchRefused': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
-      case 'banSearchTimeout': groupUpdate(op.gid, function (g) { var s = g.live.banSearch; if (s && s.status === 'pending') s.status = 'timeout'; }); break;
+      case 'banSearch': groupUpdate(update, op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'done'; s.ban = op.ban; } }); break;
+      case 'banSearchRefused': groupUpdate(update, op.gid, function (g) { var s = g.live.banSearch; if (s) { s.status = 'refused'; s.code = op.code; } }); break;
+      case 'banSearchTimeout': groupUpdate(update, op.gid, function (g) { var s = g.live.banSearch; if (s && s.status === 'pending') s.status = 'timeout'; }); break;
       // BetterChatango only logs allunblocked: the unban list is requested again the next time it is shown.
-      case 'unbannedAll': groupUpdate(op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
-      case 'modlog': groupUpdate(op.gid, function (g) {
+      case 'unbannedAll': groupUpdate(update, op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
+      case 'modlog': groupUpdate(update, op.gid, function (g) {
         var known = {}, list = (g.live.modlog || []).slice();
         list.forEach(function (x) { known[x.id] = true; });
         op.list.forEach(function (x) { if (!known[x.id]) list.push(x); });
@@ -1347,7 +1195,7 @@ function Root(props) {
         var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          mergeStyle(ensureLiveUser(d, op.from), op.style, op.ts);
+          mergeStyle(ensureLiveUser(d, op.from, localRef.current), op.style, op.ts);
           receivePm(d, op);
         });
         pmArchive.current.record(op.from, op, true);
@@ -1377,7 +1225,7 @@ function Root(props) {
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;
-          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
+          op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name, localRef.current); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
         });
         break;
       case 'friendTimeout':
@@ -1399,7 +1247,7 @@ function Root(props) {
         var before = stateRef.current.users[op.name];
         var status = op.keepIdle && before && before.idleSince ? 'idle' : op.status;
         update(function (d) {
-          var u = ensureLiveUser(d, op.name);
+          var u = ensureLiveUser(d, op.name, localRef.current);
           applyPresence(u, { status: status, lastOn: op.lastOn });
           if (status === 'offline' && !op.lastOn && before && before.status !== 'offline') u.lastOn = Date.now();
         });
@@ -1414,10 +1262,10 @@ function Root(props) {
       }
       case 'pmBlocked': update(function (d) {
         Object.keys(d.users).forEach(function (n) { if (d.users[n].blocked && op.list.indexOf(n) < 0) d.users[n].blocked = false; });
-        op.list.forEach(function (n) { ensureLiveUser(d, n).blocked = true; });
+        op.list.forEach(function (n) { ensureLiveUser(d, n, localRef.current).blocked = true; });
       }); break;
       case 'msgBgStale': update(function (d) { if (d.users[op.name]) delete d.users[op.name].msgBg; }); break;
-      case 'people': update(function (d) { op.list.forEach(function (x) { applyPresence(ensureLiveUser(d, x.name), x); }); }); break;
+      case 'people': update(function (d) { op.list.forEach(function (x) { applyPresence(ensureLiveUser(d, x.name, localRef.current), x); }); }); break;
       case 'pmUnblocked': update(function (d) { if (d.users[op.name]) d.users[op.name].blocked = false; }); break;
       default: break;
     }

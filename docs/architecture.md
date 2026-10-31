@@ -50,8 +50,10 @@ src/
   app/        root
     sound.js
     state.js         persisted preferences
-    live-state.js    live state built for Root: world at login, group, ban lists, session loss
+    live-state.js    live state built for Root: world at login, group, ban lists, session loss, account data kept in this browser,
+                     members and groups created on the fly with that data, presence, styles, group edits, group settings read from Chatango
     pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database)
+    inbox.js         Mentions page log
     live-ops.js      useBridgeOps: each bridge operation goes to the handler of the latest render, those after login once it has rendered
     root.js          Root: state, actions, live actions, handleLiveOp
     start.js         mounting, recovery screen after an interface error
