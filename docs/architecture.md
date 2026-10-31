@@ -106,8 +106,8 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 
 ## Diagnostic journal
 
-- `skin-journal.js` wraps the `WebSocket` constructor and the console, listens to the page lifecycle and to errors, and keeps the last 1,000 events in `localStorage` under `torch-skin:journal`. What it keeps and never keeps: [ADR-0011](adr/0011-diagnostic-journal.md).
-- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. The bridge records its connections and BetterChatango's warnings in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
+- `skin-journal.js` wraps the `WebSocket` constructor and the console, listens to the page lifecycle and to errors, and keeps the last 1,000 events of each account in `localStorage` under `torch-skin:journal:<username>`. Until sign-in, it keeps the events of the page in memory only. What it keeps and never keeps: [ADR-0011](adr/0011-diagnostic-journal.md).
+- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. On sign-in, the bridge gives it the account name (`JOURNAL.signIn`), which adds the events of the page to that account's log. The bridge records its connections and BetterChatango's warnings in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
 
 ## Mounting and display
 
@@ -180,7 +180,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
-- `live_login`: sign-in detection and a listener that throws, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal.
+- `live_login`: sign-in detection, a listener that throws and the diagnostic journal kept per account, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal.
 - `avatar`: avatars, on the design system bundle and the sources of `src/bridge/`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.

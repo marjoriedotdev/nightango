@@ -721,10 +721,12 @@ var liveBridge = (function () {
     var onLogin = function (catchUp) {
       if (loggedIn) return;
       loggedIn = true;
+      var me = lower(C.user.name);
+      if (JOURNAL) JOURNAL.signIn(me);
       note('Signed in');
       // BetterChatango reads the YouTube oEmbed and msgbg.xml on its own, outside the Nightango media settings: disabled in memory, not in the BetterChatango settings.
       C.renderYouTube = CH.getBackground = function () {};
-      emit({ op: 'login', me: lower(C.user.name) });
+      emit({ op: 'login', me: me });
       // Groups already connected before us: their inited and participants frames have gone by.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
       if (typeof window.__TORCH_SHOW__ === 'function') window.__TORCH_SHOW__();

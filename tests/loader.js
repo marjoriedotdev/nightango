@@ -161,6 +161,8 @@ async function suite(userscript) {
   /* Diagnostic journal: socket lifecycle, never the frame content */
   const j = page(userscript, 'https://st.chatango.com/', fakeSocket);
   const journal = j.w.__TORCH_JOURNAL__;
+  // The bridge does it on sign-in: from then on the log is saved for this account.
+  if (journal) journal.signIn('marjorie');
   const sock = new j.w.WebSocket('wss://c1.chatango.com:8081/');
   sock.fire('open');
   sock.fire('message', { data: 'OK\r\n\0' });
@@ -178,7 +180,7 @@ async function suite(userscript) {
     texts.includes('BetterChatango: conn closed: mygroup') && texts.includes('BetterChatango: unhandled frame weird') && texts.includes('TypeError: boom'), texts);
   step('journal keeps no frame or message text', journal && !texts.some(m => /secret/.test(m)), texts);
   j.w.dispatchEvent(new j.w.Event('pagehide'));
-  const stored = JSON.parse(j.w.localStorage.getItem('torch-skin:journal') || '[]');
+  const stored = JSON.parse(j.w.localStorage.getItem('torch-skin:journal:marjorie') || '[]');
   step('journal saved when the page is hidden', !!journal && stored.length === journal.entries().length);
   for (let i = 0; i < 1100; i++) if (journal) journal.add('test', 'event ' + i);
   const kept = journal ? journal.entries() : [];
