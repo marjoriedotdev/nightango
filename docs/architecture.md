@@ -58,11 +58,12 @@ src/
     inbox.js         useInbox: PM archive of unreads, reception and notification of incoming events, navigation that marks a conversation read,
                      Mentions page log
     actions.js       useActions: actions the views call through the context, those of the prototype replaced in live by those passed to Chatango
-    simulation.js    useSimulation: activity of the prototype's sample world
     reconnection.js  useReconnection: reconnection of the groups and the private connection, on demand and automatic after a loss
+    simulation.js    useSimulation: activity of the prototype's sample world
     live-ops.js      useLiveOps: bridge operations applied to the state (handleLiveOp), through useBridgeOps: each operation goes to the handler
                      of the latest render, those after login once it has rendered
-    root.js          Root, and its page hooks: state (useAppState), display preferences, idle members, tab title, Ctrl K, update check.
+    root.js          Root, which only composes the hooks of app/ and renders, and its page hooks: state (useAppState), display preferences,
+                     idle members, tab title, Ctrl K, update check
     start.js         mounting, recovery screen after an interface error
   loader/
     skin-loader.js   sandbox-side userscript: header and @version, home page guard,
@@ -144,7 +145,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 
 ## React state
 
-- `Root` holds the whole application state (`useAppState`, `app/root.js`). `update(fn)` clones the state with `JSON.parse(JSON.stringify(prev))`, applies `fn` to the clone, then replaces it. The state must therefore stay JSON-serializable.
+- `Root` holds the whole application state (`useAppState`, `app/root.js`). It only composes named hooks, one responsibility each, and renders: the hooks get what they share from it as arguments (the state and its update, `toast`, the inbox of `useInbox`), never through a module variable. `update(fn)` clones the state with `JSON.parse(JSON.stringify(prev))`, applies `fn` to the clone, then replaces it. The state must therefore stay JSON-serializable.
 - Preferences are persisted in `localStorage` under `torch-prototype-prefs` (`app/state.js`). `loadPrefs` reads them over the defaults of `core/prefs.js`: a stored value of another type than its default, left by an older version or corrupted, gives way to the default. `sky.moon` is the only preference with two types (`auto` or a phase index). The stored preferences carry their schema version (`version`, 1): preferences stored without one are read as version 1, the current one, with no migration. In live, those in `BETTER_CHATANGO_PREFS` (`core/prefs.js`: guest messages, announcements) are BetterChatango settings: read back from its settings on sign-in, and `usePref().sw` toggles them only once they are written on its side. Trusted hosts (`safety.trustedHosts`) follow the same rule: in live, it is BetterChatango's list, read back on sign-in (`null` if unreadable) and changed by `actions.setTrustedHost` once written on its side.
 - Account-specific data is persisted under `torch-skin:<username>`: closed conversations (`hidden`), hidden channels of each group (`channels`), members with a hidden style (`unstyled`) and own style (`style`). At sign-in, `storedLocal` (`app/live-state.js`) drops a value of another kind than the one expected, and the cleaned content is written back. The bridge also sets the unread migration flag there (`pmReadMigrated`, `docs/betterchatango-protocol.md`, Private history): `useLocalStore` merges its writes with the stored content to keep it. In live, favorites, group mutes and ignored members are BetterChatango's (`docs/betterchatango-protocol.md`, BetterChatango startup settings). The prototype keeps its own in its state.
 - Composer drafts live outside the state, in memory only, in a ref of `Root` given through the context (`useDraft`, `core/ui.js`): a view saves its text when it leaves, keyed by `group:<id>` or `dm:<name>`, and gets it back on return. A reload drops them, which is also how live signs out. The prototype empties them at sign-in.

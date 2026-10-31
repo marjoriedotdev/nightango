@@ -126,27 +126,29 @@ function useUpdateCheck(loggedIn, toast) {
   }, [loggedIn]);
 }
 
+/**
+ * Interface root: composes the hooks of the application and renders the shell, the dialogs and the toasts.
+ * @param {{boot: ?Object}} props State handed by the prototype hook.
+ */
 function Root(props) {
-  var store = useAppState(props.boot), state = store.state, stateRef = store.stateRef, update = store.update;
+  var store = useAppState(props.boot), state = store.state;
   // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
   var drafts = useRef({});
-  var o = useOverlays(), toast = o.toast, setNavOpen = o.setNavOpen;
-  var inbox = useInbox(stateRef, update, toast, setNavOpen), pmArchive = inbox.pmArchive, nav = inbox.nav, notify = inbox.notify, receiveGroup = inbox.receiveGroup, receiveDm = inbox.receiveDm;
-  var prefs = state.prefs;
-  useDisplayPrefs(prefs);
-  useIdleStatus(state.users, update);
+  var o = useOverlays();
+  var inbox = useInbox(store.stateRef, store.update, o.toast, o.setNavOpen);
+  useDisplayPrefs(state.prefs);
+  useIdleStatus(state.users, store.update);
   useTabTitle(state);
-  useShortcuts(stateRef, o.setPalette);
-  useUpdateCheck(state.auth.loggedIn, toast);
-  var local = useLocalStore(state), localRef = local.ref;
-  var reconnection = useReconnection(stateRef, update);
-  var pms = useLivePms(store, localRef, pmArchive);
-  var act = useActions({ store: store, toast: toast, setNavOpen: setNavOpen, inbox: inbox, drafts: drafts, localRef: localRef, reconnection: reconnection, pms: pms }), actions = act.actions;
-  useSimulation(store, inbox, toast, actions);
-  useLiveOps({ store: store, toast: toast, inbox: inbox, actions: actions, local: local, reconnection: reconnection, pms: pms });
+  useShortcuts(store.stateRef, o.setPalette);
+  useUpdateCheck(state.auth.loggedIn, o.toast);
+  var local = useLocalStore(state);
+  var reconnection = useReconnection(store.stateRef, store.update);
+  var pms = useLivePms(store, local.ref, inbox.pmArchive);
+  var act = useActions({ store: store, toast: o.toast, setNavOpen: o.setNavOpen, inbox: inbox, drafts: drafts, localRef: local.ref, reconnection: reconnection, pms: pms });
+  useSimulation(store, inbox, o.toast, act.actions);
+  useLiveOps({ store: store, toast: o.toast, inbox: inbox, actions: act.actions, local: local, reconnection: reconnection, pms: pms });
 
-  var app = { state: state, update: update, nav: nav, actions: actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: resolvedTheme(prefs, VIEWER_THEME) };
-
+  var app = { state: state, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: resolvedTheme(state.prefs, VIEWER_THEME) };
   return h(Layers, null, h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
     state.auth.loggedIn && o.profile ? h(ProfileDialog, { name: o.profile.name, gid: o.profile.gid, onClose: function () { o.setProfile(null); } }) : null,
