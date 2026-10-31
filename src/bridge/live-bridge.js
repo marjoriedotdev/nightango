@@ -1475,7 +1475,12 @@ var liveBridge = (function () {
      * @param {string} url Short TikTok link.
      * @returns {Promise<string>} Post id, rejected with the text to show if TikTok does not give it.
      */
-    tiktokPost: function (url) { return askLoader('tiktok', { url: url }, 'TikTok did not answer in time. Open the link instead.').then(function (r) { return r.post; }); },
+    tiktokPost: function (url) {
+      return askLoader('tiktok', { url: url }, 'TikTok did not answer in time. Open the link instead.').then(function (r) {
+        if (typeof r.post !== 'string' || !/^\d+$/.test(r.post)) throw new Error('TikTok did not say which video this link leads to. Open the link instead.');
+        return r.post;
+      });
+    },
     /**
      * Uploads a file to vissle like the BetterChatango Upload dialog without BetterChatango posting its link.
      * @param {File} file Chosen file.

@@ -240,12 +240,12 @@ d.addEventListener('torch-skin:vissle-request', e => {
   if (reply) setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: q.id, data: reply(q) }) })), 0);
 });
 
-// TikTok bridge of the simulated userscript: a short link ending in "ok" leads to a post, any other one to an error.
+// TikTok bridge of the simulated userscript: a short link ending in "ok" leads to a post, one ending in "odd" to a reply of another shape, any other one to an error.
 const tiktokReqs = [];
 d.addEventListener('torch-skin:tiktok-request', e => {
   const q = JSON.parse(e.detail);
   tiktokReqs.push(q.url);
-  const out = /ok\/$/.test(q.url) ? { post: '7400000000000000001' } : { error: 'TikTok could not be reached. Open the link instead.' };
+  const out = /ok\/$/.test(q.url) ? { post: '7400000000000000001' } : /odd\/$/.test(q.url) ? { post: 'player' } : { error: 'TikTok could not be reached. Open the link instead.' };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:tiktok-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
 
@@ -1005,6 +1005,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && JSON.stringify(tiktokAfter.frames) === JSON.stringify(['7400000000000000000', '7400000000000000001'].map(id => 'https://www.tiktok.com/player/v1/' + id + '?autoplay=1&rel=0'))
       && JSON.stringify(tiktokAfter.link) === JSON.stringify(['https://vm.tiktok.com/ZMbad/']) && tiktokToast,
     { tiktokBefore, tiktokAfter, tiktokToast });
+  g('b', 'test', ['1700000300.7', 'Eve', '', 'u7', 'UNID7', 'tmptiktokodd', '9.9.9.9', '0', '', '<n000/><f x11000="0">Puppies https://vm.tiktok.com/ZModd/']);
+  const oddTikTokRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Puppies') === 0); return p && p.closest('article'); };
+  await until(() => !!oddTikTokRow());
+  click(oddTikTokRow().querySelector('.embed-reveal'));
+  await until(() => !!oddTikTokRow().querySelector('.embeds a.msg-link, iframe'));
+  const oddTikTok = { frames: [...oddTikTokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: !!oddTikTokRow().querySelector('.embeds a.msg-link'), toast: !!byText('.toast', 'TikTok did not say which video this link leads to. Open the link instead.') };
+  step('a TikTok reply without a numeric post id turns back into a link', !oddTikTok.frames.length && oddTikTok.link && oddTikTok.toast, oddTikTok);
 
   /* Trusted host (BetterChatango list): under proxyMedia, only its image shows without a click, the host parsed like the browser does */
   const TRUST_LINKS = ['https://i.imgur.com/a.png', 'https://evil.example/b.png', 'https://i.imgur.com@evil.example/c.png'];
