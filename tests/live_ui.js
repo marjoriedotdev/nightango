@@ -830,6 +830,39 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const minePms = frame('msg:fay:').filter(f => f.endsWith('>Mine</g></m>')).length;
   step('own pm carries own style', styleOk(mine) && minePms === 1, { minePms, style: mine.p && [mine.p.style.cssText, mine.name && mine.name.style.cssText] });
 
+  /* Connection not open: no frame leaves, nothing is added, the state stays and the failure shows */
+  const pmBox = () => $('.thread .tc-composer textarea'), fayTexts = () => $$('.thread .tc-msg-text').map(x => x.textContent);
+  const closedFrom = sent.length, fayShown = fayTexts(), statusBefore = $('.me-btn').getAttribute('aria-label');
+  C.private.socket.readyState = 3;
+  uploadReply = () => Promise.resolve('data:abc/f.png');
+  await pickFile('h.png');
+  type(pmBox(), 'Caption'); key(pmBox(), 'Enter');
+  await until(() => !!byText('.toast', 'The file was uploaded, but the message was not sent.'));
+  const lostUpload = { toast: !!byText('.toast', 'The file was uploaded, but the message was not sent.'), copy: !!byText('.toast button', 'Copy link'), draft: pmBox().value, otherToast: !!byText('.toast', 'Private message not sent') };
+  type(pmBox(), 'Lost words'); key(pmBox(), 'Enter'); await wait(30);
+  const lostPm = { draft: pmBox().value, toast: !!byText('.toast', "Private message not sent. Try again once you're reconnected to private messages.") };
+  type(pmBox(), '');
+  click(byText('.profile .mrow', 'Block')); await wait(30);
+  click(byText('.dialog-foot button', 'Block')); await wait(30);
+  const lostBlock = { toast: !!byText('.toast', "The block could not be sent. Try again once you're reconnected to private messages."), done: !!byText('.toast', 'fay blocked.'), composer: !!pmBox() };
+  click($('.me-btn')); await wait(30);
+  click(menuItem('Idle')); await wait(30);
+  const lostStatus = { toast: !!byText('.toast', 'Your status could not be changed.'), label: $('.me-btn').getAttribute('aria-label') };
+  const fayStill = fayTexts();
+  C.private.socket.readyState = 1;
+  click(byText('.tc-nav', 'test')); await wait(50);
+  C.groups.test.socket.readyState = 3;
+  type(editBox(), 'Lost in test'); key(editBox(), 'Enter'); await wait(30);
+  const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test.") };
+  C.groups.test.socket.readyState = 1;
+  step('pm, upload, block, status and group message on a connection that is not open send nothing, keep the text and the state, and say so',
+    !sent.slice(closedFrom).length && JSON.stringify(fayStill) === JSON.stringify(fayShown)
+      && lostUpload.toast && lostUpload.copy && lostUpload.draft === 'Caption https://vissle.me/abc/f.png' && !lostUpload.otherToast
+      && lostPm.draft === 'Lost words' && lostPm.toast
+      && lostBlock.toast && !lostBlock.done && lostBlock.composer
+      && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast,
+    { sent: sent.slice(closedFrom), fayShown, fayStill, lostUpload, lostPm, lostBlock, statusBefore, lostStatus, lostGroup });
+
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000270.1', 'Eve', '', 'u7', 'UNID7', 'tmp13', '9.9.9.9', '0', '', '<n000/><f x11000="2">Look at this']);
   g('b', 'test', ['1700000271.1', 'Eve', '', 'u7', 'UNID7', 'tmp14', '9.9.9.9', '0', '', '<n000/><f x11000="0"><i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/>']);

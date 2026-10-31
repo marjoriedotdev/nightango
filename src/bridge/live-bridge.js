@@ -338,10 +338,37 @@ var liveBridge = (function () {
     return attempts[gid];
   }
 
+  /**
+   * Tells whether a BetterChatango connection can carry a frame now.
+   * @param {string} gid Group or private_message.
+   */
+  function opened(gid) {
+    var c = gid === 'private_message' ? C.private : C.groups && C.groups[gid];
+    return !!(c && c.socket && c.socket.readyState === 1);
+  }
+  function pmOpen() { return opened('private_message'); }
+  /**
+   * Says what to do while a connection cannot carry a frame.
+   * @param {string} gid Group or private_message.
+   * @returns {string} Empty while the connection is open.
+   */
+  function closedHint(gid) { return opened(gid) ? '' : "Try again once you're reconnected to " + connName(gid) + '.'; }
+  /**
+   * Hands a frame to BetterChatango on an open connection and announces its failure otherwise.
+   * @param {string} gid Group or private_message.
+   * @param {string} frame Frame without its line end.
+   * @param {string} failure Failure text, empty for a request the user did not make.
+   * @returns {boolean} True if the frame was handed to BetterChatango.
+   */
   function send(gid, frame, failure) {
+    // BetterChatango's socket catches every error and only shows a line: on a connection that is not open, the frame would read as sent.
+    var hint = closedHint(gid);
+    if (hint) {
+      if (failure) alertOnce({ op: 'notice', gid: gid, text: failure + ' ' + hint });
+      return false;
+    }
     try { C.socket(gid, frame, failure); return true; } catch (e) { warn(e); return false; }
   }
-  function pmOpen() { return !!(C.private && C.private.socket && C.private.socket.readyState === 1); }
   // Last correspondent requested by connect, to which a reply with an empty name belongs.
   var connectTarget = '';
   // Chatango returns no request id: a reply is recognized by its key, and a newer request replaces the wait of the previous one.
@@ -756,6 +783,7 @@ var liveBridge = (function () {
     onOp: onOp,
     note: note,
     connName: connName,
+    closedHint: closedHint,
     /**
      * Tells whether a message already has the final id that replying to it or editing or deleting it waits for.
      * @param {string} id Message id in the state.
@@ -770,6 +798,8 @@ var liveBridge = (function () {
      */
     send: function (gid, text, opts) {
       opts = opts || {};
+      // Checked before send, which would announce it too: Root announces a message that did not leave, an upload with its link.
+      if (!opened(gid)) return null;
       var built;
       try { built = groupBody(gid, text, opts); } catch (e) { warn(e); return null; }
       if (!built) return null;
@@ -799,6 +829,8 @@ var liveBridge = (function () {
      */
     sendPm: function (user, text, style, opts) {
       opts = opts || {};
+      // Checked before send, like a group message.
+      if (!pmOpen()) return null;
       try {
         applyStyle(style);
         // Built once and sent as is: a second build would draw another <i…/> PM key than the one shown.
@@ -865,11 +897,9 @@ var liveBridge = (function () {
       } catch (e) { warn(e); }
     },
     loadMore: function (gid) {
-      var g = C.groups && C.groups[gid], failure = 'Earlier messages could not be loaded.';
+      var g = C.groups && C.groups[gid];
       if (g && g.load === -1) return 'done';
-      if (g && send(gid, 'get_more:20:' + (g.load || 0), failure)) return 'sent';
-      emit({ op: 'notice', gid: gid, text: failure });
-      return 'failed';
+      return send(gid, 'get_more:20:' + (g && g.load || 0), 'Earlier messages could not be loaded.') ? 'sent' : 'failed';
     },
     /* Moderation: frames identical to the BetterChatango ones */
     deleteMessage: function (gid, id) { return send(gid, 'delmsg:' + id, 'The message could not be deleted.'); },

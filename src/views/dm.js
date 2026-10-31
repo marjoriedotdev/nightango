@@ -255,7 +255,7 @@ function DmComposer(p) {
       if (runCommand(app, text, null)) return;
       var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(mode.m.from, mode.m.text) : null };
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
-      app.actions.sendDm(id, text, opts);
+      if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
       p.onCancelMode();
     }, beforeSend: h(MessageStyleButton, null)
   }), emoji.picker, attach.input);

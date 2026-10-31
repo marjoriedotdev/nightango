@@ -290,10 +290,9 @@ function Root(props) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
       update(function (d) { addSentPm(d, name, { from: me, key: uid(), replyId: replyKey, editId: opts.editKey, text: (opts.quote || '') + text, ts: Date.now() }); });
-      if (opts.editKey) return;
       var u = userOf(stateRef.current, name);
-      if (u.status === 'offline' || u.blocked) return;
-      setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
+      if (!opts.editKey && u.status !== 'offline' && !u.blocked) setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
+      return true;
     },
     openDm: function (name, tab) { update(function (d) { pmConversation(d, name); }); nav({ view: 'dm', id: name, tab: tab }); },
     loadProfile: function () { /* prototype: profiles already present in the sample data */ },
@@ -622,16 +621,22 @@ function Root(props) {
     update(function (d) { d.groups[gid][key] = on; });
   }
   /**
+   * Shows that a message did not leave and what to do next.
+   * @param {string} gid Group or private_message.
+   * @param {string} outcome What did not happen, such as Message not sent.
+   */
+  function messageFailed(gid, outcome) { toast(outcome + ' ' + (liveBridge.closedHint(gid) || 'BetterChatango rejected it.')); }
+  /**
    * Sends a group message built by BetterChatango with the own style and keeps its style.
    * @param {string} gid Target group.
    * @param {string} text Typed text.
    * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string}} opts Reply, edited original or quote, and channel.
-   * @param {?string} failure Toast shown if nothing was sent, null when the caller announces it itself.
+   * @param {?string} outcome What did not happen, shown if nothing was sent, null when the caller announces it itself.
    * @returns {boolean} True if the bridge emitted the frame.
    */
-  function sendStyled(gid, text, opts, failure) {
+  function sendStyled(gid, text, opts, outcome) {
     var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
-    if (style) setOwnStyle(style); else if (failure) toast(failure);
+    if (style) setOwnStyle(style); else if (outcome) messageFailed(gid, outcome);
     return !!style;
   }
   /**
@@ -650,15 +655,15 @@ function Root(props) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
       if (replyId && !liveBridge.delivered(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
-      return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. BetterChatango rejected it.');
+      return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent.');
     };
     // Editing an edit shown on its own targets its original, the only message visible to other members.
-    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. BetterChatango rejected it.'); };
+    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited.'); };
     actions.sendDm = function (name, text, opts) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, { replyId: replyKey, editId: opts.editKey, quote: opts.quote });
-      if (!sent) { if (!opts.quiet) toast(opts.editKey ? 'Message not edited. BetterChatango rejected it.' : 'Private message not sent.'); return false; }
+      if (!sent) { if (!opts.quiet) messageFailed('private_message', opts.editKey ? 'Message not edited.' : 'Private message not sent.'); return false; }
       update(function (d) { addSentPm(d, name, { from: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
       return true;
