@@ -48,7 +48,7 @@ function GroupInfoSheet(p) {
       h('h2', { className: 'grow' }, g.id),
       h(T.IconButton, { icon: 'x', label: 'Close', onClick: p.onClose })),
     h('div', { className: 'scroll' },
-      g.topic ? h('div', { className: 'kv' }, h('h3', null, 'Description'), h('p', { className: 'about' }, g.topic)) : null,
+      g.topic ? h('div', { className: 'kv' }, h('h3', null, 'Description'), h('p', { className: 'about', dir: 'auto' }, g.topic)) : null,
       h('div', { className: 'kv' }, h('h3', null, 'Members')),
       h(MembersList, { g: g })));
 }

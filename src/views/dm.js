@@ -111,6 +111,14 @@ function hitExcerpt(text, term) {
   return h(Frag, null, (start ? '…' : '') + text.slice(start, at), h('mark', null, text.slice(at, end)), text.slice(end));
 }
 /**
+ * "You:" label before the user's own message in a preview.
+ * @param {boolean} mine The user sent the message.
+ */
+function ownLabel(mine) {
+  // Isolated: dir="auto" on the preview reads the direction of the message, not of this label.
+  return mine ? h(Frag, null, h('bdi', null, 'You:'), ' ') : null;
+}
+/**
  * Messages section of the Chats search under the conversations.
  * The tabs do not filter it.
  * @param {{found: ?Object}} p Search read by useDmSearch, null while reading.
@@ -122,7 +130,7 @@ function DmSearchHits(p) {
   else if (!found.list.length) body = h('p', { className: 'pal-empty' }, 'No message matches.');
   else body = h(Frag, null, found.list.map(function (hit) {
     return h(MessageEntry, {
-      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, hit.from === me ? 'You: ' : '', hitExcerpt(hit.text, found.query)),
+      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, ownLabel(hit.from === me), hitExcerpt(hit.text, found.query)),
       onClick: function () { app.nav({ view: 'dm', id: hit.target, seek: hit }); }
     });
   }), found.more ? h('p', { className: 'pal-empty' }, 'Showing the ' + DM_SEARCH_MAX + ' most recent matches. Refine your search to see others.') : null);
@@ -331,7 +339,7 @@ function personRow(s, n, onClick, current) {
       h('span', { className: 'conv-name' }, n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(s, n),
-      c ? h('span', { className: 'conv-prev' }, last ? (last.from === s.me ? 'You: ' : '') + messagePreview(last) : 'No messages yet') : null,
+      c ? h('span', { className: 'conv-prev', dir: 'auto' }, last ? h(Frag, null, ownLabel(last.from === s.me), messagePreview(last)) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
 }
 

@@ -20,7 +20,7 @@ function MessageEntry(p) {
         h('span', { className: 'conv-name' }, p.name),
         h('time', { className: 'tc-msg-time', dateTime: new Date(p.ts).toISOString(), title: new Date(p.ts).toLocaleString('en-GB') }, entryTime(p.ts, h24))),
       p.meta ? h('span', { className: 'conv-meta' }, p.meta) : null,
-      h('span', { className: 'conv-about' }, p.text)));
+      h('span', { className: 'conv-about', dir: 'auto' }, p.text)));
 }
 
 function MentionsView() {

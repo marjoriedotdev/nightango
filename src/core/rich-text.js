@@ -89,11 +89,12 @@ function MessageText(p) {
   var app = useApp();
   // Hidden style (plain): like BetterChatango, bold, italic and underline drop but strikethrough stays.
   var marks = p.plain ? ['s'] : EMPHASIS;
+  // Names and links in dir="ltr": they stay whole in right-to-left text and do not set its direction.
   function mention(s, key) {
     var name = s.slice(1).toLowerCase();
     return ACCOUNT_NAME.test(name)
-      ? h('button', { key: key, type: 'button', className: 'tc-mention', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
-      : h('span', { key: key, className: 'tc-mention' }, s);
+      ? h('button', { key: key, type: 'button', className: 'tc-mention', dir: 'ltr', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
+      : h('span', { key: key, className: 'tc-mention', dir: 'ltr' }, s);
   }
   function inline(text) {
     return text.split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
@@ -101,12 +102,12 @@ function MessageText(p) {
       if (s.charAt(0) === '@' && s.length > 1) return mention(s, i);
       if (/^https?:\/\//.test(s)) {
         var profile = profileOfLink(s);
-        return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: profile ? onProfileLink(app, s, profile, p.gid || null) : warnOnLink(app, s) }, s);
+        return h('a', { key: i, href: s, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', dir: 'ltr', onClick: profile ? onProfileLink(app, s, profile, p.gid || null) : warnOnLink(app, s) }, s);
       }
       return s;
     });
   }
-  return h('p', { className: 'tc-msg-text', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {
+  return h('p', { className: 'tc-msg-text', dir: 'auto', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {
     var chunks = String(part.text).split(QUOTE);
     var nodes = chunks.map(function (s, i) {
       if (i % 3 === 0) return inline(s);
