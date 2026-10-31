@@ -200,7 +200,7 @@ function DmThread(p) {
       h(MenuButton, {
         label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
       })),
-    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: len, newBelow: 'follow', older: older }),
+    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom));
 }

@@ -1652,6 +1652,42 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('older private history loads by pages', JSON.stringify(rheaFirst.texts) === JSON.stringify(pages(100)) && !rheaFirst.start && !!rheaTop
     && JSON.stringify(rheaAll.texts) === JSON.stringify(pages(130)) && rheaAll.start, { first: rheaFirst.texts.length, firstStart: rheaFirst.start, observed: !!rheaTop, all: rheaAll.texts.length, head: rheaAll.texts.slice(0, 3), allStart: rheaAll.start });
 
+  /* Message log at the 500 cap: a new message keeps the length, yet a PM still brings a scrolled-up reader back and a group still shows New messages */
+  const capTexts = () => $$('.log .tc-msg-text').map(x => x.textContent);
+  // jsdom does not scroll: the log reads a reader scrolled up and records each scrollTop it sets.
+  const scrolledUp = () => {
+    const el = $('.log'), at = { top: -2000, writes: [] };
+    Object.defineProperty(el, 'scrollTop', { configurable: true, get: () => at.top, set: v => { at.writes.push(v); at.top = v; } });
+    el.dispatchEvent(new w.Event('scroll'));
+    return at;
+  };
+  const capPm = i => pm('msg', ['tess', 'marjorie', 'unknown', (1700020000 + i) + '.5', '0', '<n000/>Cap ' + i]);
+  capPm(0); await until(() => !!byText('.conv', 'tess'));
+  click(byText('.conv', 'tess')); await until(() => capTexts().length === 1);
+  for (let i = 1; i < 500; i++) capPm(i);
+  await until(() => capTexts().length === 500, 30000);
+  let reader = scrolledUp();
+  capPm(500); await until(() => capTexts().includes('Cap 500'));
+  const capReceived = { rows: capTexts().length, first: capTexts()[0], writes: reader.writes };
+  reader = scrolledUp();
+  type($('.thread .tc-composer textarea'), 'Cap reply'); key($('.thread .tc-composer textarea'), 'Enter'); await until(() => capTexts().includes('Cap reply'));
+  const capSent = { rows: capTexts().length, first: capTexts()[0], writes: reader.writes };
+  C.groups.capped = fakeGroup();
+  SB.renderGroup({ group: 'capped', header: 'Capped' });
+  g('ok', 'capped', ['dana', '', '', '', '1700000000', '', '', '0']);
+  for (let i = 0; i < 500; i++) g('i', 'capped', [(1700030000 + i) + '.1', 'Dana', '', 'u7', 'UNID7', 'C' + i + '=', '4.4.4.4', '0', '', '<n000/><f x11000="0">Full ' + i]);
+  g('inited', 'capped', []);
+  await until(() => !!byText('.tc-nav', 'capped'), 30000);
+  click(byText('.tc-nav', 'capped')); await until(() => capTexts().length === 500);
+  reader = scrolledUp();
+  g('b', 'capped', ['1700030500.1', 'Dana', '', 'u7', 'UNID7', 'tmp500', '4.4.4.4', '0', '', '<n000/><f x11000="0">Full 500']);
+  await until(() => capTexts().includes('Full 500'));
+  const capGroup = { rows: capTexts().length, first: capTexts()[0], button: !!byText('.jump', 'New messages'), writes: reader.writes };
+  step('a message log at the cap follows a new PM for a scrolled-up reader and announces a new group message',
+    JSON.stringify(capReceived) === JSON.stringify({ rows: 500, first: 'Cap 1', writes: [0] }) && JSON.stringify(capSent) === JSON.stringify({ rows: 500, first: 'Cap 2', writes: [0] })
+      && JSON.stringify(capGroup) === JSON.stringify({ rows: 500, first: 'Full 1', button: true, writes: [] }),
+    { capReceived, capSent, capGroup });
+
   /* Private history import: only valid records of this account are written, as read, without overwriting an existing key */
   const chooseFile = (text, sel = 'input[type="file"]') => {
     const input = $(sel);
