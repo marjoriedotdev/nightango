@@ -153,7 +153,17 @@ function settleGiven(v, scope) {
  * A scan that only reads goes through it: a draft for each element would cost more than the scan. Its elements are changed through the draft only.
  * @param {*} v Draft or value.
  */
-function plainOf(v) { var n = isObj(v) && v[DRAFT]; return n ? n.copy || n.base : v; }
+function plainOf(v) {
+  var n = isObj(v) && v[DRAFT];
+  if (!n) return v;
+  var src = n.copy || n.base, out = src, k, c;
+  // A child changed through the draft holds its changes in its own copy until the state is built: its draft reads them.
+  for (k in n.children) {
+    c = n.children[k];
+    if (c.copy && src[k] === c.base) { if (out === src) out = shallowCopy(src); out[k] = c.proxy; }
+  }
+  return out;
+}
 /**
  * Opens a draft of a state: changed like the state, it copies only the objects a change reaches, from the changed one up to the root.
  * @param {Object} base State the draft starts from, never changed.

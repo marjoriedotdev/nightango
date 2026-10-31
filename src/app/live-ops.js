@@ -25,6 +25,28 @@ function useBridgeOps(handle, loggedIn) {
 }
 
 /**
+ * Adds a message of a history page to its group without sorting it: the page sorts each group it fills once.
+ * @param {Object} d State being modified.
+ * @param {{gid: string, msg: Object}} op History operation.
+ * @param {Object} local Account data kept in this browser.
+ * @returns {boolean} True if the message joined the message log, false for a message already there or an edit applied to its original.
+ */
+function addHistory(d, op, local) {
+  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style;
+  var g = ensureLiveGroup(d, op.gid, local), u = ensureLiveUser(d, hm.author, local);
+  mergeStyle(u, hs, hm.ts);
+  if (plainOf(g.messages).some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return false;
+  var o = editTarget(g, hm);
+  // History received from newest to oldest: like BetterChatango, an original already edited keeps its text.
+  if (o) { applyGroupEdit(o, hm, o.edited); return false; }
+  if (hm.editId) hm.edited = true;
+  else { delete hm.editId; mergeEdits(g, hm); }
+  g.messages.push(withReply(g, hm));
+  logMention(d, op.gid, hm);
+  return true;
+}
+
+/**
  * Applies the bridge operations to the state in live.
  * @param {{store: Object, toast: Function, inbox: Object, actions: Object, local: Object, reconnection: Object, pms: Object}} k
  *   Application state with its ref and update, notifications, inbox (useInbox), actions (useActions), account data kept in this browser (useLocalStore),
@@ -35,6 +57,24 @@ function useLiveOps(k) {
   var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, notify = k.inbox.notify, receiveGroup = k.inbox.receiveGroup;
   var actions = k.actions, local = k.local, localRef = k.local.ref, reconnection = k.reconnection, pms = k.pms;
   var offlineCount = useRef(0);
+  // History operations held for the animation frame: Chatango sends a page one frame per message.
+  var page = useRef([]);
+  /** Adds the history messages held since the last animation frame or operation in one update, with one sort and one trim of each group. */
+  function applyPage() {
+    var ops = page.current;
+    if (!ops.length) return;
+    page.current = [];
+    update(function (d) {
+      if (!d.auth.loggedIn) return;
+      var filled = {};
+      ops.forEach(function (op) { if (addHistory(d, op, localRef.current)) filled[op.gid] = true; });
+      Object.keys(filled).forEach(function (gid) {
+        var g = d.groups[gid];
+        g.messages.sort(function (a, b) { return a.ts - b.ts; });
+        trimThread(g);
+      });
+    });
+  }
   function handleLiveOp(op) {
     switch (op.op) {
       case 'login': {
@@ -86,25 +126,10 @@ function useLiveOps(k) {
         receiveGroup(op.gid, m);
         break;
       }
-      case 'hist': {
-        var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style;
-        update(function (d) {
-          if (!d.auth.loggedIn) return;
-          var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, hm.author, localRef.current);
-          mergeStyle(u, hs, hm.ts);
-          if (plainOf(g.messages).some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return;
-          var o = editTarget(g, hm);
-          // History received from newest to oldest: like BetterChatango, an original already edited keeps its text.
-          if (o) { applyGroupEdit(o, hm, o.edited); return; }
-          if (hm.editId) hm.edited = true;
-          else { delete hm.editId; mergeEdits(g, hm); }
-          g.messages.push(withReply(g, hm));
-          g.messages.sort(function (a, b) { return a.ts - b.ts; });
-          trimThread(g);
-          logMention(d, op.gid, hm);
-        });
+      case 'hist':
+        if (!page.current.length) k.store.atFrame(applyPage);
+        page.current.push(op);
         break;
-      }
       case 'msgid': groupUpdate(update, op.gid, function (g, d) {
         plainOf(g.messages).forEach(function (x, i) {
           if (x.id === op.tmp) g.messages[i].id = op.id;
@@ -301,5 +326,11 @@ function useLiveOps(k) {
     }
   }
   // The operations of one animation frame make one render: a history page or a burst of presence included.
-  useBridgeOps(function (op) { k.store.inAnimationFrame(function () { handleLiveOp(op); }); }, k.store.state.auth.loggedIn);
+  useBridgeOps(function (op) {
+    k.store.inAnimationFrame(function () {
+      // An operation after a held page reads it in the state, like the deletion or the final id of one of its messages.
+      if (op.op !== 'hist') applyPage();
+      handleLiveOp(op);
+    });
+  }, k.store.state.auth.loggedIn);
 }

@@ -218,18 +218,24 @@ const show = async t => { t.paint(); await nextTask(); };
   step('a burst of messages renders only the new rows', burst.rows <= BURST + 2, burst);
   step('a burst of messages stays within ' + MS_PER_OP + ' ms per operation', perOp < MS_PER_OP, burst);
 
-  /* A history page arrives together: one update */
+  /* A history page arrives together: one update, one sort of its group */
   t.reset();
   const s2 = t.state();
+  // Sorts of a message list: the frames of a page come one by one, the page is sorted once.
+  let sorts = 0;
+  const sort0 = t.w.Array.prototype.sort;
+  t.w.Array.prototype.sort = function () { if (this.length > 100 && this[0] && typeof this[0].ts === 'number') sorts++; return sort0.apply(this, arguments); };
   start = Date.now();
   const oldest = s2.groups.busy3.messages[0].ts / 1000;
   for (let k = 0; k < 50; k++) t.group('i', 'busy3', msgFrame('m3x' + (k % AUTHORS), 'hist' + k, oldest - (k + 1) * 30, 'Earlier ' + k));
   await show(t);
   perOp = (Date.now() - start) / 50;
+  t.w.Array.prototype.sort = sort0;
   await wait(50);
   const s3 = t.state(), page3 = s3.groups.busy3.messages;
-  const history = { roots: t.count('Root'), rows: t.count('MessageRow'), length: page3.length, sorted: page3.every((m, i) => !i || page3[i - 1].ts <= m.ts), shown: s3.groups.busy0 === s2.groups.busy0, users: s3.users === s2.users, perOp };
-  step('a history page applies in one update without touching the shown group', history.roots === 1 && history.rows === 0 && history.length === 350 && history.sorted && history.shown && history.users, history);
+  const history = { roots: t.count('Root'), rows: t.count('MessageRow'), sorts, length: page3.length, sorted: page3.every((m, i) => !i || page3[i - 1].ts <= m.ts), shown: s3.groups.busy0 === s2.groups.busy0, users: s3.users === s2.users, perOp };
+  step('a history page applies in one update with one sort, without touching the shown group',
+    history.roots === 1 && history.rows === 0 && history.sorts <= 1 && history.length === 350 && history.sorted && history.shown && history.users, history);
   step('a history page stays within ' + MS_PER_HISTORY_OP + ' ms per operation', perOp < MS_PER_HISTORY_OP, history);
 
   /* Presence: no message row renders again */

@@ -16,14 +16,25 @@ function fetchLatestVersion() {
 /**
  * Store of the application state: each update applies at once to a draft of the latest state, and the interface shows the result right away,
  * or on the next animation frame for the updates made in inAnimationFrame, so that the operations of one animation frame make one render.
+ * The work held with atFrame runs on that animation frame, before the state is shown.
  * @param {Object} initial First state.
- * @returns {{shown: function(): Object, subscribe: Function, ref: {current: Object}, update: function(function(Object)), inAnimationFrame: function(Function)}}
- *   State shown by the interface and its subscription, ref to the latest state, update, and scope whose updates wait for the next animation frame.
+ * @returns {{shown: function(): Object, subscribe: Function, ref: {current: Object}, update: function(function(Object)), inAnimationFrame: function(Function), atFrame: function(Function)}}
+ *   State shown by the interface and its subscription, ref to the latest state, update, scope whose updates wait for the next animation frame,
+ *   and work held until it.
  */
 function appStore(initial) {
-  var ref = { current: initial }, shown = initial, batched = 0, pending = null, listeners = [];
-  function flush() {
+  var ref = { current: initial }, shown = initial, batched = 0, pending = null, held = [], listeners = [];
+  function cancel() {
     if (pending) { if (pending.frame) cancelAnimationFrame(pending.frame); else clearTimeout(pending.timer); pending = null; }
+  }
+  function flush() {
+    cancel();
+    var work = held;
+    held = [];
+    batched++;
+    try { work.forEach(function (fn) { fn(); }); } finally { batched--; }
+    // The updates of the held work asked for a frame of their own: they show with this one.
+    cancel();
     if (ref.current === shown) return;
     shown = ref.current;
     listeners.slice().forEach(function (l) { l(); });
@@ -50,6 +61,10 @@ function appStore(initial) {
     inAnimationFrame: function (fn) {
       batched++;
       try { fn(); } finally { batched--; }
+    },
+    atFrame: function (fn) {
+      held.push(fn);
+      schedule();
     }
   };
 }
@@ -57,8 +72,9 @@ function appStore(initial) {
 /**
  * Application state, with a ref to the latest state that handlers read and its update.
  * @param {?Object} boot State handed by the prototype hook.
- * @returns {{state: Object, stateRef: Object, update: function(function(Object)), inAnimationFrame: function(Function), store: Object}}
- *   State of this render, ref to the latest state, update, scope whose updates wait for the next animation frame, and the store (appStore).
+ * @returns {{state: Object, stateRef: Object, update: function(function(Object)), inAnimationFrame: function(Function), atFrame: function(Function), store: Object}}
+ *   State of this render, ref to the latest state, update, scope whose updates wait for the next animation frame, work held until it,
+ *   and the store (appStore).
  */
 function useAppState(boot) {
   var store = useState(function () { return appStore(boot && boot.auth ? boot : initialState()); })[0];
@@ -69,7 +85,7 @@ function useAppState(boot) {
     if (hot && hot.snapshot) hot.snapshot(function () { return { state: store.ref.current }; });
   }, []);
   /*END PROTOTYPE*/
-  return { state: state, stateRef: store.ref, update: store.update, inAnimationFrame: store.inAnimationFrame, store: store };
+  return { state: state, stateRef: store.ref, update: store.update, inAnimationFrame: store.inAnimationFrame, atFrame: store.atFrame, store: store };
 }
 
 /**
