@@ -165,7 +165,7 @@ var SAMPLE_TIKTOK_THUMB = 'data:image/svg+xml;charset=utf-8,' + encodeURICompone
 var SAMPLE_X_POST = {
   id: '463440424141459456',
   card: {
-    author: 'U.S. Department of the Interior', handle: 'Interior', date: 'May 5, 2014', link: 'https://x.com/Interior/status/463440424141459456',
+    author: 'U.S. Department of the Interior', handle: 'Interior', date: 'May 5, 2014', time: Date.parse('2014-05-05T22:09:42Z'), avatar: null, link: 'https://x.com/Interior/status/463440424141459456',
     text: "Sunsets don't get much better than this one over @GrandTetonNPS. #nature #sunset",
     media: {
       kind: 'photo', width: 960, height: 541, sensitive: false,

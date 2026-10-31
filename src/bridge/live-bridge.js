@@ -1376,10 +1376,12 @@ var liveBridge = (function () {
     /**
      * Reads an X post through the userscript bridge: its oEmbed text and its first media.
      * @param {string} url X post link.
-     * @returns {Promise<Object>} Author, handle, text, date and link of the post, and its media if X gives one, rejected with the text to show.
+     * @returns {Promise<Object>} Author, handle, text, date and link of the post, and its author picture, time and media if X gives them, rejected with the text to show.
      */
     xPost: function (url) {
-      return askLoader('x', { url: url }).then(function (r) { return { author: r.author, handle: r.handle, text: r.text, date: r.date, link: r.link, media: r.media || null }; });
+      return askLoader('x', { url: url }).then(function (r) {
+        return { author: r.author, handle: r.handle, text: r.text, date: r.date, link: r.link, avatar: r.avatar || null, time: r.time || null, media: r.media || null };
+      });
     },
     /**
      * Uploads a file to vissle like the BetterChatango Upload dialog without BetterChatango posting its link.

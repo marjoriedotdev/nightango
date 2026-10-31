@@ -277,13 +277,22 @@ function XPostEmbed(p) {
   return h(RevealButton, { icon: 'quote', label: loading ? 'Loading post' : 'Show post', url: p.url, onClick: loading ? null : show });
 }
 
+/**
+ * X post laid out like X shows it: author, logo, text, first media, then the time of the post.
+ * Without the time from X's syndication, the date of the oEmbed shows instead.
+ * @param {Object} p.post Post read by the loader.
+ */
 function XPostCard(p) {
   var app = useApp(), post = p.post;
+  var when = post.time ? fmtTime(post.time, app.state.prefs.h24) + ' \u00b7 ' + new Date(post.time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : post.date;
   return h('div', { className: 'embed-x' },
-    h('div', { className: 'embed-x-head' }, h('span', { className: 'embed-x-author' }, post.author), h('span', null, '@' + post.handle)),
+    h('div', { className: 'embed-x-head' },
+      h(T.Avatar, { name: post.handle, src: post.avatar, size: 40, referrerPolicy: 'no-referrer' }),
+      h('div', { className: 'embed-x-who' }, h('span', { className: 'embed-x-author' }, post.author), h('span', { className: 'embed-x-handle' }, '@' + post.handle)),
+      mediaLink(app, post.link, 'embed-x-logo', h(T.Icon, { name: 'x', size: 18, label: 'Open on X' }))),
     post.text ? h('p', { className: 'embed-x-text' }, post.text) : null,
     post.media ? h(XPostMedia, { media: post.media, link: post.link }) : null,
-    h('div', { className: 'embed-x-foot' }, h('span', null, post.date), mediaLink(app, post.link, 'embed-x-open', 'Open on X')));
+    mediaLink(app, post.link, 'embed-x-date', post.time ? h('time', { dateTime: new Date(post.time).toISOString() }, when) : when));
 }
 
 /**

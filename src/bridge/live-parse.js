@@ -24,8 +24,8 @@ var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|
 // TikTok post or short link: the embed player needs the post id, which only the redirect of a short link gives.
 var TIKTOK_POST = /^https?:\/\/(?:www\.|m\.)?tiktok\.com\/@[\w.-]+\/(?:video|photo)\/(\d+)/;
 var TIKTOK_SHORT = /^https?:\/\/((?:vm|vt)\.tiktok\.com|(?:www\.)?tiktok\.com\/t)\/([\w-]+)/;
-// X post link on the hosts of X's oEmbed documentation, without the mirrors (fxtwitter, vxtwitter...).
-var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/\w{1,15}\/status\/(\d{1,20})/;
+// X post link, on X or a mirror that the loader turns back into an X link.
+var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter|fxtwitter|vxtwitter|fixupx|fixvx)\.com\/\w{1,15}\/status\/(\d{1,20})/;
 // Like BetterChatango renderMessage: only a ▓…▒ pair becomes a strikethrough, a lone marker stays text.
 var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
 // Like BetterChatango crawl (inject.js:1112): an http media loads over https, one on fp.chatango.com loads from ust.chatango.com.

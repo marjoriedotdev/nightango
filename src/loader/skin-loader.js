@@ -81,9 +81,11 @@
     });
   });
 
-  /* Bridge to X: the oEmbed of a post and its first media, which the page cannot read across origins. */
+  /* Bridge to X: the oEmbed of a post, its author picture, time and first media, which the page cannot read across origins. */
   // Any script of the page can send this event: only a post link goes out, rebuilt here, and only the fields of the card come back.
-  var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/(\w{1,15})\/status\/(\d{1,20})/;
+  // Mirrors (fxtwitter, vxtwitter, fixupx, fixvx) are only read for the post: the call goes to X, never to them.
+  var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter|fxtwitter|vxtwitter|fixupx|fixvx)\.com\/(\w{1,15})\/status\/(\d{1,20})/;
+  var X_AVATAR = /^https:\/\/pbs\.twimg\.com\/profile_images\/[^\s"'<>]+_normal\.\w+$/;
   var X_AUTHOR = /^https:\/\/(?:x|twitter)\.com\/(\w{1,15})$/;
   var X_IMAGE = /^https:\/\/pbs\.twimg\.com\/[^\s"'<>]+$/, X_VIDEO = /^https:\/\/video\.twimg\.com\/[^\s"'<>]+$/;
   // Up to 720p: the card is 420 pixels wide and the 1080p variant weighs about five times more.
@@ -98,6 +100,13 @@
     // pic.twitter.com links stand for the media, which the card shows or X opens.
     [].forEach.call(p.querySelectorAll('a'), function (a) { if (/^pic\.(?:twitter|x)\.com\//.test(a.textContent)) a.remove(); });
     return { text: p.textContent.trim(), date: dates.length ? dates[dates.length - 1].textContent.trim() : '' };
+  }
+  // Author picture in the 73 pixel size, sharp in a 40 pixel avatar, and exact time of the post.
+  function xAuthor(t) {
+    var out = {}, pic = (t.user && t.user.profile_image_url_https) || '', time = Date.parse(t.created_at);
+    if (X_AVATAR.test(pic)) out.avatar = pic.replace(/_normal(\.\w+)$/, '_bigger$1');
+    if (isFinite(time)) out.time = time;
+    return out;
   }
   function xMedia(t) {
     var m = t.mediaDetails && t.mediaDetails[0], o = m && m.original_info;
@@ -115,13 +124,12 @@
   document.addEventListener('torch-skin:x-request', function (e) {
     var q = JSON.parse(e.detail), post = X_POST.exec(q.url);
     if (!post) { reply('x', q.id, { error: 'X did not share this post. Open the link instead.' }); return; }
-    var link = 'https://x.com/' + post[1] + '/status/' + post[2], card = null, media = null, error = null, left = 2;
+    var link = 'https://x.com/' + post[1] + '/status/' + post[2], card = null, extra = {}, error = null, left = 2;
     // The card waits for both replies: the media is a bonus, the text decides.
     function done() {
       if (--left) return;
       if (!card) { reply('x', q.id, { error: error }); return; }
-      if (media) card.media = media;
-      reply('x', q.id, card);
+      reply('x', q.id, Object.assign(card, extra));
     }
     GM_xmlhttpRequest({
       method: 'GET', url: 'https://publish.x.com/oembed?url=' + encodeURIComponent(link) + '&omit_script=true&dnt=true&hide_thread=true', anonymous: true, timeout: 15000,
@@ -140,7 +148,11 @@
       method: 'GET', url: 'https://cdn.syndication.twimg.com/tweet-result?id=' + post[2] + '&lang=en&token=' + xToken(post[2]), anonymous: true, timeout: 15000,
       onload: function (r) {
         // Undocumented reply: if X changes it, the card shows without media.
-        try { media = r.status === 200 ? xMedia(JSON.parse(r.responseText)) : null; } catch (x) { media = null; }
+        try {
+          var t = r.status === 200 ? JSON.parse(r.responseText) : null, media = t && xMedia(t);
+          if (t) extra = xAuthor(t);
+          if (media) extra.media = media;
+        } catch (x) { extra = {}; }
         done();
       },
       onerror: done, ontimeout: done

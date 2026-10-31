@@ -224,13 +224,14 @@ d.addEventListener('torch-skin:tiktok-request', e => {
 
 // X bridge of the simulated userscript: post ...1 has a video, post ...2 a sensitive photo, any other one fails.
 const xReqs = [];
+const X_AVATAR = 'https://pbs.twimg.com/profile_images/1/clown_bigger.jpg', X_TIME = Date.UTC(2026, 9, 31, 12, 34);
 const X_THUMB = 'https://pbs.twimg.com/media/', X_VIDEO = 'https://video.twimg.com/ext_tw_video/1/pu/vid/1280x720/a.mp4';
 d.addEventListener('torch-skin:x-request', e => {
   const q = JSON.parse(e.detail), id = q.url.split('/status/')[1].split(/[?#]/)[0];
   xReqs.push(id);
   const media = id.endsWith('1') ? { kind: 'video', thumb: X_THUMB + id + '.jpg', video: X_VIDEO, width: 1280, height: 720, sensitive: false }
     : id.endsWith('2') ? { kind: 'photo', thumb: X_THUMB + id + '.jpg', width: 800, height: 600, sensitive: true } : null;
-  const out = media ? { author: 'Clown', handle: 'clown', text: 'Post ' + id + '\nsecond line', date: 'Oct 31, 2026', link: 'https://x.com/clown/status/' + id, media } : { error: 'X could not be reached. Open the link instead.' };
+  const out = media ? { author: 'Clown', handle: 'clown', text: 'Post ' + id + '\nsecond line', date: 'Oct 31, 2026', link: 'https://x.com/clown/status/' + id, media, avatar: X_AVATAR, time: X_TIME } : { error: 'X could not be reached. Open the link instead.' };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:x-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
 
@@ -947,7 +948,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* X: buttons under proxyMedia, cards read once when media are not blocked, video and sensitive photo on click, failure asked again at the click then turned back into a link */
   const X_IDS = ['1700000000000000001', '1700000000000000002', '1700000000000000009'];
-  const X_LINKS = ['https://x.com/clown/status/' + X_IDS[0], 'https://twitter.com/clown/status/' + X_IDS[1] + '?s=20', 'https://mobile.twitter.com/clown/status/' + X_IDS[2]];
+  const X_LINKS = ['https://fxtwitter.com/clown/status/' + X_IDS[0] + '?a=lAo9&s=19', 'https://twitter.com/clown/status/' + X_IDS[1] + '?s=20', 'https://mobile.twitter.com/clown/status/' + X_IDS[2]];
   g('b', 'test', ['1700000300.7', 'Eve', '', 'u7', 'UNID7', 'tmpx', '9.9.9.9', '0', '', '<n000/><f x11000="0">Posts ' + X_LINKS.join(' ')]);
   const xRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent === 'Posts'); return p && p.closest('article'); };
   await until(() => !!xRow());
@@ -959,7 +960,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     asked: xReqs.slice().sort(), embeds: xEmbeds(),
     text: [...xRow().querySelectorAll('.embed-x-text')].map(x => x.textContent),
     poster: [...xRow().querySelectorAll('.embed-x-poster img')].map(x => x.getAttribute('src')), videos: xRow().querySelectorAll('video').length,
-    photos: xRow().querySelectorAll('a.embed-x-media img').length, sensitive: !!byText('.embed-reveal', 'Show sensitive media')
+    photos: xRow().querySelectorAll('a.embed-x-media img').length, sensitive: !!byText('.embed-reveal', 'Show sensitive media'),
+    avatars: [...xRow().querySelectorAll('.embed-x-head .tc-avatar-img')].map(x => x.getAttribute('src') + ' ' + x.getAttribute('referrerpolicy')),
+    logos: [...xRow().querySelectorAll('a.embed-x-logo')].map(a => a.getAttribute('href') + ' ' + a.querySelector('svg').getAttribute('aria-label')),
+    times: [...xRow().querySelectorAll('a.embed-x-date time')].map(t => t.getAttribute('datetime') + ' ' + / \u00b7 31 Oct 2026$/.test(t.textContent))
   };
   click(xRow().querySelector('.embed-x-poster'));
   click(byText('.embed-reveal', 'Show sensitive media'));
@@ -975,13 +979,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const xOff = [...xRow().querySelectorAll('.embeds > a')].map(a => a.getAttribute('href'));
   await toggle('Safety', 'Embed X posts');
   const X_REVEALS = Array(3).fill('embed-reveal');
-  step('x cards: read once when media are not blocked, video and sensitive photo on click, failure turned back into a link',
+  step('x cards: mirrors included, read once when media are not blocked, video and sensitive photo on click, failure turned back into a link',
     JSON.stringify(xBefore) === JSON.stringify({ asked: [], embeds: X_REVEALS })
-      && JSON.stringify(xOpen) === JSON.stringify({ asked: X_IDS, embeds: ['embed-x', 'embed-x', 'embed-reveal'], text: X_IDS.slice(0, 2).map(id => 'Post ' + id + '\nsecond line'), poster: [X_THUMB + X_IDS[0] + '.jpg'], videos: 0, photos: 0, sensitive: true })
+      && JSON.stringify(xOpen) === JSON.stringify({ asked: X_IDS, embeds: ['embed-x', 'embed-x', 'embed-reveal'], text: X_IDS.slice(0, 2).map(id => 'Post ' + id + '\nsecond line'), poster: [X_THUMB + X_IDS[0] + '.jpg'], videos: 0, photos: 0, sensitive: true, avatars: Array(2).fill(X_AVATAR + ' no-referrer'), logos: X_IDS.slice(0, 2).map(id => 'https://x.com/clown/status/' + id + ' Open on X'), times: Array(2).fill(new Date(X_TIME).toISOString() + ' true') })
       && JSON.stringify(xPlayed) === JSON.stringify({ video: [X_VIDEO, true, true], photo: ['https://x.com/clown/status/' + X_IDS[1], X_THUMB + X_IDS[1] + '.jpg'] })
       && JSON.stringify(xBlocked) === JSON.stringify(X_REVEALS)
       && JSON.stringify(xAfter) === JSON.stringify({ asked: X_IDS.concat(X_IDS[2]), embeds: ['embed-x', 'embed-x', 'msg-link'], toast: true })
-      && JSON.stringify(xOff) === JSON.stringify(['https://x.com/clown/status/' + X_IDS[0], 'https://twitter.com/clown/status/' + X_IDS[1], 'https://mobile.twitter.com/clown/status/' + X_IDS[2]]),
+      && JSON.stringify(xOff) === JSON.stringify(['https://fxtwitter.com/clown/status/' + X_IDS[0], 'https://twitter.com/clown/status/' + X_IDS[1], 'https://mobile.twitter.com/clown/status/' + X_IDS[2]]),
     { xBefore, xOpen, xPlayed, xBlocked, xAfter, xOff, xReqs });
 
   /* Trusted host (BetterChatango list): under proxyMedia, only its image shows without a click, the host parsed like the browser does */
