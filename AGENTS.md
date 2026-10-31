@@ -86,6 +86,8 @@ The CI refuses a `-beta` `@version` on `main` and in any pull request to `main`.
 
 ## Agent skills
 
+The skills of the `mattpocock-skills` plugin (MIT, `.claude/skills/LICENSE`) are copied unchanged into `.claude/skills/`, from `mattpocock/skills` at commit `4ae2317`. To update them, copy the folders listed in its `.claude-plugin/plugin.json` again.
+
 ### Issue tracker
 
 Issues on GitHub, public repository `marjoriedotdev/nightango`, through the `gh` CLI. See `docs/agents/issue-tracker.md`.
@@ -97,3 +99,7 @@ The five triage roles under their default name (`needs-triage`, `needs-info`, `r
 ### Domain docs
 
 Single-context: `GLOSSARY.md` and `docs/adr/` at the root. See `docs/agents/domain.md`.
+
+### Pull requests
+
+Write the body of every pull request with the `pr` skill (`.claude/skills/pr/SKILL.md`): Summary, Evidence, Merge Danger. Evidence is the `pnpm test` output, plus a screenshot of the prototype when the change is visual. Merge Danger states whether the change reaches the user's Chatango account once shipped.
