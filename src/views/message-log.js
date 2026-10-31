@@ -33,6 +33,15 @@ function useMessageLog() {
 }
 
 /**
+ * Returns the change key of a message log for its messages.
+ * @param {Array} messages Messages of the log, sorted.
+ */
+function logChangeKey(messages) {
+  // At THREAD_MAX a new message keeps the length: the first message, which it pushes out, tells the change instead.
+  return messages.length + ':' + (messages.length ? messages[0].id : '');
+}
+
+/**
  * Message log of a group or a PM.
  * It follows the bottom while the reader is there, keeps the reading position elsewhere and loads older pages at the top.
  * @param {{log: Object, label: string, rows: Array, firstTs: ?number, changeKey: *, newBelow: string, older: ?Object}} p Driver (useMessageLog), accessible name,

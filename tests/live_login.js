@@ -2,7 +2,8 @@ const { JSDOM } = require('jsdom');
 const { concatSources, layerSources } = require('../scripts/build.mjs');
 const live = concatSources(process.argv[2], layerSources('bridge'));
 function run(label, setup) {
-  const dom = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only' });
+  // BetterChatango's client document holds its PM tab from the start (inject.js:10601).
+  const dom = new JSDOM('<!doctype html><body><span data-sidebar="private"></span></body>', { runScripts: 'outside-only' });
   const w = dom.window;
   let shown = 0;
   w.__TORCH_LIVE__ = true;

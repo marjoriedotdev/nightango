@@ -17,12 +17,13 @@ src/
                      Person (avatar and name that open the profile), role and "You" badges, list presence,
                      useRightColumn (single 1180 px threshold: right column above, full screen below)
     rich-text.js     MessageText (emphasis, quotes, mentions, links), shownParts (shown text without the links shown as a media), trusted hosts (isTrustedUrl), RichText (sanitized mini profile), fullProfileDoc
-    selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry
+    selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry,
+                     message cap of a group or a conversation (THREAD_MAX, trimThread)
   bridge/     the bridge to BetterChatango
     live-model.js    LIVE, JOURNAL, avatarSrc (and photo version of one's own account), vissle pagination, Chatango bits (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      emoticon table (EMOTICONS)
     live-parse.js    pure bridge functions: message content (parseContent, media), group frames,
-                     Premium background (parseMiniCss, background form), updateprofile response, message background (parseMsgBg), linked accounts (parseWho), presence, timestamps,
+                     Premium background (parseMiniCss, background form), allowed client.post calls (postRefusal), updateprofile response, message background (parseMsgBg), vissle activity replies (parseVisits), linked accounts (parseWho), presence, timestamps,
                      message references, private history records (reading, sorting an import),
                      media library entries (validation, page order, sorting an import)
     live-bridge.js   liveBridge: incoming and outgoing frames, warnings, connections,
@@ -99,14 +100,14 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 - Header: `@match https://st.chatango.com/*`, `@noframes`, `@grant GM_xmlhttpRequest`, `@connect vissle.me`, `@connect tiktok.com`, `@run-at document-idle`.
 - The loader stops outside the home page (`window.top !== window` or `pathname !== '/'`): st.chatango.com also serves the chat windows embedded in other sites.
 - The page code is injected by a `<script>` whose `textContent` is an ASCII-only JSON string literal. It is never parsed as HTML.
-- Only the vissle and TikTok bridges run in the sandbox. The page sends them its requests through `askLoader` (`live-bridge.js`), which matches the replies by id. The vissle bridge reads the queried profile from `client.user.name` through an inline probe injected on each request, which returns it through a synchronous `CustomEvent` (`torch-skin:account`), and ignores the one the page would ask for. No `unsafeWindow`: Userscripts (Safari) does not provide it ([ADR-0005](adr/0005-visitors-own-profile-only.md)). The TikTok bridge accepts only a short TikTok link, which it rebuilds, and replies with the post id only ([ADR-0014](adr/0014-tiktok-embed.md)).
+- Only the vissle and TikTok bridges run in the sandbox. The page sends them its requests through `askLoader` (`live-bridge.js`), which matches the replies by id, ignores a reply that is not JSON or matches no request, and rejects a request that gets no reply in time, as with a userscript manager without `GM_xmlhttpRequest`. Its wait outlasts the loader's own `GM_xmlhttpRequest` timeout, whose reply says more. Any script of the page can send a request: each bridge reads only a JSON object with a string id and the fields it expects, and answers any other request with an error, without a call. The vissle bridge accepts only the `page`, `order` and `get` values the Visitors screen sends (`docs/betterchatango-protocol.md`, Profile activity). It reads the queried profile from `client.user.name` through an inline probe injected on each request, which returns it through a synchronous `CustomEvent` (`torch-skin:account`), and ignores the one the page would ask for. No `unsafeWindow`: Userscripts (Safari) does not provide it ([ADR-0005](adr/0005-visitors-own-profile-only.md)). The TikTok bridge accepts only a short TikTok link, which it rebuilds, and replies with the post id only ([ADR-0014](adr/0014-tiktok-embed.md)).
 - `skin-page.js` protects itself from a double start (`window.__TORCH_SKIN__`), sets up the diagnostic journal (`skin-journal.js`, in place of `/*JOURNAL*/`) before any BetterChatango socket, watches for the BetterChatango sign-in screen, adds the BetterChatango startup script, loads React and ReactDOM from cdnjs with SRI, waits for BetterChatango's global objects, then mounts the interface.
 - If the startup fails, the original BetterChatango client stays in place.
 
 ## Diagnostic journal
 
 - `skin-journal.js` wraps the `WebSocket` constructor and the console, listens to the page lifecycle and to errors, and keeps the last 1,000 events in `localStorage` under `torch-skin:journal`. What it keeps and never keeps: [ADR-0011](adr/0011-diagnostic-journal.md).
-- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. The bridge records its connections and BetterChatango's warnings in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
+- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. The bridge records its connections, BetterChatango's warnings, the requests its post helper refuses and a refused save of the unread migration flag in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
 
 ## Mounting and display
 
@@ -175,12 +176,13 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `smoke`: hosted prototype, loaded from `dist/nightango.html`.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
 - `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
-- `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
+- `pm`: PM unreads, private history reading, merge, import and pages up to the cap, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
 - `live_login`: sign-in detection, on the concatenation of the sources of `src/bridge/`.
 - `avatar`: avatars, on the design system bundle and the sources of `src/bridge/`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.
+- `allowed_calls`: every `fetch`, `client.post` and `GM_xmlhttpRequest` call site, the `@grant` and `@connect` of the userscript and the `credential` option, against the closed list of `docs/betterchatango-protocol.md` (Allowed HTTP calls), on the sources of `src/`.
 
 Test policy: [ADR-0009](adr/0009-test-only-complex-behaviour.md) and `docs/coding-conventions.md`.
 

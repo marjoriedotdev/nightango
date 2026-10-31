@@ -1,5 +1,4 @@
 /* ---------- Root ---------- */
-var THREAD_MAX = 500;
 var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
 // Chatango pushes no presence for a correspondent who is neither a friend nor connected since the last private connection.
@@ -153,12 +152,6 @@ function Root(props) {
     }
   }
 
-  function trimThread(g) {
-    if (g.messages.length <= THREAD_MAX) return;
-    g.messages.splice(0, g.messages.length - THREAD_MAX);
-    // The BetterChatango get_more counter ignores the trim: resuming would skip the removed messages.
-    g.historyCapped = true;
-  }
   /**
    * Records for the Mentions page a group message that mentions the user with the newest first.
    * @param {Object} d State being modified.
@@ -290,10 +283,9 @@ function Root(props) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
       update(function (d) { addSentPm(d, name, { from: me, key: uid(), replyId: replyKey, editId: opts.editKey, text: (opts.quote || '') + text, ts: Date.now() }); });
-      if (opts.editKey) return;
       var u = userOf(stateRef.current, name);
-      if (u.status === 'offline' || u.blocked) return;
-      setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
+      if (!opts.editKey && u.status !== 'offline' && !u.blocked) setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
+      return true;
     },
     openDm: function (name, tab) { update(function (d) { pmConversation(d, name); }); nav({ view: 'dm', id: name, tab: tab }); },
     loadProfile: function () { /* prototype: profiles already present in the sample data */ },
@@ -360,6 +352,7 @@ function Root(props) {
           var t = lower(r.target), c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now() });
           c.messages.push(pmMessage(pmRecordEntry(r)));
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
+          trimThread(c);
         });
       });
       return Promise.resolve({ added: added.length, saved: screened.valid.length - added.length, skipped: screened.skipped, foreign: screened.foreign });
@@ -622,16 +615,22 @@ function Root(props) {
     update(function (d) { d.groups[gid][key] = on; });
   }
   /**
+   * Shows that a message did not leave and what to do next.
+   * @param {string} gid Group or private_message.
+   * @param {string} outcome What did not happen, such as Message not sent.
+   */
+  function messageFailed(gid, outcome) { toast(outcome + ' ' + (liveBridge.closedHint(gid) || 'BetterChatango rejected it.')); }
+  /**
    * Sends a group message built by BetterChatango with the own style and keeps its style.
    * @param {string} gid Target group.
    * @param {string} text Typed text.
    * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string}} opts Reply, edited original or quote, and channel.
-   * @param {?string} failure Toast shown if nothing was sent, null when the caller announces it itself.
+   * @param {?string} outcome What did not happen, shown if nothing was sent, null when the caller announces it itself.
    * @returns {boolean} True if the bridge emitted the frame.
    */
-  function sendStyled(gid, text, opts, failure) {
+  function sendStyled(gid, text, opts, outcome) {
     var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
-    if (style) setOwnStyle(style); else if (failure) toast(failure);
+    if (style) setOwnStyle(style); else if (outcome) messageFailed(gid, outcome);
     return !!style;
   }
   /**
@@ -642,6 +641,19 @@ function Root(props) {
   function setUpload(to, name) {
     setUploads(function (u) { var o = Object.assign({}, u); if (name) o[uploadKey(to)] = name; else delete o[uploadKey(to)]; return o; });
   }
+  /**
+   * Deletes the conversations whose private history BetterChatango cleared in this browser and keeps the others.
+   * @param {string[]} names Correspondents.
+   * @param {string} failure Toast shown if a history was not cleared, since its conversation would come back on reload.
+   */
+  function deleteLiveDms(names, failure) {
+    // Without a history database, BetterChatango keeps nothing in this browser that could come back.
+    var unsaved = stateRef.current.pmUnsaved;
+    var cleared = names.filter(function (n) { return liveBridge.clearPmHistory(n) || unsaved; });
+    cleared.forEach(function (n) { actions.closeDm(n); });
+    update(function (d) { cleared.forEach(function (n) { Object.assign(d.dms[n], { messages: [], olderMore: false, historyCapped: false }); }); });
+    if (cleared.length < names.length) toast(failure);
+  }
 
   if (LIVE) {
     actions.logout = function () { location.reload(); };
@@ -650,15 +662,15 @@ function Root(props) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
       if (replyId && !liveBridge.delivered(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
-      return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent. BetterChatango rejected it.');
+      return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent.');
     };
     // Editing an edit shown on its own targets its original, the only message visible to other members.
-    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited. BetterChatango rejected it.'); };
+    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited.'); };
     actions.sendDm = function (name, text, opts) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, { replyId: replyKey, editId: opts.editKey, quote: opts.quote });
-      if (!sent) { if (!opts.quiet) toast(opts.editKey ? 'Message not edited. BetterChatango rejected it.' : 'Private message not sent.'); return false; }
+      if (!sent) { if (!opts.quiet) messageFailed('private_message', opts.editKey ? 'Message not edited.' : 'Private message not sent.'); return false; }
       update(function (d) { addSentPm(d, name, { from: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
       return true;
@@ -814,11 +826,7 @@ function Root(props) {
       update(function (d) { ensureLiveUser(d, name)[key] = !was; });
       toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
-    actions.deleteDm = function (name) {
-      liveBridge.clearPmHistory(name);
-      actions.closeDm(name);
-      update(function (d) { d.dms[name].messages = []; d.dms[name].olderMore = false; });
-    };
+    actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
     actions.removeDmMessage = function (name, m) {
       liveBridge.removePm(name, m).then(function (ok) {
         if (!ok) { toast('This message could not be removed. Reload the page and try again.'); return; }
@@ -826,10 +834,7 @@ function Root(props) {
         syncPmUnread(pmArchive.current, update, [name]);
       });
     };
-    actions.deleteAllDms = function () {
-      Object.keys(stateRef.current.dms).forEach(function (n) { liveBridge.clearPmHistory(n); actions.closeDm(n); });
-      update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; d.dms[n].olderMore = false; }); });
-    };
+    actions.deleteAllDms = function () { deleteLiveDms(Object.keys(stateRef.current.dms), 'BetterChatango could not delete your saved conversations. Try again in a moment.'); };
     actions.checkPmr = function () {
       liveBridge.pmrStatus().then(function (st) { update(function (d) { if (d.auth.loggedIn) d.pmrStatus = st; }); });
     };

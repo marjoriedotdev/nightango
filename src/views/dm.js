@@ -158,6 +158,7 @@ function DmThread(p) {
     var m = dmHitMessage(convo, seek);
     if (m) log.jumpTo(m.id);
     else if (convo.loadingOlder) return;
+    else if (convo.historyCapped) app.ui.toast('This message is still saved in this browser, but a conversation shows only its last ' + THREAD_MAX + ' messages.');
     else if (convo.olderMore && !failed) { asked.current = true; app.actions.loadOlderDm(id); return; }
     // Failed read: loadOlderDm already announced it.
     else if (!failed) app.ui.toast('This message is no longer saved in this browser.');
@@ -166,11 +167,12 @@ function DmThread(p) {
   }, [p.seek, len, convo.loadingOlder]);
 
   var u = userOf(s, id);
-  var rows = [], prev = null, lastDay = null;
+  var rows = [], prev = null, lastDay = null, byKey = Object.create(null);
+  convo.messages.forEach(function (m) { if (m.key && !byKey[m.key]) byKey[m.key] = m; });
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    var original = m.replyTo ? convo.messages.find(function (x) { return x.key === m.replyTo.key; }) : null;
+    var original = m.replyTo ? byKey[m.replyTo.key] || null : null;
     rows.push(h(DmMessageRow, {
       key: m.id, m: m, peer: id, continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
       original: original, onJump: function (o) { log.jumpTo(o.id); }, onReply: u.blocked ? null : cm.enter('reply'), onQuote: u.blocked ? null : cm.enter('quote'),
@@ -178,7 +180,7 @@ function DmThread(p) {
     }));
     prev = m;
   });
-  var older = !LIVE || !s.pmLoaded ? null
+  var older = !LIVE || !s.pmLoaded || convo.historyCapped ? null
     : !convo.olderMore ? { status: 'start', text: 'This is the start of the messages saved in this browser.' }
     : {
       status: 'more', loading: convo.loadingOlder, ready: !convo.loadingOlder && !convo.olderFailed, load: function () { app.actions.loadOlderDm(id); },
@@ -198,7 +200,7 @@ function DmThread(p) {
       h(MenuButton, {
         label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
       })),
-    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: len, newBelow: 'follow', older: older }),
+    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom));
 }
@@ -255,7 +257,7 @@ function DmComposer(p) {
       if (runCommand(app, text, null)) return;
       var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(mode.m.from, mode.m.text) : null };
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
-      app.actions.sendDm(id, text, opts);
+      if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
       p.onCancelMode();
     }, beforeSend: h(MessageStyleButton, null)
   }), emoji.picker, attach.input);

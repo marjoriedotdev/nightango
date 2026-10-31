@@ -315,33 +315,103 @@ var liveBridge = (function () {
       } catch (e) { warn(e); }
     }, 2000);
   }
+  // BetterChatango times out only the group it recorded last in cache.connecting (inject.js:5699-5704): each attempt gets the same 10 s here.
+  var CONNECT_TIMEOUT = 10000;
+  /**
+   * Calls client.connect and keeps the socket it opens.
+   * @param {string} gid Group or private_message.
+   * @returns {{done: Promise, socket: ?WebSocket}} Promise of client.connect and its new socket, null if it opened none.
+   */
+  function openSocket(gid) {
+    // client.connect creates its socket synchronously and keeps it to itself until ok (inject.js:5631): the only handle to close it while it connects.
+    var Native = window.WebSocket, out = { done: null, socket: null };
+    window.WebSocket = function (url) { out.socket = new Native(url); return out.socket; };
+    try { out.done = C.connect(gid); } finally { window.WebSocket = Native; }
+    return out;
+  }
   /**
    * Starts a BetterChatango connection.
    * @param {string} gid Group or private_message.
+   * @returns {Promise} Settles with the attempt, rejected after CONNECT_TIMEOUT without an answer or when the group is left.
    */
   function connect(gid) {
     // A second PM session opened during the first would send kickingoff to ours: only one attempt at a time.
-    if (attempts[gid]) return attempts[gid];
+    if (attempts[gid]) return attempts[gid].done;
+    var a = { socket: null, timer: null, cancel: null };
+    var cancelled = new Promise(function (resolve, reject) { a.cancel = reject; });
     // BetterChatango ignores client.connect while gid stays in cache.connect: like it, we remove it around each attempt.
     function forget() { C.cache.connect = C.cache.connect.filter(function (x) { return x !== gid; }); }
     function settle() {
+      clearTimeout(a.timer);
       delete attempts[gid];
       forget();
       // Without a new socket, the observed state does not change: we force it to be emitted again to leave "connecting", including for a group that BetterChatango removed.
       if (gid === 'private_message') pmState = null; else connState[gid] = 'connecting';
     }
-    function attempt() { forget(); return C.connect(gid); }
+    function attempt() {
+      forget();
+      var opened = openSocket(gid);
+      a.socket = opened.socket;
+      a.timer = setTimeout(function () { a.cancel(new Error('no answer after ' + CONNECT_TIMEOUT / 1000 + ' s')); }, CONNECT_TIMEOUT);
+      return opened.done;
+    }
     // Like BetterChatango, the history database opens before the private connection: the msgoff frames, delivered only once right after OK, are archived there.
     note('Connecting to ' + connName(gid));
     var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
-    attempts[gid] = sock.then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) { settle(); note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e)); throw e; });
-    return attempts[gid];
+    a.done = Promise.race([sock, cancelled]).then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) {
+      settle();
+      var g = C.groups && C.groups[gid];
+      // A late answer would give BetterChatango a second socket for this connection, and the frames of a left group.
+      // Once ok registers it (inject.js:3185), the socket carries the group without inited, as in BetterChatango: closing it would restart the reconnection sequence.
+      if (a.socket && (left[gid] || !(g && g.socket === a.socket))) a.socket.close();
+      note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e));
+      throw e;
+    });
+    attempts[gid] = a;
+    return a.done;
+  }
+  /**
+   * Starts a connection then runs its follow-up, unless the user left the group in between.
+   * @param {string} gid Group or private_message.
+   * @param {Function} then Follow-up of a successful attempt.
+   */
+  function connectThen(gid, then) {
+    try {
+      connect(gid).then(function () { if (!left[gid]) { try { then(); } catch (e) { warn(e); } } }, function (e) { if (!left[gid]) warn(e); });
+    } catch (e) { warn(e); }
   }
 
+  /**
+   * Tells whether a BetterChatango connection can carry a frame now.
+   * @param {string} gid Group or private_message.
+   */
+  function opened(gid) {
+    var c = gid === 'private_message' ? C.private : C.groups && C.groups[gid];
+    return !!(c && c.socket && c.socket.readyState === 1);
+  }
+  function pmOpen() { return opened('private_message'); }
+  /**
+   * Says what to do while a connection cannot carry a frame.
+   * @param {string} gid Group or private_message.
+   * @returns {string} Empty while the connection is open.
+   */
+  function closedHint(gid) { return opened(gid) ? '' : "Try again once you're reconnected to " + connName(gid) + '.'; }
+  /**
+   * Hands a frame to BetterChatango on an open connection and announces its failure otherwise.
+   * @param {string} gid Group or private_message.
+   * @param {string} frame Frame without its line end.
+   * @param {string} failure Failure text, empty for a request the user did not make.
+   * @returns {boolean} True if the frame was handed to BetterChatango.
+   */
   function send(gid, frame, failure) {
+    // BetterChatango's socket catches every error and only shows a line: on a connection that is not open, the frame would read as sent.
+    var hint = closedHint(gid);
+    if (hint) {
+      if (failure) alertOnce({ op: 'notice', gid: gid, text: failure + ' ' + hint });
+      return false;
+    }
     try { C.socket(gid, frame, failure); return true; } catch (e) { warn(e); return false; }
   }
-  function pmOpen() { return !!(C.private && C.private.socket && C.private.socket.readyState === 1); }
   // Last correspondent requested by connect, to which a reply with an empty name belongs.
   var connectTarget = '';
   // Chatango returns no request id: a reply is recognized by its key, and a newer request replaces the wait of the previous one.
@@ -387,15 +457,20 @@ var liveBridge = (function () {
    */
   function focusPm(user) {
     pmFocus = user || false;
-    // BetterChatango only archives a sent private message for the conversation it considers open.
+    // BetterChatango plays its sound for a PM of the conversation it considers open, which sendPm gives back after each send.
     try { if (C.private) C.private.focus = pmFocus; } catch (e) { warn(e); }
     if (pmFocus && pmFocus !== connectTarget) connectPm(pmFocus);
   }
   function post(url, fields, item) {
+    var refused = postRefusal(url, item);
+    if (refused) {
+      note('Refused a request to ' + url.split(/[?#]/)[0] + ': ' + refused);
+      return Promise.reject(new Error('Nightango refused this request to protect your account. Nothing was sent.'));
+    }
     if (typeof C.post !== 'function') return Promise.reject(new Error('BetterChatango is not signed in yet.'));
     var form = new FormData();
     Object.keys(fields).forEach(function (k) { if (fields[k] !== undefined && fields[k] !== null) form.set(k, fields[k]); });
-    return C.post(url, form, item || {}).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
+    return C.post(url, form, item).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
   }
   var pmrCheck = null, pmrConnected = null;
   /**
@@ -458,6 +533,8 @@ var liveBridge = (function () {
       tx.onabort = function () { reject(tx.error); };
     });
   }
+  // Also kept for the page: if storage refuses the flag, each later open would mark every new PM read.
+  var pmReadMigrated = false;
   /**
    * Marks read once per account the messages archived before Nightango.
    * BetterChatango archived them all unread for lack of a private focus. Called by openPmDb before the private connection, it leaves that connection's msgoff unread.
@@ -465,8 +542,11 @@ var liveBridge = (function () {
    */
   function migrateUnread(db) {
     var key = skinKey(lower(C.user.name));
-    if (!db || (storageGet(key) || {}).pmReadMigrated) return db;
-    return markRead(db, null).then(function () { storageMerge(key, { pmReadMigrated: true }); }, warn).then(function () { return db; });
+    if (!db || pmReadMigrated || (storageGet(key) || {}).pmReadMigrated) return db;
+    pmReadMigrated = true;
+    return markRead(db, null).then(function () {
+      if (!storageMerge(key, { pmReadMigrated: true })) note('Could not save the unread migration: local storage refused the write');
+    }, warn).then(function () { return db; });
   }
   // String upper bound like BetterChatango: in IndexedDB order, a string comes after any timestamp.
   function targetRange(target) { return IDBKeyRange.bound([target, 1], [target, '']); }
@@ -675,12 +755,18 @@ var liveBridge = (function () {
   }
 
   /* Replies from the userscript bridges (vissle, TikTok), matched to requests by id */
-  var loaderWaits = {};
+  // Longer than the GM_xmlhttpRequest timeout of the loader, whose own reply says more.
+  var LOADER_WAIT = 20000;
+  // Any script of the page can send a reply: one that is not JSON or matches no request is ignored.
+  var loaderWaits = Object.create(null);
   function onLoaderReply(e) {
-    var r = JSON.parse(e.detail), wait = loaderWaits[r.id];
+    var r = null;
+    try { r = JSON.parse(e.detail); } catch (x) { return; }
+    var wait = r && typeof r.id === 'string' ? loaderWaits[r.id] : null;
     if (!wait) return;
     delete loaderWaits[r.id];
-    if (r.error) wait.reject(new Error(r.error)); else wait.resolve(r);
+    clearTimeout(wait.timer);
+    if (r.error && typeof r.error === 'string') wait.reject(new Error(r.error)); else wait.resolve(r);
   }
   document.addEventListener('torch-skin:vissle-response', onLoaderReply);
   document.addEventListener('torch-skin:tiktok-response', onLoaderReply);
@@ -688,12 +774,14 @@ var liveBridge = (function () {
    * Sends a request to a userscript bridge.
    * @param {string} channel Bridge name: vissle or tiktok.
    * @param {Object} q Request fields.
-   * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error.
+   * @param {string} late Text to show if the bridge does not reply.
+   * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error or does not come.
    */
-  function askLoader(channel, q) {
+  function askLoader(channel, q, late) {
     return new Promise(function (resolve, reject) {
       var id = uid();
-      loaderWaits[id] = { resolve: resolve, reject: reject };
+      var timer = setTimeout(function () { delete loaderWaits[id]; reject(new Error(late)); }, LOADER_WAIT);
+      loaderWaits[id] = { resolve: resolve, reject: reject, timer: timer };
       document.dispatchEvent(new CustomEvent('torch-skin:' + channel + '-request', { detail: JSON.stringify(Object.assign({ id: id }, q)) }));
     });
   }
@@ -716,6 +804,8 @@ var liveBridge = (function () {
       note('Signed in');
       // BetterChatango reads the YouTube oEmbed and msgbg.xml on its own, outside the Nightango media settings: disabled in memory, not in the BetterChatango settings.
       C.renderYouTube = CH.getBackground = function () {};
+      // With connect_start, BetterChatango clicks its PM tab 6 s later, and its PM screen moves client.private.focus: disabled the same way.
+      document.querySelector('[data-sidebar="private"]').click = function () {};
       emit({ op: 'login', me: lower(C.user.name) });
       // Groups already connected before us: their inited and participants frames have gone by.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
@@ -756,6 +846,7 @@ var liveBridge = (function () {
     onOp: onOp,
     note: note,
     connName: connName,
+    closedHint: closedHint,
     /**
      * Tells whether a message already has the final id that replying to it or editing or deleting it waits for.
      * @param {string} id Message id in the state.
@@ -770,6 +861,8 @@ var liveBridge = (function () {
      */
     send: function (gid, text, opts) {
       opts = opts || {};
+      // Checked before send, which would announce it too: Root announces a message that did not leave, an upload with its link.
+      if (!opened(gid)) return null;
       var built;
       try { built = groupBody(gid, text, opts); } catch (e) { warn(e); return null; }
       if (!built) return null;
@@ -799,6 +892,8 @@ var liveBridge = (function () {
      */
     sendPm: function (user, text, style, opts) {
       opts = opts || {};
+      // Checked before send, like a group message.
+      if (!pmOpen()) return null;
       try {
         applyStyle(style);
         // Built once and sent as is: a second build would draw another <i…/> PM key than the one shown.
@@ -810,7 +905,9 @@ var liveBridge = (function () {
         body = body.slice(0, at) + ref + body.slice(at);
         if (opts.quote) body = withQuote(body, at + ref.length, opts.quote, true);
         var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
-        if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null;
+        // BetterChatango archives a sent PM under client.private.focus, not its recipient: an upload can leave after a switch.
+        C.private.focus = user;
+        try { if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
         // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
         return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId, editId: parsed.editId };
@@ -851,25 +948,27 @@ var liveBridge = (function () {
     join: function (gid) {
       delete left[gid];
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }
-      try { connect(gid).then(function () { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } }, warn); } catch (e) { warn(e); }
+      connectThen(gid, function () { C.setFocus({ group: gid }); });
     },
-    leave: function (gid) { left[gid] = true; note('Leaving #' + gid); try { C.disconnectFrom(gid); } catch (e) { warn(e); } },
+    leave: function (gid) {
+      left[gid] = true;
+      note('Leaving #' + gid);
+      // BetterChatango only closes an open socket that it registered on ok (inject.js:5714): cancelling the attempt closes the one still connecting.
+      if (attempts[gid]) attempts[gid].cancel(new Error('left the group'));
+      try { C.disconnectFrom(gid); } catch (e) { warn(e); }
+    },
     /**
      * Restarts a closed connection.
      * @param {string} gid Group or private_message.
      * @param {boolean=} background True for a group that is not shown: the BetterChatango focus stays on the shown group.
      */
     reconnect: function (gid, background) {
-      try {
-        connect(gid).then(function () { if (gid !== 'private_message' && !background) { try { C.setFocus({ group: gid, reload: true }); } catch (e) { warn(e); } } }, warn);
-      } catch (e) { warn(e); }
+      connectThen(gid, function () { if (gid !== 'private_message' && !background) C.setFocus({ group: gid, reload: true }); });
     },
     loadMore: function (gid) {
-      var g = C.groups && C.groups[gid], failure = 'Earlier messages could not be loaded.';
+      var g = C.groups && C.groups[gid];
       if (g && g.load === -1) return 'done';
-      if (g && send(gid, 'get_more:20:' + (g.load || 0), failure)) return 'sent';
-      emit({ op: 'notice', gid: gid, text: failure });
-      return 'failed';
+      return send(gid, 'get_more:20:' + (g && g.load || 0), 'Earlier messages could not be loaded.') ? 'sent' : 'failed';
     },
     /* Moderation: frames identical to the BetterChatango ones */
     deleteMessage: function (gid, id) { return send(gid, 'delmsg:' + id, 'The message could not be deleted.'); },
@@ -933,18 +1032,25 @@ var liveBridge = (function () {
       return openPmDb().then(function (db) { return new Promise(function (resolve) {
         try {
           if (!db) { resolve({}); return; }
-          var out = {}, req = db.transaction(['messages'], 'readonly').objectStore('messages').openCursor();
+          // Index read from the end: each archived name gives its newest records first, then continue([name]) jumps to the previous name.
+          var kept = {}, name = null, count = 0, req = db.transaction(['messages'], 'readonly').objectStore('messages').index('target_ts_idx').openCursor(null, 'prev');
           req.onsuccess = function (e) {
             var cur = e.target.result;
             if (!cur) {
-              Object.keys(out).forEach(function (k) {
-                var list = out[k].sort(function (a, b) { return a.archiveTs - b.archiveTs; });
-                out[k] = { list: list.slice(-perTarget), more: list.length > perTarget };
+              // Only the kept records are parsed. A name archived with capitals joins its lowercase conversation.
+              var out = {};
+              Object.keys(kept).forEach(function (t) {
+                var list = kept[t].list.sort(function (a, b) { return a.ts - b.ts; });
+                out[t] = { list: list.slice(-perTarget).map(pmRecordEntry).filter(Boolean), more: kept[t].more || list.length > perTarget };
               });
               resolve(out); return;
             }
-            var v = cur.value || {}, target = lower(v.target), x = target && pmRecordEntry(v);
-            if (x) (out[target] = out[target] || []).push(x);
+            var v = cur.value, target = lower(v.target);
+            if (v.target !== name) { name = v.target; count = 0; }
+            if (!target) { cur.continue([name]); return; }
+            var k = kept[target] = kept[target] || { list: [], more: false };
+            if (count === perTarget) { k.more = true; cur.continue([name]); return; }
+            k.list.push(v); count++;
             cur.continue();
           };
           req.onerror = function () { resolve({}); };
@@ -1359,11 +1465,14 @@ var liveBridge = (function () {
     /**
      * Reads the activity of one's own profile recorded by vissle.me.
      * @param {{page: number, order: string, get: string}} q Cursor, order and filter of the requested page.
+     * @returns {Promise<Array>} Items read by parseVisits, rejected with the text to show.
      */
     visitors: function (q) {
-      return askLoader('vissle', { page: q.page, order: q.order, get: q.get }).then(function (r) {
-        if (r.data.error) throw new Error(r.data.error);
-        return r.data.get;
+      return askLoader('vissle', { page: q.page, order: q.order, get: q.get }, 'vissle.me did not answer in time. Reload the page and try again.').then(function (r) {
+        if (r.data && typeof r.data.error === 'string') throw new Error(r.data.error);
+        var items = parseVisits(r.data);
+        if (!items) throw new Error('vissle.me sent an unreadable reply.');
+        return items;
       });
     },
     /**
@@ -1371,7 +1480,12 @@ var liveBridge = (function () {
      * @param {string} url Short TikTok link.
      * @returns {Promise<string>} Post id, rejected with the text to show if TikTok does not give it.
      */
-    tiktokPost: function (url) { return askLoader('tiktok', { url: url }).then(function (r) { return r.post; }); },
+    tiktokPost: function (url) {
+      return askLoader('tiktok', { url: url }, 'TikTok did not answer in time. Open the link instead.').then(function (r) {
+        if (typeof r.post !== 'string' || !/^\d+$/.test(r.post)) throw new Error('TikTok did not say which video this link leads to. Open the link instead.');
+        return r.post;
+      });
+    },
     /**
      * Uploads a file to vissle like the BetterChatango Upload dialog without BetterChatango posting its link.
      * @param {File} file Chosen file.
@@ -1380,7 +1494,7 @@ var liveBridge = (function () {
     uploadFile: function (file) {
       var failed = 'The file could not be uploaded. Try again.';
       // Never progress: this BetterChatango branch posts the link in client.focus itself.
-      return post('https://vissle.me/chatango/upload', { filedata: file }, { key: true }).then(function (resp) {
+      return post(VISSLE_UPLOAD, { filedata: file }, { key: true }).then(function (resp) {
         var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
         if (path) return 'https://vissle.me/' + path[1];
         throw new Error(resp.split(':')[0] === 'unauthed' ? 'vissle did not accept your session. Reload the page and sign in again.' : failed);

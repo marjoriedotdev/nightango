@@ -50,8 +50,8 @@ function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
 function isGuest(name) { return /^[!#]/.test(name); }
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable: preference not kept */ } }
-function storageMerge(key, patch) { storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
+function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
+function storageMerge(key, patch) { return storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
 /**
  * Reads a JSON file chosen by the user.
  * @param {File} file Chosen file.

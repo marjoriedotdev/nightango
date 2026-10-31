@@ -69,8 +69,8 @@ async function suite(userscript) {
   step('no overlay before BetterChatango is ready', !a.d.getElementById('torch-skin'));
   step('React loaded with integrity check', [...a.d.querySelectorAll('script[src*="cdnjs"]')].every(s => s.integrity.indexOf('sha384-') === 0 && s.crossOrigin === 'anonymous'));
   await deliverReact(a.w);
-  // BetterChatango replaces the whole document with its client, sign-in screen included.
-  a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div></body>';
+  // BetterChatango replaces the whole document with its client, sign-in screen and PM tab included.
+  a.d.documentElement.innerHTML = '<head></head><body><div class="login"><div class="login-wrapper"></div></div><span data-sidebar="private"></span></body>';
   await wait(20);
   const skin = a.d.getElementById('torch-skin-login');
   step('sign-in screen skinned in the new document, without loading anything',
@@ -124,6 +124,28 @@ async function suite(userscript) {
       && t3call.url === 'https://vm.tiktok.com/ZMabc123/' && !!tReply('t1').error && !!tReply('t3').error
       && tReply('t2').post === '7429876543210987654' && Object.keys(tReply('t2')).sort().join() === 'id,post',
     { calls: a.gm.slice(sent).map(c => ({ method: c.method, url: c.url, anonymous: c.anonymous })), tiktok });
+
+  /* Bridges: a request the interface does not make gets an error reply, and no call leaves the sandbox */
+  const askedBefore = a.gm.length, vissleFrom = replies.length, tiktokFrom = tiktok.length;
+  const askVissle = detail => a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:vissle-request', { detail }));
+  const visit = fields => askVissle(JSON.stringify(Object.assign({ page: 1, order: 'desc', get: 'all' }, fields)));
+  askVissle('{"id":"m0",');
+  askVissle('null');
+  visit({ id: 'm1', get: 'everything' });
+  visit({ id: 'm2', order: 1 });
+  visit({ id: 'm3', page: '1' });
+  visit({ id: 'm4', page: -1 });
+  visit({ id: 'm5', page: { next: 1 } });
+  visit({ id: 7 });
+  a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:tiktok-request', { detail: 'https://vm.tiktok.com/ZMabc123/' }));
+  askTikTok('t4', ['https://vm.tiktok.com/ZMabc123/']);
+  await wait(20);
+  const vissleRefused = replies.slice(vissleFrom), tiktokRefused = tiktok.slice(tiktokFrom);
+  step('bridges answer a malformed request with an error and make no call',
+    a.gm.length === askedBefore
+      && vissleRefused.length === 8 && vissleRefused.every(r => typeof r.error === 'string' && !('data' in r)) && ['m1', 'm2', 'm3', 'm4', 'm5'].every(id => vissleRefused.some(r => r.id === id))
+      && tiktokRefused.length === 2 && tiktokRefused.every(r => typeof r.error === 'string' && !('post' in r)) && tiktokRefused.some(r => r.id === 't4'),
+    { calls: a.gm.slice(askedBefore).map(c => c.url), vissleRefused, tiktokRefused });
   step('no page errors', a.errors.length === 0, a.errors);
   a.w.close();
 
