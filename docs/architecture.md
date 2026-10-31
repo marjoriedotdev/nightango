@@ -53,6 +53,7 @@ src/
     live-state.js    live state built for Root: world at login, group, ban lists, session loss, account data kept in this browser,
                      members and groups created on the fly with that data, presence, styles, group edits, group settings read from Chatango
     pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database)
+    overlays.js      useOverlays: toasts, dialogs and navigation drawer, opened by the views through ui
     inbox.js         Mentions page log
     live-ops.js      useBridgeOps: each bridge operation goes to the handler of the latest render, those after login once it has rendered
     root.js          Root, and its page hooks: state (useAppState), display preferences, idle members, tab title, Ctrl K, update check.

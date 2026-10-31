@@ -139,30 +139,13 @@ function Root(props) {
   if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
   // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
   var drafts = useRef({});
-  var u1 = useState([]), toasts = u1[0], setToasts = u1[1];
-  var u2 = useState(null), confirmCfg = u2[0], setConfirm = u2[1];
-  var u3 = useState(null), profile = u3[0], setProfile = u3[1];
-  var u4 = useState(null), linkUrl = u4[0], setLinkUrl = u4[1];
-  var u5 = useState(false), palette = u5[0], setPalette = u5[1];
-  var u6 = useState(null), create = u6[0], setCreate = u6[1];
-  var u7 = useState(false), newDm = u7[0], setNewDm = u7[1];
-  var u8 = useState(null), banCfg = u8[0], setBan = u8[1];
-  var u9 = useState(false), navOpen = u9[0], setNavOpen = u9[1];
-  var u11 = useState(null), fullProfile = u11[0], setFullProfile = u11[1];
-  var u12 = useState(null), profileLink = u12[0], setProfileLink = u12[1];
   var u13 = useState({}), uploads = u13[0], setUploads = u13[1];
-  var u14 = useState(null), who = u14[0], setWho = u14[1];
+  var o = useOverlays(), toast = o.toast, setNavOpen = o.setNavOpen;
   var prefs = state.prefs;
   useDisplayPrefs(prefs);
   useIdleStatus(state.users, update);
   useTabTitle(state);
-  useShortcuts(stateRef, setPalette);
-
-  var toast = useCallback(function (text, opts) {
-    var t = Object.assign({ id: uid(), text: text }, opts || {});
-    setToasts(function (list) { return list.concat([t]).slice(-4); });
-  }, []);
-  function dismissToast(id) { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }
+  useShortcuts(stateRef, o.setPalette);
   useUpdateCheck(state.auth.loggedIn, toast);
 
   function nav(route) {
@@ -1338,36 +1321,20 @@ function Root(props) {
     return function () { clearInterval(timer); };
   }, [state.auth.loggedIn]);
 
-  var ui = {
-    toast: toast,
-    confirm: setConfirm,
-    // The full profile dialog covers the profile dialog: a profile opened from its links would stay hidden under it.
-    openProfile: function (name, gid) { setFullProfile(null); setProfile({ name: name, gid: gid }); },
-    openFullProfile: function (name) { setFullProfile(name); },
-    openWho: setWho,
-    openLink: setLinkUrl,
-    openProfileLink: setProfileLink,
-    openPalette: function () { setPalette(true); setNavOpen(false); },
-    openCreate: function (prefill) { setCreate({ prefill: prefill || '' }); setNavOpen(false); },
-    openNewDm: function () { setNewDm(true); setNavOpen(false); },
-    ban: function (name, gid, msg) { setBan({ name: name, gid: gid, msg: msg || null }); },
-    openNav: function () { setNavOpen(true); },
-    closeNav: function () { setNavOpen(false); }
-  };
-  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, uploads: uploads, drafts: drafts, theme: resolvedTheme(prefs, VIEWER_THEME) };
+  var app = { state: state, update: update, nav: nav, actions: actions, ui: o.ui, navOpen: o.navOpen, uploads: uploads, drafts: drafts, theme: resolvedTheme(prefs, VIEWER_THEME) };
 
   return h(Layers, null, h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
-    state.auth.loggedIn && profile ? h(ProfileDialog, { name: profile.name, gid: profile.gid, onClose: function () { setProfile(null); } }) : null,
-    state.auth.loggedIn && banCfg ? h(BanDialog, { name: banCfg.name, gid: banCfg.gid, msg: banCfg.msg, onClose: function () { setBan(null); } }) : null,
-    state.auth.loggedIn && fullProfile ? h(FullProfileDialog, { name: fullProfile, onClose: function () { setFullProfile(null); } }) : null,
-    state.auth.loggedIn && who ? h(WhoDialog, { key: who, name: who, onClose: function () { setWho(null); }, onDone: function () { setWho(null); setProfile(null); } }) : null,
-    linkUrl ? h(LinkDialog, { url: linkUrl, onClose: function () { setLinkUrl(null); } }) : null,
-    profileLink ? h(ProfileLinkDialog, { link: profileLink, onClose: function () { setProfileLink(null); } }) : null,
-    state.auth.loggedIn && palette ? h(Palette, { onClose: function () { setPalette(false); } }) : null,
-    state.auth.loggedIn && create ? h(CreateGroupDialog, { prefill: create.prefill, onClose: function () { setCreate(null); } }) : null,
-    state.auth.loggedIn && newDm ? h(NewDmDialog, { onClose: function () { setNewDm(false); } }) : null,
-    confirmCfg ? h(ConfirmDialog, { confirm: confirmCfg, onClose: function () { setConfirm(null); } }) : null,
+    state.auth.loggedIn && o.profile ? h(ProfileDialog, { name: o.profile.name, gid: o.profile.gid, onClose: function () { o.setProfile(null); } }) : null,
+    state.auth.loggedIn && o.banCfg ? h(BanDialog, { name: o.banCfg.name, gid: o.banCfg.gid, msg: o.banCfg.msg, onClose: function () { o.setBan(null); } }) : null,
+    state.auth.loggedIn && o.fullProfile ? h(FullProfileDialog, { name: o.fullProfile, onClose: function () { o.setFullProfile(null); } }) : null,
+    state.auth.loggedIn && o.who ? h(WhoDialog, { key: o.who, name: o.who, onClose: function () { o.setWho(null); }, onDone: function () { o.setWho(null); o.setProfile(null); } }) : null,
+    o.linkUrl ? h(LinkDialog, { url: o.linkUrl, onClose: function () { o.setLinkUrl(null); } }) : null,
+    o.profileLink ? h(ProfileLinkDialog, { link: o.profileLink, onClose: function () { o.setProfileLink(null); } }) : null,
+    state.auth.loggedIn && o.palette ? h(Palette, { onClose: function () { o.setPalette(false); } }) : null,
+    state.auth.loggedIn && o.create ? h(CreateGroupDialog, { prefill: o.create.prefill, onClose: function () { o.setCreate(null); } }) : null,
+    state.auth.loggedIn && o.newDm ? h(NewDmDialog, { onClose: function () { o.setNewDm(false); } }) : null,
+    o.confirmCfg ? h(ConfirmDialog, { confirm: o.confirmCfg, onClose: function () { o.setConfirm(null); } }) : null,
     state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
-    h(Toasts, { toasts: toasts, dismiss: dismissToast })));
+    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast })));
 }

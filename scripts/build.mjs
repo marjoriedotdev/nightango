@@ -60,6 +60,7 @@ export const APP_SOURCES = [
   'app/state.js',
   'app/live-state.js',
   'app/pm.js',
+  'app/overlays.js',
   'app/inbox.js',
   'app/live-ops.js',
   'app/root.js',
