@@ -1110,7 +1110,9 @@ var liveBridge = (function () {
             premium: (parseInt(q('d'), 10) || 0) * 1000 > Date.now(), mini: null
           };
           if (!data.premium) return data;
-          return memberFile(CH.subdomain.custom_profile(n), /^text\/css/, parseMiniCss).then(function (mini) { data.mini = mini; return data; });
+          return memberFile(CH.subdomain.custom_profile(n), /^text\/css/, function (css) {
+            return css.length > MINI_CSS_MAX_LENGTH ? null : parseMiniCss(css);
+          }).then(function (mini) { data.mini = mini; return data; });
         });
       });
     },

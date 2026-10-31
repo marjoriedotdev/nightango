@@ -173,6 +173,8 @@ const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</scrip
 // Premium background in the real custom_profile.css format (goddess account). Without a file, Chatango returns a JPEG image.
 const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
 const GODDESS_CSS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
+// Valid background past the size cap of the file: read as absent.
+const BULKY_CSS = GODDESS_CSS + '/*' + ' '.repeat(5000) + '*/';
 // Message background in the msgbg.xml format: attributes of the first element, fields of the BetterChatango background form. A response that is not text/xml means no background.
 const MSGBG = {
   rosa: '<?xml version="1.0" ?><bgi bgc="FFCC99" bgalp="100" useimg="1" ialp="40" align="br" tile="0" hasrec="0" isvid="0"/>',
@@ -195,11 +197,12 @@ w.fetch = (url, opts) => {
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent(saved ? saved.f.line : 'Old bio') + '</body><s>M</s><b>1990-01-01</b><l>Rouen</l><d>' + PREMIUM_END + '</d></mod>';
   }
   else if (/marjorie\/mod2\.xml/.test(url)) status = ownMod2Status;
-  else if (/\/(goddess|expired|sith|lost)\/mod1\.xml/.test(url)) {
+  else if (/\/(goddess|expired|sith|lost|bulky)\/mod1\.xml/.test(url)) {
     const end = /expired/.test(url) ? PREMIUM_END - 60 * 86400 : PREMIUM_END;
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent('Hi <a href="https://example.com/g">my page</a>') + '</body><s>F</s><b>1990-01-01</b><l>Paris</l><d>' + end + '</d></mod>';
   }
   else if (/goddess\/custom_profile\.css/.test(url)) { body = GODDESS_CSS; type = 'text/css'; }
+  else if (/bulky\/custom_profile\.css/.test(url)) { body = BULKY_CSS; type = 'text/css'; }
   else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
@@ -1184,21 +1187,27 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && String(scrollSearches[1].f.f) === '80' && String(scrollSearches[1].f.t) === '120' && !byText('.convs button', 'Load more'),
     { observed, cards, requests: scrollSearches.map(x => [x.f.f, x.f.t]), loadMore: !!byText('.convs button', 'Load more') });
 
-  /* Mini profile Premium background: active Premium read from custom_profile.css, expired Premium never requested, JPEG or 404 response without a background */
-  searchBody = 'h=goddess;1:expired;1:sith;1:lost;1';
+  /* Mini profile Premium background: active Premium read from custom_profile.css, expired Premium never requested, JPEG, 404 or oversized file without a background */
+  const PREMIUM = ['goddess', 'expired', 'sith', 'lost', 'bulky'];
+  searchBody = 'h=' + PREMIUM.map(n => n + ';1').join(':');
   const personOf = n => $$('.conv.person').find(x => x.querySelector('.conv-name').textContent === n);
-  click(refreshBtn()); await until(() => ['goddess', 'expired', 'sith', 'lost'].every(n => !!personOf(n) && !personOf(n).querySelector('.tc-skeleton')));
+  click(refreshBtn()); await until(() => PREMIUM.every(n => !!personOf(n) && !personOf(n).querySelector('.tc-skeleton')));
   const cssAsked = n => fetches.some(x => x.url.indexOf('/' + n + '/custom_profile.css') >= 0);
-  const premiumCards = ['goddess', 'expired', 'sith', 'lost'].map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
+  const premiumCards = PREMIUM.map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
   if (personOf('goddess')) { click(personOf('goddess')); await wait(120); }
   const profileDialog = $('.dialog.profile-dialog');
   const aboutLink = profileDialog && profileDialog.querySelector('.about.rich a');
   const premiumAbout = profileDialog ? { bg: profileDialog.style.backgroundColor, text: profileDialog.style.color, link: aboutLink && aboutLink.style.color } : null;
   key(d, 'Escape'); await wait(30);
-  step('premium profile background', JSON.stringify(premiumCards) === JSON.stringify([['goddess', 'rgb(158, 159, 252)'], ['expired', ''], ['sith', ''], ['lost', '']])
-    && cssAsked('goddess') && !cssAsked('expired') && cssAsked('sith') && cssAsked('lost')
-    && !!premiumAbout && premiumAbout.bg === 'rgb(158, 159, 252)' && premiumAbout.text === 'rgb(61, 61, 60)' && premiumAbout.link === 'rgb(41, 62, 62)',
-    { premiumCards, css: ['goddess', 'expired', 'sith', 'lost'].map(cssAsked), premiumAbout });
+  if (personOf('bulky')) { click(personOf('bulky')); await wait(120); }
+  const bulkyDialog = $('.dialog.profile-dialog');
+  const bulkyAbout = bulkyDialog ? { bg: bulkyDialog.style.backgroundColor, about: (bulkyDialog.querySelector('.about.rich') || {}).textContent } : null;
+  key(d, 'Escape'); await wait(30);
+  step('premium profile background', JSON.stringify(premiumCards) === JSON.stringify([['goddess', 'rgb(158, 159, 252)'], ['expired', ''], ['sith', ''], ['lost', ''], ['bulky', '']])
+    && cssAsked('goddess') && !cssAsked('expired') && cssAsked('sith') && cssAsked('lost') && cssAsked('bulky')
+    && !!premiumAbout && premiumAbout.bg === 'rgb(158, 159, 252)' && premiumAbout.text === 'rgb(61, 61, 60)' && premiumAbout.link === 'rgb(41, 62, 62)'
+    && !!bulkyAbout && bulkyAbout.bg === '' && bulkyAbout.about === 'Hi my page',
+    { premiumCards, css: PREMIUM.map(cssAsked), premiumAbout, bulkyAbout });
   searchBody = SEARCH_BODY;
 
   /* Status */

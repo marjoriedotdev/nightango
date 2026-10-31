@@ -296,9 +296,10 @@ The formatting toolbar of the Profile page inserts only what all clients show.
 - File `custom_profile.css`, in the same folder but without the `sp/sp` prefix (BetterChatango `chatango.subdomain.custom_profile`).
 - BetterChatango reads it only if Premium is active (`d` × 1000 > now). The bridge does the same.
 - Without a file, Chatango returns a small JPEG image. The bridge requires `r.ok` and a `text/css` `content-type`. Reference account: `sith`, Premium without `custom_profile.css`.
+- The BetterChatango background form writes well under 1 KB. The bridge reads a file of more than 4,096 characters as absent, without parsing it: the mini profile shows without a Premium background.
 - Format observed on the reference account `goddess`, one rule per selector, with varying spaces and `!important`:
   `body { background-color; background-image: url(…); background-repeat; color }`, `.profile_text { color }`, `a, a:visited, a:active { color; text-decoration }`, `a:hover { … }`.
-- The CSS is never injected ([ADR-0004](adr/0004-member-html-never-injected.md)). `parseMiniCss` derives `{bg, text, link, image, repeat}` from it: colors converted to hex (hex, CSS name, `rgb()`), text from `body` or failing that from `.profile_text`, image over `https` only (`http` rewritten), repeat limited to `repeat`, `repeat-x`, `repeat-y` or `no-repeat`. The result goes into `u.miniStyle`, cached with the profile.
+- The CSS is never injected ([ADR-0004](adr/0004-member-html-never-injected.md)). `parseMiniCss` finds its comments and rules with `indexOf` in a single pass, then derives `{bg, text, link, image, repeat}` from them: colors converted to hex (hex, CSS name, `rgb()`), text from `body` or failing that from `.profile_text`, image over `https` only (`http` rewritten), repeat limited to `repeat`, `repeat-x`, `repeat-y` or `no-repeat`. The result goes into `u.miniStyle`, cached with the profile.
 
 ### Message background
 

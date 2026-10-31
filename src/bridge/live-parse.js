@@ -251,20 +251,43 @@ function opaqueColor(value) {
   var v = String(value || '').trim(), f = /^(?:rgb|hsl)a?\(([^)]*)\)$/i.exec(v), p = f ? f[1].trim().split(/\s*[,\/]\s*|\s+/) : [];
   return p.length > 3 && parseFloat(p[3]) === 0 ? null : cssColor(v);
 }
+// The BetterChatango background form writes well under 1 KB: a larger custom_profile.css is read as absent.
+var MINI_CSS_MAX_LENGTH = 4096;
+/**
+ * Removes the comments of a style sheet and keeps an unclosed one as text.
+ * @param {string} css Style sheet.
+ */
+function cssWithoutComments(css) {
+  var out = '', at = 0, open, close;
+  while ((open = css.indexOf('/*', at)) >= 0 && (close = css.indexOf('*/', open + 2)) >= 0) {
+    out += css.slice(at, open);
+    at = close + 2;
+  }
+  return out + css.slice(at);
+}
 /**
  * Reads the Premium background of a mini profile without ever injecting its CSS.
  * @param {string} css Content of custom_profile.css.
  */
 function parseMiniCss(css) {
-  var rules = Object.create(null), re = /([^{}]+)\{([^}]*)\}/g, m, unsafe = /^(?:__proto__|constructor|prototype)$/;
-  css = String(css).replace(/\/\*[\s\S]*?\*\//g, '');
-  while ((m = re.exec(css))) {
+  var rules = Object.create(null), unsafe = /^(?:__proto__|constructor|prototype)$/, at = 0;
+  // Scanned with indexOf, not a pattern: the cost stays linear in the size of the file, braces and comments closed or not.
+  css = cssWithoutComments(String(css));
+  for (;;) {
+    var open = css.indexOf('{', at), start = open;
+    if (open < 0) break;
+    while (start > at && css.charAt(start - 1) !== '}') start--;
+    // A brace with no selector before it starts no rule: the next selector can begin right after it.
+    if (start === open) { at = open + 1; continue; }
+    var close = css.indexOf('}', open + 1);
+    if (close < 0) break;
+    at = close + 1;
     var decl = Object.create(null);
-    m[2].split(';').forEach(function (x) {
+    css.slice(open + 1, close).split(';').forEach(function (x) {
       var i = x.indexOf(':'), prop = x.slice(0, i).trim().toLowerCase();
       if (i > 0 && !unsafe.test(prop)) decl[prop] = x.slice(i + 1).replace(/!important/i, '').trim();
     });
-    m[1].split(',').forEach(function (sel) {
+    css.slice(start, open).split(',').forEach(function (sel) {
       sel = sel.trim().toLowerCase();
       if (!unsafe.test(sel)) rules[sel] = Object.assign(rules[sel] || Object.create(null), decl);
     });

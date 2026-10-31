@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const SUITES = ['smoke', 'live_ui', 'pm', 'markup', 'loader', 'live_login', 'avatar', 'moon', 'check_ds'];
+const SUITES = ['smoke', 'live_ui', 'pm', 'member_content', 'markup', 'loader', 'live_login', 'avatar', 'moon', 'check_ds'];
 // Some suites exit with 0 despite a failure: only their output reports it.
 const FAILURE = /^(FAIL|CRASH)|^ERRORS:(?! none$)/m;
 
