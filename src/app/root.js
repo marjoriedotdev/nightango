@@ -260,17 +260,8 @@ function Root(props) {
   }
 
   var mediaLib = LIVE ? liveBridge : sampleMedia;
-  // Post per short TikTok link and thumbnail per TikTok link, asked once per page.
-  var tiktokAsked = useRef({ posts: {}, thumbs: {} });
-  function tiktokPost(url) {
-    var posts = tiktokAsked.current.posts;
-    if (!posts[url]) {
-      // A failed resolution is asked again at the next click.
-      posts[url] = (LIVE ? liveBridge.tiktokPost(url) : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.')))
-        .catch(function (e) { delete posts[url]; throw e; });
-    }
-    return posts[url];
-  }
+  // Post page read once per TikTok link and per page: a failure is read again only at a click.
+  var tiktokPosts = useRef({});
   // The stars and the Media tab read the media library again when this counter changes.
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
@@ -380,25 +371,21 @@ function Root(props) {
     searchMedia: function (text, count) { return mediaLib.searchMedia(text, count); },
     hasMedia: function (url) { return mediaLib.hasMedia(url); },
     /**
-     * Finds the TikTok post a short link leads to.
-     * @param {string} url Short TikTok link.
-     * @returns {Promise<{post: string, link: string}>} Post id and link, rejected with the text to show.
-     */
-    tiktokPost: tiktokPost,
-    /**
-     * Reads the thumbnail of a TikTok post, resolving a short link first.
-     * A failure is kept for the page: the card stays without a thumbnail.
+     * Reads the post of a TikTok link and its cover.
      * @param {{id: ?string, url: string}} e TikTok media of a message.
-     * @returns {Promise<string>} https address of the thumbnail.
+     * @param {boolean} [click] The user clicked the link: a previous failure is read again.
+     * @returns {Promise<{post: string, link: string, thumb: ?string}>} Post id and link, and cover address if TikTok gives one, rejected with the text to show.
      */
-    tiktokThumb: function (e) {
-      var thumbs = tiktokAsked.current.thumbs;
-      if (!thumbs[e.url]) {
-        // Prototype: a post link shows the sample thumbnail, a short link none.
-        thumbs[e.url] = !LIVE ? (e.id ? Promise.resolve(SAMPLE_TIKTOK_THUMB) : Promise.reject(new Error('Short TikTok links are not part of this prototype.')))
-          : (e.id ? Promise.resolve(e.url) : tiktokPost(e.url).then(function (r) { return r.link; })).then(liveBridge.tiktokThumb);
+    tiktokPost: function (e, click) {
+      var asked = tiktokPosts.current, entry = asked[e.url];
+      if (!entry || (click && entry.failed)) {
+        entry = asked[e.url] = { failed: false };
+        // Prototype: a post link shows the sample cover, a short link turns back into a link.
+        entry.promise = !LIVE ? (e.id ? Promise.resolve({ post: e.id, link: e.url, thumb: SAMPLE_TIKTOK_THUMB }) : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.')))
+          : liveBridge.tiktokPost(e.url);
+        entry.promise.catch(function () { entry.failed = true; });
       }
-      return thumbs[e.url];
+      return entry.promise;
     },
     /**
      * Adds an image to the media library under the name BetterChatango gives it or removes it.
