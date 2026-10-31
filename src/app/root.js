@@ -43,6 +43,8 @@ function Root(props) {
   var u14 = useState(null), who = u14[0], setWho = u14[1];
   var u10 = useState(0), themeTick = u10[1];
   var prefs = state.prefs;
+  // Read on each render: a page left open past November 2 loses its decorations without a reload.
+  var season = prefs.sky.season ? seasonOf(new Date()) : null;
 
   useEffect(function () {
     var hot = window.claude && window.claude.hot;
@@ -67,8 +69,9 @@ function Root(props) {
     root.classList.toggle('underline-links', !!prefs.a11y.underlineLinks);
     root.classList.toggle('calm-sky', !!prefs.sky.calm);
     root.classList.toggle('moon-south', !!prefs.sky.south);
+    root.classList.toggle('season-halloween', season === 'halloween');
     storageSet(PREFS_KEY, prefs);
-  }, [prefs]);
+  }, [prefs, season]);
   useEffect(function () {
     var mq; try { mq = window.matchMedia('(prefers-color-scheme: light)'); } catch (e) { return; }
     function onChange() { themeTick(function (n) { return n + 1; }); }
@@ -1471,7 +1474,7 @@ function Root(props) {
     openNav: function () { setNavOpen(true); },
     closeNav: function () { setNavOpen(false); }
   };
-  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, uploads: uploads, theme: resolvedTheme(prefs, VIEWER_THEME) };
+  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, uploads: uploads, theme: resolvedTheme(prefs, VIEWER_THEME), season: season };
 
   return h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),

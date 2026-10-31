@@ -22,6 +22,7 @@ export const APP_SOURCES = [
   'bridge/live-parse.js',
   'bridge/live-bridge.js',
   'views/login.js',
+  'views/season.js',
   'views/shell.js',
   'views/group.js',
   'views/message.js',
@@ -159,12 +160,28 @@ function themeRules(tokens, root, auto, light, dark) {
 }
 
 /**
+ * Declares the tokens of each season under its class on the root.
+ * @param {object} tokens Content of tokens.json.
+ */
+function seasonRules(tokens) {
+  return tokens.color.seasons.map((season) => {
+    const block = (theme) => season.tokens.map((t) => `--${t.name}: ${t.value[theme]};`).join(' ');
+    const root = `:root.season-${season.id}`;
+    return `${root} { ${block('dark')} }\n` +
+      `@media (prefers-color-scheme: light) { ${root}:not([data-theme="dark"]) { ${block('light')} } }\n` +
+      `${root}[data-theme="light"] { ${block('light')} }\n`;
+  }).join('');
+}
+
+/**
  * Produces the token stylesheet.
  * @param {object} tokens Content of tokens.json.
  */
 function tokensCss(tokens) {
+  // Seasons come last: their rules must win over the base theme rules of the same specificity.
   return '/* Torch tokens, dark first: generated from the Torch design system */\n' +
-    themeRules(tokens, ':root', ':root:not([data-theme="dark"])', ':root[data-theme="light"]', ':root[data-theme="dark"]');
+    themeRules(tokens, ':root', ':root:not([data-theme="dark"])', ':root[data-theme="light"]', ':root[data-theme="dark"]') +
+    seasonRules(tokens);
 }
 
 /**
@@ -218,7 +235,8 @@ function jsonString(text) {
  * @param {string} app Application stylesheet.
  */
 function skinCss(tokens, bundle, app) {
-  const shadowTokens = SHADOW_SELECTORS.reduce((css, [from, to]) => css.replaceAll(from, () => to), tokens);
+  const shadowTokens = SHADOW_SELECTORS.reduce((css, [from, to]) => css.replaceAll(from, () => to),
+    tokens.replace(/:root\.(season-[\w-]+)([^\s{]*)/g, (_, season, rest) => `:host(.${season}${rest})`));
   const shadowApp = app
     .replace('html,body{height:100%}', () => ':host{display:block;height:100%}')
     .replace('body{background:var(--bg)', () => '#app{height:100%;background:var(--bg)')

@@ -32,6 +32,7 @@ function MembersList(p) {
  */
 function MembersPanel(p) {
   return h('aside', { className: 'col members', 'aria-label': 'Members of ' + p.g.id },
+    useApp().season === 'halloween' ? h(SeasonWeb) : null,
     columnHeader('Members'),
     h('div', { className: 'scroll' }, h(MembersList, { g: p.g })));
 }
