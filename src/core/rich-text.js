@@ -83,24 +83,31 @@ var EMPHASIS = ['b', 'i', 'u', 's'];
 
 // Like BetterChatango's rendering: "@name: `text`" is a quote and does not cross a line break.
 var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
+// The same quote as one group, for splitting plain text.
+var QUOTE_WHOLE = /(@[A-Za-z0-9]{1,20}: `.*?`)/;
 var NAME_OR_LINK = /(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/;
 
 /**
  * Plain text whose names and links stay whole and left to right, without a button or a link.
- * In a dir="auto" container they do not set the direction either.
+ * In a dir="auto" container they do not set the direction either, nor does a quote, which takes its own.
  * @param {string} text Shown text.
  * @param {Array<number>} [hit] Start and end of a highlighted search term.
  */
 function bidiText(text, hit) {
   var end = 0;
-  return String(text).split(NAME_OR_LINK).map(function (s, i) {
-    var start = end;
-    end += s.length;
-    if (s && hit && hit[0] < end && hit[1] > start) {
-      var a = Math.max(hit[0] - start, 0), b = Math.min(hit[1] - start, s.length);
-      s = h(Frag, null, s.slice(0, a), h('mark', null, s.slice(a, b)), s.slice(b));
-    }
-    return i % 2 ? h('span', { key: i, dir: 'ltr' }, s) : h(Frag, { key: i }, s);
+  function run(text) {
+    return text.split(NAME_OR_LINK).map(function (s, i) {
+      var start = end;
+      end += s.length;
+      if (s && hit && hit[0] < end && hit[1] > start) {
+        var a = Math.max(hit[0] - start, 0), b = Math.min(hit[1] - start, s.length);
+        s = h(Frag, null, s.slice(0, a), h('mark', null, s.slice(a, b)), s.slice(b));
+      }
+      return i % 2 ? h('span', { key: i, dir: 'ltr' }, s) : h(Frag, { key: i }, s);
+    });
+  }
+  return String(text).split(QUOTE_WHOLE).map(function (s, i) {
+    return i % 2 ? h('span', { key: i, dir: 'auto' }, run(s)) : h(Frag, { key: i }, run(s));
   });
 }
 
@@ -132,7 +139,8 @@ function MessageText(p) {
     var nodes = chunks.map(function (s, i) {
       if (i % 3 === 0) return inline(s);
       if (i % 3 === 2) return null;
-      return h('span', { key: i, className: 'msg-quote' }, mention('@' + s), ': ', h('span', { className: 'msg-quote-text' }, inline(chunks[i + 1])));
+      // Its own direction: the author's words around it set the direction of the message.
+      return h('span', { key: i, className: 'msg-quote', dir: 'auto' }, mention('@' + s), ': ', h('span', { className: 'msg-quote-text' }, inline(chunks[i + 1])));
     });
     return marks.reduce(function (node, mark) { return part[mark] ? h(mark, { key: k }, node) : node; }, nodes);
   }));
