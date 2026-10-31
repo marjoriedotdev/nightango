@@ -46,6 +46,16 @@ w.__TORCH_LIVE__ = true;
 w.__TORCH_SHOW__ = () => { shown++; };
 w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
+// Diagnostic journal of the page code: the bridge notes its connections there.
+const journal = [];
+w.__TORCH_JOURNAL__ = { limit: 1000, add: (k, m) => { journal.push({ t: Date.now(), k, m: String(m) }); }, entries: () => journal.slice(), clear: () => { journal.length = 0; }, subscribe: () => noop };
+// Like a browser WebSocket: a frame reaches onmessage only while the socket is open.
+const sockets = [];
+w.WebSocket = function (url) { this.url = url; this.readyState = 0; sockets.push(this); };
+w.WebSocket.prototype.close = function () { this.readyState = 3; };
+w.WebSocket.prototype.receive = function (frame) { if (this.readyState === 1) this.onmessage({ data: frame }); };
+// Held: client.connect opens a socket like socketEvent, whose ok registers the group and whose inited settles the attempt.
+let connectHeld = false;
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
 const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
 // Record of the BetterChatango history database (saveMessage): key ts, the frame timestamp.
@@ -126,7 +136,17 @@ const C = {
   connect(gid) {
     if (C.cache.connect.includes(gid)) return new Promise(noop);
     C.cache.connect.push(gid);
-    calls.push(['connect', gid, !!C.database.pm]); if (gid !== 'private_message' && !C.groups[gid]) C.groups[gid] = fakeGroup(); return Promise.resolve({});
+    calls.push(['connect', gid, !!C.database.pm]);
+    if (connectHeld) return new Promise(resolve => {
+      const socket = new w.WebSocket('wss://s12.chatango.com:8080/');
+      socket.onmessage = e => {
+        const [name, ...data] = e.data.split(':');
+        C.event.group[name](C, socket, gid, data);
+        if (name === 'ok') C.groups[gid] = Object.assign(fakeGroup(), { socket });
+        if (name === 'inited') resolve(socket);
+      };
+    });
+    if (gid !== 'private_message' && !C.groups[gid]) C.groups[gid] = fakeGroup(); return Promise.resolve({});
   },
   setFocus(o) { calls.push(['focus', o.group]); }, disconnectFrom(gid) { calls.push(['disconnect', gid]); delete C.groups[gid]; },
   systemMessage() {}, setNotice() {}, setProfile(dt) { calls.push(['setProfile', dt]); },
@@ -1733,6 +1753,32 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   C.groups.test.socket.readyState = 1; await wait(2300);
   step('automatic reconnect after a server drop, then after a failed attempt',
     auto1.test === 1 && auto1.pm === 1 && auto1.focus === 0 && auto2.test === 2 && auto2.pm === 1, { auto1, auto2 });
+
+  /* Hung attempt: without an answer, the bridge gives up after its timeout, and Try again starts a new attempt */
+  // A hidden page starts no automatic attempt: a loss or a failure leaves the banner on Try again.
+  const hidePage = () => Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
+  const showPage = () => { delete d.visibilityState; };
+  const failedPhase = () => (connBanner() || {}).phase === 'failed';
+  click(byText('.tc-nav', 'test')); await wait(50);
+  connectHeld = true;
+  hidePage();
+  C.groups.test.socket.readyState = 3; await until(failedPhase, 3000);
+  showPage();
+  const hungFrom = { connects: connectsOf('test'), sockets: sockets.length, notes: journal.length };
+  click(byText('.conn-banner button', 'Try again')); await wait(30);
+  const hungSocket = sockets[hungFrom.sockets];
+  hidePage();
+  await until(failedPhase, 15000);
+  showPage();
+  const hung = { connects: connectsOf('test') - hungFrom.connects, socket: hungSocket ? hungSocket.readyState : null, cached: C.cache.connect.includes('test'), notes: journal.slice(hungFrom.notes).map(e => e.m), banner: connBanner() };
+  connectHeld = false;
+  const tryAgain = byText('.conn-banner button', 'Try again');
+  if (tryAgain) { click(tryAgain); await wait(30); }
+  hung.retried = connectsOf('test') - hungFrom.connects;
+  C.groups.test.socket.readyState = 1; await until(() => !connBanner());
+  step('an attempt without an answer fails after the bridge timeout, closes its socket and is noted, then Try again starts a new one',
+    hung.connects === 1 && hung.socket === 3 && !hung.cached && hung.notes.includes('Could not connect to #test: no answer after 10 s') && hung.banner && hung.banner.phase === 'failed' && hung.retried === 2,
+    hung);
 
   /* Session loss: signed in elsewhere, offline, connection lost, session expired */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };

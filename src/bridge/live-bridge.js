@@ -315,27 +315,58 @@ var liveBridge = (function () {
       } catch (e) { warn(e); }
     }, 2000);
   }
+  // BetterChatango times out only the group it recorded last in cache.connecting (inject.js:5699-5704): each attempt gets the same 10 s here.
+  var CONNECT_TIMEOUT = 10000;
+  /**
+   * Calls client.connect and keeps the socket it opens.
+   * @param {string} gid Group or private_message.
+   * @returns {{done: Promise, socket: ?WebSocket}} Promise of client.connect and its new socket, null if it opened none.
+   */
+  function openSocket(gid) {
+    // client.connect creates its socket synchronously and keeps it to itself until ok (inject.js:5631): the only handle to close it while it connects.
+    var Native = window.WebSocket, out = { done: null, socket: null };
+    window.WebSocket = function (url) { out.socket = new Native(url); return out.socket; };
+    try { out.done = C.connect(gid); } finally { window.WebSocket = Native; }
+    return out;
+  }
   /**
    * Starts a BetterChatango connection.
    * @param {string} gid Group or private_message.
+   * @returns {Promise} Settles with the attempt, rejected after CONNECT_TIMEOUT without an answer.
    */
   function connect(gid) {
     // A second PM session opened during the first would send kickingoff to ours: only one attempt at a time.
-    if (attempts[gid]) return attempts[gid];
+    if (attempts[gid]) return attempts[gid].done;
+    var a = { socket: null, timer: null, cancel: null };
+    var cancelled = new Promise(function (resolve, reject) { a.cancel = reject; });
     // BetterChatango ignores client.connect while gid stays in cache.connect: like it, we remove it around each attempt.
     function forget() { C.cache.connect = C.cache.connect.filter(function (x) { return x !== gid; }); }
     function settle() {
+      clearTimeout(a.timer);
       delete attempts[gid];
       forget();
       // Without a new socket, the observed state does not change: we force it to be emitted again to leave "connecting", including for a group that BetterChatango removed.
       if (gid === 'private_message') pmState = null; else connState[gid] = 'connecting';
     }
-    function attempt() { forget(); return C.connect(gid); }
+    function attempt() {
+      forget();
+      var opened = openSocket(gid);
+      a.socket = opened.socket;
+      a.timer = setTimeout(function () { a.cancel(new Error('no answer after ' + CONNECT_TIMEOUT / 1000 + ' s')); }, CONNECT_TIMEOUT);
+      return opened.done;
+    }
     // Like BetterChatango, the history database opens before the private connection: the msgoff frames, delivered only once right after OK, are archived there.
     note('Connecting to ' + connName(gid));
     var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
-    attempts[gid] = sock.then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) { settle(); note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e)); throw e; });
-    return attempts[gid];
+    a.done = Promise.race([sock, cancelled]).then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) {
+      settle();
+      // A late answer would give BetterChatango a second socket for this connection.
+      if (a.socket) a.socket.close();
+      note('Could not connect to ' + connName(gid) + ': ' + (e && e.message || e));
+      throw e;
+    });
+    attempts[gid] = a;
+    return a.done;
   }
 
   /**
