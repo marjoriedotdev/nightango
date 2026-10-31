@@ -25,6 +25,14 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Presence is a moon phase: full moon (`status-online`), crescent (`status-idle`), new moon outline (`status-offline`). The shape carries the state, so a list reads in grayscale. Where one person is shown (a conversation header, a profile), a text label sits next to the dot (Online, Idle, Last online …). In a list, the phase may stand alone on screen; the row's accessible name then states the status.
 - Focus: a 2px solid `focus-ring` outline offset by 2px on every interactive element. It holds 3:1 on every surface.
 
+## Seasons
+
+- A season dresses the night for a few days a year, read from the device date: Halloween from October 24 to November 2. Its tokens (`color.seasons` in `tokens.json`) replace the tokens of the same name under the `season-<id>` class on the root, in both themes, and add the colors of its decorations (`season-*`).
+- A season keeps every contrast rule above: text at 4.5:1 on every surface, and `bg` and `selected` at least as far from text as in the base theme, since member colors and the accent as text are corrected against the base values. The accent stays the reader's choice.
+- The moon keeps its real phase; only its colors change. At Halloween it turns into a harvest moon, gold to rust.
+- Decorations are inline SVG, hidden from assistive technology, never over text or a control: silhouettes on the sky band, a cobweb in a column corner, a costume on member avatars from 24px through the `decor` slot of `Avatar`. Group icons wear none.
+- Seasonal motion stops with Calm sky and with reduced motion. Seasonal decorations, in Appearance, turns the whole season off.
+
 ## Typography
 
 - Geist (`font-sans`) for everything people read and click. Instrument Serif (`font-display`) for places and people: page titles, conversation header names, profile names, empty state titles, the wordmark. Geist Mono (`font-mono`) only for version numbers. All three are embedded from `fonts/fonts.css` (SIL Open Font License 1.1, see `fonts/OFL.txt`).

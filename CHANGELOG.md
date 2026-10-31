@@ -2,6 +2,13 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.30.0] - 2026-10-31
+
+### Added
+
+- From October 24 to November 2, Nightango dresses for Halloween: a violet night, a harvest moon with bats, a cobweb and its spider in the member list, and costumes on avatars. Only you see them.
+- Seasonal decorations in Settings, Appearance, turns them off. Calm sky stops their motion.
+
 ## [0.29.1] - 2026-10-31
 
 ### Changed
