@@ -104,6 +104,26 @@ async function suite(userscript) {
       && body.action === 'activity' && body.profile === 'marjorie' && body.page === 1700000000.5 && body.order === 'desc' && body.get === 'like'
       && !!reply && reply.data.get[0].user === 'zoe',
     { calls: a.gm.map(c => ({ method: c.method, url: c.url, anonymous: c.anonymous, data: c.data })), replies });
+
+  /* TikTok bridge: short links only, rebuilt by the sandbox, without cookies, only the post id comes back */
+  const tiktok = [], sent = a.gm.length;
+  a.d.addEventListener('torch-skin:tiktok-response', e => tiktok.push(JSON.parse(e.detail)));
+  const askTikTok = (id, url) => a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:tiktok-request', { detail: JSON.stringify({ id, url }) }));
+  askTikTok('t1', 'https://example.com/t/ZPLyE4syb/');
+  askTikTok('t2', 'https://www.tiktok.com/t/ZPLyE4syb/?_r=1');
+  askTikTok('t3', 'https://vm.tiktok.com/ZMabc123/');
+  await wait(20);
+  const [t2call, t3call] = a.gm.slice(sent);
+  if (t2call) t2call.onload({ status: 200, finalUrl: 'https://www.tiktok.com/@clown/video/7429876543210987654?_t=8q&_r=1', responseText: '<html></html>' });
+  // Userscripts (Safari) names the final URL responseURL.
+  if (t3call) t3call.onload({ status: 200, responseURL: 'https://www.tiktok.com/login?redirect_url=x', responseText: '<html></html>' });
+  await wait(20);
+  const tReply = id => tiktok.find(r => r.id === id) || {};
+  step('TikTok bridge resolves short links only and returns the post id only',
+    a.gm.length === sent + 2 && t2call.method === 'GET' && t2call.url === 'https://www.tiktok.com/t/ZPLyE4syb/' && t2call.anonymous === true
+      && t3call.url === 'https://vm.tiktok.com/ZMabc123/' && !!tReply('t1').error && !!tReply('t3').error
+      && tReply('t2').post === '7429876543210987654' && Object.keys(tReply('t2')).sort().join() === 'id,post',
+    { calls: a.gm.slice(sent).map(c => ({ method: c.method, url: c.url, anonymous: c.anonymous })), tiktok });
   step('no page errors', a.errors.length === 0, a.errors);
   a.w.close();
 
