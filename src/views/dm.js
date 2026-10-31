@@ -111,7 +111,7 @@ function useDmSearch(term) {
 function hitExcerpt(text, term) {
   var at = text.toLowerCase().indexOf(term.toLowerCase()), end = at + term.length, start = Math.max(0, at - 30), space = text.indexOf(' ', start);
   if (start && space >= 0 && space < at) start = space + 1;
-  return h(Frag, null, (start ? '…' : '') + text.slice(start, at), h('mark', null, text.slice(at, end)), text.slice(end));
+  return h(Frag, null, start ? '…' : '', bidiText(text.slice(start), [at - start, end - start]));
 }
 /**
  * "You:" label before the user's own message in a preview.
@@ -342,7 +342,7 @@ function personRow(s, n, onClick, current) {
       h('span', { className: 'conv-name' }, n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(s, n),
-      c ? h('span', { className: 'conv-prev', dir: 'auto' }, last ? h(Frag, null, ownLabel(last.from === s.me), messagePreview(last)) : 'No messages yet') : null,
+      c ? h('span', { className: 'conv-prev', dir: 'auto' }, last ? h(Frag, null, ownLabel(last.from === s.me), bidiText(messagePreview(last))) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
 }
 

@@ -35,6 +35,6 @@ function MentionsView() {
     pageHeader('Mentions'),
     h('div', { className: 'scroll' },
       h('div', { className: 'mentions' }, shown.length ? shown.map(function (e) {
-        return h(MessageEntry, { key: e.gid + ' ' + e.id, name: e.author, ts: e.ts, meta: '#' + e.gid, text: e.text, onClick: function () { open(e); } });
+        return h(MessageEntry, { key: e.gid + ' ' + e.id, name: e.author, ts: e.ts, meta: '#' + e.gid, text: bidiText(e.text), onClick: function () { open(e); } });
       }) : h('p', { className: 'pal-empty' }, 'No mentions yet. Messages that mention you appear here until you reload the page.'))));
 }

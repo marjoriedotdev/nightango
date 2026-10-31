@@ -7,7 +7,7 @@
 function profileAbout(u, skinned) {
   if (u.profileMissing) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'This account has no public profile.'));
   if (u.aboutHtml) return h(RichAbout, { u: u, skinned: skinned });
-  if (u.about) return h('div', { className: 'kv' }, h('p', { className: 'about', dir: 'auto' }, u.about));
+  if (u.about) return h('div', { className: 'kv' }, h('p', { className: 'about', dir: 'auto' }, bidiText(u.about)));
   if (LIVE && !u.profileLoaded) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'Loading profile.'));
   return null;
 }

@@ -83,6 +83,26 @@ var EMPHASIS = ['b', 'i', 'u', 's'];
 
 // Like BetterChatango's rendering: "@name: `text`" is a quote and does not cross a line break.
 var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
+var NAME_OR_LINK = /(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/;
+
+/**
+ * Plain text whose names and links stay whole and left to right, without a button or a link.
+ * In a dir="auto" container they do not set the direction either.
+ * @param {string} text Shown text.
+ * @param {Array<number>} [hit] Start and end of a highlighted search term.
+ */
+function bidiText(text, hit) {
+  var end = 0;
+  return String(text).split(NAME_OR_LINK).map(function (s, i) {
+    var start = end;
+    end += s.length;
+    if (s && hit && hit[0] < end && hit[1] > start) {
+      var a = Math.max(hit[0] - start, 0), b = Math.min(hit[1] - start, s.length);
+      s = h(Frag, null, s.slice(0, a), h('mark', null, s.slice(a, b)), s.slice(b));
+    }
+    return i % 2 ? h('span', { key: i, dir: 'ltr' }, s) : h(Frag, { key: i }, s);
+  });
+}
 
 /* Message text: emphasis (parseContent segments, absent without emphasis), quotes, mentions and links */
 function MessageText(p) {
@@ -97,7 +117,7 @@ function MessageText(p) {
       : h('span', { key: key, className: 'tc-mention', dir: 'ltr' }, s);
   }
   function inline(text) {
-    return text.split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
+    return text.split(NAME_OR_LINK).map(function (s, i) {
       if (!s) return null;
       if (s.charAt(0) === '@' && s.length > 1) return mention(s, i);
       if (/^https?:\/\//.test(s)) {
@@ -147,7 +167,7 @@ function richNodes(node, ctx, key) {
   var out = [];
   Array.prototype.forEach.call(node.childNodes, function (c, i) {
     var k = key + '.' + i;
-    if (c.nodeType === 3) { if (c.nodeValue) out.push(c.nodeValue); return; }
+    if (c.nodeType === 3) { if (c.nodeValue) out.push(h(Frag, { key: k }, bidiText(c.nodeValue))); return; }
     if (c.nodeType !== 1) return;
     var tag = c.tagName.toLowerCase();
     if (RICH_DROP[tag]) return;
@@ -189,7 +209,7 @@ function RichText(p) {
   var r = useState(false), revealed = r[0], setRevealed = r[1];
   var html = String(p.html || '').replace(/\r\n|\r|\n/g, '<br>');
   var body;
-  try { body = richBody(html); } catch (e) { return h('p', { className: 'about', dir: 'auto' }, p.html); }
+  try { body = richBody(html); } catch (e) { return h('p', { className: 'about', dir: 'auto' }, bidiText(p.html)); }
   var ctx = {
     bg: p.bg || SURFACE[app.theme].bg, inline: p.inline, link: p.link,
     images: safety.embedImages, blocked: function (src) { return !revealed && waitsForClick(safety, 'image', src); },

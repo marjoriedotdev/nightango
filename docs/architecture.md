@@ -16,7 +16,7 @@ src/
     ui.js            React context, Portal (#layer layer), useFloating (layer anchored to its trigger), useDraft (composer text per conversation), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
                      Person (avatar and name that open the profile), role and "You" badges, list presence,
                      useRightColumn (single 1180 px threshold: right column above, full screen below)
-    rich-text.js     MessageText (emphasis, quotes, mentions, links), shownParts (shown text without the links shown as a media), trusted hosts (isTrustedUrl), RichText (sanitized mini profile), fullProfileDoc
+    rich-text.js     MessageText (emphasis, quotes, mentions, links), bidiText (plain text with its names and links kept left to right), shownParts (shown text without the links shown as a media), trusted hosts (isTrustedUrl), RichText (sanitized mini profile), fullProfileDoc
     selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry
   bridge/     the bridge to BetterChatango
     live-model.js    LIVE, JOURNAL, avatarSrc (and photo version of one's own account), vissle pagination, Chatango bits (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
