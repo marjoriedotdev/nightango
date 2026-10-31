@@ -1,11 +1,12 @@
 // -- Recovery screen ----------------------------------------------------------
-// Plain elements and buttons only: the screen must not depend on what may have failed.
+// Plain elements and design system buttons only: nothing from Root, which may be what failed.
 function RecoveryScreen() {
   return h('main', { className: 'recovery' },
     h('div', { className: 'empty', role: 'alert' },
       h('h1', null, 'Nightango ran into an error'),
+      // The bridge keeps BetterChatango's PM handlers, whose connect can call vissle outside the allowed list.
       h('p', null, LIVE
-        ? "You're still connected. Reload the page to start Nightango again, or show BetterChatango to keep chatting."
+        ? "Reload the page to start Nightango again. Your groups keep working in BetterChatango meanwhile. Private messages won't open there until you reload."
         : 'Reload the page to start again.'),
       h('div', { className: 'recovery-actions' },
         LIVE ? h(T.Button, { variant: 'ghost', onClick: function () { window.__TORCH_HIDE__(); } }, 'Show BetterChatango') : null,

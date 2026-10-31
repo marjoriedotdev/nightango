@@ -189,6 +189,10 @@ async function suite(userscript) {
   const r = page(userscript, 'https://st.chatango.com/');
   await deliverReact(r.w);
   fakeBetterChatango(r.w);
+  // BetterChatango's PM handlers: connect opens its PM screen, DENIED shows its alert.
+  const bcPrivate = [];
+  r.w.client.event.private.connect = () => { bcPrivate.push('connect'); };
+  r.w.client.event.private.DENIED = () => { bcPrivate.push('DENIED'); };
   await wait(700);
   // A view that fails to render: the sidebar draws the avatar of the signed-in account.
   r.w.Torch.Avatar = () => { throw new r.w.TypeError('view failed'); };
@@ -206,8 +210,14 @@ async function suite(userscript) {
   if (action('Reload')) action('Reload').click();
   step('Reload reloads the page', r.reloads.length === 1, r.reloads);
   const hiddenBefore = !!r.d.getElementById('torch-skin-hide');
+  const said = screen ? screen.textContent : '';
   if (action('Show BetterChatango')) action('Show BetterChatango').click();
   step('Show BetterChatango removes the overlay and the hiding stylesheet', hiddenBefore && !r.d.getElementById('torch-skin') && !r.d.getElementById('torch-skin-hide'));
+  // The bridge keeps BetterChatango's PM handlers, so a conversation opened there stays closed until a reload.
+  r.w.client.event.private.connect(r.w.client, null, 'private_message', ['bob', '0', 'online']);
+  r.w.client.event.private.DENIED(r.w.client, null, 'private_message', []);
+  step('recovery screen says private messages need a reload in BetterChatango',
+    /private messages/i.test(said) && /reload/i.test(said) && bcPrivate.length === 0, { said, bcPrivate });
   r.w.close();
 }
 
