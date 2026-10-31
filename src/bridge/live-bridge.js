@@ -1369,9 +1369,15 @@ var liveBridge = (function () {
     /**
      * Finds the TikTok post a short link leads to, through the userscript bridge.
      * @param {string} url Short TikTok link.
-     * @returns {Promise<string>} Post id, rejected with the text to show if TikTok does not give it.
+     * @returns {Promise<{post: string, link: string}>} Post id and link, rejected with the text to show if TikTok does not give them.
      */
-    tiktokPost: function (url) { return askLoader('tiktok', { url: url }).then(function (r) { return r.post; }); },
+    tiktokPost: function (url) { return askLoader('tiktok', { op: 'post', url: url }).then(function (r) { return { post: r.post, link: r.link }; }); },
+    /**
+     * Reads the thumbnail TikTok gives for a post, through the userscript bridge.
+     * @param {string} link TikTok post link.
+     * @returns {Promise<string>} https address of the thumbnail.
+     */
+    tiktokThumb: function (link) { return askLoader('tiktok', { op: 'thumb', url: link }).then(function (r) { return r.thumb; }); },
     /**
      * Uploads a file to vissle like the BetterChatango Upload dialog without BetterChatango posting its link.
      * @param {File} file Chosen file.

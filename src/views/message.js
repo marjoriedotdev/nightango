@@ -208,14 +208,23 @@ function VideoEmbed(p) {
 
 /**
  * TikTok post in TikTok's embed player, which exists only after the click.
- * A short link is resolved at the click: only its redirect gives the post id.
+ * Its thumbnail is asked to TikTok only under the rules of the YouTube thumbnail.
+ * A short link is resolved at the click, or before for the thumbnail: only its redirect gives the post id.
  * @param {?string} p.id Post id, absent for a short link.
- * @param {string} p.url Link typed in the message.
+ * @param {string} p.url Post or short link of the message.
  */
 function TikTokEmbed(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var a = useState(p.id || null), post = a[0], setPost = a[1];
   var b = useState('idle'), phase = b[0], setPhase = b[1];
+  var c = useState(null), thumb = c[0], setThumb = c[1];
+  var preview = safety.embedVideos && !waitsForClick(safety, 'tiktok', p.url);
+  useEffect(function () {
+    if (!preview) return;
+    var current = true;
+    app.actions.tiktokThumb({ id: p.id, url: p.url }).then(function (url) { if (current) setThumb(url); }, function () { /* without a thumbnail, the card stays plain */ });
+    return function () { current = false; };
+  }, [preview, p.url]);
   if (!safety.embedVideos || phase === 'failed') return mediaLink(app, p.url, 'msg-link', p.url);
   if (phase === 'playing') {
     return h('iframe', {
@@ -226,9 +235,12 @@ function TikTokEmbed(p) {
   function play() {
     if (post) { setPhase('playing'); return; }
     setPhase('loading');
-    app.actions.tiktokPost(p.url).then(function (id) { setPost(id); setPhase('playing'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
+    app.actions.tiktokPost(p.url).then(function (r) { setPost(r.post); setPhase('playing'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
   }
-  return h(RevealButton, { icon: 'play', label: phase === 'loading' ? 'Loading video' : 'Play video', url: p.url, onClick: phase === 'loading' ? null : play });
+  var loading = phase === 'loading';
+  return h('button', { type: 'button', className: 'embed-video embed-tiktok', 'aria-label': 'Play video', 'aria-busy': loading ? 'true' : undefined, onClick: loading ? null : play },
+    preview && thumb ? h('img', { src: thumb, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer', onError: function () { setThumb(null); } }) : null,
+    h('span', { className: 'embed-play' }, loading ? h(T.Spinner, { size: 22, label: 'Loading video' }) : h(T.Icon, { name: 'play', size: 22 })));
 }
 
 /**
