@@ -169,9 +169,9 @@ function GroupView(p) {
       h('header', { className: 'topbar' },
         h(MobileNavButton, null),
         h('h1', null, g.id),
-        h('span', { className: 'vsep' }),
-        h('p', { className: 'topic' }, g.topic),
-        h('span', { className: 'grow only-mobile' }),
+        g.topic ? h(Frag, null, h('span', { className: 'vsep' }), h('p', { className: 'topic' }, g.topic)) : null,
+        // The topic pushes the buttons to the right on desktop: without one, this spacer does it.
+        h('span', { className: g.topic ? 'grow only-mobile' : 'grow' }),
         // On mobile only the number stays visible: the accessible name keeps "online".
         h('button', { type: 'button', className: 'pillbtn', 'aria-label': waitingCount ? undefined : online + ' online', 'aria-pressed': column.pressed == null ? undefined : String(column.pressed), onClick: column.toggle },
           h(T.Icon, { name: 'users', size: 16 }), waitingCount ? 'Members' : online, waitingCount ? null : h('span', { className: 'hide-mobile' }, ' online')),
