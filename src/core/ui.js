@@ -53,23 +53,39 @@ function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
 var ROW_BATCH = 100;
 /**
  * Renders a long list in batches: the first rows, then one more batch each time the sentinel after them approaches the visible area.
- * Rendered rows stay until the list is reset, whatever the data updates.
+ * A rendered row stays rendered when rows are added or removed around it, until the list is reset.
  * @param {Object} rootRef Ref of the scrolling area.
- * @param {number} total Rows in the list, 0 while the list is not rendered.
+ * @param {Array<string>} keys Keys of the rows in list order, empty while the list is not rendered.
  * @param {string} reset Search, filter or tab of the list: a new value renders the first batch again.
  * @returns {{limit: number, sentinel: ?Object}} Rows to render, and the element to place after them while rows are left.
  */
-function useRowBatches(rootRef, total, reset) {
+function useRowBatches(rootRef, keys, reset) {
   var st = useState({ reset: reset, limit: ROW_BATCH }), batch = st[0], setBatch = st[1];
-  var sentinelRef = useRef(null);
+  var sentinelRef = useRef(null), lastRef = useRef(null);
   if (batch.reset !== reset) { batch = { reset: reset, limit: ROW_BATCH }; setBatch(batch); }
-  var more = total > batch.limit;
+  var last = lastRef.current && lastRef.current.reset === reset ? lastRef.current : null, limit = batch.limit, i;
+  if (last) {
+    var added = 0, was;
+    for (i = 0; i < keys.length; i++) if (last.at[keys[i]] === undefined) added++;
+    // Rows added above a rendered row would push it past the batch limit, out of the DOM with its focus and swipe.
+    for (i = keys.length - 1; i >= limit; i--) {
+      was = last.at[keys[i]];
+      // A row moved further down than rows were added, like a member gone offline, waits for its batch: following it would render every row above it.
+      if (was !== undefined && was < last.limit && i - was <= added) { limit = i + 1; break; }
+    }
+  }
+  useEffect(function () {
+    var at = Object.create(null);
+    keys.forEach(function (k, j) { at[k] = j; });
+    lastRef.current = { reset: reset, at: at, limit: limit };
+  });
+  var more = keys.length > limit;
   // The limit as enabled: each batch observes the sentinel again, so a sentinel still in view loads the next batch.
-  useInfiniteScroll(rootRef, sentinelRef, more && batch.limit, function () {
-    // Functional update: the observer keeps the callback of its batch, which can predate a reset.
-    setBatch(function (b) { return { reset: b.reset, limit: b.limit + ROW_BATCH }; });
+  useInfiniteScroll(rootRef, sentinelRef, more && limit, function () {
+    // Functional update: the observer keeps the callback of its limit, which can predate a reset to the same limit.
+    setBatch(function (b) { return { reset: b.reset, limit: Math.max(b.limit, limit) + ROW_BATCH }; });
   }, LOAD_BELOW_MARGIN);
-  return { limit: batch.limit, sentinel: more ? h('div', { ref: sentinelRef, 'aria-hidden': 'true', style: { height: 1 } }) : null };
+  return { limit: limit, sentinel: more ? h('div', { ref: sentinelRef, 'aria-hidden': 'true', style: { height: 1 } }) : null };
 }
 
 var FLOAT_UNPLACED = { position: 'fixed', visibility: 'hidden', top: 0, left: 0 };

@@ -10,7 +10,7 @@ function MembersList(p) {
   var off = others.filter(function (n) { return userOf(s, n).status === 'offline' && n !== s.me; });
   var guests = guestsOf(g), showGuests = s.prefs.safety.showGuests && guests.count;
   var loading = LIVE && !g.membersLoaded;
-  var batch = useRowBatches(p.scrollRef, loading ? 0 : staff.length + on.length + off.length + (showGuests ? guests.names.length : 0), g.id);
+  var batch = useRowBatches(p.scrollRef, loading ? [] : staff.concat(on, off, showGuests ? guests.names : []), g.id);
   var before = 0;
   function row(n) {
     var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status;

@@ -1687,12 +1687,16 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && !editOnly.original && !editOnly.edit && !editOnly.shown,
     { removed, refused, edited, editOnly });
 
-  /* Long PM list in batches of 100: the next batch when the sentinel nears the visible area, again at once while it stays in view, kept by a new message, back to the first batch on another filter */
+  /* Long PM list in batches of 100: the next batch when the sentinel nears the visible area, again at once while it stays in view, kept by a new message, back to the first batch on another filter, rendered rows kept when conversations arrive above them */
   const batchRows = () => $$('.convs .conv-row').length;
   const batchWatcher = () => observers.filter(x => x.targets.some(t => t.isConnected && t.closest('.convs'))).pop();
   const reachEnd = o => { if (o) o.cb(o.targets.map(target => ({ isIntersecting: true, target })), o); };
   const listedBefore = batchRows();
+  // Received while the list is closed: while it shows, they would arrive above rendered rows, which keep them all rendered.
+  click(byText('.tc-nav', 'test')); await until(() => !$('.convs'));
   for (let i = 0; i < 250; i++) pm('msgoff', ['crowd' + i, 'marjorie', 'unknown', (1700005000 + i) + '.5', '0', '<n000/>Hi ' + i]);
+  await wait(50);
+  click(byText('.tc-nav', 'Private messages'));
   await until(() => $$('.convs .conv-name').some(x => x.textContent === 'crowd249') && !!batchWatcher());
   const batches = { total: listedBefore + 250, first: batchRows() };
   const nearEnd = batchWatcher();
@@ -1714,9 +1718,17 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   batches.backToAll = batchRows();
   reachEnd(batchWatcher()); await until(() => batchRows() > 100);
   batches.backToAllNext = batchRows();
+  // Every row rendered, then enough new conversations above them to pass the batch limit: no rendered row leaves.
+  while (batchWatcher() && batchRows() < batches.total) { const rendered = batchRows(); reachEnd(batchWatcher()); await until(() => batchRows() > rendered); }
+  const oldestRow = $$('.convs .conv-row').pop();
+  batches.late = 100 * Math.ceil(batches.total / 100) - batches.total + 5;
+  for (let i = 0; i < batches.late; i++) pm('msgoff', ['late' + i, 'marjorie', 'unknown', (1700007000 + i) + '.5', '0', '<n000/>Late ' + i]);
+  await until(() => $$('.convs .conv-name').some(x => x.textContent === 'late' + (batches.late - 1)));
+  batches.grown = batchRows(); batches.oldestKept = oldestRow.isConnected; batches.grownSentinel = !!batchWatcher();
   step('long pm list rendered in batches of 100',
     batches.first === 100 && batches.second === 200 && batches.all === batches.total && !batches.sentinel && batches.afterMessage === batches.total
-      && batches.unread === 100 && batches.backToAll === 100 && batches.backToAllNext === 200, batches);
+      && batches.unread === 100 && batches.backToAll === 100 && batches.backToAllNext === 200
+      && batches.grown === batches.total + batches.late && batches.oldestKept && !batches.grownSentinel, batches);
 
   /* Automatic reconnection: dropped by the server, page visible, network up, group not shown */
   const connectsOf = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;

@@ -18,7 +18,7 @@ function DMView(p) {
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
   var term = section === 'chats' ? q.trim() : '', found = useDmSearch(term);
   var scrollRef = useRef(null), loading = LIVE && !s.pmLoaded;
-  var batch = useRowBatches(scrollRef, section === 'chats' && !loading ? shown.length : 0, section + ':' + tab + ':' + q);
+  var batch = useRowBatches(scrollRef, section === 'chats' && !loading ? shown : [], section + ':' + tab + ':' + q);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
     h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
