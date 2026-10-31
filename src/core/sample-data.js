@@ -71,6 +71,7 @@ function seedWorld(me) {
       msg('sable', "I've put a note in the group announcement until it's fixed.", 18),
       msg('quill', 'Confirmed, the second reconnect held. Thanks.', 16, { replyTo: { id: known.id } }),
       msg('marrow', "Here's what the reconnect loop looks like on my side:", 14, { embeds: [{ kind: 'image', url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#0d0e10"/><g font-family="monospace" font-size="11" fill="#8a8e96"><text x="14" y="26">[ws] connecting s12.chatango.com:8081</text><text x="14" y="46" fill="#f08a8a">[ws] closed (1006) after 41s</text><text x="14" y="66">[ws] reconnect 1/3</text><text x="14" y="86" fill="#f08a8a">[ws] closed (1006) after 2s</text><text x="14" y="106">[ws] reconnect 2/3</text><text x="14" y="126" fill="#3fb27f">[ws] connected, joined #community</text></g></svg>') }] }),
+      msg('kestrel', SAMPLE_TIKTOK_LINK + '\nkitties', 13, { embeds: [{ kind: 'tiktok', id: '6718335390845095173', url: SAMPLE_TIKTOK_LINK }] }),
       msg('nightowl', '@' + me + ' the theme you exported imports cleanly now, nice work.', 12),
       msg(me, "Good to hear. I'll publish the light variant tonight.", 11)
     ]
@@ -156,6 +157,9 @@ var SAMPLE_VISITS = (function () {
  * Simulates a page of vissle activity.
  * @param {{page: number, get: string}} q Cursor and filter of the requested page.
  */
+// Post of TikTok's embed documentation, and the thumbnail the prototype shows in place of the one TikTok's oEmbed would give.
+var SAMPLE_TIKTOK_LINK = 'https://www.tiktok.com/@scout2015/video/6718335390845095173';
+var SAMPLE_TIKTOK_THUMB = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 320"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a2a4f"/><stop offset="1" stop-color="#c9774a"/></linearGradient></defs><rect width="180" height="320" fill="url(#g)"/><circle cx="90" cy="150" r="46" fill="#f3d2b3"/><path d="M52 120l12-40 22 30zM128 120l-12-40-22 30z" fill="#f3d2b3"/><circle cx="74" cy="148" r="5" fill="#2a2030"/><circle cx="106" cy="148" r="5" fill="#2a2030"/><path d="M84 166q6 6 12 0" stroke="#2a2030" stroke-width="3" fill="none"/></svg>');
 function sampleVisits(q) {
   return SAMPLE_VISITS.filter(function (x) { return (q.get === 'all' || x.action === q.get) && (q.page === 1 || x.time < q.page); }).slice(0, VISIT_PAGE);
 }
