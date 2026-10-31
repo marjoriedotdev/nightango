@@ -19,11 +19,11 @@ function MembersList(p) {
       h('span', { className: 'grow', style: u.status === 'offline' && !isMe ? { color: 'var(--text-3)' } : null }, n),
       presenceSr(status), youBadge(isMe), developerBadge(n), roleBadge(roleOf(g, n)));
   }
-  // Rows of a section within the rendered batches, null while a row before the section is left to render.
+  // Rows of a section within the rendered batches, null until they reach its first row: a heading never shows without its rows.
   function rows(names) {
     var from = before;
     before += names.length;
-    return from > batch.limit ? null : names.slice(0, batch.limit - from).map(row);
+    return from > batch.limit || (names.length && from === batch.limit) ? null : names.slice(0, batch.limit - from).map(row);
   }
   if (loading) return h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }));
   var staffRows = rows(staff), onRows = rows(on), offRows = rows(off), guestRows = showGuests ? rows(guests.names) : null;
