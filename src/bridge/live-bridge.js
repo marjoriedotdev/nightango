@@ -786,6 +786,23 @@ var liveBridge = (function () {
    * @param {string} late Text to show if the bridge does not reply.
    * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error or does not come.
    */
+  /**
+   * Builds an X card from a reply of the X bridge, null if a field has another shape than the loader sends: any script of the page can reply.
+   * @param {Object} r Reply of the bridge.
+   * @returns {?Object} Author, handle, text, date, link, author picture, time and media of the post.
+   */
+  function xCard(r) {
+    function text(v) { return typeof v === 'string'; }
+    function size(v) { return v === undefined || (typeof v === 'number' && v > 0 && isFinite(v)); }
+    var m = r.media == null ? null : r.media;
+    if (!text(r.author) || !text(r.text) || !text(r.date) || !text(r.handle) || !/^\w{1,15}$/.test(r.handle) || !text(r.link) || !/^https:\/\/x\.com\/\w{1,15}\/status\/\d{1,20}$/.test(r.link)) return null;
+    if (r.avatar != null && !(text(r.avatar) && /^https:\/\/pbs\.twimg\.com\/profile_images\//.test(r.avatar))) return null;
+    // A time new Date cannot hold would throw when the card writes it.
+    if (r.time != null && !(typeof r.time === 'number' && Math.abs(r.time) <= 8.64e15)) return null;
+    if (m && !(text(m.thumb) && /^https:\/\/pbs\.twimg\.com\//.test(m.thumb) && typeof m.sensitive === 'boolean' && size(m.width) && size(m.height)
+      && (m.kind === 'photo' || (m.kind === 'video' && text(m.video) && /^https:\/\/video\.twimg\.com\//.test(m.video))))) return null;
+    return { author: r.author, handle: r.handle, text: r.text, date: r.date, link: r.link, avatar: r.avatar || null, time: r.time == null ? null : r.time, media: m };
+  }
   function askLoader(channel, q, late) {
     return new Promise(function (resolve, reject) {
       var id = uid();
@@ -1510,8 +1527,9 @@ var liveBridge = (function () {
      */
     xPost: function (url) {
       return askLoader('x', { url: url }, 'X did not answer in time. Open the link instead.').then(function (r) {
-        if (typeof r.text !== 'string' || typeof r.link !== 'string') throw new Error('X did not share this post. Open the link instead.');
-        return { author: r.author, handle: r.handle, text: r.text, date: r.date, link: r.link, avatar: r.avatar || null, time: r.time || null, media: r.media || null };
+        var post = xCard(r);
+        if (!post) throw new Error('X did not share this post. Open the link instead.');
+        return post;
       });
     },
     /**
