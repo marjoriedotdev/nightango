@@ -1339,11 +1339,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const frankOffline = !!frankRow && !!frankRow.querySelector('.tc-presence-offline');
   step('friends last online and order', JSON.stringify(seen.map(x => x[0])) === JSON.stringify(['zoe', 'frank', 'erin', 'abe']) && timeOf('erin') === '3 d ago' && timeOf('frank') === '10 min ago' && !timeOf('abe') && !timeOf('zoe')
     && seen.every(x => !/\b(Online|Idle|Offline|ago)\b/.test(x[1])) && frankOffline, { seen, frankOffline });
-  // Idle shown only after 3 minutes: kim reaches it during the test, through the switch timer.
-  pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.999']); pm('idleupdate', ['zoe', '0']); await until(() => !!convRow('kim'));
+  // Idle shown only after 3 minutes: kim reaches it during the test, through the switch timer, which fires a little early as timers can.
+  const setTimeout0 = w.setTimeout;
+  w.setTimeout = (fn, ms, ...args) => setTimeout0.call(w, fn, ms >= 20 ? ms - 20 : ms, ...args);
+  pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.99']); pm('idleupdate', ['zoe', '0']); await until(() => !!convRow('kim'));
   const presenceRow = n => { const r = $$('.convs .conv').find(x => x.querySelector('.conv-name').textContent === n); return r ? [(r.querySelector('.tc-presence') || {}).className || '', (r.querySelector('.conv-time') || {}).textContent || ''] : []; };
   const before3 = { ivy: presenceRow('ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
   await until(() => /tc-presence-idle/.test(presenceRow('kim')[0]));
+  w.setTimeout = setTimeout0;
   const after3 = presenceRow('kim');
   step('idle shown after three minutes with its duration', /tc-presence-idle/.test(before3.ivy[0]) && before3.ivy[1] === 'Idle 5 min'
     && /tc-presence-online/.test(before3.jade[0]) && !before3.jade[1] && /tc-presence-online/.test(before3.kim[0]) && /tc-presence-online/.test(before3.zoe[0]) && !before3.zoe[1]

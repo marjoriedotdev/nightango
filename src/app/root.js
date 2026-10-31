@@ -137,7 +137,9 @@ function useIdleStatus(users, update) {
     var next = Infinity;
     Object.keys(users).forEach(function (n) { var u = users[n]; if (u.idleSince && u.status === 'online') next = Math.min(next, u.idleSince + IDLE_DELAY); });
     if (next === Infinity) return;
-    var timer = setTimeout(function () {
+    var timer = setTimeout(function due() {
+      // A timer can fire a little early: switching nobody changes no state, and nothing would set it again.
+      if (Date.now() < next) { timer = setTimeout(due, next - Date.now()); return; }
       update(function (d) { Object.keys(d.users).forEach(function (n) { var u = d.users[n]; if (u.idleSince && u.status === 'online' && Date.now() - u.idleSince >= IDLE_DELAY) u.status = 'idle'; }); });
     }, Math.max(0, next - Date.now()));
     return function () { clearTimeout(timer); };
