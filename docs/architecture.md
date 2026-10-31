@@ -69,7 +69,7 @@ torchds/project/     design system: tokens, components/bundle.js (namespace wind
 dist/                build outputs, not versioned
 ```
 
-`bridge/live-parse.js` contains only functions that read neither the BetterChatango client, nor `emit`, nor any variable of the bridge closure. A function that depends on this closure stays in `bridge/live-bridge.js`. The bridge keeps the steps specific to BetterChatango: waiting for Chatango's replies and their delays, requesting the announcement and reading a group's info after `inited`, the mention sound of a PM, the temporary `k:` message ids. It emits only facts to `Root`. `Root` (`app/root.js`) applies them to the state, with `app/pm.js` for PMs and `app/live-state.js` for the live state it builds.
+`bridge/live-parse.js` contains only functions that read neither the BetterChatango client, nor `emit`, nor any variable of the bridge closure. A function that depends on this closure stays in `bridge/live-bridge.js`. The bridge keeps the steps specific to BetterChatango: waiting for Chatango's replies and their delays, requesting the announcement and reading a group's info after `inited`, the mention sound of a PM, the temporary `k:` message ids. It emits only facts to `Root`. Each listener receives an operation on its own: one that throws is logged to the console, so to the diagnostic journal, and stops neither the other listeners nor the step that emits, sign-in included. `Root` (`app/root.js`) applies them to the state, with `app/pm.js` for PMs and `app/live-state.js` for the live state it builds.
 
 ## Concatenation
 
@@ -178,7 +178,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal, recovery screen. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
 - `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
-- `live_login`: sign-in detection, on the concatenation of the sources of `src/bridge/`.
+- `live_login`: sign-in detection and a listener that throws, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal.
 - `avatar`: avatars, on the design system bundle and the sources of `src/bridge/`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.
