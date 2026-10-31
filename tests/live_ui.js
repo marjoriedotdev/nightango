@@ -942,9 +942,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('connect', ['fay', '1700000000', 'offline']);
   await until(() => !!$('.thread .topbar .tc-presence-offline'));
   const fayHead = { topic: ($('.thread .topbar .topic') || {}).textContent || '', offline: !!$('.thread .topbar .tc-presence-offline') };
-  const fayDays = +((/^Last online (\d+) days ago$/.exec(fayHead.topic) || [])[1]);
+  const fayYears = +((/^Last online (\d+) years? ago$/.exec(fayHead.topic) || [])[1]);
   step('opening a pm asks Chatango for the presence', JSON.stringify(fayFrames) === JSON.stringify([['private_message', 'connect:fay']]) && fayHead.offline
-    && Math.abs(fayDays - (Date.now() - 1700000000000) / 86400000) <= 1 && !calls.some(c => c[0] === 'betterChatangoPmScreen'), { fayFrames, fayHead, betterChatango: calls.filter(c => c[0] === 'betterChatangoPmScreen').length });
+    && Math.abs(fayYears - (Date.now() - 1700000000000) / (365.25 * 86400000)) <= 0.5 + 1 / 365.25 && !calls.some(c => c[0] === 'betterChatangoPmScreen'), { fayFrames, fayHead, betterChatango: calls.filter(c => c[0] === 'betterChatangoPmScreen').length });
   // Private connection back: BetterChatango builds a new client.private after its OK handler, and Chatango forgets the previous connect.
   const sentBeforeOk = sent.length;
   pm('OK', []); C.private.focus = false;
@@ -2048,6 +2048,49 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && !edited.original && !edited.edit && edited.nell && !edited.shown
       && !editOnly.original && !editOnly.edit && !editOnly.shown,
     { removed, refused, edited, editOnly });
+
+  /* Long PM list in batches of 100: the next batch when the sentinel nears the visible area, again at once while it stays in view, kept by a new message, back to the first batch on another filter, rendered rows kept when conversations arrive above them */
+  const batchRows = () => $$('.convs .conv-row').length;
+  const batchWatcher = () => observers.filter(x => x.targets.some(t => t.isConnected && t.closest('.convs'))).pop();
+  const reachEnd = o => { if (o) o.cb(o.targets.map(target => ({ isIntersecting: true, target })), o); };
+  const listedBefore = batchRows();
+  // Received while the list is closed: while it shows, they would arrive above rendered rows, which keep them all rendered.
+  click(byText('.tc-nav', 'test')); await until(() => !$('.convs'));
+  for (let i = 0; i < 250; i++) pm('msgoff', ['crowd' + i, 'marjorie', 'unknown', (1700005000 + i) + '.5', '0', '<n000/>Hi ' + i]);
+  await wait(50);
+  click(byText('.tc-nav', 'Private messages'));
+  await until(() => $$('.convs .conv-name').some(x => x.textContent === 'crowd249') && !!batchWatcher());
+  const batches = { total: listedBefore + 250, first: batchRows() };
+  const nearEnd = batchWatcher();
+  reachEnd(nearEnd); await until(() => batchRows() > 100);
+  batches.second = batchRows();
+  // Sentinel still in view: the observer of the new batch reports it at once, like the browser does.
+  await until(() => batchWatcher() !== nearEnd, 1000);
+  const stillInView = batchWatcher();
+  if (stillInView !== nearEnd) { reachEnd(stillInView); await until(() => batchRows() > 200); }
+  batches.all = batchRows(); batches.sentinel = !!batchWatcher();
+  pm('msgoff', ['crowd0', 'marjorie', 'unknown', '1700006000.5', '0', '<n000/>Still here']);
+  await until(() => $$('.convs .conv-prev').some(x => x.textContent === 'Still here'));
+  batches.afterMessage = batchRows();
+  await until(() => $$('.convs .conv-row .tc-count').length >= 200);
+  click(byText('.convs .tab', 'Unread')); await wait(50);
+  batches.unread = batchRows();
+  // Back to All: the observer can predate this filter, its batch must still apply.
+  click(byText('.convs .tab', 'All')); await wait(50);
+  batches.backToAll = batchRows();
+  reachEnd(batchWatcher()); await until(() => batchRows() > 100);
+  batches.backToAllNext = batchRows();
+  // Every row rendered, then enough new conversations above them to pass the batch limit: no rendered row leaves.
+  while (batchWatcher() && batchRows() < batches.total) { const rendered = batchRows(); reachEnd(batchWatcher()); await until(() => batchRows() > rendered); }
+  const oldestRow = $$('.convs .conv-row').pop();
+  batches.late = 100 * Math.ceil(batches.total / 100) - batches.total + 5;
+  for (let i = 0; i < batches.late; i++) pm('msgoff', ['late' + i, 'marjorie', 'unknown', (1700007000 + i) + '.5', '0', '<n000/>Late ' + i]);
+  await until(() => $$('.convs .conv-name').some(x => x.textContent === 'late' + (batches.late - 1)));
+  batches.grown = batchRows(); batches.oldestKept = oldestRow.isConnected; batches.grownSentinel = !!batchWatcher();
+  step('long pm list rendered in batches of 100',
+    batches.first === 100 && batches.second === 200 && batches.all === batches.total && !batches.sentinel && batches.afterMessage === batches.total
+      && batches.unread === 100 && batches.backToAll === 100 && batches.backToAllNext === 200
+      && batches.grown === batches.total + batches.late && batches.oldestKept && !batches.grownSentinel, batches);
 
   /* Automatic reconnection: dropped by the server, page visible, network up, group not shown */
   const connectsOf = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;

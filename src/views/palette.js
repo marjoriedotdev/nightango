@@ -6,7 +6,7 @@ function Palette(p) {
   var entries = [];
   Object.keys(s.groups).forEach(function (k) {
     var g = s.groups[k];
-    if (g.joined) entries.push({ group: 'Groups', label: '#' + k, hint: g.mentions ? '@' + g.mentions : g.unread ? g.unread + ' new' : '', icon: 'hash', run: function () { app.nav({ view: 'group', id: k }); } });
+    if (g.joined) entries.push({ group: 'Groups', label: '#' + k, hint: g.mentions ? '@' + g.mentions.toLocaleString('en-US') : g.unread ? g.unread.toLocaleString('en-US') + ' new' : '', icon: 'hash', run: function () { app.nav({ view: 'group', id: k }); } });
   });
   listedDms(s).forEach(function (n) { entries.push({ group: 'People', label: n, hint: statusLabel(userOf(s, n).status), icon: 'message', run: function () { app.actions.openDm(n); } }); });
   SETTINGS_NAV.forEach(function (sec) {

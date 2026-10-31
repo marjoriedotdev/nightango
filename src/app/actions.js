@@ -117,9 +117,9 @@ function useActions(k) {
     loadProfile: function () { /* prototype: profiles already present in the sample data */ },
     loadProfiles: function () { /* same */ },
     searchPeople: function (f) {
-      // Prototype: search among the sample members who are not friends yet.
+      // Prototype: search the names of the sample members who are not friends yet, as Chatango searches usernames.
       var s0 = stateRef.current, q = String(f.query || '').toLowerCase();
-      var list = Object.keys(s0.users).filter(function (n) { var u = s0.users[n]; return !u.friend && (!q || n.indexOf(q) >= 0 || String(u.location || '').toLowerCase().indexOf(q) >= 0) && (!f.online || u.status !== 'offline'); });
+      var list = Object.keys(s0.users).filter(function (n) { var u = s0.users[n]; return !u.friend && (!q || n.indexOf(q) >= 0) && (!f.online || u.status !== 'offline'); });
       update(function (d) { d.meet = { results: list, loading: false, error: null, done: true, filters: f }; });
     },
     /**

@@ -87,39 +87,68 @@ function onProfileLink(app, url, name, gid) {
  */
 function memberLink(app, url, gid, key) {
   var profile = profileOfLink(url);
-  return h('a', { key: key, href: url, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', onClick: profile ? onProfileLink(app, url, profile, gid) : warnOnLink(app, url) }, url);
+  return h('a', { key: key, href: url, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', dir: 'ltr', onClick: profile ? onProfileLink(app, url, profile, gid) : warnOnLink(app, url) }, url);
 }
 
 var EMPHASIS = ['b', 'i', 'u', 's'];
 
 // Like BetterChatango's rendering: "@name: `text`" is a quote and does not cross a line break.
 var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
+// The same quote as one group, for splitting plain text.
+var QUOTE_WHOLE = /(@[A-Za-z0-9]{1,20}: `.*?`)/;
+var NAME_OR_LINK = /(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/;
+
+/**
+ * Plain text whose names and links stay whole and left to right, without a button or a link.
+ * In a dir="auto" container they do not set the direction either, nor does a quote, which takes its own.
+ * @param {string} text Shown text.
+ * @param {Array<number>} [hit] Start and end of a highlighted search term.
+ */
+function bidiText(text, hit) {
+  var end = 0;
+  function run(text) {
+    return text.split(NAME_OR_LINK).map(function (s, i) {
+      var start = end;
+      end += s.length;
+      if (s && hit && hit[0] < end && hit[1] > start) {
+        var a = Math.max(hit[0] - start, 0), b = Math.min(hit[1] - start, s.length);
+        s = h(Frag, null, s.slice(0, a), h('mark', null, s.slice(a, b)), s.slice(b));
+      }
+      return i % 2 ? h('span', { key: i, dir: 'ltr' }, s) : h(Frag, { key: i }, s);
+    });
+  }
+  return String(text).split(QUOTE_WHOLE).map(function (s, i) {
+    return i % 2 ? h('span', { key: i, dir: 'auto' }, run(s)) : h(Frag, { key: i }, run(s));
+  });
+}
 
 /* Message text: emphasis (parseContent segments, absent without emphasis), quotes, mentions and links */
 function MessageText(p) {
   var app = useAppApi();
   // Hidden style (plain): like BetterChatango, bold, italic and underline drop but strikethrough stays.
   var marks = p.plain ? ['s'] : EMPHASIS;
+  // Names and links in dir="ltr": they stay whole in right-to-left text and do not set its direction.
   function mention(s, key) {
     var name = s.slice(1).toLowerCase();
     return ACCOUNT_NAME.test(name)
-      ? h('button', { key: key, type: 'button', className: 'tc-mention', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
-      : h('span', { key: key, className: 'tc-mention' }, s);
+      ? h('button', { key: key, type: 'button', className: 'tc-mention', dir: 'ltr', title: 'View ' + name + "'s profile", onClick: function () { app.ui.openProfile(name, p.gid || null); } }, s)
+      : h('span', { key: key, className: 'tc-mention', dir: 'ltr' }, s);
   }
   function inline(text) {
-    return text.split(/(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/g).map(function (s, i) {
+    return text.split(NAME_OR_LINK).map(function (s, i) {
       if (!s) return null;
       if (s.charAt(0) === '@' && s.length > 1) return mention(s, i);
       if (/^https?:\/\//.test(s)) return memberLink(app, s, p.gid || null, i);
       return s;
     });
   }
-  return h('p', { className: 'tc-msg-text', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {
+  return h('p', { className: 'tc-msg-text', dir: 'auto', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {
     var chunks = String(part.text).split(QUOTE);
     var nodes = chunks.map(function (s, i) {
       if (i % 3 === 0) return inline(s);
       if (i % 3 === 2) return null;
-      return h('span', { key: i, className: 'msg-quote' }, mention('@' + s), ': ', h('span', { className: 'msg-quote-text' }, inline(chunks[i + 1])));
+      // Its own direction: the author's words around it set the direction of the message.
+      return h('span', { key: i, className: 'msg-quote', dir: 'auto' }, mention('@' + s), ': ', h('span', { className: 'msg-quote-text' }, inline(chunks[i + 1])));
     });
     return marks.reduce(function (node, mark) { return part[mark] ? h(mark, { key: k }, node) : node; }, nodes);
   }));
@@ -154,7 +183,7 @@ function richNodes(node, ctx, key) {
   var out = [];
   Array.prototype.forEach.call(node.childNodes, function (c, i) {
     var k = key + '.' + i;
-    if (c.nodeType === 3) { if (c.nodeValue) out.push(c.nodeValue); return; }
+    if (c.nodeType === 3) { if (c.nodeValue) out.push(h(Frag, { key: k }, bidiText(c.nodeValue))); return; }
     if (c.nodeType !== 1) return;
     var tag = c.tagName.toLowerCase();
     if (RICH_DROP[tag]) return;
@@ -196,7 +225,7 @@ function RichText(p) {
   var r = useState(false), revealed = r[0], setRevealed = r[1];
   var html = String(p.html || '').replace(/\r\n|\r|\n/g, '<br>');
   var body;
-  try { body = richBody(html); } catch (e) { return h('p', { className: 'about' }, p.html); }
+  try { body = richBody(html); } catch (e) { return h('p', { className: 'about', dir: 'auto' }, bidiText(p.html)); }
   var ctx = {
     bg: p.bg || SURFACE[app.theme].bg, inline: p.inline, link: p.link,
     images: safety.embedImages, blocked: function (src) { return !revealed && waitsForClick(safety, 'image', src); },
@@ -204,7 +233,7 @@ function RichText(p) {
     onLink: function (url) { return warnOnLink(app, url); }
   };
   var nodes = richNodes(body, ctx, 'r');
-  return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich' }].concat(nodes));
+  return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich', dir: 'auto' }].concat(nodes));
 }
 var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
 var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;

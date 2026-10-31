@@ -18,7 +18,7 @@ src/
                      functions that keep their identity across renders (useLatestCalls), Layers (layer node and open dialogs of the interface), Portal (#layer layer), useFloating (layer anchored to its trigger), useDraft (composer text per conversation), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
                      Person (avatar and name that open the profile), role and "You" badges, list presence,
                      useRightColumn (single 1180 px threshold: right column above, full screen below)
-    rich-text.js     MessageText (emphasis, quotes, mentions, links), memberLink (member link through the link warning), shownParts (shown text without the links shown as a media), trusted hosts (isTrustedUrl),
+    rich-text.js     MessageText (emphasis, quotes, mentions, links), memberLink (member link through the link warning), bidiText (plain text with its names, links and quotes kept in their own direction), shownParts (shown text without the links shown as a media), trusted hosts (isTrustedUrl),
                      RichText (sanitized mini profile), unlinkFullProfile (full profile links removed and listed), fullProfileDoc
     selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry,
                      message cap of a group or a conversation (THREAD_MAX, trimThread)

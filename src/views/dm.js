@@ -17,6 +17,8 @@ function DMView(p) {
   var filters = [['all', 'All'], ['unread', 'Unread']];
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
   var term = section === 'chats' ? q.trim() : '', found = useDmSearch(term);
+  var scrollRef = useRef(null), loading = LIVE && !s.pmLoaded;
+  var batch = useRowBatches(scrollRef, section === 'chats' && !loading ? shown : [], section + ':' + tab + ':' + q);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
     h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
@@ -36,9 +38,10 @@ function DMView(p) {
         filters.map(function (t) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
-    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
-      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
-        shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, user: userOf(s, n), convo: s.dms[n], me: s.me, active: n === id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
+    h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
+      loading ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
+        shown.length ? shown.slice(0, batch.limit).map(function (n) { return h(ChatRow, { key: n, name: n, user: userOf(s, n), convo: s.dms[n], me: s.me, active: n === id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
+        batch.sentinel,
         term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
   var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column, seek: p.seek })
@@ -108,7 +111,15 @@ function useDmSearch(term) {
 function hitExcerpt(text, term) {
   var at = text.toLowerCase().indexOf(term.toLowerCase()), end = at + term.length, start = Math.max(0, at - 30), space = text.indexOf(' ', start);
   if (start && space >= 0 && space < at) start = space + 1;
-  return h(Frag, null, (start ? '…' : '') + text.slice(start, at), h('mark', null, text.slice(at, end)), text.slice(end));
+  return h(Frag, null, start ? '…' : '', bidiText(text.slice(start), [at - start, end - start]));
+}
+/**
+ * "You:" label before the user's own message in a preview.
+ * @param {boolean} mine The user sent the message.
+ */
+function ownLabel(mine) {
+  // Isolated: dir="auto" on the preview reads the direction of the message, not of this label.
+  return mine ? h(Frag, null, h('bdi', null, 'You:'), ' ') : null;
 }
 /**
  * Messages section of the Chats search under the conversations.
@@ -122,7 +133,7 @@ function DmSearchHits(p) {
   else if (!found.list.length) body = h('p', { className: 'pal-empty' }, 'No message matches.');
   else body = h(Frag, null, found.list.map(function (hit) {
     return h(MessageEntry, {
-      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, hit.from === me ? 'You: ' : '', hitExcerpt(hit.text, found.query)),
+      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, ownLabel(hit.from === me), hitExcerpt(hit.text, found.query)),
       onClick: function () { app.nav({ view: 'dm', id: hit.target, seek: hit }); }
     });
   }), found.more ? h('p', { className: 'pal-empty' }, 'Showing the ' + DM_SEARCH_MAX + ' most recent matches. Refine your search to see others.') : null);
@@ -345,7 +356,7 @@ function personRow(n, u, c, me, onClick, active) {
       h('span', { className: 'conv-name' }, n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(n, u),
-      c ? h('span', { className: 'conv-prev' }, last ? (last.from === me ? 'You: ' : '') + messagePreview(last) : 'No messages yet') : null,
+      c ? h('span', { className: 'conv-prev', dir: 'auto' }, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
 }
 

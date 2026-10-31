@@ -139,7 +139,7 @@ function MeetPeople() {
     h('form', { onSubmit: function (e) { e.preventDefault(); run(f); }, noValidate: true, role: 'search', style: { padding: '12px 12px 6px', display: 'flex', flexDirection: 'column', gap: 8 } },
       h('div', { style: { display: 'flex', gap: 8 } },
         h('label', { htmlFor: 'meet-q', className: 'tc-sr' }, 'Search people'),
-        h('input', { id: 'meet-q', className: 'tc-input', type: 'search', style: { flex: 1, minWidth: 0 }, placeholder: 'Username or keyword', value: f.query, onChange: function (e) { var v = e.target.value; setF(function (x) { return Object.assign({}, x, { query: v }); }); } }),
+        h('input', { id: 'meet-q', className: 'tc-input', type: 'search', style: { flex: 1, minWidth: 0 }, placeholder: 'Username', value: f.query, onChange: function (e) { var v = e.target.value; setF(function (x) { return Object.assign({}, x, { query: v }); }); } }),
         h(T.Button, { icon: 'sliders', 'aria-label': 'Filters' + (active.length ? ', ' + active.length + ' active' : ''), onClick: function () { setFiltersOpen(true); } },
           'Filters', active.length ? h('span', { className: 'filter-count', 'aria-hidden': 'true' }, active.length) : null),
         h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', size: 34, iconSize: 15, className: 'hide-mobile', disabled: loading, onClick: function () { run(f); } })),
