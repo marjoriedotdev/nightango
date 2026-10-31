@@ -21,6 +21,22 @@ function fetchLatestVersion() {
   });
 }
 
+/**
+ * Returns the reading of a post asked once per page, read again at a click after a failure.
+ * @param {Object} asked Readings already asked, by key.
+ * @param {string} key Post the reading is for.
+ * @param {boolean} click The user clicked the link.
+ * @param {Function} read Starts the reading and returns its promise.
+ */
+function askOnce(asked, key, click, read) {
+  var entry = asked[key];
+  if (!entry || (click && entry.failed)) {
+    entry = asked[key] = { failed: false, promise: read() };
+    entry.promise.catch(function () { entry.failed = true; });
+  }
+  return entry.promise;
+}
+
 function Root(props) {
   var st = useState(function () { return props.boot && props.boot.auth ? props.boot : initialState(); }), state = st[0], setState = st[1];
   var stateRef = useRef(state); stateRef.current = state;
@@ -377,15 +393,11 @@ function Root(props) {
      * @returns {Promise<{post: string, link: string, thumb: ?string}>} Post id and link, and cover address if TikTok gives one, rejected with the text to show.
      */
     tiktokPost: function (e, click) {
-      var asked = tiktokPosts.current, entry = asked[e.url];
-      if (!entry || (click && entry.failed)) {
-        entry = asked[e.url] = { failed: false };
+      return askOnce(tiktokPosts.current, e.url, click, function () {
         // Prototype: a post link shows the sample cover, a short link turns back into a link.
-        entry.promise = !LIVE ? (e.id ? Promise.resolve({ post: e.id, link: e.url, thumb: SAMPLE_TIKTOK_THUMB }) : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.')))
-          : liveBridge.tiktokPost(e.url);
-        entry.promise.catch(function () { entry.failed = true; });
-      }
-      return entry.promise;
+        return LIVE ? liveBridge.tiktokPost(e.url) : e.id ? Promise.resolve({ post: e.id, link: e.url, thumb: SAMPLE_TIKTOK_THUMB })
+          : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.'));
+      });
     },
     /**
      * Adds an image to the media library under the name BetterChatango gives it or removes it.
