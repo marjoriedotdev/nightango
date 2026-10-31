@@ -62,8 +62,10 @@ function useLocalStore(state) {
     if (JSON.stringify(stored) !== raw) storageSet(skinKey(me), stored);
     localRef.current = Object.assign(blankLocal(), stored);
   }
+  var me = LIVE && state.auth.loggedIn ? state.me : null;
+  // Runs again only when what it keeps can change: the own style, the conversations, the groups or the members.
   useEffect(function () {
-    if (!LIVE || !state.auth.loggedIn || !state.me) return;
+    if (!me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
     // Local favorites, mutes and ignored members that BetterChatango has not accepted yet: kept for the next sign-in.
@@ -77,8 +79,8 @@ function useLocalStore(state) {
     prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
     Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
     // Merged with the storage: the bridge also sets the unread migration flag there.
-    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
-  });
+    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(me), o); }
+  }, [me, state.ownStyle, state.dms, state.groups, state.users]);
   return { ref: localRef, restore: restore };
 }
 /** Key of a ban list entry: unid and IP, like removeblock. */
