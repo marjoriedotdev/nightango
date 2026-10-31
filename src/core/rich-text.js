@@ -189,7 +189,7 @@ function RichText(p) {
   var r = useState(false), revealed = r[0], setRevealed = r[1];
   var html = String(p.html || '').replace(/\r\n|\r|\n/g, '<br>');
   var body;
-  try { body = richBody(html); } catch (e) { return h('p', { className: 'about' }, p.html); }
+  try { body = richBody(html); } catch (e) { return h('p', { className: 'about', dir: 'auto' }, p.html); }
   var ctx = {
     bg: p.bg || SURFACE[app.theme].bg, inline: p.inline, link: p.link,
     images: safety.embedImages, blocked: function (src) { return !revealed && waitsForClick(safety, 'image', src); },
@@ -197,7 +197,7 @@ function RichText(p) {
     onLink: function (url) { return warnOnLink(app, url); }
   };
   var nodes = richNodes(body, ctx, 'r');
-  return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich' }].concat(nodes));
+  return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich', dir: 'auto' }].concat(nodes));
 }
 var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
 var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
