@@ -158,6 +158,7 @@ function DmThread(p) {
     var m = dmHitMessage(convo, seek);
     if (m) log.jumpTo(m.id);
     else if (convo.loadingOlder) return;
+    else if (convo.historyCapped) app.ui.toast('This message is still saved in this browser, but a conversation shows only its last ' + THREAD_MAX + ' messages.');
     else if (convo.olderMore && !failed) { asked.current = true; app.actions.loadOlderDm(id); return; }
     // Failed read: loadOlderDm already announced it.
     else if (!failed) app.ui.toast('This message is no longer saved in this browser.');
@@ -178,7 +179,7 @@ function DmThread(p) {
     }));
     prev = m;
   });
-  var older = !LIVE || !s.pmLoaded ? null
+  var older = !LIVE || !s.pmLoaded || convo.historyCapped ? null
     : !convo.olderMore ? { status: 'start', text: 'This is the start of the messages saved in this browser.' }
     : {
       status: 'more', loading: convo.loadingOlder, ready: !convo.loadingOlder && !convo.olderFailed, load: function () { app.actions.loadOlderDm(id); },

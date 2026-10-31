@@ -1,5 +1,4 @@
 /* ---------- Root ---------- */
-var THREAD_MAX = 500;
 var MENTION_MAX = 100;
 var IDLE_DELAY = 3 * MIN;
 // Chatango pushes no presence for a correspondent who is neither a friend nor connected since the last private connection.
@@ -153,12 +152,6 @@ function Root(props) {
     }
   }
 
-  function trimThread(g) {
-    if (g.messages.length <= THREAD_MAX) return;
-    g.messages.splice(0, g.messages.length - THREAD_MAX);
-    // The BetterChatango get_more counter ignores the trim: resuming would skip the removed messages.
-    g.historyCapped = true;
-  }
   /**
    * Records for the Mentions page a group message that mentions the user with the newest first.
    * @param {Object} d State being modified.
@@ -359,6 +352,7 @@ function Root(props) {
           var t = lower(r.target), c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now() });
           c.messages.push(pmMessage(pmRecordEntry(r)));
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
+          trimThread(c);
         });
       });
       return Promise.resolve({ added: added.length, saved: screened.valid.length - added.length, skipped: screened.skipped, foreign: screened.foreign });
@@ -657,7 +651,7 @@ function Root(props) {
     var unsaved = stateRef.current.pmUnsaved;
     var cleared = names.filter(function (n) { return liveBridge.clearPmHistory(n) || unsaved; });
     cleared.forEach(function (n) { actions.closeDm(n); });
-    update(function (d) { cleared.forEach(function (n) { d.dms[n].messages = []; d.dms[n].olderMore = false; }); });
+    update(function (d) { cleared.forEach(function (n) { Object.assign(d.dms[n], { messages: [], olderMore: false, historyCapped: false }); }); });
     if (cleared.length < names.length) toast(failure);
   }
 

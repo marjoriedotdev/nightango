@@ -89,7 +89,9 @@ function applyPmEdit(o, x) {
  */
 function addSentPm(d, name, x) {
   var c = pmConversation(d, name), o = pmEditTarget(c, x);
-  if (o) applyPmEdit(o, x); else c.messages.push(pmMessage(x));
+  if (o) { applyPmEdit(o, x); return; }
+  c.messages.push(pmMessage(x));
+  trimThread(c);
 }
 /**
  * Receives a PM in its conversation: an edit applies to its original and a new message reopens the conversation.
@@ -103,6 +105,7 @@ function receivePm(d, x) {
   c.closed = false;
   c.messages.push(pmMessage(x));
   c.messages.sort(function (a, b) { return a.ts - b.ts; });
+  trimThread(c);
   return false;
 }
 /**
@@ -123,4 +126,5 @@ function mergePmHistory(c, list, onEntry) {
     c.messages.push(m);
   });
   c.messages.sort(function (a, b) { return a.ts - b.ts; });
+  trimThread(c);
 }

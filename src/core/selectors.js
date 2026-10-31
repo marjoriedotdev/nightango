@@ -42,6 +42,17 @@ function findMsg(g, id) {
   for (var i = g.messages.length - 1; i >= 0; i--) { var x = g.messages[i]; if (x.id === plain || x.id === 'k:' + plain) return x; }
   return null;
 }
+var THREAD_MAX = 500;
+/**
+ * Drops the oldest messages of a group or a private conversation beyond THREAD_MAX.
+ * @param {{messages: Array, historyCapped: ?boolean}} t Group or conversation in the state being modified, messages sorted.
+ */
+function trimThread(t) {
+  if (t.messages.length <= THREAD_MAX) return;
+  t.messages.splice(0, t.messages.length - THREAD_MAX);
+  // Older pages stop: a group's get_more counter would skip the removed messages, a PM page would be trimmed at once.
+  t.historyCapped = true;
+}
 /**
  * Returns the guests of a group: names of the named guests and the total with anons included.
  * @param {Object} group Group.
