@@ -183,6 +183,7 @@ function Root(props) {
   useShortcuts(store.stateRef, o.setPalette);
   useUpdateCheck(state.auth.loggedIn, o.toast);
   var local = useLocalStore(state);
+  usePrunedUsers(store, state.auth.loggedIn, [o.profile && o.profile.name, o.fullProfile, o.who, o.banCfg && o.banCfg.name]);
   var reconnection = useReconnection(store.stateRef, store.update);
   var pms = useLivePms(store, local.ref, inbox.pmArchive);
   var act = useActions({ store: store, toast: o.toast, setNavOpen: o.setNavOpen, inbox: inbox, drafts: drafts, localRef: local.ref, reconnection: reconnection, pms: pms });

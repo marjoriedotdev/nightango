@@ -1,9 +1,12 @@
-// Cost of the live operations on a busy state, read through counts: what an operation shares with the previous state and the renders it causes.
+// Cost of the live operations on a busy state, read through counts: what an operation shares with the previous state, the renders it causes
+// and the members dropped.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
 const ME = 'marjorie';
 const MIN = 60000;
+// Period on which the members nothing refers to leave the state (PRUNE_EVERY, app/live-state.js).
+const PRUNE_EVERY = 5 * MIN;
 const GROUPS = ['busy0', 'busy1', 'busy2', 'busy3'];
 // Messages of each group: the first three at the cap (THREAD_MAX), the last one below it, for a history page that stays.
 const SIZES = [500, 500, 500, 300];
@@ -49,6 +52,11 @@ function page(o) {
     w.requestAnimationFrame = cb => { paints.push(cb); return paints.length; };
     w.cancelAnimationFrame = id => { paints[id - 1] = null; };
   }
+  // Intervals by delay, with the ones still running.
+  const intervals = [];
+  const setInterval0 = w.setInterval, clearInterval0 = w.clearInterval;
+  w.setInterval = (fn, ms) => { const id = setInterval0.call(w, fn, ms); intervals.push({ id, fn, ms, running: true }); return id; };
+  w.clearInterval = id => { intervals.forEach(x => { if (x.id === id) x.running = false; }); clearInterval0.call(w, id); };
 
   const group = gid => ({ socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { owner: 'owner', information: { title: gid, description: '' } }, load: 5 });
   const C = {
@@ -91,7 +99,7 @@ function page(o) {
   R.memo = function (type, compare) { return memo(COUNTED.includes(type.name) ? counting(type) : type, compare); };
   w.eval(app);
   return {
-    w, d, C,
+    w, d, C, intervals,
     // The interface has mounted and handed its state to the hook.
     ready: () => !!hot.read,
     state: () => hot.read().state,
@@ -135,6 +143,22 @@ function busyState(tpl, style) {
   for (let k = 0; k < STALE; k++) s.users['gone' + k] = user({ status: 'offline' });
   Object.assign(s, { route: { view: 'group', id: 'busy0' }, lastChat: { view: 'group', id: 'busy0' }, liveFocused: true, groupsSeen: true, pmLoaded: true, friendsLoaded: true });
   return s;
+}
+
+/**
+ * Lists the people the state refers to: groups (members, guests, authors, staff), conversations, friends and the people marked by the user.
+ * @param {Object} s Application state.
+ */
+function referenced(s) {
+  const names = new Set([s.me]);
+  Object.values(s.groups).forEach(g => {
+    g.members.concat(g.guestNames || [], Object.keys(g.settings.staff || {})).forEach(n => names.add(n));
+    g.messages.forEach(m => { if (m.author) names.add(m.author); });
+  });
+  Object.keys(s.dms).forEach(n => names.add(n));
+  Object.keys(s.friendAdds).concat(Object.keys(s.notifyOnline), s.mentionLog.map(x => x.author), s.meet ? s.meet.results : []).forEach(n => names.add(n));
+  Object.keys(s.users).forEach(n => { const u = s.users[n]; if (u.friend || u.ignored || u.blocked || u.unstyled) names.add(n); });
+  return names;
 }
 
 // Group message frame from a member, at a given time in seconds.
@@ -210,6 +234,20 @@ const show = async t => { t.paint(); await nextTask(); };
   const s5 = t.state();
   const presence = { roots: t.count('Root'), rows: t.count('MessageRow'), members: t.count('MemberRow'), offline: s5.users.m0x1.status, groups: s5.groups === s4.groups };
   step('a presence burst re-renders neither message rows nor the other members', presence.roots === 1 && presence.rows === 0 && presence.members <= 20 && presence.offline === 'offline' && presence.groups, presence);
+
+  /* Members nothing refers to any more are dropped */
+  const keep = Array.from({ length: 100 }, (_, k) => 'S' + k + ':1700:U' + k + ':m3x' + k + ':None').join(';');
+  t.group('g_participants', 'busy3', [keep]);
+  t.paint(); await wait(50);
+  const prune = t.intervals.filter(x => x.running && x.ms === PRUNE_EVERY);
+  prune.forEach(x => x.fn());
+  t.paint(); await wait(50);
+  const s6 = t.state(), refs = referenced(s6), names = Object.keys(s6.users);
+  const users = {
+    before: Object.keys(s5.users).length, after: names.length, timers: prune.length,
+    unreferenced: names.filter(n => !refs.has(n)).slice(0, 5), lost: ['m3x5', 'm3x110', 'f3', 'c4', ME].filter(n => !s6.users[n])
+  };
+  step('members that nothing refers to any more leave the users map, the others stay', users.timers === 1 && !users.unreferenced.length && !users.lost.length && users.after <= users.before - STALE, users);
 
   /* Conversation rows: a presence change renders only its row */
   t.d.querySelectorAll('.tc-nav').forEach(el => { if (el.textContent.trim().startsWith('Private messages')) el.click(); });

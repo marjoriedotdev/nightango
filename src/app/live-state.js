@@ -162,6 +162,48 @@ function ensurePresentUser(d, name, local) {
   var u = ensureLiveUser(d, name, local);
   if (u.status === 'offline' && !u.friend) u.status = 'online';
 }
+// Period on which the members nothing refers to any more leave the state.
+var PRUNE_EVERY = 5 * MIN;
+/**
+ * Lists the members the state refers to: in a group (member, guest, author, staff), in a conversation, in Meet people, in Mentions or as a pending friend.
+ * @param {Object} s Application state.
+ * @param {string[]} shown Members shown outside the state, by an open dialog.
+ * @returns {Object<string, boolean>} Referenced names.
+ */
+function referencedUsers(s, shown) {
+  var names = Object.create(null);
+  function add(n) { names[n] = true; }
+  add(s.me);
+  shown.forEach(add);
+  Object.keys(s.groups).forEach(function (k) {
+    var g = s.groups[k];
+    g.members.concat(g.guestNames || [], Object.keys(g.settings.staff)).forEach(add);
+    g.messages.forEach(function (m) { if (m.author) add(m.author); });
+  });
+  Object.keys(s.dms).concat(Object.keys(s.friendAdds), Object.keys(s.notifyOnline), s.meet ? s.meet.results : []).forEach(add);
+  s.mentionLog.forEach(function (x) { add(x.author); });
+  return names;
+}
+/**
+ * Drops from the live state, on PRUNE_EVERY, the members nothing refers to any more: former members, authors of trimmed messages, search results.
+ * Friends and the members the user ignores, blocks or shows without style stay, since their lists are read from the state.
+ * @param {{stateRef: Object, update: Function}} store Ref to the application state and its update.
+ * @param {boolean} loggedIn Signed in.
+ * @param {Array<?string>} shown Members shown by an open dialog.
+ */
+function usePrunedUsers(store, loggedIn, shown) {
+  var shownRef = useRef(shown);
+  shownRef.current = shown;
+  useEffect(function () {
+    if (!LIVE || !loggedIn) return;
+    var timer = setInterval(function () {
+      var s = store.stateRef.current, kept = referencedUsers(s, shownRef.current.filter(Boolean));
+      var gone = Object.keys(s.users).filter(function (n) { var u = s.users[n]; return !kept[n] && !u.friend && !u.ignored && !u.blocked && !u.unstyled; });
+      if (gone.length) store.update(function (d) { gone.forEach(function (n) { delete d.users[n]; }); });
+    }, PRUNE_EVERY);
+    return function () { clearInterval(timer); };
+  }, [loggedIn]);
+}
 /**
  * Applies a presence received from the bridge to a member.
  * @param {Object} u Member in the state.
