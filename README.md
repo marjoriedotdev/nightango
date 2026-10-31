@@ -36,7 +36,7 @@ To update, paste the new release over the same script. Settings > What's new lis
 - Every HTTP call Nightango makes is listed in [docs/betterchatango-protocol.md](docs/betterchatango-protocol.md#allowed-http-calls). Nothing outside that list is called.
 - Every Chatango frame it sends comes from BetterChatango's code or a reference library.
 - Member HTML is rebuilt from an allow list, never injected.
-- Profile and message backgrounds and full-size profile pictures load without a referrer.
+- Profile backgrounds and full-size profile pictures load without a referrer. Message backgrounds load with the page referrer, from Chatango only.
 - Fonts ship inside the userscript.
 - The diagnostic journal (Settings > Diagnostics) stays in the browser, one log per account, and never records frame contents or what you send.
 
