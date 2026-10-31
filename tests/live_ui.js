@@ -231,13 +231,13 @@ w.fetch = (url, opts) => {
   return searchHold && /\/search$/.test(url) ? searchHold.then(() => res) : Promise.resolve(res);
 };
 
-// vissle bridge of the simulated userscript: the response comes back by event, as from the sandbox.
+// vissle bridge of the simulated userscript: the response comes back by event, as from the sandbox. Without vissleReply, none comes back.
 const vissleReqs = [];
 let vissleReply = () => ({ action: 'activity', get: [] });
 d.addEventListener('torch-skin:vissle-request', e => {
-  const q = JSON.parse(e.detail);
+  const q = JSON.parse(e.detail), reply = vissleReply;
   vissleReqs.push(q);
-  setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: q.id, data: vissleReply(q) }) })), 0);
+  if (reply) setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: q.id, data: reply(q) }) })), 0);
 });
 
 // TikTok bridge of the simulated userscript: a short link ending in "ok" leads to a post, any other one to an error.
@@ -1318,6 +1318,28 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const UNREADABLE = 'vissle.me sent an unreadable reply.', oddReplies = [];
   for (const data of [null, 42, { action: 'activity' }, { get: [{ user: 'zoe' }] }, { get: [{ user: 'zoe', time: NOW, msg: { text: 'Hi' } }] }]) oddReplies.push(await refreshVisitors(() => data));
   step('own visitors list: a reply of another shape shows the unreadable reply error', oddReplies.every(x => x.text.includes(UNREADABLE) && x.rows === 0), oddReplies);
+  // No reply, as without the sandbox half of the userscript: the bridge gives up on its own timer, which the test runs at once.
+  // The bridge sets this timer right before it sends the request.
+  const pageSetTimeout = w.setTimeout, pageTimers = [];
+  let giveUp = null;
+  const takeTimer = () => { giveUp = pageTimers[pageTimers.length - 1] || null; };
+  w.setTimeout = function () { const id = pageSetTimeout.apply(w, arguments); pageTimers.push({ id, fn: arguments[0] }); return id; };
+  d.addEventListener('torch-skin:vissle-request', takeTimer);
+  vissleReply = null;
+  const silentFrom = vissleReqs.length, visitorsRefresh = () => visitors().querySelector('button[aria-label="Refresh"]');
+  click(visitorsRefresh()); await wait(30);
+  w.setTimeout = pageSetTimeout;
+  d.removeEventListener('torch-skin:vissle-request', takeTimer);
+  // Replies the page cannot match to its request are ignored.
+  d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: 'activity' }));
+  d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: 'constructor', data: { get: [] } }) }));
+  await wait(30);
+  const silent = { asked: vissleReqs.length - silentFrom, loading: visitorsRefresh().disabled, timer: !!giveUp };
+  if (giveUp) { w.clearTimeout(giveUp.id); giveUp.fn(); }
+  await until(() => !visitorsRefresh().disabled);
+  silent.text = visitors().textContent;
+  step('own visitors list: a request without a reply ends on an error', silent.asked === 1 && silent.loading && silent.text.includes('vissle.me did not answer in time.'), silent);
+  vissleReply = () => ({ action: 'activity', get: [] });
   /* Unreadable full profile (server error): saving another field sends nothing, never an empty full profile */
   const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
   betterChatangoFull.value = ''; ownMod2Status = 500;

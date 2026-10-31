@@ -750,12 +750,18 @@ var liveBridge = (function () {
   }
 
   /* Replies from the userscript bridges (vissle, TikTok), matched to requests by id */
-  var loaderWaits = {};
+  // Longer than the GM_xmlhttpRequest timeout of the loader, whose own reply says more.
+  var LOADER_WAIT = 20000;
+  // Any script of the page can send a reply: one that is not JSON or matches no request is ignored.
+  var loaderWaits = Object.create(null);
   function onLoaderReply(e) {
-    var r = JSON.parse(e.detail), wait = loaderWaits[r.id];
+    var r = null;
+    try { r = JSON.parse(e.detail); } catch (x) { return; }
+    var wait = r && typeof r.id === 'string' ? loaderWaits[r.id] : null;
     if (!wait) return;
     delete loaderWaits[r.id];
-    if (r.error) wait.reject(new Error(r.error)); else wait.resolve(r);
+    clearTimeout(wait.timer);
+    if (r.error && typeof r.error === 'string') wait.reject(new Error(r.error)); else wait.resolve(r);
   }
   document.addEventListener('torch-skin:vissle-response', onLoaderReply);
   document.addEventListener('torch-skin:tiktok-response', onLoaderReply);
@@ -763,12 +769,14 @@ var liveBridge = (function () {
    * Sends a request to a userscript bridge.
    * @param {string} channel Bridge name: vissle or tiktok.
    * @param {Object} q Request fields.
-   * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error.
+   * @param {string} late Text to show if the bridge does not reply.
+   * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error or does not come.
    */
-  function askLoader(channel, q) {
+  function askLoader(channel, q, late) {
     return new Promise(function (resolve, reject) {
       var id = uid();
-      loaderWaits[id] = { resolve: resolve, reject: reject };
+      var timer = setTimeout(function () { delete loaderWaits[id]; reject(new Error(late)); }, LOADER_WAIT);
+      loaderWaits[id] = { resolve: resolve, reject: reject, timer: timer };
       document.dispatchEvent(new CustomEvent('torch-skin:' + channel + '-request', { detail: JSON.stringify(Object.assign({ id: id }, q)) }));
     });
   }
@@ -1455,7 +1463,7 @@ var liveBridge = (function () {
      * @returns {Promise<Array>} Items read by parseVisits, rejected with the text to show.
      */
     visitors: function (q) {
-      return askLoader('vissle', { page: q.page, order: q.order, get: q.get }).then(function (r) {
+      return askLoader('vissle', { page: q.page, order: q.order, get: q.get }, 'vissle.me did not answer in time. Reload the page and try again.').then(function (r) {
         if (r.data && typeof r.data.error === 'string') throw new Error(r.data.error);
         var items = parseVisits(r.data);
         if (!items) throw new Error('vissle.me sent an unreadable reply.');
@@ -1467,7 +1475,7 @@ var liveBridge = (function () {
      * @param {string} url Short TikTok link.
      * @returns {Promise<string>} Post id, rejected with the text to show if TikTok does not give it.
      */
-    tiktokPost: function (url) { return askLoader('tiktok', { url: url }).then(function (r) { return r.post; }); },
+    tiktokPost: function (url) { return askLoader('tiktok', { url: url }, 'TikTok did not answer in time. Open the link instead.').then(function (r) { return r.post; }); },
     /**
      * Uploads a file to vissle like the BetterChatango Upload dialog without BetterChatango posting its link.
      * @param {File} file Chosen file.
