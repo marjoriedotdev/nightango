@@ -26,7 +26,7 @@ w.clearTimeout = id => { timers.delete(id); };
 const nativeFocus = w.HTMLElement.prototype.focus;
 w.HTMLElement.prototype.focus = function (o) { if (!this.closest('[inert]')) nativeFocus.call(this, o); };
 
-w.eval(concatSources(ROOT, layerSources('core')) + '; window.ui = { MenuButton: MenuButton, Dialog: Dialog, Toasts: Toasts };');
+w.eval(concatSources(ROOT, layerSources('core')) + '; window.ui = { Layers: Layers, MenuButton: MenuButton, Dialog: Dialog, Toasts: Toasts };');
 const ui = w.ui, R = w.React, h = R.createElement;
 
 // Like skin-page.js: #app in the shadow root of the host, the layer next to it.
@@ -102,7 +102,7 @@ const log = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 
 (async () => {
-  w.ReactDOM.createRoot(mount).render(h(Harness));
+  w.ReactDOM.createRoot(mount).render(h(ui.Layers, null, h(Harness)));
   await flush();
 
   /* Menus give the focus back to their button */

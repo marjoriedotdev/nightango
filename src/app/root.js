@@ -1479,7 +1479,7 @@ function Root(props) {
   };
   var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, uploads: uploads, drafts: drafts, theme: resolvedTheme(prefs, VIEWER_THEME) };
 
-  return h(Ctx.Provider, { value: app },
+  return h(Layers, null, h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
     state.auth.loggedIn && profile ? h(ProfileDialog, { name: profile.name, gid: profile.gid, onClose: function () { setProfile(null); } }) : null,
     state.auth.loggedIn && banCfg ? h(BanDialog, { name: banCfg.name, gid: banCfg.gid, msg: banCfg.msg, onClose: function () { setBan(null); } }) : null,
@@ -1492,5 +1492,5 @@ function Root(props) {
     state.auth.loggedIn && newDm ? h(NewDmDialog, { onClose: function () { setNewDm(false); } }) : null,
     confirmCfg ? h(ConfirmDialog, { confirm: confirmCfg, onClose: function () { setConfirm(null); } }) : null,
     state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
-    h(Toasts, { toasts: toasts, dismiss: dismissToast }));
+    h(Toasts, { toasts: toasts, dismiss: dismissToast })));
 }

@@ -3,17 +3,30 @@ var Ctx = React.createContext(null);
 function useApp() { return useContext(Ctx); }
 
 /* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
-var layerNode = null;
+var LayerCtx = React.createContext(null);
 function appMount() { return window.__TORCH_MOUNT__ || document.getElementById('app'); }
-function layerRoot() {
-  if (layerNode && layerNode.isConnected) return layerNode;
-  var mountEl = appMount();
-  layerNode = document.createElement('div');
-  layerNode.id = 'layer';
-  (mountEl && mountEl.parentNode ? mountEl.parentNode : document.body).appendChild(layerNode);
-  return layerNode;
+/**
+ * Gives the interface inside it its layer node and its stack of open dialogs.
+ * @param {{children: *}} p Interface.
+ */
+function Layers(p) {
+  var ref = useRef(null);
+  if (!ref.current) ref.current = { node: null, dialogs: [] };
+  return h(LayerCtx.Provider, { value: ref.current }, p.children);
 }
-function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot()); }
+/**
+ * Returns the layer node next to the mount point, created again once it has left the document.
+ * @param {{node: ?Element}} layer Layer given by Layers.
+ */
+function layerRoot(layer) {
+  if (layer.node && layer.node.isConnected) return layer.node;
+  var mountEl = appMount();
+  layer.node = document.createElement('div');
+  layer.node.id = 'layer';
+  (mountEl && mountEl.parentNode ? mountEl.parentNode : document.body).appendChild(layer.node);
+  return layer.node;
+}
+function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot(useContext(LayerCtx))); }
 
 function useOutside(ref, open, onClose, extraRef) {
   useEffect(function () {
@@ -215,39 +228,41 @@ function SkeletonRows(p) {
   return h('div', { role: 'status' }, h('span', { className: 'tc-sr' }, p.label), rows);
 }
 
-var openDialogs = [];
 /**
  * Makes the interface behind the top dialog inert so that Tab and screen readers stay in it.
  * The app and the dialogs under the top one become inert. Menus and toasts, above the dialogs, stay reachable.
+ * @param {{dialogs: Array}} layer Layer given by Layers.
  */
-function syncInert() {
+function syncInert(layer) {
   // Dialogs that close in the same render have already lost their node: they no longer keep the app inert.
-  var layers = openDialogs.filter(function (r) { return r.current; }).map(function (r) { return r.current.closest('.overlay'); });
+  var layers = layer.dialogs.filter(function (r) { return r.current; }).map(function (r) { return r.current.closest('.overlay'); });
   appMount().toggleAttribute('inert', layers.length > 0);
   layers.forEach(function (el, i) { el.toggleAttribute('inert', i < layers.length - 1); });
 }
 /**
  * Puts a modal layer on top of the open dialogs.
+ * @param {{dialogs: Array}} layer Layer given by Layers.
  * @param {Object} ref Ref of the layer overlay or of an element inside it.
  */
-function openModal(ref) { openDialogs.push(ref); syncInert(); }
+function openModal(layer, ref) { layer.dialogs.push(ref); syncInert(layer); }
 /**
  * Takes a modal layer out of the open dialogs.
  * It comes before the focus goes back to where it was, since an element in an inert app takes no focus.
+ * @param {{dialogs: Array}} layer Layer given by Layers.
  * @param {Object} ref Ref given to openModal.
  */
-function closeModal(ref) { openDialogs.splice(openDialogs.indexOf(ref), 1); syncInert(); }
+function closeModal(layer, ref) { layer.dialogs.splice(layer.dialogs.indexOf(ref), 1); syncInert(layer); }
 function Dialog(p) {
-  var ref = useRef(null);
+  var ref = useRef(null), layer = useContext(LayerCtx);
   useEffect(function () {
     var rootNode = ref.current ? ref.current.getRootNode() : document;
     var prev = rootNode.activeElement;
     var el = ref.current && ref.current.querySelector('[data-autofocus], input, textarea, select, button');
     if (el) el.focus();
-    openModal(ref);
+    openModal(layer, ref);
     function onKey(e) {
       // Every dialog listens on document: only the top one reacts.
-      if (openDialogs[openDialogs.length - 1] !== ref) return;
+      if (layer.dialogs[layer.dialogs.length - 1] !== ref) return;
       if (e.key === 'Escape' && p.onClose) { e.stopPropagation(); p.onClose(); }
       if (e.key === 'Tab' && ref.current) {
         // A disabled control takes no focus: at either end of the list, Tab would leave the dialog past it.
@@ -265,7 +280,7 @@ function Dialog(p) {
     document.addEventListener('keydown', onKey);
     if (blocking) document.addEventListener('keydown', onEscape, true);
     return function () {
-      closeModal(ref);
+      closeModal(layer, ref);
       document.removeEventListener('keydown', onKey);
       if (blocking) document.removeEventListener('keydown', onEscape, true);
       if (prev && prev.focus) prev.focus();

@@ -81,13 +81,13 @@ function ProfilePhoto(p) {
  * @param {Function} p.onClose Closes the viewer.
  */
 function PhotoViewer(p) {
-  var ref = useRef(null), thumb = avatarSrc(p.name, 96);
+  var ref = useRef(null), layer = useContext(LayerCtx), thumb = avatarSrc(p.name, 96);
   var a = useState(profileImgSrc(p.name, 'full')), src = a[0], setSrc = a[1];
   var b = useState(false), loaded = b[0], setLoaded = b[1];
   useEffect(function () {
     var prev = ref.current.getRootNode().activeElement;
     ref.current.querySelector('button').focus();
-    openModal(ref);
+    openModal(layer, ref);
     // Capture listener: Escape and Tab stop before the profile dialog open underneath.
     function onKey(e) {
       if (e.key !== 'Escape' && e.key !== 'Tab') return;
@@ -98,7 +98,7 @@ function PhotoViewer(p) {
     document.addEventListener('keydown', onKey, true);
     return function () {
       document.removeEventListener('keydown', onKey, true);
-      closeModal(ref);
+      closeModal(layer, ref);
       if (prev && prev.focus) prev.focus();
     };
   }, []);
