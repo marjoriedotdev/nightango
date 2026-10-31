@@ -48,11 +48,11 @@ function DiagnosticsPage() {
   var list = JOURNAL.entries(), shown = list.slice(-JOURNAL_SHOWN).reverse();
   function copy() { copyText(journalText(list), function (ok) { app.ui.toast(ok ? 'Log copied.' : 'The log could not be copied. Download it instead.'); }); }
   function download() { var d = new Date(); downloadFile('torch-skin-log-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.txt', journalText(list), 'text/plain'); }
-  function clear() { app.ui.confirm({ title: 'Clear the log?', body: 'Events recorded so far are deleted from this browser.', confirmLabel: 'Clear log', danger: true, onConfirm: JOURNAL.clear }); }
+  function clear() { app.ui.confirm({ title: 'Clear the log?', body: 'Events recorded for this account are deleted from this browser.', confirmLabel: 'Clear log', danger: true, onConfirm: JOURNAL.clear }); }
   return h(Page, { title: 'Diagnostics', lede: 'Connection and page events recorded by Nightango, to find out why a group or your private messages disconnect.' },
-    h(T.Banner, { icon: 'lock' }, 'The log stays in this browser and is never sent. It holds no password and no message text. To share it, copy it into an issue.'),
+    h(T.Banner, { icon: 'lock' }, 'The log stays in this browser and is never sent. It holds no password and no message text, but it lists the groups you visited. To share it, copy it into a GitHub issue. Issues are public, so paste only what you want everyone to see.'),
     h(T.SettingsSection, {
-      title: 'Log', description: plural(list.length, 'event', 'events') + ', newest first. Nightango keeps the latest ' + JOURNAL.limit.toLocaleString('en-US') + (list.length > JOURNAL_SHOWN ? ' and shows ' + JOURNAL_SHOWN + '. Copy the log to see them all.' : '.'),
+      title: 'Log', description: plural(list.length, 'event', 'events') + ', newest first. Nightango keeps the latest ' + JOURNAL.limit.toLocaleString('en-US') + ' for this account' + (list.length > JOURNAL_SHOWN ? ' and shows ' + JOURNAL_SHOWN + '. Copy the log to see them all.' : '.'),
       headerAside: h('div', { className: 'journal-actions' },
         h(T.Button, { size: 'sm', variant: 'primary', icon: 'copy', disabled: !list.length, onClick: copy }, 'Copy log'),
         h(T.Button, { size: 'sm', disabled: !list.length, onClick: download }, 'Download'),

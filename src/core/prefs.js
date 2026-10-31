@@ -1,5 +1,7 @@
 function defaultPrefs() {
   return {
+    // Schema version of the stored preferences: those stored without one have the schema of version 1.
+    version: 1,
     theme: 'system', accent: '#f27a3f', density: 'comfortable', textSize: 14, h24: true, announcements: true,
     styles: { names: true, fonts: true, sameSize: true, backgrounds: false, profileBackgrounds: true },
     notify: {
@@ -13,6 +15,7 @@ function defaultPrefs() {
     safety: { embedImages: true, embedVideos: true, proxyMedia: true, warnLinks: true, trustedHosts: [], showGuests: true, guestMessages: true, syncBlocked: true, ignoreMode: 'collapse' },
     a11y: { reduceMotion: false, underlineLinks: false },
     sky: { calm: false, south: false, moon: 'auto' },
+    customThemes: [],
     simulate: true
   };
 }

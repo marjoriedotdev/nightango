@@ -16,6 +16,8 @@ function useMessageLog() {
   useEffect(function () {
     if (!target) return;
     var row = logRef.current.querySelector('[data-msg-id=' + JSON.stringify(target.id) + ']');
+    // A busy group can trim the target between the jump and this render.
+    if (!row) { setTarget(null); return; }
     var still = reduceMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     row.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
     row.tabIndex = -1;
@@ -55,12 +57,13 @@ function MessageLog(p) {
   useInfiniteScroll(v.ref, sentinelRef, more && older.ready && !p.log.targetId, function () { older.load(); }, '200px 0px 0px 0px');
   useLayoutEffect(function () {
     var el = v.ref.current;
-    // History added at the top does not move the view (.log in column-reverse): nothing to restore.
+    // History added at the top does not move the view (.log in column-reverse), and its sort can bring a row stamped with the local clock to the end.
     var olderAdded = p.firstTs < seenFirstTs.current;
-    seenFirstTs.current = p.firstTs;
     if (v.atBottom.current || !olderAdded && p.newBelow === 'follow') el.scrollTop = 0;
     else if (!olderAdded) v.setBelow(true);
   }, [p.changeKey]);
+  // After the effect above, even without a key change: older history that leaves the key alone must not hide the next message.
+  useLayoutEffect(function () { seenFirstTs.current = p.firstTs; }, [p.firstTs]);
   useLogAnchor(v.ref);
   function onScroll() {
     // .log in column-reverse: scrollTop is 0 at the bottom and goes negative when scrolling up.

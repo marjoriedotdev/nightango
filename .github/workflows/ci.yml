@@ -12,6 +12,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    outputs:
+      checksums: ${{ steps.checksums.outputs.checksums }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -19,7 +21,7 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version-file: package.json
       - run: pnpm install --frozen-lockfile
       # Every user is told about a release from main: a beta must not reach it, even through a pull request.
       - name: Refuse a beta @version on main
@@ -30,6 +32,16 @@ jobs:
             exit 1
           fi
       - run: pnpm test
+      # The release job publishes the userscripts only if they match these checksums, taken from the files tested here.
+      - name: Checksum the tested userscripts
+        id: checksums
+        working-directory: dist
+        run: |
+          {
+            echo 'checksums<<EOF'
+            sha256sum nightango.min.user.js nightango.user.js
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 
   release:
     needs: test
@@ -47,9 +59,17 @@ jobs:
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version-file: package.json
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # No action carries files between jobs (a new dependency): the rebuild must match the tested files byte for byte.
+      - name: Check the userscripts against the tested ones
+        working-directory: dist
+        env:
+          TESTED: ${{ needs.test.outputs.checksums }}
+        run: |
+          printf '%s\n' "$TESTED" > SHA256SUMS
+          sha256sum --check --strict SHA256SUMS
       # One release per @version: a push without a version bump publishes nothing.
       # The beta branch publishes prereleases only, which releases/latest skips (update check, ADR-0013).
       - name: Create release for @version
@@ -76,4 +96,4 @@ jobs:
             cat view.err
             exit 1
           fi
-          gh release create "$tag" dist/nightango.min.user.js dist/nightango.user.js --target "$GITHUB_SHA" --title "$tag" --generate-notes $flags
+          gh release create "$tag" dist/nightango.min.user.js dist/nightango.user.js dist/SHA256SUMS --target "$GITHUB_SHA" --title "$tag" --generate-notes $flags

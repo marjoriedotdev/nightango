@@ -87,6 +87,7 @@ function PhotoViewer(p) {
   useEffect(function () {
     var prev = ref.current.getRootNode().activeElement;
     ref.current.querySelector('button').focus();
+    openModal(ref);
     // Capture listener: Escape and Tab stop before the profile dialog open underneath.
     function onKey(e) {
       if (e.key !== 'Escape' && e.key !== 'Tab') return;
@@ -97,6 +98,7 @@ function PhotoViewer(p) {
     document.addEventListener('keydown', onKey, true);
     return function () {
       document.removeEventListener('keydown', onKey, true);
+      closeModal(ref);
       if (prev && prev.focus) prev.focus();
     };
   }, []);
@@ -171,14 +173,19 @@ function useFullProfileMedia() {
 }
 
 /**
- * Full profile shown in an isolated frame without scripts on the member's Premium background.
+ * Full profile shown in an isolated frame without scripts or links on the member's Premium background.
+ * Its links are listed below the frame, where they go through the link warning.
  * @param {string} p.name Member whose profile it is.
  * @param {string} p.html HTML written by the member.
  * @param {boolean} p.media Whether images are allowed, as given by useFullProfileMedia.
  */
 function FullProfileFrame(p) {
   var app = useApp(), mini = miniStyleOf(app.state.prefs, userOf(app.state, p.name), app.theme);
-  return h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(p.html, p.media, mini) });
+  var page = useMemo(function () { return unlinkFullProfile(p.html); }, [p.html]);
+  return h(Frag, null,
+    h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: '', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(page.html, p.media, mini) }),
+    page.links.length ? h('div', { className: 'profile-links' }, h('h3', null, 'Links in this profile'),
+      h('ul', null, page.links.map(function (url) { return h('li', { key: url }, memberLink(app, url, null)); }))) : null);
 }
 
 /** Full profile: the member's HTML page shown in an isolated frame without scripts. */

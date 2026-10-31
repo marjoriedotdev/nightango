@@ -11,7 +11,10 @@ const vc = new VirtualConsole();
 vc.on('error', e => errors.push(String(e && e.message || e)));
 vc.on('jsdomError', e => errors.push('jsdom: ' + e.message));
 vc.on('warn', e => { if (!/act\(|ReactDOM.render|useLayoutEffect/.test(String(e))) errors.push('warn: ' + String(e).slice(0, 300)); });
-const dom = new JSDOM('<!doctype html><html><head></head><body>' + html + '</body></html>', { runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc, url: 'https://example.test/' });
+// Hook of the hosted prototype: the page starts the interface and reads its state back.
+const hot = { starts: 0, snapshot: null };
+const dom = new JSDOM('<!doctype html><html><head></head><body>' + html + '</body></html>', { runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc, url: 'https://example.test/',
+  beforeParse(w) { w.claude = { hot: { ready(start) { hot.starts++; start({}); }, snapshot(read) { hot.snapshot = read; } } }; } });
 const w = dom.window, d = w.document;
 w.matchMedia = w.matchMedia || (() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
 // jsdom has neither CSS.supports nor ResizeObserver: the message log takes the path without native anchoring or measuring.
@@ -32,6 +35,7 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   type($('#lg-pass'), 'x'); click(byText('button', 'Log in') && $$('button[type=submit]')[0]);
   await wait(800);
   step('chat renders', !!$('.log') && !!byText('h1', 'community'));
+  step('starts from the prototype hook', hot.starts === 1 && !!hot.snapshot && hot.snapshot().state.auth.loggedIn === true);
   step('messages', $$('.tc-msg').length >= 5);
   const ta = $('.tc-composer textarea'); type(ta, 'Hello from the smoke test @sable'); key(ta, 'Enter');
   await wait(100);

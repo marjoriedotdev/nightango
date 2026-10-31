@@ -43,10 +43,12 @@ function Root(props) {
   var u10 = useState(0), themeTick = u10[1];
   var prefs = state.prefs;
 
+  /*PROTOTYPE*/
   useEffect(function () {
     var hot = window.claude && window.claude.hot;
     if (hot && hot.snapshot) hot.snapshot(function () { return { state: stateRef.current }; });
   }, []);
+  /*END PROTOTYPE*/
 
   /* Theme, accent and display preferences applied to the root */
   useEffect(function () {
@@ -105,9 +107,8 @@ function Root(props) {
   }, []);
 
   var toast = useCallback(function (text, opts) {
-    var id = uid(), t = Object.assign({ id: id, text: text }, opts || {});
+    var t = Object.assign({ id: uid(), text: text }, opts || {});
     setToasts(function (list) { return list.concat([t]).slice(-4); });
-    setTimeout(function () { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }, t.action ? 7000 : 4500);
   }, []);
   function dismissToast(id) { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }
 
@@ -1151,6 +1152,7 @@ function Root(props) {
     switch (op.op) {
       case 'login': {
         var stored = storageGet(skinKey(op.me)) || {}, raw = JSON.stringify(stored);
+        stored = storedLocal(stored);
         var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
         // Lists from before the sync with BetterChatango: moved into its own lists, removed from local storage once all are accepted.
         Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
@@ -1436,7 +1438,20 @@ function Root(props) {
     // Merged with the storage: the bridge also sets the unread migration flag there.
     if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(state.me), o); }
   });
-  useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(handleLiveOp); }, []);
+  // Operations received after login wait for its first render: until then they would read the signed-out state, without groups, users or route.
+  var heldOps = useRef(null);
+  function onLiveOp(op) {
+    if (heldOps.current) { heldOps.current.push(op); return; }
+    handleLiveOp(op);
+    if (op.op === 'login') heldOps.current = [];
+  }
+  useEffect(function () { if (LIVE && liveBridge) return liveBridge.onOp(onLiveOp); }, []);
+  useEffect(function () {
+    var held = heldOps.current;
+    if (!held || !state.auth.loggedIn) return;
+    heldOps.current = null;
+    held.forEach(function (op) { deliverOp(handleLiveOp, op); });
+  }, [state.auth.loggedIn]);
   useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);
   useEffect(function () {
     if (!LIVE || !state.auth.loggedIn) return;
@@ -1447,7 +1462,8 @@ function Root(props) {
   var ui = {
     toast: toast,
     confirm: setConfirm,
-    openProfile: function (name, gid) { setProfile({ name: name, gid: gid }); },
+    // The full profile dialog covers the profile dialog: a profile opened from its links would stay hidden under it.
+    openProfile: function (name, gid) { setFullProfile(null); setProfile({ name: name, gid: gid }); },
     openFullProfile: function (name) { setFullProfile(name); },
     openWho: setWho,
     openLink: setLinkUrl,

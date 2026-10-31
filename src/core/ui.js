@@ -4,9 +4,10 @@ function useApp() { return useContext(Ctx); }
 
 /* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
 var layerNode = null;
+function appMount() { return window.__TORCH_MOUNT__ || document.getElementById('app'); }
 function layerRoot() {
   if (layerNode && layerNode.isConnected) return layerNode;
-  var mountEl = window.__TORCH_MOUNT__ || document.getElementById('app');
+  var mountEl = appMount();
   layerNode = document.createElement('div');
   layerNode.id = 'layer';
   (mountEl && mountEl.parentNode ? mountEl.parentNode : document.body).appendChild(layerNode);
@@ -130,9 +131,18 @@ function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
   function setOpen(n) { if (p.open == null) st[1](n); if (p.onOpenChange) p.onOpenChange(n); }
-  function close() { setOpen(false); }
+  function close() {
+    var trigger = ref.current && ref.current.querySelector('button');
+    var held = menuRef.current && menuRef.current.contains(menuRef.current.getRootNode().activeElement);
+    setOpen(false);
+    if (!trigger || !held) return;
+    // Before the menu leaves: its focused item would take the focus with it, to the page body.
+    trigger.focus({ preventScroll: true });
+    // A press on a spot that takes no focus clears it once the event is over: the button takes it back then.
+    setTimeout(function () { var a = trigger.getRootNode().activeElement; if (!a || a === document.body) trigger.focus({ preventScroll: true }); }, 0);
+  }
   var place = useFloating(ref, menuRef, open, close, { up: p.up, align: p.align, at: p.at });
-  function toggle() { setOpen(!open); }
+  function toggle() { if (open) close(); else setOpen(true); }
   function onKey(e) {
     if (!menuRef.current) return;
     var items = Array.prototype.slice.call(menuRef.current.querySelectorAll('button:not(:disabled)'));
@@ -206,6 +216,27 @@ function SkeletonRows(p) {
 }
 
 var openDialogs = [];
+/**
+ * Makes the interface behind the top dialog inert so that Tab and screen readers stay in it.
+ * The app and the dialogs under the top one become inert. Menus and toasts, above the dialogs, stay reachable.
+ */
+function syncInert() {
+  // Dialogs that close in the same render have already lost their node: they no longer keep the app inert.
+  var layers = openDialogs.filter(function (r) { return r.current; }).map(function (r) { return r.current.closest('.overlay'); });
+  appMount().toggleAttribute('inert', layers.length > 0);
+  layers.forEach(function (el, i) { el.toggleAttribute('inert', i < layers.length - 1); });
+}
+/**
+ * Puts a modal layer on top of the open dialogs.
+ * @param {Object} ref Ref of the layer overlay or of an element inside it.
+ */
+function openModal(ref) { openDialogs.push(ref); syncInert(); }
+/**
+ * Takes a modal layer out of the open dialogs.
+ * It comes before the focus goes back to where it was, since an element in an inert app takes no focus.
+ * @param {Object} ref Ref given to openModal.
+ */
+function closeModal(ref) { openDialogs.splice(openDialogs.indexOf(ref), 1); syncInert(); }
 function Dialog(p) {
   var ref = useRef(null);
   useEffect(function () {
@@ -213,13 +244,14 @@ function Dialog(p) {
     var prev = rootNode.activeElement;
     var el = ref.current && ref.current.querySelector('[data-autofocus], input, textarea, select, button');
     if (el) el.focus();
-    openDialogs.push(ref);
+    openModal(ref);
     function onKey(e) {
       // Every dialog listens on document: only the top one reacts.
       if (openDialogs[openDialogs.length - 1] !== ref) return;
       if (e.key === 'Escape' && p.onClose) { e.stopPropagation(); p.onClose(); }
       if (e.key === 'Tab' && ref.current) {
-        var f = ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        // A disabled control takes no focus: at either end of the list, Tab would leave the dialog past it.
+        var f = ref.current.querySelectorAll('button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])');
         if (!f.length) return;
         var first = f[0], last = f[f.length - 1];
         var active = rootNode.activeElement;
@@ -233,7 +265,7 @@ function Dialog(p) {
     document.addEventListener('keydown', onKey);
     if (blocking) document.addEventListener('keydown', onEscape, true);
     return function () {
-      openDialogs.splice(openDialogs.indexOf(ref), 1);
+      closeModal(ref);
       document.removeEventListener('keydown', onKey);
       if (blocking) document.removeEventListener('keydown', onEscape, true);
       if (prev && prev.focus) prev.focus();
@@ -257,15 +289,38 @@ function ConfirmDialog(p) {
   });
 }
 
+var TOAST_MS = 4500, TOAST_ACTION_MS = 7000;
 function Toasts(p) {
   return h(Portal, null, h('div', { className: 'toasts', role: 'status', 'aria-live': 'polite' },
-    p.toasts.map(function (t) {
-      return h('div', { key: t.id, className: 'toast' },
-        t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
-        h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
-        t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
-        h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
-    })));
+    p.toasts.map(function (t) { return h(Toast, { key: t.id, toast: t, dismiss: p.dismiss }); })));
+}
+/**
+ * Notification that closes once its delay has run.
+ * The delay of a toast with an action waits while the toast is hovered or holds the focus, so that its action stays within reach.
+ * @param {{toast: Object, dismiss: function(string)}} p Notification and its closing by id.
+ */
+function Toast(p) {
+  var t = p.toast;
+  var a = useState(false), hovered = a[0], setHovered = a[1];
+  var b = useState(false), focused = b[0], setFocused = b[1];
+  var left = useRef(t.action ? TOAST_ACTION_MS : TOAST_MS);
+  var held = !!t.action && (hovered || focused);
+  useEffect(function () {
+    if (held) return;
+    var start = Date.now(), timer = setTimeout(function () { p.dismiss(t.id); }, left.current);
+    return function () { clearTimeout(timer); left.current -= Date.now() - start; };
+  }, [held]);
+  return h('div', {
+    className: 'toast',
+    onMouseEnter: function () { setHovered(true); }, onMouseLeave: function () { setHovered(false); },
+    onFocus: function () { setFocused(true); },
+    // The focus moving from one of its buttons to the other keeps the toast held.
+    onBlur: function (e) { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }
+  },
+    t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
+    h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
+    t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
+    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
 }
 
 var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;

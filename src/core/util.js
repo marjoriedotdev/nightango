@@ -47,11 +47,26 @@ function isNewerVersion(a, b) {
   return b.indexOf('-') !== -1;
 }
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+/**
+ * Returns a text without its trailing white space.
+ * @param {string} text Text to trim.
+ */
+function trimEnd(text) {
+  var end = text.length;
+  // A loop rather than replace(/\s+$/, ''): that pattern starts again from each space of a long run.
+  while (end && /\s/.test(text.charAt(end - 1))) end--;
+  return text.slice(0, end);
+}
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
 function isGuest(name) { return /^[!#]/.test(name); }
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
 function storageMerge(key, patch) { return storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
+/**
+ * Returns the kind of a stored JSON value: null, array, object, string, number or boolean.
+ * @param {*} v Value read from the storage.
+ */
+function kindOf(v) { return v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
 /**
  * Reads a JSON file chosen by the user.
  * @param {File} file Chosen file.

@@ -29,6 +29,18 @@ function liveWorld(me) {
     groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, retrying: {}
   };
 }
+// Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', unstyled: 'array', style: 'object', fav: 'array', muted: 'array', ignored: 'array' };
+/**
+ * Returns the account data stored in this browser without the values of another kind left by an older version or corrupted.
+ * @param {*} stored Content of skinKey.
+ */
+function storedLocal(stored) {
+  var out = {};
+  if (kindOf(stored) !== 'object') return out;
+  Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
+  return out;
+}
 /** Key of a ban list entry: unid and IP, like removeblock. */
 function banKey(b) { return b.unid + ':' + b.ip; }
 function blankBanPage() { return { loaded: false, more: false, loading: false }; }

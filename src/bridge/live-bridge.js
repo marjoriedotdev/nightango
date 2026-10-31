@@ -1,3 +1,11 @@
+/**
+ * Gives an operation to a listener: one that throws stops neither the other listeners nor the sequence that emits, sign-in included.
+ * @param {function(Object)} fn Listener.
+ * @param {Object} op Operation.
+ */
+function deliverOp(fn, op) {
+  try { fn(op); } catch (e) { console.warn('[torch-skin] could not apply the ' + op.op + ' operation:', e); }
+}
 var liveBridge = (function () {
   if (!LIVE) return null;
   var refs = window.__betterChatangoRefs || {};
@@ -21,8 +29,8 @@ var liveBridge = (function () {
 
   // A message shown before its final id keeps the temporary id k:{key}, which Chatango refers to by the key alone.
   function withTempIds(ids) { return ids.concat(ids.map(function (id) { return 'k:' + id; })); }
-  function emit(op) { if (listeners.length) listeners.forEach(function (f) { f(op); }); else queue.push(op); }
-  function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
+  function emit(op) { if (listeners.length) listeners.forEach(function (f) { deliverOp(f, op); }); else queue.push(op); }
+  function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(function (op) { deliverOp(fn, op); }); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
   function note(text) { if (JOURNAL) JOURNAL.add('app', text); }
   function connName(gid) { return gid === 'private_message' ? 'private messages' : '#' + gid; }
   /**
@@ -801,12 +809,14 @@ var liveBridge = (function () {
     var onLogin = function (catchUp) {
       if (loggedIn) return;
       loggedIn = true;
+      var me = lower(C.user.name);
+      if (JOURNAL) JOURNAL.signIn(me);
       note('Signed in');
       // BetterChatango reads the YouTube oEmbed and msgbg.xml on its own, outside the Nightango media settings: disabled in memory, not in the BetterChatango settings.
       C.renderYouTube = CH.getBackground = function () {};
       // With connect_start, BetterChatango clicks its PM tab 6 s later, and its PM screen moves client.private.focus: disabled the same way.
       document.querySelector('[data-sidebar="private"]').click = function () {};
-      emit({ op: 'login', me: lower(C.user.name) });
+      emit({ op: 'login', me: me });
       // Groups already connected before us: their inited and participants frames have gone by.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
       if (typeof window.__TORCH_SHOW__ === 'function') window.__TORCH_SHOW__();
@@ -1193,7 +1203,11 @@ var liveBridge = (function () {
       var n = lower(name);
       if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.reject(new Error('Guests have no profile.'));
       return cached(profileCache, n, function () {
-        return fetch(CH.subdomain.mod1(n)).then(function (r) { return r.text(); }).then(function (xml) {
+        return fetch(CH.subdomain.mod1(n)).then(function (r) {
+          // Server error rejected: read as a missing profile, it would stay cached for the cache delay instead of being read again.
+          if (r.status >= 500) throw new Error('Chatango returned HTTP ' + r.status + ' for mod1.xml.');
+          return r.text();
+        }).then(function (xml) {
           var doc = new DOMParser().parseFromString(xml, 'text/xml');
           if (doc.querySelector('parsererror')) return { missing: true };
           var q = function (sel) { var el = doc.querySelector(sel); return el ? el.textContent.trim() : ''; };
@@ -1204,7 +1218,9 @@ var liveBridge = (function () {
             premium: (parseInt(q('d'), 10) || 0) * 1000 > Date.now(), mini: null
           };
           if (!data.premium) return data;
-          return memberFile(CH.subdomain.custom_profile(n), /^text\/css/, parseMiniCss).then(function (mini) { data.mini = mini; return data; });
+          return memberFile(CH.subdomain.custom_profile(n), /^text\/css/, function (css) {
+            return css.length > MINI_CSS_MAX_LENGTH ? null : parseMiniCss(css);
+          }).then(function (mini) { data.mini = mini; return data; });
         });
       });
     },

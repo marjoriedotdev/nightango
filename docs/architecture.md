@@ -8,7 +8,7 @@ Nightango is a single React 18 application written in ES5 JavaScript, without JS
 src/
   core/       shared base, evaluated first
     globals.js       React aliases, T wrapper (live avatars), hooks
-    util.js          time, local storage, copy, reading a JSON file, downloading a JSON file
+    util.js          time, local storage, copy, reading a JSON file, downloading a JSON file, trailing white space trim
     colors.js        colors and contrast, fonts, channels
     roles.js         permissions, roles (owner, admin, mod), Chatango rights bits (PERM_FLAG), default rights of a role, default group settings
     sample-data.js   prototype sample data, simulated visits, in-memory sample media library
@@ -16,7 +16,8 @@ src/
     ui.js            React context, Portal (#layer layer), useFloating (layer anchored to its trigger), useDraft (composer text per conversation), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
                      Person (avatar and name that open the profile), role and "You" badges, list presence,
                      useRightColumn (single 1180 px threshold: right column above, full screen below)
-    rich-text.js     MessageText (emphasis, quotes, mentions, links), shownParts (shown text without the links shown as a media), trusted hosts (isTrustedUrl), RichText (sanitized mini profile), fullProfileDoc
+    rich-text.js     MessageText (emphasis, quotes, mentions, links), memberLink (member link through the link warning), shownParts (shown text without the links shown as a media), trusted hosts (isTrustedUrl),
+                     RichText (sanitized mini profile), unlinkFullProfile (full profile links removed and listed), fullProfileDoc
     selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry,
                      message cap of a group or a conversation (THREAD_MAX, trimThread)
   bridge/     the bridge to BetterChatango
@@ -52,7 +53,7 @@ src/
     live-state.js    live state built for Root: world at login, group, ban lists, session loss
     pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database)
     root.js          Root: state, actions, live actions, handleLiveOp
-    start.js         mounting
+    start.js         mounting, recovery screen after an interface error
   loader/
     skin-loader.js   sandbox-side userscript: header and @version, home page guard,
                      page code injection, vissle and TikTok bridges (GM_xmlhttpRequest)
@@ -70,7 +71,7 @@ torchds/project/     design system: tokens, components/bundle.js (namespace wind
 dist/                build outputs, not versioned
 ```
 
-`bridge/live-parse.js` contains only functions that read neither the BetterChatango client, nor `emit`, nor any variable of the bridge closure. A function that depends on this closure stays in `bridge/live-bridge.js`. The bridge keeps the steps specific to BetterChatango: waiting for Chatango's replies and their delays, requesting the announcement and reading a group's info after `inited`, the mention sound of a PM, the temporary `k:` message ids. It emits only facts to `Root`. `Root` (`app/root.js`) applies them to the state, with `app/pm.js` for PMs and `app/live-state.js` for the live state it builds.
+`bridge/live-parse.js` contains only functions that read neither the BetterChatango client, nor `emit`, nor any variable of the bridge closure. A function that depends on this closure stays in `bridge/live-bridge.js`. The bridge keeps the steps specific to BetterChatango: waiting for Chatango's replies and their delays, requesting the announcement and reading a group's info after `inited`, the mention sound of a PM, the temporary `k:` message ids. It emits only facts to `Root`. Each listener receives an operation on its own: one that throws is logged to the console, so to the diagnostic journal, and stops neither the other listeners nor the step that emits, sign-in included (`deliverOp`). `Root` (`app/root.js`) applies them to the state, with `app/pm.js` for PMs and `app/live-state.js` for the live state it builds. The operations received after `login` wait for its first render, then go through `deliverOp` in their order: until then, they would read the signed-out state, which has no groups, users or route.
 
 ## Concatenation
 
@@ -79,6 +80,8 @@ dist/                build outputs, not versioned
 The build opens the IIFE with two names: `APP_VERSION`, the `@version` of `src/loader/skin-loader.js`, and `RELEASE_NOTES`, the sections of `CHANGELOG.md` read in the Keep a Changelog format (`{ version, date, groups: [{ title, items }] }`, most recent first). The prototype and the userscript therefore get the same version and the same notes. The build rejects a malformed `CHANGELOG.md` or one whose first section is not the `@version` one.
 
 `bridge/live-parse.js` sits right before `bridge/live-bridge.js`, after `bridge/live-model.js` whose `FONT_FACES` it reads. Its functions become names of the single scope, shared with every file: a name that duplicates another replaces the first one without an error.
+
+Code between `/*PROTOTYPE*/` and `/*END PROTOTYPE*/` belongs to the hosted prototype only: its hook `window.claude.hot`, through which the hosted page starts the interface, can hand it a saved state and reads its state back (`app/start.js`, `app/root.js`). The build leaves these blocks out of the userscripts, since any script on st.chatango.com could define this hook. `dist/app.js` keeps them, like `dist/nightango.html`.
 
 The build rejects app code or a bundle that contains `</script`, a userscript stylesheet that still targets `:root` or `html,body{`, and a sign-in screen stylesheet that contains `url(` or `@import`.
 
@@ -106,8 +109,8 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 
 ## Diagnostic journal
 
-- `skin-journal.js` wraps the `WebSocket` constructor and the console, listens to the page lifecycle and to errors, and keeps the last 1,000 events in `localStorage` under `torch-skin:journal`. What it keeps and never keeps: [ADR-0011](adr/0011-diagnostic-journal.md).
-- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. The bridge records its connections, BetterChatango's warnings, the requests its post helper refuses and a refused save of the unread migration flag in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
+- `skin-journal.js` wraps the `WebSocket` constructor and the console, listens to the page lifecycle and to errors, and keeps the last 1,000 events of each account in `localStorage` under `torch-skin:journal:<username>`. Until sign-in, it keeps the events of the page in memory only. What it keeps and never keeps: [ADR-0011](adr/0011-diagnostic-journal.md).
+- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. On sign-in, the bridge gives it the account name (`JOURNAL.signIn`), which adds the events of the page to that account's log. The bridge records its connections, BetterChatango's warnings, the requests its post helper refuses and a refused save of the unread migration flag in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
 
 ## Mounting and display
 
@@ -117,7 +120,8 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 - That screen only gets a stylesheet, `<style id="torch-skin-login">` in `document.head`: `src/styles/login.css` after the tokens declared under `.login`, in the system theme, or the one chosen in Nightango once the `#torch-skin` host carries it (`body:has(> #torch-skin[data-theme])`). It recolors BetterChatango's `--theme-*` variables, so its menu and windows follow too. No script touches its form, and the stylesheet loads nothing ([ADR-0001](adr/0001-password-never-read.md)). BetterChatango replaces the whole document before showing its screen: a `MutationObserver` on `<html>` adds the stylesheet to the new document, before the first paint. If the interface cannot start, the stylesheet is removed and the screen goes back to its BetterChatango look.
 - Fields of that screen use 16px text on touch screens (`pointer: coarse`), like the interface fields: iOS Safari zooms into a field under 16px.
 - On sign-in, `window.__TORCH_SHOW__` hides the rest of the BetterChatango page and shows the host.
-- Dialogs, menus and notifications go through `Portal`, rendered in a `#layer` layer next to `#app`, so they do not distort the layout.
+- An error while rendering the interface or in one of its effects shows the recovery screen instead of an empty page: `Recovery` (`app/start.js`), an error boundary around `Root`. It offers Reload and, in live, Show BetterChatango, which calls `window.__TORCH_HIDE__` to remove the host and the hiding stylesheet. BetterChatango's connections keep running and the bridge keeps its hooks: the groups work there, but BetterChatango's private `connect` and `DENIED` handlers stay held (`docs/betterchatango-protocol.md`, Friend presence), so a private conversation opens only after a reload, as the screen says. The error goes to the console, so the diagnostic journal keeps its name and message only.
+- Dialogs, menus and notifications go through `Portal`, rendered in a `#layer` layer next to `#app`, so they do not distort the layout. While a dialog is open, `#app` and the dialogs under the top one carry `inert`: Tab and screen readers stay in the top dialog. Menus and toasts, above the dialogs, stay reachable.
 - The interface fonts (Geist, Geist Mono, Instrument Serif) are embedded: woff2 files of the Latin subset in `torchds/project/fonts/`, under SIL OFL 1.1 (`OFL.txt`). The build encodes them as base64 `data:` URLs in the `@font-face` rules of `fonts.css`. `skin-page.js` puts these `@font-face` rules in a `<style id="torch-skin-fonts">` in `document.head` when the interface mounts: Chrome ignores a `@font-face` declared only in the shadow root. The hosted prototype gets the same `@font-face` rules in its stylesheet. The design system previews and the mockups link `fonts.css`. No external font request.
 
 ## Live mode and prototype mode
@@ -131,8 +135,8 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 ## React state
 
 - `Root` (`app/root.js`) holds the whole application state. `update(fn)` clones the state with `JSON.parse(JSON.stringify(prev))`, applies `fn` to the clone, then replaces it. The state must therefore stay JSON-serializable.
-- Preferences are persisted in `localStorage` under `torch-prototype-prefs` (`app/state.js`). In live, those in `BETTER_CHATANGO_PREFS` (`core/prefs.js`: guest messages, announcements) are BetterChatango settings: read back from its settings on sign-in, and `usePref().sw` toggles them only once they are written on its side. Trusted hosts (`safety.trustedHosts`) follow the same rule: in live, it is BetterChatango's list, read back on sign-in (`null` if unreadable) and changed by `actions.setTrustedHost` once written on its side.
-- Account-specific data is persisted under `torch-skin:<username>`: closed conversations (`hidden`), hidden channels of each group (`channels`), members with a hidden style (`unstyled`) and own style (`style`). The bridge also sets the unread migration flag there (`pmReadMigrated`, `docs/betterchatango-protocol.md`, Private history): `Root` merges its writes with the stored content to keep it. In live, favorites, group mutes and ignored members are BetterChatango's (`docs/betterchatango-protocol.md`, BetterChatango startup settings). The prototype keeps its own in its state.
+- Preferences are persisted in `localStorage` under `torch-prototype-prefs` (`app/state.js`). `loadPrefs` reads them over the defaults of `core/prefs.js`: a stored value of another type than its default, left by an older version or corrupted, gives way to the default. `sky.moon` is the only preference with two types (`auto` or a phase index). The stored preferences carry their schema version (`version`, 1): preferences stored without one are read as version 1, the current one, with no migration. In live, those in `BETTER_CHATANGO_PREFS` (`core/prefs.js`: guest messages, announcements) are BetterChatango settings: read back from its settings on sign-in, and `usePref().sw` toggles them only once they are written on its side. Trusted hosts (`safety.trustedHosts`) follow the same rule: in live, it is BetterChatango's list, read back on sign-in (`null` if unreadable) and changed by `actions.setTrustedHost` once written on its side.
+- Account-specific data is persisted under `torch-skin:<username>`: closed conversations (`hidden`), hidden channels of each group (`channels`), members with a hidden style (`unstyled`) and own style (`style`). At sign-in, `storedLocal` (`app/live-state.js`) drops a value of another kind than the one expected, and the cleaned content is written back. The bridge also sets the unread migration flag there (`pmReadMigrated`, `docs/betterchatango-protocol.md`, Private history): `Root` merges its writes with the stored content to keep it. In live, favorites, group mutes and ignored members are BetterChatango's (`docs/betterchatango-protocol.md`, BetterChatango startup settings). The prototype keeps its own in its state.
 - Composer drafts live outside the state, in memory only (`useDraft`, `core/ui.js`): a view saves its text when it leaves, keyed by `group:<id>` or `dm:<name>`, and gets it back on return. A reload drops them, which is also how live signs out. The prototype empties them at sign-in.
 - PM unreads come from the archive (`app/pm.js`): BetterChatango's history database in live, an in-memory archive in the prototype or when that database is missing. A conversation's `unread` is only a copy of it, written only by `app/pm.js` ([ADR-0012](adr/0012-pm-unread-from-history.md)).
 - Profiles read (mini profile, Premium background in `u.miniStyle`) and message backgrounds (`u.msgBg`) are cached with the user.
@@ -145,7 +149,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 - Quotes: in each segment, `MessageText` recognizes `` @name: `text` `` as BetterChatango's rendering (`docs/betterchatango-protocol.md`, Sending) and rebuilds it as React elements, the name as a mention and the quoted text apart.
 - Emoticons: `parseContent` replaces an `<i s="sm://{name}"/>` tag with the system emoji that the `EMOTICONS` table maps to the name, in `text` as in `parts`. From the member, only the name is kept and compared with the table (`docs/betterchatango-protocol.md`, Emoticons).
 - Mini profile: `RichText` rebuilds an allowlist of tags as React elements. The `inline` mode (Meet cards) ignores blocks, links, images, size and alignment.
-- Full profile: `fullProfileDoc` produces an isolated document in a `sandbox` `iframe`, with a CSP and `referrer` `no-referrer` in a `<meta>`. The frame is the `FullProfileFrame` component, shared by the full profile dialog and the Profile page preview, with `useFullProfileMedia` for the "Load images" button. Under `styles.profileBackgrounds`, its `<style>` reuses the Premium background chosen by `miniStyleOf` (hex colors, `https` image with its repeat if media are allowed), each value checked before being written.
+- Full profile: `fullProfileDoc` produces an isolated document in a `sandbox` `iframe` with no permission, with a CSP and `referrer` `no-referrer` in a `<meta>`. The frame is the `FullProfileFrame` component, shared by the full profile dialog and the Profile page preview, with `useFullProfileMedia` for the "Load images" button. Before it goes into the frame, the member HTML loses the address of every link (`unlinkFullProfile`, parsed without running or loading anything): no link opens from the frame. Below the frame, "Links in this profile" lists each distinct `http` or `https` address once (`memberLink`), through the link warning and the trusted hosts, and through the profile link handling for `{name}.chatango.com`. A profile opened from the full profile dialog closes it, since it covers the profile dialog. Under `styles.profileBackgrounds`, its `<style>` reuses the Premium background chosen by `miniStyleOf` (hex colors, `https` image with its repeat if media are allowed), each value checked before being written.
 - Premium background: colors taken from `custom_profile.css` by `parseMiniCss`, with guaranteed contrast. In the profile dialog, `miniSkin` applies the background, the text and the theme color tokens (secondary text at 4.5:1, borders, hovers) to the whole dialog. The image is an `<img>` with `referrerPolicy="no-referrer"`, as a 120 px cover (`object-fit: cover`) behind the avatar, faded into the background color. The PM profile panel keeps the background on the text block only, with the image as a banner above it. Meet cards show only the color. The Premium background image follows the media settings, trusted hosts (`waitsForClick`) and `styles.profileBackgrounds`.
 - Message background: under `styles.backgrounds`, the color taken from `msgbg.xml` by `parseMsgBg` colors the row of a group message marked `bg`, text and name at 4.5:1. The `msgbg.jpg` image is a CSS background behind the text (`background` slot of `T.Message`), at its natural size, placed according to the member's alignment, tiled if the member asks for it, only if `embedImages` is on and `proxyMedia` is off.
 - Hidden style: "Hide style", in a message menu or the actions on a person, marks the member `unstyled`. `memberStyles` then renders their rows, in groups and in PMs, as if `styles.names`, `styles.fonts` and `styles.backgrounds` were off for them alone, without reading their message background, and `MessageText` removes their bold, italic and underline, keeping strikethrough. Reference: BetterChatango's `/style name` (`inject.js:7308-7350`), which only affects messages already displayed and keeps nothing on reload.
@@ -173,12 +177,14 @@ Both userscripts come out of the same `userscript()` function, which describes t
 
 jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 
-- `smoke`: hosted prototype, loaded from `dist/nightango.html`.
+- `smoke`: hosted prototype, loaded from `dist/nightango.html` and started through its hook.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
-- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
+- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal, recovery screen, prototype hook left out. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
+- `layers`: menus, dialogs and toasts of `core/ui.js` in a Shadow DOM, as in live, on the sources of `src/core/` and the design system bundle. The cases move the clock of the app timers forward themselves.
 - `pm`: PM unreads, private history reading, merge, import and pages up to the cap, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
+- `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
-- `live_login`: sign-in detection, on the concatenation of the sources of `src/bridge/`.
+- `live_login`: sign-in detection, a listener that throws and the diagnostic journal kept per account, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal.
 - `avatar`: avatars, on the design system bundle and the sources of `src/bridge/`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.
@@ -188,9 +194,9 @@ Test policy: [ADR-0009](adr/0009-test-only-complex-behaviour.md) and `docs/codin
 
 ## Continuous integration
 
-- `.github/workflows/ci.yml`, `test` job: `pnpm install --frozen-lockfile` then `pnpm test` on every push and pull request to `main` and `beta`. Before the tests, it refuses a `-beta` `@version` on `main` or in a pull request to `main`.
-- Same workflow, `release` job: on a push to `main` or `beta`, after `test`. It reads the `@version` of `src/loader/skin-loader.js`, then, if the release `v` followed by this number does not exist yet, it runs `pnpm build` again and creates the tag on the tested commit and the GitHub release with both userscripts attached. Otherwise it publishes nothing. On `beta`, only a `X.Y.Z-beta.N` version is published, as a prerelease never marked latest. A stable version there publishes nothing. Releases run one at a time (`concurrency: release`).
-- Actions are pinned to the full commit SHA of their release, with the version in a comment. pnpm comes from the `packageManager` field of `package.json`.
+- `.github/workflows/ci.yml`, `test` job: `pnpm install --frozen-lockfile` then `pnpm test` on every push and pull request to `main` and `beta`. Before the tests, it refuses a `-beta` `@version` on `main` or in a pull request to `main`. After them, it hands the SHA-256 checksums of both userscripts it tested to the `release` job.
+- Same workflow, `release` job: on a push to `main` or `beta`, after `test`. It runs `pnpm build` again and checks both userscripts against the checksums of the tested ones: a single byte of difference stops it. No action carries `dist/` from one job to the other, since that would be a new dependency. It then reads the `@version` of `src/loader/skin-loader.js` and, if the release `v` followed by this number does not exist yet, creates the tag on the tested commit and the GitHub release with both userscripts and their checksums (`SHA256SUMS`) attached. Otherwise it publishes nothing. On `beta`, only a `X.Y.Z-beta.N` version is published, as a prerelease never marked latest. A stable version there publishes nothing. Releases run one at a time (`concurrency: release`).
+- Actions are pinned to the full commit SHA of their release, with the version in a comment. pnpm comes from the `packageManager` field of `package.json`, Node from its `engines.node` field, which a local run follows too: pnpm warns under another Node version.
 
 ## BetterChatango reference copy
 

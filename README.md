@@ -13,11 +13,24 @@ Nightango is a Tampermonkey userscript for [st.chatango.com](https://st.chatango
 ## Install
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.
-2. Download `nightango.min.user.js` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest).
-3. In Tampermonkey, create a new script and replace its content with the file. Save.
-4. Open https://st.chatango.com/ and sign in on the BetterChatango screen. Nightango appears once the session is open.
+2. Download `nightango.min.user.js` and `SHA256SUMS` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest).
+3. Check the file, as shown in [Check the download](#check-the-download).
+4. In Tampermonkey, create a new script and replace its content with the file. Save.
+5. Open https://st.chatango.com/ and sign in on the BetterChatango screen. Nightango appears once the session is open.
 
-To update, paste the new release over the same script. Settings > What's new lists the changes of each version.
+To update, check the new release the same way, then paste it over the same script. Settings > What's new lists the changes of each version.
+
+### Check the download
+
+`SHA256SUMS` lists the SHA-256 checksum of both userscripts of the release, taken from the files the CI tested before publishing them. In the folder where you saved the file, compute the checksum of your copy:
+
+- macOS: `shasum -a 256 nightango.min.user.js`
+- Linux: `sha256sum nightango.min.user.js`
+- Windows, in PowerShell: `Get-FileHash nightango.min.user.js`
+
+Compare the result with the `nightango.min.user.js` line of `SHA256SUMS`. PowerShell prints it in capital letters: apart from the case, the two values must be the same. If they differ, don't install the file: download it again from the release page.
+
+A matching checksum tells you that your copy is the file the release published, the one the CI tested. The checksum comes from the same release, so it can't vouch for the release itself.
 
 ## Preview
 
@@ -32,12 +45,13 @@ To update, paste the new release over the same script. Settings > What's new lis
 ## Privacy
 
 - Nightango never reads, stores, logs or sends your password. Sign-in happens on BetterChatango's screen.
+- Using Nightango means trusting vissle.me with your Chatango account: Nightango loads BetterChatango from vissle.me as published there, and BetterChatango handles the sign-in and keeps your credentials on its servers.
 - Every HTTP call Nightango makes is listed in [docs/betterchatango-protocol.md](docs/betterchatango-protocol.md#allowed-http-calls). Nothing outside that list is called.
 - Every Chatango frame it sends comes from BetterChatango's code or a reference library.
 - Member HTML is rebuilt from an allow list, never injected.
-- Profile and message backgrounds and full-size profile pictures load without a referrer.
+- Profile backgrounds and full-size profile pictures load without a referrer. Message backgrounds load with the page referrer, from Chatango only.
 - Fonts ship inside the userscript.
-- The diagnostic journal (Settings > Diagnostics) stays in the browser and never records frame contents or what you send.
+- The diagnostic journal (Settings > Diagnostics) stays in the browser, one log per account, and never records frame contents or what you send.
 
 ## Support
 
@@ -45,7 +59,7 @@ For any question or problem, send a private message to [marjorie](https://marjor
 
 ## Development
 
-Requires Node.js and pnpm.
+Requires pnpm and Node.js 24, the version the CI uses (`engines` in `package.json`).
 
 ```
 pnpm install

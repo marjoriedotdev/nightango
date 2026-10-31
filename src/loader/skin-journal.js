@@ -6,14 +6,24 @@
     // BetterChatango connection lines (inject.js:5588, 5652, 5662, 5669, 5701). The rest of its console contains frames and PMs.
     var BETTER_CHATANGO_LINES = [/^conn closed: /, /^CONNECTION TIMED OUT: /, /^environment server error$/, /^client version out of date$/];
     var UNKNOWN_FRAME = /^\[UNKNOWN\] \(([^)]*)\)/;
-    var entries = [], listeners = [], saveTimer = null, sockets = 0;
-    try { entries = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { /* unreadable journal: it starts empty again */ }
-    if (!Array.isArray(entries)) entries = [];
+    var entries = [], listeners = [], saveTimer = null, sockets = 0, accountKey = null;
 
+    function stored(key) {
+      try { var list = JSON.parse(localStorage.getItem(key)); return Array.isArray(list) ? list : null; } catch (e) { return null; }
+    }
+    // The log shared by every account up to 0.29.0. The Array test spares an account named journal, whose data lives under the same key.
+    if (stored(KEY)) localStorage.removeItem(KEY);
     function save() {
       clearTimeout(saveTimer);
       saveTimer = null;
-      try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) { /* storage full or unavailable: the journal stays in memory */ }
+      // Before sign-in the events stay in memory: they join the account that signs in on this page, never the next one.
+      if (!accountKey) return;
+      try { localStorage.setItem(accountKey, JSON.stringify(entries)); } catch (e) { /* storage full or unavailable: the journal stays in memory */ }
+    }
+    function signIn(name) {
+      accountKey = KEY + ':' + name;
+      entries = (stored(accountKey) || []).concat(entries).slice(-MAX);
+      save();
     }
     function add(kind, text) {
       entries.push({ t: Date.now(), k: kind, m: String(text).slice(0, TEXT_MAX) });
@@ -132,6 +142,7 @@
     window.__TORCH_JOURNAL__ = {
       limit: MAX,
       add: add,
+      signIn: signIn,
       entries: function () { return entries.slice(); },
       clear: function () { entries = []; save(); listeners.forEach(function (fn) { fn(); }); },
       subscribe: function (fn) { listeners.push(fn); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }

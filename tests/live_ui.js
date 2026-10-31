@@ -6,7 +6,12 @@ const errors = [];
 const vc = new VirtualConsole();
 vc.on('error', e => errors.push(String(e && e.message || e)));
 vc.on('jsdomError', e => errors.push('jsdom: ' + e.message));
-vc.on('warn', e => { if (!/act\(|ReactDOM.render|useLayoutEffect|\[torch-skin\]/.test(String(e))) errors.push('warn: ' + String(e).slice(0, 300)); });
+// The bridge only logs an operation that throws: the steps read these logs.
+const opFailures = [];
+vc.on('warn', e => {
+  if (/^\[torch-skin\] could not apply/.test(String(e))) opFailures.push(String(e));
+  if (!/act\(|ReactDOM.render|useLayoutEffect|\[torch-skin\]/.test(String(e))) errors.push('warn: ' + String(e).slice(0, 300));
+});
 
 const dom = new JSDOM(`<!doctype html><html><head></head><body>
   <input data-text-field="age" value="34"><select data-text-field="gender"><option value="?">?</option><option value="M" selected>M</option><option value="F">F</option></select>
@@ -37,6 +42,10 @@ w.IntersectionObserver = function (cb, opts) {
 // jsdom has neither CSS.supports nor ResizeObserver: the message log takes the path without native anchoring or measuring.
 w.CSS = { supports: () => false };
 w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
+// The bridge polls BetterChatango's sockets every 2 s: the sign-in also runs a poll at a chosen moment.
+let pollSockets = null;
+const nativeSetInterval = w.setInterval;
+w.setInterval = (fn, ms) => { if (ms === 2000 && !pollSockets) pollSockets = fn; return nativeSetInterval.call(w, fn, ms); };
 
 /* ---------- Fake BetterChatango client ---------- */
 const sent = [], posts = [], calls = [];
@@ -189,10 +198,22 @@ let ownMod2Status = 200;
 const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img src="x" onerror="alert(2)"><a href="javascript:alert(3)">bad</a> <a href="https://example.com/p">good</a> <font color="#ff0000" size="5">red</font>');
 // Chatango age, like BetterChatango: current year minus birth year.
 const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
-const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">');
+// Links of the full profile: a repeated address, another scheme, a Chatango profile, a trusted host, SVG, an image map,
+// a link that only a second parse of the serialized page creates (mutation XSS), and three shapes that make a link
+// only in the frame: a declarative shadow root, a nested frame document and an SVG animation, none of them listed.
+const FULL_LINKS = ['https://example.com/p', 'https://abe.chatango.com/', 'https://i.imgur.com/g', 'https://svg.example/', 'https://area.example/', 'https://smuggled.example/'];
+const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">'
+  + '<p><a href="https://example.com/p" target="_top">My site</a> <a href=" https://example.com/p ">again</a> <a href="javascript:alert(5)">Script link</a> <a href="https://abe.chatango.com/">abe</a> <a href="https://i.imgur.com/g">gallery</a></p>'
+  + '<svg><a href="https://svg.example/"><text>S</text></a></svg><map name="m"><area href="https://area.example/" alt="Area"></map>'
+  + '<div><template shadowrootmode="open"><a target="_self" href="https://shadow.example/">Shadow</a></template></div>'
+  + '<iframe srcdoc="<a href=https://nested.example/>Nested</a>"></iframe>'
+  + '<svg><a><animate attributeName="href" values="https://animated.example/" fill="freeze"/><text>Animated</text></a><a id="set-link"><text>Set</text></a><set href="#set-link" attributeName="xlink:href" to="https://set.example/"/></svg>'
+  + '<math><mtext><table><mglyph><style><a href="https://smuggled.example/">Smuggled</a>');
 // Premium background in the real custom_profile.css format (goddess account). Without a file, Chatango returns a JPEG image.
 const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
 const GODDESS_CSS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
+// Valid background past the size cap of the file: read as absent.
+const BULKY_CSS = GODDESS_CSS + '/*' + ' '.repeat(5000) + '*/';
 // Message background in the msgbg.xml format: attributes of the first element, fields of the BetterChatango background form. A response that is not text/xml means no background.
 const MSGBG = {
   rosa: '<?xml version="1.0" ?><bgi bgc="FFCC99" bgalp="100" useimg="1" ialp="40" align="br" tile="0" hasrec="0" isvid="0"/>',
@@ -215,11 +236,12 @@ w.fetch = (url, opts) => {
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent(saved ? saved.f.line : 'Old bio') + '</body><s>M</s><b>1990-01-01</b><l>Rouen</l><d>' + PREMIUM_END + '</d></mod>';
   }
   else if (/marjorie\/mod2\.xml/.test(url)) status = ownMod2Status;
-  else if (/\/(goddess|expired|sith|lost)\/mod1\.xml/.test(url)) {
+  else if (/\/(goddess|expired|sith|lost|bulky)\/mod1\.xml/.test(url)) {
     const end = /expired/.test(url) ? PREMIUM_END - 60 * 86400 : PREMIUM_END;
     body = '<?xml version="1.0"?><mod><body>' + encodeURIComponent('Hi <a href="https://example.com/g">my page</a>') + '</body><s>F</s><b>1990-01-01</b><l>Paris</l><d>' + end + '</d></mod>';
   }
   else if (/goddess\/custom_profile\.css/.test(url)) { body = GODDESS_CSS; type = 'text/css'; }
+  else if (/bulky\/custom_profile\.css/.test(url)) { body = BULKY_CSS; type = 'text/css'; }
   else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
@@ -248,6 +270,10 @@ d.addEventListener('torch-skin:tiktok-request', e => {
   const out = /ok\/$/.test(q.url) ? { post: '7400000000000000001' } : /odd\/$/.test(q.url) ? { post: 'player' } : { error: 'TikTok could not be reached. Open the link instead.' };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:tiktok-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
+
+// Stored by an older or broken version: values of another type than the default, next to a phase index that replaces "auto".
+w.localStorage.setItem('torch-prototype-prefs', JSON.stringify({ notify: null, a11y: 'on', volume: '70', customThemes: { night: 1 }, sky: { calm: 'no', moon: 3 } }));
+w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold' }));
 
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
@@ -282,8 +308,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Sign-in and group */
   C.user.name = 'marjorie'; C.user.full = 'Marjorie';
   C.groups.test = fakeGroup();
+  C.groups.edits = fakeGroup();
   C.emit('clientLogin', C);
+  // Before the first signed-in render: a message in a group opened later, then the connection changes of a socket poll.
+  g('b', 'edits', ['1700000100.1', 'Alice', '', 'u1', 'UNID1', 'tmp0', '1.2.3.4', '0', '', '<n000/><f x11000="0">Sent before the first render']);
+  pollSockets();
   await wait(100);
+  const earlyFailures = opFailures.slice();
   step('overlay shown after login', shown === 1);
   const fetchesAtLogin = fetches.length;
   C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
@@ -306,6 +337,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !$('.log .tc-skeleton'));
   groupSkeleton.afterInit = !!$('.log .tc-skeleton');
   step('group opens', !!byText('h1', 'test'));
+  const storedPrefs = JSON.parse(w.localStorage.getItem('torch-prototype-prefs') || '{}');
+  const storedAccount = JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}');
+  step('stored values of another type load with their defaults, the others are kept, and sign-in completes',
+    !!storedPrefs.notify && storedPrefs.notify.pm.app === true && storedPrefs.a11y.reduceMotion === false && storedPrefs.volume === 70
+      && Array.isArray(storedPrefs.customThemes) && storedPrefs.sky.calm === false && storedPrefs.sky.moon === 3
+      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated') && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
+    { storedPrefs, storedAccount });
+  step('stored preferences without a version read as the current schema and saved with its version', storedPrefs.version === 1 && storedPrefs.sky.moon === 3, storedPrefs.version);
   step('announcement requested after init', frame('getannouncement').length >= 1);
   step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
   step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('bob') && x.textContent.includes('Admin')));
@@ -489,12 +528,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { whoReplies, calls: whoAsked().length });
 
   /* Message edit, like BetterChatango: <e…/> frame, history merge, deletion of edits */
-  C.groups.edits = fakeGroup();
   SB.renderGroup({ group: 'edits', header: 'Edits' });
   g('ok', 'edits', ['marjorie', '', '', '', '1700000000', '', '', '0']);
   g('inited', 'edits', []);
   await wait(50);
   click(byText('.tc-nav', 'edits')); await wait(50);
+  step('message and connection changes received before the first signed-in render applied without an error',
+    !!$$('.log .tc-msg-text').find(x => x.textContent === 'Sent before the first render') && !earlyFailures.length, earlyFailures);
   g('b', 'edits', ['1700000300.1', 'Marjorie', '', 'u0', 'UNID0', 'tmp30', '9.9.9.9', '0', '', '<n000/><f x11000="0">Mine typo']);
   g('u', 'edits', ['tmp30', 'A-B_C=']);
   await wait(50);
@@ -580,6 +620,29 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     !!byText('.toast', 'The file could not be uploaded. Try again.') && !linkFrames(failFrom).length && failKept.draft === 'Again' && failKept.chip && !!removeFile && !byText('.tc-composer', 'g.png'),
     { sent: linkFrames(failFrom), failKept, removed: !!removeFile });
 
+  /* Full group: at 500 messages each new one trims the oldest, so the count no longer changes */
+  click(byText('.tc-nav', 'edits')); await wait(50);
+  const fill = (i, text) => g('b', 'edits', [(1700000400 + i) + '.1', 'Dana', '', 'u7', 'UNID7', 'full' + i, '4.4.4.4', '0', '', '<n000/><f x11000="0">' + text]);
+  for (let i = 0; i < 500; i++) fill(i, 'Filler ' + i);
+  const logText = txt => !!$$('.log .tc-msg-text').find(x => x.textContent === txt);
+  await until(() => logText('Filler 499'));
+  const fullLog = $('.log');
+  const fullStart = { capped: logText('Filler 0') && !logText('Mine fixed') && !logText('Sent before the first render'), button: !!$('.jump') };
+  // jsdom has no layout: the test scrolls the column-reverse log itself, 0 is the bottom and a reader 10 px above it still counts as there.
+  const scrollLog = y => { const el = $('.log'); el.scrollTop = y; el.dispatchEvent(new w.Event('scroll')); };
+  scrollLog(-10);
+  fill(500, 'Arrives at the bottom'); await until(() => logText('Arrives at the bottom'));
+  const atBottom = { top: fullLog.scrollTop, button: !!$('.jump') };
+  scrollLog(-2000);
+  fill(501, 'Arrives below the reader'); await until(() => logText('Arrives below the reader'));
+  const scrolledUp = { top: fullLog.scrollTop, button: !!$('.jump'), trimmed: !logText('Filler 1') };
+  if ($('.jump')) { click($('.jump')); await wait(30); }
+  step('full group keeps a reader at the bottom there and shows New messages to a reader who scrolled up',
+    fullStart.capped && !fullStart.button && atBottom.top === 0 && !atBottom.button
+      && scrolledUp.top === -2000 && scrolledUp.button && scrolledUp.trimmed && fullLog.scrollTop === 0 && !$('.jump'),
+    { fullStart, atBottom, scrolledUp, after: fullLog.scrollTop });
+  click(byText('.tc-nav', 'test')); await wait(50);
+
   /* Warnings and connection */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
   step('BetterChatango notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
@@ -621,6 +684,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (historyTop) historyTop.cb(historyTop.targets.map(target => ({ isIntersecting: true, target })), historyTop);
   await wait(30);
   step('get_more uses BetterChatango counter', frame('get_more:').pop() === 'get_more:20:5', { observed: !!historyTop, frames: frame('get_more:') });
+  // The page reaches a reader scrolled up, and its sort brings the ban above, stamped with the local clock, to the end of the thread.
+  scrollLog(-2000);
+  const lastRow = () => $('.log .log-inner').lastElementChild.textContent;
+  g('i', 'test', ['1600000010.1', 'Ivy', '', 'u9', 'UNID9', 'O1=', '3.3.3.3', '0', '', '<n000/><f x11000="0">Older page']);
+  await until(() => logText('Older page'));
+  const olderPage = { top: $('.log').scrollTop, button: !!$('.jump'), last: lastRow() };
+  g('i', 'test', ['1600000000.1', 'Ivy', '', 'u9', 'UNID9', 'O2=', '3.3.3.3', '0', '', '<n000/><f x11000="0">Oldest page']);
+  await until(() => logText('Oldest page'));
+  const oldestPage = { top: $('.log').scrollTop, button: !!$('.jump'), last: lastRow() };
+  g('b', 'test', ['1700000260.1', 'Bob', '', 'u2', 'UNID2', 'tmp12', '5.6.7.8', '0', '', '<n000/><f x11000="0">After the older pages']);
+  await until(() => logText('After the older pages'));
+  const next = { top: $('.log').scrollTop, button: !!$('.jump') };
+  if ($('.jump')) { click($('.jump')); await wait(30); }
+  step('older history keeps a scrolled-up reader in place without New messages, the next message shows it',
+    olderPage.top === -2000 && !olderPage.button && olderPage.last === 'alice was banned'
+      && oldestPage.top === -2000 && !oldestPage.button && oldestPage.last === 'alice was banned'
+      && next.top === -2000 && next.button && $('.log').scrollTop === 0 && !$('.jump'),
+    { olderPage, oldestPage, next, after: $('.log').scrollTop });
   g('nomore', 'test', []); await until(() => d.body.textContent.includes('beginning of the history'));
   step('history end shown', d.body.textContent.includes('beginning of the history'));
 
@@ -1224,12 +1305,41 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const frameEl = $('iframe.fullprofile');
   const sd = frameEl ? frameEl.getAttribute('srcdoc') : '';
   step('full profile in an isolated frame', !!frameEl && !/allow-scripts|allow-same-origin/.test(frameEl.getAttribute('sandbox')) && sd.includes("default-src 'none'") && sd.includes('Zoe page'));
+  // Parsed like the frame parses its srcdoc: no element may keep an address, in any namespace.
+  const frameDoc = new w.DOMParser().parseFromString(sd, 'text/html');
+  const frameLinks = [...frameDoc.querySelectorAll('*')].filter(el => [...el.attributes].some(a => a.localName === 'href')).map(el => el.outerHTML);
+  // jsdom attaches no declarative shadow root, loads no nested srcdoc and runs no SVG animation: the browser would, so none may reach the frame.
+  const frameLate = [...frameDoc.querySelectorAll('template, iframe, [srcdoc], animate, set')].map(el => el.outerHTML);
+  step('full profile frame keeps the link text but can open nothing', !!frameEl && frameEl.getAttribute('sandbox') === '' && !frameLinks.length && !frameLate.length
+    && frameDoc.body.textContent.includes('My site again Script link abe gallery') && frameDoc.body.textContent.includes('AnimatedSet'),
+    { sandbox: frameEl && frameEl.getAttribute('sandbox'), frameLinks, frameLate });
+  const profileLinks = $$('.profile-links a').map(a => a.getAttribute('href'));
+  step('each http(s) link of the full profile listed once below the frame', !!byText('.profile-links h3', 'Links in this profile') && JSON.stringify(profileLinks) === JSON.stringify(FULL_LINKS), profileLinks);
   const loadImages = byText('.dialog-foot button', 'Load images');
   if (loadImages) { click(loadImages); await wait(30); }
   const sdLoaded = $('iframe.fullprofile') ? $('iframe.fullprofile').getAttribute('srcdoc') : '';
   step('full profile blocks external media until asked', sd.includes('img-src data:;') && !!loadImages && sdLoaded.includes('img-src https:'),
     { blocked: sd.includes('img-src data:;'), button: !!loadImages, loaded: sdLoaded.includes('img-src https:') });
-  click(byText('.dialog-foot button', 'Close')); await wait(30);
+  // Cancelable click, like the browser's: opens tells whether the browser would follow the link.
+  const followListed = async url => {
+    const a = $$('.profile-links a').find(x => x.getAttribute('href') === url);
+    const opens = !!a && a.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await wait(30);
+    const top = $$('.dialog').pop();
+    return { found: !!a, opens, top: top && top.getAttribute('aria-label'), text: top && top.textContent };
+  };
+  const warned = await followListed('https://example.com/p');
+  if (warned.top === 'This link leaves Nightango') { click(byText('.dialog-foot button', 'Cancel')); await wait(30); }
+  const trusted = await followListed('https://i.imgur.com/g');
+  step('full profile links go through the link warning, a trusted host opens directly',
+    warned.found && !warned.opens && warned.top === 'This link leaves Nightango' && warned.text.includes('https://example.com/p')
+      && trusted.found && trusted.opens && trusted.top === "zoe's profile", { warned: Object.assign({}, warned, { text: undefined }), trusted: Object.assign({}, trusted, { text: undefined }) });
+  const profileLink = await followListed('https://abe.chatango.com/');
+  const viewProfile = profileLink.top === 'abe.chatango.com' && byText('.dialog-foot button', 'View profile');
+  if (viewProfile) { click(viewProfile); await wait(60); }
+  const dialogsAfter = $$('.dialog').map(x => x.getAttribute('aria-label'));
+  step('a Chatango profile link of the full profile offers the profile, shown on top', profileLink.found && !profileLink.opens && !!viewProfile && JSON.stringify(dialogsAfter) === JSON.stringify(['Profile of abe']),
+    { profileLink: Object.assign({}, profileLink, { text: undefined }), dialogsAfter });
   key(d, 'Escape'); await wait(30);
 
   /* Refresh Meet people with the current filters */
@@ -1272,21 +1382,27 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && String(scrollSearches[1].f.f) === '80' && String(scrollSearches[1].f.t) === '120' && !byText('.convs button', 'Load more'),
     { observed, cards, requests: scrollSearches.map(x => [x.f.f, x.f.t]), loadMore: !!byText('.convs button', 'Load more') });
 
-  /* Mini profile Premium background: active Premium read from custom_profile.css, expired Premium never requested, JPEG or 404 response without a background */
-  searchBody = 'h=goddess;1:expired;1:sith;1:lost;1';
+  /* Mini profile Premium background: active Premium read from custom_profile.css, expired Premium never requested, JPEG, 404 or oversized file without a background */
+  const PREMIUM = ['goddess', 'expired', 'sith', 'lost', 'bulky'];
+  searchBody = 'h=' + PREMIUM.map(n => n + ';1').join(':');
   const personOf = n => $$('.conv.person').find(x => x.querySelector('.conv-name').textContent === n);
-  click(refreshBtn()); await until(() => ['goddess', 'expired', 'sith', 'lost'].every(n => !!personOf(n) && !personOf(n).querySelector('.tc-skeleton')));
+  click(refreshBtn()); await until(() => PREMIUM.every(n => !!personOf(n) && !personOf(n).querySelector('.tc-skeleton')));
   const cssAsked = n => fetches.some(x => x.url.indexOf('/' + n + '/custom_profile.css') >= 0);
-  const premiumCards = ['goddess', 'expired', 'sith', 'lost'].map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
+  const premiumCards = PREMIUM.map(n => [n, personOf(n) ? personOf(n).style.backgroundColor : null]);
   if (personOf('goddess')) { click(personOf('goddess')); await wait(120); }
   const profileDialog = $('.dialog.profile-dialog');
   const aboutLink = profileDialog && profileDialog.querySelector('.about.rich a');
   const premiumAbout = profileDialog ? { bg: profileDialog.style.backgroundColor, text: profileDialog.style.color, link: aboutLink && aboutLink.style.color } : null;
   key(d, 'Escape'); await wait(30);
-  step('premium profile background', JSON.stringify(premiumCards) === JSON.stringify([['goddess', 'rgb(158, 159, 252)'], ['expired', ''], ['sith', ''], ['lost', '']])
-    && cssAsked('goddess') && !cssAsked('expired') && cssAsked('sith') && cssAsked('lost')
-    && !!premiumAbout && premiumAbout.bg === 'rgb(158, 159, 252)' && premiumAbout.text === 'rgb(61, 61, 60)' && premiumAbout.link === 'rgb(41, 62, 62)',
-    { premiumCards, css: ['goddess', 'expired', 'sith', 'lost'].map(cssAsked), premiumAbout });
+  if (personOf('bulky')) { click(personOf('bulky')); await wait(120); }
+  const bulkyDialog = $('.dialog.profile-dialog');
+  const bulkyAbout = bulkyDialog ? { bg: bulkyDialog.style.backgroundColor, about: (bulkyDialog.querySelector('.about.rich') || {}).textContent } : null;
+  key(d, 'Escape'); await wait(30);
+  step('premium profile background', JSON.stringify(premiumCards) === JSON.stringify([['goddess', 'rgb(158, 159, 252)'], ['expired', ''], ['sith', ''], ['lost', ''], ['bulky', '']])
+    && cssAsked('goddess') && !cssAsked('expired') && cssAsked('sith') && cssAsked('lost') && cssAsked('bulky')
+    && !!premiumAbout && premiumAbout.bg === 'rgb(158, 159, 252)' && premiumAbout.text === 'rgb(61, 61, 60)' && premiumAbout.link === 'rgb(41, 62, 62)'
+    && !!bulkyAbout && bulkyAbout.bg === '' && bulkyAbout.about === 'Hi my page',
+    { premiumCards, css: PREMIUM.map(cssAsked), premiumAbout, bulkyAbout });
   searchBody = SEARCH_BODY;
 
   /* Status */
