@@ -833,7 +833,8 @@ var liveBridge = (function () {
       // BetterChatango reads the YouTube oEmbed and msgbg.xml on its own, outside the Nightango media settings: disabled in memory, not in the BetterChatango settings.
       C.renderYouTube = CH.getBackground = function () {};
       // With connect_start, BetterChatango clicks its PM tab 6 s later, and its PM screen moves client.private.focus: disabled the same way.
-      document.querySelector('[data-sidebar="private"]').click = function () {};
+      var pmTab = document.querySelector('[data-sidebar="private"]');
+      if (pmTab) pmTab.click = function () {};
       emit({ op: 'login', me: me });
       // Groups already connected before us: their inited and participants frames have gone by.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
