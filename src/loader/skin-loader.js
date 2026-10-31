@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nightango
 // @namespace    torch-skin
-// @version      0.30.1
+// @version      0.30.2
 // @description  Starts BetterChatango on st.chatango.com and shows Nightango, a redesigned interface, on top of it. Not affiliated with BetterChatango or Chatango.
 // @match        https://st.chatango.com/*
 // @noframes
@@ -54,37 +54,28 @@
     });
   });
 
-  /* Bridge to TikTok: the post of a short link and the thumbnail of a post, which the page cannot read across origins. */
-  // Any script of the page can send this event: only a short or post link goes out, rebuilt here, and only a post link or a thumbnail address comes back.
+  /* Bridge to TikTok: the post page of a short or post link, which the page cannot read across origins. */
+  // Any script of the page can send this event: only a short or post link goes out, rebuilt here, and only the post link and its cover address come back.
   var TIKTOK_SHORT = /^https?:\/\/((?:vm|vt)\.tiktok\.com|(?:www\.)?tiktok\.com\/t)\/([\w-]+)\/?(?:[?#]\S*)?$/;
   var TIKTOK_POST = /^https?:\/\/(?:www\.|m\.)?tiktok\.com\/@([\w.-]+)\/(video|photo)\/(\d+)/;
+  // TikTok's oEmbed no longer gives thumbnail_url: the cover is only in the JSON of the post page, its slashes escaped as \u002F.
+  var TIKTOK_COVER = /"cover":"(https:[^"\s]+)"/;
   function tiktokPostLink(m) { return 'https://www.tiktok.com/@' + m[1] + '/' + m[2] + '/' + m[3]; }
-  function askTikTok(id, url, read) {
-    GM_xmlhttpRequest({
-      method: 'GET', url: url, anonymous: true, timeout: 15000,
-      onload: function (r) { reply('tiktok', id, read(r)); },
-      onerror: function () { reply('tiktok', id, { error: 'TikTok could not be reached. Open the link instead.' }); },
-      ontimeout: function () { reply('tiktok', id, { error: 'TikTok did not answer in time. Open the link instead.' }); }
-    });
-  }
   document.addEventListener('torch-skin:tiktok-request', function (e) {
-    var q = JSON.parse(e.detail), unknown = 'TikTok did not say which video this link leads to. Open the link instead.';
-    if (q.op === 'thumb') {
-      var post = TIKTOK_POST.exec(q.url), none = { error: 'TikTok sent no thumbnail for this video.' };
-      if (!post) { reply('tiktok', q.id, none); return; }
-      askTikTok(q.id, 'https://www.tiktok.com/oembed?url=' + encodeURIComponent(tiktokPostLink(post)), function (r) {
-        var thumb = null;
-        try { thumb = JSON.parse(r.responseText).thumbnail_url; } catch (x) { /* unreadable reply: no thumbnail */ }
-        return typeof thumb === 'string' && /^https:\/\/\S+$/.test(thumb) ? { thumb: thumb } : none;
-      });
-      return;
-    }
-    var link = TIKTOK_SHORT.exec(q.url);
-    if (!link) { reply('tiktok', q.id, { error: unknown }); return; }
-    askTikTok(q.id, 'https://' + link[1] + '/' + link[2] + '/', function (r) {
-      // finalUrl in Tampermonkey, responseURL in Userscripts (Safari).
-      var post = TIKTOK_POST.exec(r.finalUrl || r.responseURL || '');
-      return post ? { post: post[3], link: tiktokPostLink(post) } : { error: unknown };
+    var q = JSON.parse(e.detail), short = TIKTOK_SHORT.exec(q.url), post = TIKTOK_POST.exec(q.url), unknown = 'TikTok did not say which video this link leads to. Open the link instead.';
+    if (!short && !post) { reply('tiktok', q.id, { error: unknown }); return; }
+    GM_xmlhttpRequest({
+      method: 'GET', url: short ? 'https://' + short[1] + '/' + short[2] + '/' : tiktokPostLink(post), anonymous: true, timeout: 15000,
+      onload: function (r) {
+        // finalUrl in Tampermonkey, responseURL in Userscripts (Safari).
+        var to = short ? TIKTOK_POST.exec(r.finalUrl || r.responseURL || '') : post;
+        if (!to) { reply('tiktok', q.id, { error: unknown }); return; }
+        var out = { post: to[3], link: tiktokPostLink(to) }, cover = r.status === 200 ? TIKTOK_COVER.exec(r.responseText || '') : null;
+        if (cover) { try { out.thumb = JSON.parse('"' + cover[1] + '"'); } catch (x) { /* malformed escape: no cover */ } }
+        reply('tiktok', q.id, out);
+      },
+      onerror: function () { reply('tiktok', q.id, { error: 'TikTok could not be reached. Open the link instead.' }); },
+      ontimeout: function () { reply('tiktok', q.id, { error: 'TikTok did not answer in time. Open the link instead.' }); }
     });
   });
 })();

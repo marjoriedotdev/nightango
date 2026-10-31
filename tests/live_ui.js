@@ -211,14 +211,14 @@ d.addEventListener('torch-skin:vissle-request', e => {
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:vissle-response', { detail: JSON.stringify({ id: q.id, data: vissleReply(q) }) })), 0);
 });
 
-// TikTok bridge of the simulated userscript: a short link ending in "ok" leads to a post, any other one to an error, every post has a thumbnail.
+// TikTok bridge of the simulated userscript: a post link or a short link ending in "ok" leads to a post with its cover, any other one to an error.
 const tiktokReqs = [];
 const TIKTOK_THUMB = 'https://p16-sign.tiktokcdn.test/obj/';
 d.addEventListener('torch-skin:tiktok-request', e => {
   const q = JSON.parse(e.detail);
-  tiktokReqs.push(q.op + ':' + q.url);
-  const out = q.op === 'thumb' ? { thumb: TIKTOK_THUMB + q.url.split('/').pop() + '.jpg' }
-    : /ok\/$/.test(q.url) ? { post: '7400000000000000001', link: 'https://www.tiktok.com/@clown/video/7400000000000000001' } : { error: 'TikTok could not be reached. Open the link instead.' };
+  tiktokReqs.push(q.url);
+  const link = /\/video\//.test(q.url) ? q.url : /ok\/$/.test(q.url) ? 'https://www.tiktok.com/@clown/video/7400000000000000001' : null;
+  const out = link ? { post: link.split('/').pop(), link, thumb: TIKTOK_THUMB + link.split('/').pop() + '.jpg' } : { error: 'TikTok could not be reached. Open the link instead.' };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:tiktok-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
 
@@ -900,7 +900,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && JSON.stringify(played.files) === JSON.stringify([['VIDEO', 'https://x.test/clip.MP4?t=3', true, true], ['AUDIO', 'https://x.test/song.mp3#end', true, true], ['VIDEO', 'https://x.test/old.webm', true, true]])
     && !failed.audio && failed.link, { mediaBlocked, mediaOpen, played, failed });
 
-  /* TikTok: compact button until a thumbnail has loaded, thumbnail asked through the userscript only when external media are not blocked, short link resolved once, player created on click, failure turned back into a link */
+  /* TikTok: compact button until a cover has loaded, link read through the userscript when shown only if external media are not blocked, read once and reused at the click, failure asked again at the click then turned back into a link */
   const TIKTOK_LINKS = ['https://www.tiktok.com/@clown/video/7400000000000000000?lang=en', 'https://www.tiktok.com/t/ZPLok/....', 'https://vm.tiktok.com/ZMbad/', 'https://www.tiktok.com/@clown'];
   g('b', 'test', ['1700000300.5', 'Eve', '', 'u7', 'UNID7', 'tmptiktok', '9.9.9.9', '0', '', '<n000/><f x11000="0">Kitties ' + TIKTOK_LINKS.join(' ')]);
   const tiktokRow = () => { const p = $$('.log .tc-msg-text').find(x => x.textContent.indexOf('Kitties') === 0); return p && p.closest('article'); };
@@ -922,13 +922,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => tiktokRow().querySelectorAll('iframe').length === 2 && !!tiktokRow().querySelector('.embeds a.msg-link'));
   const tiktokAfter = { asked: tiktokReqs.length, frames: [...tiktokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: [...tiktokRow().querySelectorAll('.embeds a.msg-link')].map(a => a.getAttribute('href')) };
   const tiktokToast = !!byText('.toast', 'TikTok could not be reached. Open the link instead.');
-  const TIKTOK_POST0 = 'https://www.tiktok.com/@clown/video/7400000000000000000', TIKTOK_POST1 = 'https://www.tiktok.com/@clown/video/7400000000000000001';
+  const TIKTOK_POST0 = 'https://www.tiktok.com/@clown/video/7400000000000000000';
   const REVEALS = Array(3).fill('embed-reveal');
   step('tiktok cards: thumbnail only when media are not blocked and loaded, short links resolved once, player on click',
     JSON.stringify(tiktokBefore) === JSON.stringify({ asked: [], links: ['https://www.tiktok.com/@clown'], embeds: REVEALS, thumbs: [] })
       && JSON.stringify(tiktokLoading) === JSON.stringify(['embed-reveal', ':hidden', 'embed-reveal', ':hidden', 'embed-reveal'])
-      && JSON.stringify(tiktokOpen) === JSON.stringify({ asked: ['post:https://vm.tiktok.com/ZMbad/', 'post:https://www.tiktok.com/t/ZPLok/', 'thumb:' + TIKTOK_POST0, 'thumb:' + TIKTOK_POST1], thumbs: [TIKTOK_THUMB + '7400000000000000000.jpg', TIKTOK_THUMB + '7400000000000000001.jpg'], embeds: ['embed-video embed-tiktok', 'embed-video embed-tiktok', 'embed-reveal'] })
-      && tiktokBlocked.length === 0 && JSON.stringify(tiktokBlockedEmbeds) === JSON.stringify(REVEALS) && tiktokAfter.asked === 5 && tiktokReqs[4] === 'post:https://vm.tiktok.com/ZMbad/'
+      && JSON.stringify(tiktokOpen) === JSON.stringify({ asked: ['https://vm.tiktok.com/ZMbad/', TIKTOK_POST0, 'https://www.tiktok.com/t/ZPLok/'], thumbs: [TIKTOK_THUMB + '7400000000000000000.jpg', TIKTOK_THUMB + '7400000000000000001.jpg'], embeds: ['embed-video embed-tiktok', 'embed-video embed-tiktok', 'embed-reveal'] })
+      && tiktokBlocked.length === 0 && JSON.stringify(tiktokBlockedEmbeds) === JSON.stringify(REVEALS) && tiktokAfter.asked === 4 && tiktokReqs[3] === 'https://vm.tiktok.com/ZMbad/'
       && JSON.stringify(tiktokAfter.frames) === JSON.stringify(['7400000000000000000', '7400000000000000001'].map(id => 'https://www.tiktok.com/player/v1/' + id + '?autoplay=1&rel=0'))
       && JSON.stringify(tiktokAfter.link) === JSON.stringify(['https://vm.tiktok.com/ZMbad/']) && tiktokToast,
     { tiktokBefore, tiktokLoading, tiktokOpen, tiktokBlocked, tiktokBlockedEmbeds, tiktokAfter, tiktokReqs, tiktokToast });

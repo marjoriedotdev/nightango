@@ -109,33 +109,33 @@ async function suite(userscript) {
   const tiktok = [], sent = a.gm.length;
   a.d.addEventListener('torch-skin:tiktok-response', e => tiktok.push(JSON.parse(e.detail)));
   const askTikTok = (id, url) => a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:tiktok-request', { detail: JSON.stringify({ id, url }) }));
-  const askTikTokThumb = (id, url) => a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:tiktok-request', { detail: JSON.stringify({ id, op: 'thumb', url }) }));
+  // Page of a post as TikTok serves it: the cover sits in its JSON with escaped slashes.
+  const PAGE = '<html><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">{"video":{"cover":"https:\\u002F\\u002Fp16-common-sign.tiktokcdn-us.com\\u002Fobj\\u002Fa~tplv.image?dr=1\\u0026x-expires=1"}}</script></html>';
   askTikTok('t1', 'https://example.com/t/ZPLyE4syb/');
   askTikTok('t2', 'https://www.tiktok.com/t/ZPLyE4syb/');
   askTikTok('t3', 'https://vm.tiktok.com/ZMabc123/');
-  askTikTokThumb('t4', 'https://example.com/@clown/video/7429876543210987654');
-  askTikTokThumb('t5', 'http://m.tiktok.com/@clown.cat/video/7429876543210987654?lang=en');
-  askTikTokThumb('t6', 'https://www.tiktok.com/@clown/photo/7400000000000000000');
+  askTikTok('t4', 'https://example.com/@clown/video/7429876543210987654');
+  askTikTok('t5', 'http://m.tiktok.com/@clown.cat/video/7429876543210987654?lang=en');
+  askTikTok('t6', 'https://www.tiktok.com/@clown/photo/7400000000000000000');
   await wait(20);
   const [t2call, t3call, t5call, t6call] = a.gm.slice(sent);
-  if (t2call) t2call.onload({ status: 200, finalUrl: 'https://www.tiktok.com/@clown.cat/video/7429876543210987654?_t=8q&_r=1', responseText: '<html></html>' });
+  if (t2call) t2call.onload({ status: 200, finalUrl: 'https://www.tiktok.com/@clown.cat/video/7429876543210987654?_t=8q&_r=1', responseText: PAGE });
   // Userscripts (Safari) names the final URL responseURL.
-  if (t3call) t3call.onload({ status: 200, responseURL: 'https://www.tiktok.com/login?redirect_url=x', responseText: '<html></html>' });
-  if (t5call) t5call.onload({ status: 200, responseText: JSON.stringify({ title: 'kitties', author_name: 'clown', html: '<script src="https://www.tiktok.com/embed.js"></script>', thumbnail_url: 'https://p16-sign-va.tiktokcdn.com/obj/kitties.jpeg?x-expires=1' }) });
-  if (t6call) t6call.onload({ status: 200, responseText: JSON.stringify({ thumbnail_url: 'javascript:alert(1)' }) });
+  if (t3call) t3call.onload({ status: 200, responseURL: 'https://www.tiktok.com/login?redirect_url=x', responseText: PAGE });
+  if (t5call) t5call.onload({ status: 200, finalUrl: 'https://www.tiktok.com/@clown.cat/video/7429876543210987654', responseText: '<html>{"cover":"javascript:alert(1)"}</html>' });
+  if (t6call) t6call.onload({ status: 403, finalUrl: 'https://www.tiktok.com/@clown/photo/7400000000000000000', responseText: PAGE });
   await wait(20);
   const tReply = id => tiktok.find(r => r.id === id) || {};
   const keys = id => Object.keys(tReply(id)).sort().join();
-  step('TikTok bridge resolves short links only and returns the post link only',
-    t2call && t2call.method === 'GET' && t2call.url === 'https://www.tiktok.com/t/ZPLyE4syb/' && t2call.anonymous === true
-      && t3call.url === 'https://vm.tiktok.com/ZMabc123/' && !!tReply('t1').error && !!tReply('t3').error
-      && tReply('t2').post === '7429876543210987654' && tReply('t2').link === 'https://www.tiktok.com/@clown.cat/video/7429876543210987654' && keys('t2') === 'id,link,post',
-    { calls: a.gm.slice(sent).map(c => ({ method: c.method, url: c.url, anonymous: c.anonymous })), tiktok });
-  step('TikTok bridge reads the oEmbed of a rebuilt post link and returns an https thumbnail only',
-    a.gm.length === sent + 4 && t5call.method === 'GET' && t5call.anonymous === true
-      && t5call.url === 'https://www.tiktok.com/oembed?url=' + encodeURIComponent('https://www.tiktok.com/@clown.cat/video/7429876543210987654')
-      && t6call.url === 'https://www.tiktok.com/oembed?url=' + encodeURIComponent('https://www.tiktok.com/@clown/photo/7400000000000000000')
-      && !!tReply('t4').error && !!tReply('t6').error && tReply('t5').thumb === 'https://p16-sign-va.tiktokcdn.com/obj/kitties.jpeg?x-expires=1' && keys('t5') === 'id,thumb',
+  const COVER = 'https://p16-common-sign.tiktokcdn-us.com/obj/a~tplv.image?dr=1&x-expires=1';
+  step('TikTok bridge reads a rebuilt short or post link and returns its post link and cover only',
+    a.gm.length === sent + 4 && a.gm.slice(sent).every(c => c.method === 'GET' && c.anonymous === true)
+      && t2call.url === 'https://www.tiktok.com/t/ZPLyE4syb/' && t3call.url === 'https://vm.tiktok.com/ZMabc123/'
+      && t5call.url === 'https://www.tiktok.com/@clown.cat/video/7429876543210987654' && t6call.url === 'https://www.tiktok.com/@clown/photo/7400000000000000000'
+      && !!tReply('t1').error && !!tReply('t3').error && !!tReply('t4').error
+      && keys('t2') === 'id,link,post,thumb' && tReply('t2').post === '7429876543210987654' && tReply('t2').link === 'https://www.tiktok.com/@clown.cat/video/7429876543210987654' && tReply('t2').thumb === COVER
+      && keys('t5') === 'id,link,post' && tReply('t5').post === '7429876543210987654'
+      && keys('t6') === 'id,link,post' && tReply('t6').post === '7400000000000000000',
     { calls: a.gm.slice(sent).map(c => ({ method: c.method, url: c.url, anonymous: c.anonymous })), tiktok });
   step('no page errors', a.errors.length === 0, a.errors);
   a.w.close();

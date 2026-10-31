@@ -208,9 +208,8 @@ function VideoEmbed(p) {
 
 /**
  * TikTok post in TikTok's embed player, which exists only after the click.
- * Its thumbnail is asked to TikTok only under the rules of the YouTube thumbnail.
- * The vertical card shows only once the thumbnail has loaded: until then, and without one, a compact button.
- * A short link is resolved at the click, or before for the thumbnail: only its redirect gives the post id.
+ * Its post page, which gives the post id of a short link and the cover, is read when shown only under the rules of the YouTube thumbnail, otherwise at the click.
+ * The vertical card shows only once the cover has loaded: until then, and without one, a compact button.
  * @param {?string} p.id Post id, absent for a short link.
  * @param {string} p.url Post or short link of the message.
  */
@@ -224,7 +223,7 @@ function TikTokEmbed(p) {
   useEffect(function () {
     if (!preview) return;
     var current = true;
-    app.actions.tiktokThumb({ id: p.id, url: p.url }).then(function (url) { if (current) setThumb(url); }, function () { /* without a thumbnail, the card stays plain */ });
+    app.actions.tiktokPost({ id: p.id, url: p.url }).then(function (r) { if (current) { setPost(r.post); setThumb(r.thumb); } }, function () { /* without the post page, the link stays a button */ });
     return function () { current = false; };
   }, [preview, p.url]);
   if (!safety.embedVideos || phase === 'failed') return mediaLink(app, p.url, 'msg-link', p.url);
@@ -237,7 +236,7 @@ function TikTokEmbed(p) {
   function play() {
     if (post) { setPhase('playing'); return; }
     setPhase('loading');
-    app.actions.tiktokPost(p.url).then(function (r) { setPost(r.post); setPhase('playing'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
+    app.actions.tiktokPost({ id: p.id, url: p.url }, true).then(function (r) { setPost(r.post); setPhase('playing'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
   }
   var loading = phase === 'loading', card = preview && thumb && loaded;
   // Loaded hidden behind the button first: an empty vertical card would take the height of a video for nothing.
