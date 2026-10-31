@@ -212,12 +212,14 @@ var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 var SAFE_IMAGE_URL = /^https:\/\/[^<>"'\\()\s]+$/;
 var MATHML_NS = 'http://www.w3.org/1998/Math/MathML', SVG_NS = 'http://www.w3.org/2000/svg';
 /**
- * Tells whether an element of a full profile can give a link its address only once the frame shows it.
+ * Tells whether an element of a full profile can make a link only once the frame parses or shows it.
  * @param {Element} el Element of the parsed member HTML.
  */
-function setsLinkLater(el) {
+function makesLinkLater(el) {
   // A declarative shadow root: the frame's parser attaches its content, which getElementsByTagName never visits.
   if (el.localName === 'template') return true;
+  // Its srcdoc becomes a document of its own, and the CSP blocks every other frame source, so nothing shown is lost.
+  if (el.localName === 'iframe') return true;
   return el.namespaceURI === SVG_NS && (el.localName === 'animate' || el.localName === 'set') && /(?:^|:)href$/i.test(String(el.getAttribute('attributeName')).trim());
 }
 /**
@@ -230,7 +232,7 @@ function unlinkFullProfile(html) {
   function unlink() {
     var found = false;
     Array.prototype.slice.call(body.getElementsByTagName('*')).forEach(function (el) {
-      if (setsLinkLater(el)) { el.parentNode.removeChild(el); found = true; return; }
+      if (makesLinkLater(el)) { el.parentNode.removeChild(el); found = true; return; }
       // Firefox follows an href on any MathML element.
       if (el.localName !== 'a' && el.localName !== 'area' && el.namespaceURI !== MATHML_NS) return;
       Array.prototype.slice.call(el.attributes).forEach(function (attr) {
