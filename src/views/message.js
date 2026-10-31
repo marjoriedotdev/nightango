@@ -199,6 +199,7 @@ function RevealButton(p) {
 }
 
 function safetyPrefs(s) { return s.prefs.safety; }
+function clockPref(s) { return s.prefs.h24; }
 
 function VideoEmbed(p) {
   var app = useAppApi(), safety = useStatePart(safetyPrefs);
@@ -266,7 +267,7 @@ function TikTokEmbed(p) {
  * @param {string} p.url Post link of the message.
  */
 function XPostEmbed(p) {
-  var app = useApp(), safety = app.state.prefs.safety;
+  var app = useAppApi(), safety = useStatePart(safetyPrefs);
   var a = useState(null), post = a[0], setPost = a[1];
   var b = useState('idle'), phase = b[0], setPhase = b[1];
   var preview = safety.embedX && !waitsForClick(safety, 'x', p.url);
@@ -292,8 +293,8 @@ function XPostEmbed(p) {
  * @param {Object} p.post Post read by the loader.
  */
 function XPostCard(p) {
-  var app = useApp(), post = p.post;
-  var when = post.time ? fmtTime(post.time, app.state.prefs.h24) + ' \u00b7 ' + new Date(post.time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : post.date;
+  var app = useAppApi(), h24 = useStatePart(clockPref), post = p.post;
+  var when = post.time ? fmtTime(post.time, h24) + ' \u00b7 ' + new Date(post.time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : post.date;
   return h('div', { className: 'embed-x' },
     h('div', { className: 'embed-x-head' },
       h(T.Avatar, { name: post.handle, src: post.avatar, size: 40, referrerPolicy: 'no-referrer' }),
@@ -310,7 +311,7 @@ function XPostCard(p) {
  * @param {string} p.link Post link, opened by the photo.
  */
 function XPostMedia(p) {
-  var app = useApp(), m = p.media;
+  var app = useAppApi(), m = p.media;
   var a = useState(!m.sensitive), revealed = a[0], setRevealed = a[1];
   var b = useState(false), playing = b[0], setPlaying = b[1];
   var c = useState(false), failed = c[0], setFailed = c[1];
