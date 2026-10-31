@@ -167,7 +167,7 @@ function emphasisParts(body) {
     if (part.text) parts.push(part);
   });
   while (parts.length && !(parts[0].text = parts[0].text.replace(/^\s+/, ''))) parts.shift();
-  while (parts.length && !(parts[parts.length - 1].text = parts[parts.length - 1].text.replace(/\s+$/, ''))) parts.pop();
+  while (parts.length && !(parts[parts.length - 1].text = trimEnd(parts[parts.length - 1].text))) parts.pop();
   return parts.some(function (x) { return EMPHASIS.some(function (m) { return x[m]; }); }) ? parts : null;
 }
 

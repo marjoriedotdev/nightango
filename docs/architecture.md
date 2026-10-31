@@ -8,7 +8,7 @@ Nightango is a single React 18 application written in ES5 JavaScript, without JS
 src/
   core/       shared base, evaluated first
     globals.js       React aliases, T wrapper (live avatars), hooks
-    util.js          time, local storage, copy, reading a JSON file, downloading a JSON file
+    util.js          time, local storage, copy, reading a JSON file, downloading a JSON file, trailing white space trim
     colors.js        colors and contrast, fonts, channels
     roles.js         permissions, roles (owner, admin, mod), Chatango rights bits (PERM_FLAG), default rights of a role, default group settings
     sample-data.js   prototype sample data, simulated visits, in-memory sample media library
@@ -177,7 +177,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
 - `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal, recovery screen. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
 - `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
-- `member_content`: member content read by the bridge and the interface (Premium background file), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
+- `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
 - `live_login`: sign-in detection and a listener that throws, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal.
 - `avatar`: avatars, on the design system bundle and the sources of `src/bridge/`.

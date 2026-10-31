@@ -10,7 +10,7 @@ const w = dom.window;
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
 w.eval(fs.readFileSync(ROOT + '/torchds/project/components/bundle.js', 'utf8'));
-w.eval(concatSources(ROOT, layerSources('core').concat(layerSources('bridge'))) + '; window.mod = { parseMiniCss: parseMiniCss };');
+w.eval(concatSources(ROOT, layerSources('core').concat(layerSources('bridge'))) + '; window.mod = { parseMiniCss: parseMiniCss, parseContent: parseContent, shownParts: shownParts };');
 const m = w.mod;
 
 const log = [];
@@ -62,6 +62,29 @@ try {
     slowCss.length === 0 && ['noBraces', 'unclosedBrace', 'unclosedComments'].every(k => JSON.stringify(large[k].out) === JSON.stringify(NO_STYLE))
       && large.manyRules.out.text === '#222' && large.manyRules.out.link === '#111',
     { slow: slowCss, ms: Object.keys(large).map(k => [k, large[k].ms]), manyRules: large.manyRules.out });
+
+  /* Message text: spaces trimmed at both ends of the shown text, never inside it */
+  const parts = s => JSON.stringify(m.parseContent(s, false, false).parts);
+  const image = text => ({ text, parts: null, embeds: [{ kind: 'image', url: 'https://i.example/a.png' }] });
+  const trims = {
+    edges: parts('  <b>x</b> y&nbsp;\t<br/> ') === JSON.stringify([{ text: 'x', b: true }, { text: ' y' }]),
+    emptyEnds: parts('<u> </u><b>x</b>  <i> </i>') === JSON.stringify([{ text: 'x', b: true }]),
+    lines: parts(' <s>a</s>\n\nb\n') === JSON.stringify([{ text: 'a', s: true }, { text: '\n\nb' }]),
+    hiddenLink: JSON.stringify(m.shownParts(image('x  y https://i.example/a.png'))) === JSON.stringify([{ text: 'x  y' }]),
+    hiddenLead: JSON.stringify(m.shownParts(image('https://i.example/a.png  tail\u00a0 '))) === JSON.stringify([{ text: 'tail' }])
+  };
+  step('message text: spaces trimmed at both ends only', Object.keys(trims).every(k => trims[k]), trims);
+
+  /* Message text: one pass over a long run of spaces inside the text */
+  const spaces = ' '.repeat(LARGE);
+  const runs = {
+    parts: timed(() => m.parseContent('<b>x</b>' + spaces + 'y', false, false).parts),
+    shown: timed(() => m.shownParts(image('x' + spaces + 'y https://i.example/a.png')))
+  };
+  const slowText = Object.keys(runs).filter(k => runs[k].ms > BUDGET_MS);
+  step('message text: long run of spaces trimmed in one pass',
+    slowText.length === 0 && runs.parts.out.length === 2 && runs.parts.out[1].text === spaces + 'y' && runs.shown.out.length === 1 && runs.shown.out[0].text === 'x' + spaces + 'y',
+    { slow: slowText, ms: Object.keys(runs).map(k => [k, runs[k].ms]) });
 
   console.log(log.join('\n'));
   process.exit(0);

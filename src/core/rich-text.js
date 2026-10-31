@@ -20,7 +20,7 @@ function shownParts(m) {
     return Object.assign({}, part, { text: text });
   });
   shown[0].text = shown[0].text.replace(/^\s+/, '');
-  shown[shown.length - 1].text = shown[shown.length - 1].text.replace(/\s+$/, '');
+  shown[shown.length - 1].text = trimEnd(shown[shown.length - 1].text);
   return shown.filter(function (part) { return part.text; });
 }
 function messagePreview(m) {
