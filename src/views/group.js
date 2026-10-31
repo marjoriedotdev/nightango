@@ -293,6 +293,30 @@ function useMentionCompletion(g, inputRef, value, setValue) {
 }
 
 /**
+ * Returns where a line of a wrapped text starts.
+ * @param {Element} el Element that holds the text.
+ * @param {number} n Line, from 1.
+ * @returns {number} Offset of the first character of the line in the text, or the text length when the text has fewer lines.
+ */
+function lineStart(el, n) {
+  var walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), range = document.createRange();
+  var at = 0, line = 0, bottom = -Infinity, node, i, r;
+  while ((node = walk.nextNode())) {
+    for (i = 0; i < node.length; i++) {
+      range.setStart(node, i); range.setEnd(node, i + 1);
+      r = range.getClientRects()[0];
+      // By the middle of the character: a fallback font can draw a box taller than the line.
+      if (r && (r.top + r.bottom) / 2 > bottom) {
+        if (++line === n) return at + i;
+        bottom = r.bottom;
+      }
+    }
+    at += node.length;
+  }
+  return at;
+}
+
+/**
  * Shows the text of a group announcement cut to three lines with a button that shows the rest only when it does not fit.
  * @param {{text: string}} p Shown text of the announcement.
  */
@@ -300,6 +324,7 @@ function AnnouncementText(p) {
   var ref = useRef(null), moreRef = useRef(null), id = React.useId();
   var open = useState(false), expanded = open[0], setExpanded = open[1];
   var size = useState(false), tall = size[0], setTall = size[1];
+  var cut = useState(p.text.length), shown = cut[0], setShown = cut[1];
   // Measured only while collapsed: expanded, the text always fits.
   useLayoutEffect(function () {
     if (expanded) return;
@@ -310,15 +335,20 @@ function AnnouncementText(p) {
       // The button leaves with the overflow: focus moves to the text rather than falling back to the page.
       if (!folds && moreRef.current && moreRef.current === el.getRootNode().activeElement) el.focus();
       setTall(folds);
+      setShown(folds ? lineStart(el, 4) : p.text.length);
     }
     var ro = new ResizeObserver(measure);
     ro.observe(el);
     measure();
     return function () { ro.disconnect(); };
   }, [expanded]);
+  var folded = tall && !expanded;
   return h(Frag, null,
     // Clamped only when the text needs more than three lines: overflow:hidden cuts the stacked marks of Vietnamese and Thai.
-    h('span', { id: id, ref: ref, tabIndex: -1, className: cx('ann-text', tall && !expanded && 'ann-clamp') }, p.text),
+    h('span', { id: id, ref: ref, tabIndex: -1, className: cx('ann-text', folded && 'ann-clamp') },
+      folded ? p.text.slice(0, shown) : p.text,
+      // Transparent as well as clipped: a hidden line still draws the marks it stacks above its line box, inside the clip.
+      folded ? h('span', { className: 'ann-rest' }, p.text.slice(shown)) : null),
     expanded || tall ? h('button', { ref: moreRef, type: 'button', className: 'linkbtn ann-more', 'aria-expanded': String(expanded), 'aria-controls': id, onClick: function () { setExpanded(!expanded); } }, expanded ? 'Show less' : 'Show more') : null);
 }
 

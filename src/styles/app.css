@@ -150,6 +150,7 @@ h1,h2,h3{text-wrap:balance}
 .ann-text{display:block}
 /* The padding and the negative margin cancel out: they give the marks stacked above the first line room inside the clip. */
 .ann-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding-top:3px;margin-top:-3px}
+.ann-rest{color:transparent}
 .conn-banner{flex:none;display:grid;grid-template-rows:1fr;margin:0 20px;transition:grid-template-rows var(--duration-base) var(--ease-out),opacity var(--duration-base) var(--ease-out);animation:conn-in var(--duration-base) var(--ease-out)}
 .conn-banner-leaving{grid-template-rows:0fr;opacity:0}
 @keyframes conn-in{from{grid-template-rows:0fr;opacity:0}}
