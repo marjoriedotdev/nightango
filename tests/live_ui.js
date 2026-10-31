@@ -585,7 +585,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fullLog = $('.log');
   const fullStart = { capped: logText('Filler 0') && !logText('Mine fixed') && !logText('Sent before the first render'), button: !!$('.jump') };
   // jsdom has no layout: the test scrolls the column-reverse log itself, 0 is the bottom and a reader 10 px above it still counts as there.
-  const scrollLog = y => { fullLog.scrollTop = y; fullLog.dispatchEvent(new w.Event('scroll')); };
+  const scrollLog = y => { const el = $('.log'); el.scrollTop = y; el.dispatchEvent(new w.Event('scroll')); };
   scrollLog(-10);
   fill(500, 'Arrives at the bottom'); await until(() => logText('Arrives at the bottom'));
   const atBottom = { top: fullLog.scrollTop, button: !!$('.jump') };
@@ -640,6 +640,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (historyTop) historyTop.cb(historyTop.targets.map(target => ({ isIntersecting: true, target })), historyTop);
   await wait(30);
   step('get_more uses BetterChatango counter', frame('get_more:').pop() === 'get_more:20:5', { observed: !!historyTop, frames: frame('get_more:') });
+  // The page reaches a reader scrolled up, and its sort brings the ban above, stamped with the local clock, to the end of the thread.
+  scrollLog(-2000);
+  const lastRow = () => $('.log .log-inner').lastElementChild.textContent;
+  g('i', 'test', ['1600000010.1', 'Ivy', '', 'u9', 'UNID9', 'O1=', '3.3.3.3', '0', '', '<n000/><f x11000="0">Older page']);
+  await until(() => logText('Older page'));
+  const olderPage = { top: $('.log').scrollTop, button: !!$('.jump'), last: lastRow() };
+  g('i', 'test', ['1600000000.1', 'Ivy', '', 'u9', 'UNID9', 'O2=', '3.3.3.3', '0', '', '<n000/><f x11000="0">Oldest page']);
+  await until(() => logText('Oldest page'));
+  const oldestPage = { top: $('.log').scrollTop, button: !!$('.jump'), last: lastRow() };
+  g('b', 'test', ['1700000260.1', 'Bob', '', 'u2', 'UNID2', 'tmp12', '5.6.7.8', '0', '', '<n000/><f x11000="0">After the older pages']);
+  await until(() => logText('After the older pages'));
+  const next = { top: $('.log').scrollTop, button: !!$('.jump') };
+  if ($('.jump')) { click($('.jump')); await wait(30); }
+  step('older history keeps a scrolled-up reader in place without New messages, the next message shows it',
+    olderPage.top === -2000 && !olderPage.button && olderPage.last === 'alice was banned'
+      && oldestPage.top === -2000 && !oldestPage.button && oldestPage.last === 'alice was banned'
+      && next.top === -2000 && next.button && $('.log').scrollTop === 0 && !$('.jump'),
+    { olderPage, oldestPage, next, after: $('.log').scrollTop });
   g('nomore', 'test', []); await until(() => d.body.textContent.includes('beginning of the history'));
   step('history end shown', d.body.textContent.includes('beginning of the history'));
 
