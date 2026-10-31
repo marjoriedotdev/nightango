@@ -94,7 +94,7 @@ This list is closed. It covers the calls that the application code (bridge, load
 - `POST https://vissle.me/track1/activity`, through the loader's `GM_xmlhttpRequest` bridge, with `anonymous: true`.
 - `GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` through `fetch`, without cookie or credential, once per page at sign-in, in live only: latest Nightango release, only `tag_name` read ([ADR-0013](adr/0013-update-check-at-sign-in.md)).
 - `GET` of the post page of a TikTok link: `https://www.tiktok.com/t/{code}/`, `https://vm.tiktok.com/{code}/` or `https://vt.tiktok.com/{code}/` for a short link, whose redirect leads to the post page, `https://www.tiktok.com/@{user}/video|photo/{id}` for a post link. Through the loader's `GM_xmlhttpRequest` bridge (`@connect tiktok.com`), with `anonymous: true`, one call per TikTok link and per page (a failure is read again at a click), in live only: when the link shows if its cover may load, otherwise on click for a short link only. The loader rebuilds the URL from a link it validates itself. It replies with the post id and link, read from the URL reached after the redirects for a short link (`finalUrl`, `responseURL` in Userscripts), and with the `"cover"` https address found in the page JSON if the page answers 200, never with the rest of the page ([ADR-0014](adr/0014-tiktok-embed.md)).
-- TikTok's oEmbed is not called: checked on 2026-10-31, it no longer gives `thumbnail_url`, and its `html` asks for TikTok's `embed.js` script in the page.
+- TikTok's oEmbed is not called: its documented response (checked on 2026-10-31) no longer has `thumbnail_url`, and its `html` is an iframe of the same `player/v1`.
 
 ### Resources loaded by the loader and the interface
 
