@@ -204,7 +204,7 @@ async function suite(userscript) {
   visit({ id: 7 });
   a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:tiktok-request', { detail: 'https://vm.tiktok.com/ZMabc123/' }));
   askTikTok('t4', ['https://vm.tiktok.com/ZMabc123/']);
-  a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:x-request', { detail: '[]' }));
+  a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:x-request', { detail: 'https://x.com/clown/status/1700000000000000006' }));
   askX('x6', { href: 'https://x.com/clown/status/1700000000000000006' });
   await wait(20);
   const vissleRefused = replies.slice(vissleFrom), tiktokRefused = tiktok.slice(tiktokFrom), xRefused = xs.slice(xFrom);
