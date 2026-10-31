@@ -128,13 +128,11 @@ function useUpdateCheck(loggedIn, toast) {
 
 function Root(props) {
   var store = useAppState(props.boot), state = store.state, stateRef = store.stateRef, update = store.update;
-  // Only source of PM unreads: the BetterChatango database in live, an in-memory archive in the prototype or when that database is missing.
-  var pmArchive = useRef(null);
-  if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
   // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
   var drafts = useRef({});
   var u13 = useState({}), uploads = u13[0], setUploads = u13[1];
   var o = useOverlays(), toast = o.toast, setNavOpen = o.setNavOpen;
+  var inbox = useInbox(stateRef, update, toast, setNavOpen), pmArchive = inbox.pmArchive, nav = inbox.nav, notify = inbox.notify, receiveGroup = inbox.receiveGroup, receiveDm = inbox.receiveDm;
   var prefs = state.prefs;
   useDisplayPrefs(prefs);
   useIdleStatus(state.users, update);
@@ -144,37 +142,6 @@ function Root(props) {
   var local = useLocalStore(state), localRef = local.ref;
   var reconnection = useReconnection(stateRef, update);
   var pms = useLivePms(store, localRef, pmArchive);
-
-  function nav(route) {
-    update(function (d) {
-      var cur = d.route;
-      // Going back to the message log does not jump again to the message opened from Mentions or the PM search.
-      if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; delete cur.seek; }
-      var r = Object.assign({}, route);
-      if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = Date.now(); g.unread = 0; g.mentions = 0; }
-      if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
-      d.route = r;
-    });
-    setNavOpen(false);
-    if (route.view === 'dm' && route.id) readPm(pmArchive.current, update, route.id);
-    if (LIVE) {
-      if (route.view === 'group' && route.id) liveBridge.focus(route.id);
-      liveBridge.focusPm(route.view === 'dm' && route.id ? route.id : false);
-    }
-  }
-
-  /* Notifications of an incoming event, after the state update */
-  function notify(kind, info) {
-    var p = stateRef.current.prefs, n = p.notify[kind];
-    if (!n) return;
-    var focused = document.visibilityState === 'visible' && (typeof document.hasFocus !== 'function' || document.hasFocus());
-    if (n.sound && (!p.soundFocusOnly || focused)) beep(p.volume);
-    if (n.app && info.toast) toast(info.toast, info.action ? { action: info.action, icon: info.icon, clamp: kind === 'pm' } : { icon: info.icon, clamp: kind === 'pm' });
-    // BetterChatango already shows its own desktop alert for a mention when push_desktop is on, but none for a PM.
-    if (n.desktop && !focused && !(LIVE && kind === 'mentions' && liveBridge.setting('desktopMentions'))) {
-      try { if (window.Notification && window.Notification.permission === 'granted') new window.Notification('Nightango', { body: info.toast }); } catch (e) { /* system notifications unavailable */ }
-    }
-  }
 
   /**
    * Sets the sample world of the prototype with its mentions recorded like those of the live history.
@@ -193,38 +160,6 @@ function Root(props) {
   function seedState(d, world) {
     Object.assign(d, world);
     Object.keys(d.groups).forEach(function (gid) { d.groups[gid].messages.forEach(function (m) { logMention(d, gid, m); }); });
-  }
-  function receiveGroup(gid, msg) {
-    var s0 = stateRef.current, me = s0.me;
-    var mention = msg.kind === 'msg' && mentionsMe(me, msg.text);
-    // Like in BetterChatango, a mention in a muted group or from an ignored author does not alert, and the counters still change.
-    var quiet = !!(s0.groups[gid] && s0.groups[gid].muted) || !!userOf(s0, msg.author).ignored;
-    var focused = s0.route.view === 'group' && s0.route.id === gid && document.visibilityState === 'visible';
-    update(function (d) {
-      var g = d.groups[gid]; if (!g) return;
-      // The reply is resolved on the up-to-date state: the final id of the original can arrive just before.
-      if (LIVE && msg.replyId) withReply(g, msg);
-      g.messages.push(msg);
-      trimThread(g);
-      logMention(d, gid, msg);
-      if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
-      if (focused) g.lastReadTs = Date.now();
-    });
-    if (mention && !quiet && !(s0.route.view === 'group' && s0.route.id === gid)) {
-      notify('mentions', { toast: msg.author + ' mentioned you in #' + gid, icon: 'at-sign', action: { label: 'Open', run: function () { nav({ view: 'group', id: gid }); } } });
-    }
-  }
-  function receiveDm(from, text) {
-    var s0 = stateRef.current, m = { from: from, key: uid(), text: text, ts: Date.now() };
-    var focused = isDmInView(s0, from);
-    update(function (d) {
-      receivePm(d, m);
-      var c = d.dms[from];
-      if (focused) c.lastReadTs = Date.now();
-    });
-    pmArchive.current.record(from, m, !focused);
-    syncPmUnread(pmArchive.current, update, [from]);
-    if (!focused && !userOf(s0, from).ignored) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
   }
   /**
    * Announces the toggle of a member mark in the prototype as in live.
@@ -897,7 +832,6 @@ function Root(props) {
       u.styleTs = Math.max(u.styleTs || 0, Date.now());
     });
   }
-
 
   function handleLiveOp(op) {
     switch (op.op) {
