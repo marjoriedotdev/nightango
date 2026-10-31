@@ -6,3 +6,4 @@ Pass `name` from `Torch.iconNames`. Size 16 next to body text, 17 in 32px icon b
 
 - Decorative by default (`aria-hidden`). Give `label` only when the icon is the sole carrier of meaning, such as the muted marker on a nav item.
 - Never use emoji as icons.
+- `x` is a filled brand mark, the X logo, kept for a link to an X post.
