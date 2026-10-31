@@ -55,6 +55,7 @@ src/
     pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database)
     overlays.js      useOverlays: toasts, dialogs and navigation drawer, opened by the views through ui
     inbox.js         Mentions page log
+    reconnection.js  useReconnection: reconnection of the groups and the private connection, on demand and automatic after a loss
     live-ops.js      useBridgeOps: each bridge operation goes to the handler of the latest render, those after login once it has rendered
     root.js          Root, and its page hooks: state (useAppState), display preferences, idle members, tab title, Ctrl K, update check.
                      Still in Root: actions, live actions, handleLiveOp
