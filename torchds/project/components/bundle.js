@@ -81,7 +81,9 @@
     star: [['polygon', { points: '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2' }]],
     gift: [['rect', { x: 3, y: 8, width: 18, height: 4, rx: 1 }], ['path', { d: 'M12 8v13' }], ['path', { d: 'M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7' }], ['path', { d: 'M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5' }]],
     type: [['polyline', { points: '4 7 4 4 20 4 20 7' }], ['line', { x1: 9, x2: 15, y1: 20, y2: 20 }], ['line', { x1: 12, x2: 12, y1: 4, y2: 20 }]],
-    list: [['line', { x1: 8, x2: 21, y1: 6, y2: 6 }], ['line', { x1: 8, x2: 21, y1: 12, y2: 12 }], ['line', { x1: 8, x2: 21, y1: 18, y2: 18 }], ['line', { x1: 3, x2: 3.01, y1: 6, y2: 6 }], ['line', { x1: 3, x2: 3.01, y1: 12, y2: 12 }], ['line', { x1: 3, x2: 3.01, y1: 18, y2: 18 }]]
+    list: [['line', { x1: 8, x2: 21, y1: 6, y2: 6 }], ['line', { x1: 8, x2: 21, y1: 12, y2: 12 }], ['line', { x1: 8, x2: 21, y1: 18, y2: 18 }], ['line', { x1: 3, x2: 3.01, y1: 6, y2: 6 }], ['line', { x1: 3, x2: 3.01, y1: 12, y2: 12 }], ['line', { x1: 3, x2: 3.01, y1: 18, y2: 18 }]],
+    // Brand mark, filled: X logo from Simple Icons 15.22.0 (CC0-1.0).
+    x: [['path', { d: 'M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z', fill: 'currentColor', stroke: 'none' }]]
   };
 
   function Icon(props) {
@@ -215,7 +217,7 @@
     var style = Object.assign({ width: size, height: size, background: props.color || avatarColor(props.name), fontSize: Math.round(size * (props.square ? 0.45 : 0.36)), '--dot': dot + 'px' }, props.ring ? { '--presence-ring': props.ring } : null, props.style);
     return h('span', { className: cx('tc-avatar', props.square && 'tc-avatar-square'), style: style, 'aria-hidden': 'true' },
       props.square ? String(props.name || '?').charAt(0).toUpperCase() : initials(props.name),
-      src ? h('img', { className: cx('tc-avatar-img', fadedSrc === src ? 'tc-fade-in' : !loadedAvatars[src] && 'tc-avatar-img-wait'), src: src, alt: '', loading: 'lazy', decoding: 'async', draggable: false,
+      src ? h('img', { className: cx('tc-avatar-img', fadedSrc === src ? 'tc-fade-in' : !loadedAvatars[src] && 'tc-avatar-img-wait'), src: src, alt: '', loading: 'lazy', decoding: 'async', draggable: false, referrerPolicy: props.referrerPolicy,
         onLoad: function (e) { loadedAvatars[src] = true; if (e.currentTarget.classList.contains('tc-avatar-img-wait')) setFadedSrc(src); if (props.onLoad) props.onLoad(); },
         onError: function () { brokenAvatars[src] = true; failed(function (n) { return n + 1; }); } }) : null,
       props.decor || null,

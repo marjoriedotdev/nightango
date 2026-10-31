@@ -25,7 +25,7 @@ function page(userscript, url, before) {
     .observe(w.document, { childList: true, subtree: true });
   // Userscript manager sandbox: own globals, shared DOM, no unsafeWindow, which Userscripts (Safari) lacks.
   const sandbox = vm.createContext({
-    document: w.document, location: w.location, CustomEvent: w.CustomEvent, console, setTimeout, clearTimeout,
+    document: w.document, location: w.location, CustomEvent: w.CustomEvent, DOMParser: w.DOMParser, console, setTimeout, clearTimeout,
     GM_xmlhttpRequest: details => { gm.push(details); }
   });
   sandbox.window = sandbox.top = sandbox.self = sandbox;
@@ -137,6 +137,53 @@ async function suite(userscript) {
       && keys('t5') === 'id,link,post' && tReply('t5').post === '7429876543210987654'
       && keys('t6') === 'id,link,post' && tReply('t6').post === '7400000000000000000',
     { calls: a.gm.slice(sent).map(c => ({ method: c.method, url: c.url, anonymous: c.anonymous })), tiktok });
+
+  /* X bridge: post links on X or a mirror only, rebuilt on X by the sandbox, without cookies, only the card fields come back */
+  const xs = [], xSent = a.gm.length;
+  a.d.addEventListener('torch-skin:x-response', e => xs.push(JSON.parse(e.detail)));
+  const askX = (id, url) => a.d.dispatchEvent(new a.w.CustomEvent('torch-skin:x-request', { detail: JSON.stringify({ id, url }) }));
+  // oEmbed reply as X serves it, with markup that must not survive and a pic.twitter.com link that stands for the media.
+  const oembed = handle => JSON.stringify({ author_name: 'U.S. Interior', author_url: 'https://x.com/' + handle, html: '<blockquote class="twitter-tweet" data-dnt="true"><p lang="en" dir="ltr">Sunsets don&#39;t get<br>better <a href="https://x.com/GrandTetonNPS">@GrandTetonNPS</a> <img src="x" onerror="window.xss=1"> <a href="http://t.co/Yu">pic.twitter.com/YuKy2rcjyU</a></p>&mdash; U.S. Interior (@' + handle + ') <a href="https://x.com/' + handle + '/status/1?ref_src=twsrc%5Etfw">May 5, 2014</a></blockquote>\n<script src="https://platform.twitter.com/widgets.js"></script>' });
+  const mp4 = (bitrate, url) => ({ bitrate, content_type: 'video/mp4', url });
+  const USER = { name: 'U.S. Interior', screen_name: 'Interior', profile_image_url_https: 'https://pbs.twimg.com/profile_images/432081479/DOI_LOGO_normal.jpg' };
+  const VIDEO = { created_at: '2014-05-05T22:09:42.000Z', user: USER, possibly_sensitive: false, mediaDetails: [{ type: 'video', media_url_https: 'https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/a.jpg', original_info: { width: 1920, height: 1080 }, video_info: { variants: [
+    { content_type: 'application/x-mpegURL', url: 'https://video.twimg.com/ext_tw_video/1/pu/pl/a.m3u8' }, mp4(256000, 'https://video.twimg.com/v/480.mp4'), mp4(2176000, 'https://video.twimg.com/v/720.mp4'),
+    mp4(10368000, 'https://video.twimg.com/v/1080.mp4'), mp4(2000000, 'https://evil.example/v.mp4')] } }] };
+  const PHOTO = { created_at: 'not a date', user: { profile_image_url_https: 'https://evil.example/a_normal.jpg' }, possibly_sensitive: true, mediaDetails: [{ type: 'photo', media_url_https: 'https://pbs.twimg.com/media/b.jpg', original_info: { width: 800, height: 600 } }] };
+  askX('x1', 'https://example.com/Interior/status/463440424141459456');
+  askX('x2', 'https://twitter.com/Interior/status/463440424141459456?s=20');
+  askX('x3', 'https://mobile.twitter.com/clown/status/1700000000000000003');
+  askX('x4', 'https://x.com/clown/status/1700000000000000004');
+  askX('x5', 'https://fxtwitter.com/clown/status/1700000000000000005?a=lAo9&s=19');
+  await wait(20);
+  const xCalls = a.gm.slice(xSent), xCall = (host, id) => xCalls.find(c => c.url.indexOf(host) === 8 && c.url.indexOf(id) > 0);
+  const answer = (host, id, status, body) => { const c = xCall(host, id); if (c) c.onload({ status, responseText: body }); };
+  answer('publish.x.com', '463440424141459456', 200, oembed('Interior'));
+  answer('cdn.syndication', '463440424141459456', 200, JSON.stringify(VIDEO));
+  answer('publish.x.com', '1700000000000000003', 200, oembed('clown'));
+  answer('cdn.syndication', '1700000000000000003', 200, JSON.stringify({ mediaDetails: [{ type: 'photo', media_url_https: 'javascript:alert(1)' }] }));
+  answer('publish.x.com', '1700000000000000004', 404, '<html></html>');
+  answer('cdn.syndication', '1700000000000000004', 200, JSON.stringify(PHOTO));
+  answer('publish.x.com', '1700000000000000005', 200, oembed('clown'));
+  answer('cdn.syndication', '1700000000000000005', 200, JSON.stringify(PHOTO));
+  await wait(20);
+  const xReply = id => xs.find(r => r.id === id) || {};
+  const xKeys = id => Object.keys(xReply(id)).sort().join();
+  const OEMBED_URL = 'https://publish.x.com/oembed?url=' + encodeURIComponent('https://x.com/Interior/status/463440424141459456') + '&omit_script=true&dnt=true&hide_thread=true';
+  step('X bridge reads the oEmbed, the author picture, time and first media of a post link rebuilt on X and returns the card fields only',
+    xCalls.length === 8 && xCalls.every(c => c.method === 'GET' && c.anonymous === true)
+      && xCall('publish.x.com', '463440424141459456').url === OEMBED_URL
+      && /^https:\/\/cdn\.syndication\.twimg\.com\/tweet-result\?id=463440424141459456&lang=en&token=[0-9a-z]+$/.test(xCall('cdn.syndication', '463440424141459456').url)
+      && !!xReply('x1').error && !!xReply('x4').error && a.w.xss === undefined
+      && xKeys('x2') === 'author,avatar,date,handle,id,link,media,text,time' && xReply('x2').author === 'U.S. Interior' && xReply('x2').handle === 'Interior'
+      && xReply('x2').avatar === 'https://pbs.twimg.com/profile_images/432081479/DOI_LOGO_bigger.jpg' && xReply('x2').time === Date.UTC(2014, 4, 5, 22, 9, 42)
+      && xReply('x2').text === "Sunsets don't get\nbetter @GrandTetonNPS" && xReply('x2').date === 'May 5, 2014' && xReply('x2').link === 'https://x.com/Interior/status/463440424141459456'
+      && JSON.stringify(xReply('x2').media) === JSON.stringify({ kind: 'video', thumb: 'https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/a.jpg', sensitive: false, width: 1920, height: 1080, video: 'https://video.twimg.com/v/720.mp4' })
+      && xKeys('x3') === 'author,date,handle,id,link,text' && xReply('x3').link === 'https://x.com/clown/status/1700000000000000003'
+      && xCall('publish.x.com', '1700000000000000005').url.indexOf(encodeURIComponent('https://x.com/clown/status/1700000000000000005') + '&') > 0
+      && xKeys('x5') === 'author,date,handle,id,link,media,text' && xReply('x5').link === 'https://x.com/clown/status/1700000000000000005'
+      && JSON.stringify(xReply('x5').media) === JSON.stringify({ kind: 'photo', thumb: 'https://pbs.twimg.com/media/b.jpg', sensitive: true, width: 800, height: 600 }),
+    { calls: xCalls.map(c => c.url), xs });
   step('no page errors', a.errors.length === 0, a.errors);
   a.w.close();
 

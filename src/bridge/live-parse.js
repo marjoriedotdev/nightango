@@ -24,6 +24,8 @@ var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|
 // TikTok post or short link: the embed player needs the post id, which only the redirect of a short link gives.
 var TIKTOK_POST = /^https?:\/\/(?:www\.|m\.)?tiktok\.com\/@[\w.-]+\/(?:video|photo)\/(\d+)/;
 var TIKTOK_SHORT = /^https?:\/\/((?:vm|vt)\.tiktok\.com|(?:www\.)?tiktok\.com\/t)\/([\w-]+)/;
+// X post link, on X or a mirror that the loader turns back into an X link.
+var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter|fxtwitter|vxtwitter|fixupx|fixvx)\.com\/\w{1,15}\/status\/(\d{1,20})/;
 // Like BetterChatango renderMessage: only a ▓…▒ pair becomes a strikethrough, a lone marker stays text.
 var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
 // Like BetterChatango crawl (inject.js:1112): an http media loads over https, one on fp.chatango.com loads from ust.chatango.com.
@@ -39,11 +41,12 @@ function embedOf(src) {
 }
 /**
  * Recognizes the media of a link typed in the text.
- * @param {string} url Link found in the text: YouTube video, TikTok post, image, video or audio file.
+ * @param {string} url Link found in the text: YouTube video, TikTok or X post, image, video or audio file.
  */
 function linkEmbedOf(url) {
-  var yt = YOUTUBE_LINK.exec(url), tt = TIKTOK_POST.exec(url), short = TIKTOK_SHORT.exec(url);
+  var yt = YOUTUBE_LINK.exec(url), tt = TIKTOK_POST.exec(url), short = TIKTOK_SHORT.exec(url), xp = X_POST.exec(url);
   if (yt) return { kind: 'youtube', id: yt[1] };
+  if (xp) return { kind: 'x', id: xp[1], url: xp[0] };
   // Like YouTube, the link may run into text without a space ("…/t/ZPLy/....."): only the post or short link part is kept.
   if (tt) return { kind: 'tiktok', id: tt[1], url: tt[0] };
   if (short) return { kind: 'tiktok', url: 'https://' + short[1] + '/' + short[2] + '/' };

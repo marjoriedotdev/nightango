@@ -2,6 +2,14 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.31.0] - 2026-10-31
+
+### Added
+
+- X posts show as a card laid out like on X: author, text, first photo or video, time.
+- Links from fxtwitter, vxtwitter, fixupx and fixvx show the same card.
+- Embed X posts can be turned off in Settings, Safety.
+
 ## [0.30.2] - 2026-10-31
 
 ### Added
