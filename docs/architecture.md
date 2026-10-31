@@ -57,6 +57,7 @@ src/
     overlays.js      useOverlays: toasts, dialogs and navigation drawer, opened by the views through ui
     inbox.js         useInbox: PM archive of unreads, reception and notification of incoming events, navigation that marks a conversation read,
                      Mentions page log
+    actions.js       useActions: actions the views call through the context, those of the prototype replaced in live by those passed to Chatango
     simulation.js    useSimulation: activity of the prototype's sample world
     reconnection.js  useReconnection: reconnection of the groups and the private connection, on demand and automatic after a loss
     live-ops.js      useBridgeOps: each bridge operation goes to the handler of the latest render, those after login once it has rendered
