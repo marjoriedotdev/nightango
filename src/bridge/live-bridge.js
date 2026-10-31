@@ -457,7 +457,7 @@ var liveBridge = (function () {
    */
   function focusPm(user) {
     pmFocus = user || false;
-    // BetterChatango only archives a sent private message for the conversation it considers open.
+    // BetterChatango plays its sound for a PM of the conversation it considers open, which sendPm gives back after each send.
     try { if (C.private) C.private.focus = pmFocus; } catch (e) { warn(e); }
     if (pmFocus && pmFocus !== connectTarget) connectPm(pmFocus);
   }
@@ -885,7 +885,9 @@ var liveBridge = (function () {
         body = body.slice(0, at) + ref + body.slice(at);
         if (opts.quote) body = withQuote(body, at + ref.length, opts.quote, true);
         var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
-        if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null;
+        // BetterChatango archives a sent PM under client.private.focus, not its recipient: an upload can leave after a switch.
+        C.private.focus = user;
+        try { if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
         // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
         return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId, editId: parsed.editId };

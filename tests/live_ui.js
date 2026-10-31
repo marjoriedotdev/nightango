@@ -39,6 +39,8 @@ w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
 
 /* ---------- Fake BetterChatango client ---------- */
 const sent = [], posts = [], calls = [];
+// Archive targets of the sent PMs, read by the bridge on reload.
+const sentPmArchive = [];
 // vissle response to a file upload (chatango/upload).
 let uploadReply = () => Promise.resolve('data:abc/f.png');
 let shown = 0;
@@ -118,7 +120,11 @@ const C = {
   settings: { privacy: { groups: { connect_own: false, connect_recent: false, connect_favorite: true, favorite: [] } }, notifications: { muted: { groups: [] }, sound: { play_mention: true, volume_mention: 30, play_online: false, volume_online: '45' } }, safety: { users: { ignore: [] }, whitelist: { enable: true, domain: ['i.imgur.com'] } } },
   on(ev, cb) { d.addEventListener('chatango_' + ev, cb); },
   emit(ev, data) { d.dispatchEvent(new w.CustomEvent('chatango_' + ev, { detail: data })); },
-  socket(gid, frame) { sent.push([gid, frame]); },
+  // Like BetterChatango, a sent PM is archived under client.private.focus, and not at all while it is false (inject.js:4633-4645).
+  socket(gid, frame) {
+    sent.push([gid, frame]);
+    if (gid === 'private_message' && frame.indexOf('msg:') === 0 && C.private.focus) sentPmArchive.push({ target: C.private.focus, frame });
+  },
   sendMessage(data, length, group, user) {
     if (length && styleProbe) styleAtBuild.push({ group, style: styleProbe() });
     // Like BetterChatango, a PM body wraps the text in the emphasis of the style, uppercase, and replaces a YouTube link with its <i> tag.
@@ -882,6 +888,29 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && lostBlock.toast && !lostBlock.done && lostBlock.composer
       && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast,
     { sent: sent.slice(closedFrom), fayShown, fayStill, lostUpload, lostPm, lostBlock, statusBefore, lostStatus, lostGroup });
+
+  /* Sent PM archived under its recipient: an upload lets the user switch to another PM or to a group before its link leaves */
+  const archivedUnder = text => sentPmArchive.filter(x => x.frame.includes(text)).map(x => x.target);
+  const pmLeft = text => frame('msg:fay:').some(f => f.includes(text));
+  const uploadThenShow = async (text, show) => {
+    uploadReply = () => new Promise(resolve => { releaseUpload = () => resolve('data:abc/f.png'); });
+    await pickFile('late.png');
+    type(pmBox(), text); key(pmBox(), 'Enter'); await wait(30);
+    click(show()); await wait(50);
+    const shownFocus = C.private.focus;
+    if (releaseUpload) releaseUpload();
+    await until(() => pmLeft(text));
+    return { left: pmLeft(text), archived: archivedUnder(text), shownFocus, focus: C.private.focus };
+  };
+  click(byText('.tc-nav', 'Private messages')); await wait(50);
+  click(byText('.conv', 'fay')); await wait(50);
+  const toOtherPm = await uploadThenShow('Late for fay', () => byText('.conv', 'dave'));
+  click(byText('.conv', 'fay')); await wait(50);
+  const toGroup = await uploadThenShow('Late again', () => byText('.tc-nav', 'test'));
+  step('a pm that leaves after a switch to another pm or to a group is archived under its recipient, then BetterChatango gets back the shown conversation',
+    JSON.stringify(toOtherPm) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: 'dave', focus: 'dave' })
+      && JSON.stringify(toGroup) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: false, focus: false }),
+    { toOtherPm, toGroup });
 
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000270.1', 'Eve', '', 'u7', 'UNID7', 'tmp13', '9.9.9.9', '0', '', '<n000/><f x11000="2">Look at this']);
