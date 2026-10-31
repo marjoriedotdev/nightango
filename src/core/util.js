@@ -67,7 +67,7 @@ function isNewerVersion(a, b) {
   // A release comes after its own betas.
   return b.indexOf('-') !== -1;
 }
-function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many); }
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
 function isGuest(name) { return /^[!#]/.test(name); }
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }

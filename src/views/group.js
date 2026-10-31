@@ -64,7 +64,7 @@ function GroupView(p) {
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
   var rights = groupRights(g, me);
   var canClose = rights.closeGroup, canBroadcast = rights.broadcast;
-  var online = LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length;
+  var online = (LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length).toLocaleString('en-US');
   var ann = g.settings.announcement, annText = LIVE ? ann.displayText : ann.text;
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
   // The sending channel is never hidden, even if it stays in the stored list.

@@ -23,7 +23,7 @@ function MembersList(p) {
       off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
       s.prefs.safety.showGuests && guests.count ? h(Frag, null,
         h('h3', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + guests.count), guests.names.map(function (n) { return row(n); }),
-        g.guests ? h('p', { className: 'muted', style: { margin: 'var(--space-1) var(--space-2)' } }, g.guests + ' anonymous') : null) : null);
+        g.guests ? h('p', { className: 'muted', style: { margin: 'var(--space-1) var(--space-2)' } }, g.guests.toLocaleString('en-US') + ' anonymous') : null) : null);
 }
 
 /**
