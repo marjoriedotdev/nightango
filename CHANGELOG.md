@@ -6,7 +6,8 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Added
 
-- X posts show as a card with their text and first photo or video.
+- X posts show as a card laid out like on X: author, text, first photo or video, time.
+- Links from fxtwitter, vxtwitter, fixupx and fixvx show the same card.
 - Embed X posts can be turned off in Settings, Safety.
 
 ## [0.30.2] - 2026-10-31
