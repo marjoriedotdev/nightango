@@ -27,6 +27,8 @@ function Root(props) {
   var pmArchive = useRef(null);
   if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
   var update = useCallback(function (fn) { setState(function (prev) { var d = JSON.parse(JSON.stringify(prev)); fn(d); return d; }); }, []);
+  // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
+  var drafts = useRef({});
   var u1 = useState([]), toasts = u1[0], setToasts = u1[1];
   var u2 = useState(null), confirmCfg = u2[0], setConfirm = u2[1];
   var u3 = useState(null), profile = u3[0], setProfile = u3[1];
@@ -257,7 +259,7 @@ function Root(props) {
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
   var actions = {
-    login: function (name) { var world = sampleWorld(name); drafts = {}; update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
+    login: function (name) { var world = sampleWorld(name); drafts.current = {}; update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
     resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
@@ -1475,7 +1477,7 @@ function Root(props) {
     openNav: function () { setNavOpen(true); },
     closeNav: function () { setNavOpen(false); }
   };
-  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, uploads: uploads, theme: resolvedTheme(prefs, VIEWER_THEME) };
+  var app = { state: state, update: update, nav: nav, actions: actions, ui: ui, navOpen: navOpen, uploads: uploads, drafts: drafts, theme: resolvedTheme(prefs, VIEWER_THEME) };
 
   return h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
