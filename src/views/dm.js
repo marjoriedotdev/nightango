@@ -303,15 +303,11 @@ function presenceSince(u) {
   return null;
 }
 /**
- * Idle or offline duration of a friend, refreshed every minute.
+ * Idle or offline duration of a friend, refreshed every minute by the clock all relative times share.
  * @param {{user: Object}} p Member in the state.
  */
 function PresenceTime(p) {
-  var tick = useState(0)[1];
-  useEffect(function () {
-    var timer = setInterval(function () { tick(function (n) { return n + 1; }); }, MIN);
-    return function () { clearInterval(timer); };
-  }, []);
+  useMinute();
   var x = presenceSince(p.user);
   return x ? h('time', { className: 'tc-msg-time conv-time', dateTime: new Date(x.ts).toISOString(), title: x.title + new Date(x.ts).toLocaleString('en-GB') }, x.text) : null;
 }

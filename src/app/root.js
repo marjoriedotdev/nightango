@@ -192,7 +192,7 @@ function Root(props) {
 
   // nav, actions and ui keep their identity: the context changes only with what the views show.
   var api = useMemo(function () {
-    return { store: store.store, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, drafts: drafts, get state() { return store.store.shown(); } };
+    return { store: store.store, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, drafts: drafts, clock: minuteClock(), get state() { return store.store.shown(); } };
   }, []);
   var theme = resolvedTheme(state.prefs, VIEWER_THEME);
   var app = useMemo(function () {

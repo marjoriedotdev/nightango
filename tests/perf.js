@@ -1,5 +1,5 @@
-// Cost of the live operations on a busy state, read through counts: what an operation shares with the previous state, the renders it causes
-// and the members dropped.
+// Cost of the live operations on a busy state, read through counts: what an operation shares with the previous state, the renders it causes,
+// the members dropped and the minute timers.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const S = process.argv[2];
@@ -248,6 +248,21 @@ const show = async t => { t.paint(); await nextTask(); };
     unreferenced: names.filter(n => !refs.has(n)).slice(0, 5), lost: ['m3x5', 'm3x110', 'f3', 'c4', ME].filter(n => !s6.users[n])
   };
   step('members that nothing refers to any more leave the users map, the others stay', users.timers === 1 && !users.unreferenced.length && !users.lost.length && users.after <= users.before - STALE, users);
+
+  /* Relative times: one shared minute timer */
+  const minuteTimers = () => t.intervals.filter(x => x.running && x.ms === MIN).length;
+  const timersBefore = minuteTimers();
+  t.d.querySelectorAll('.tc-nav').forEach(el => { if (el.textContent.trim().startsWith('Friends')) el.click(); });
+  await wait(50); t.paint(); await wait(50);
+  const times = [...t.d.querySelectorAll('.conv-time')], timers = minuteTimers() - timersBefore;
+  // Three minutes later, one tick of the newest minute timer.
+  const shownTimes = () => times.map(el => el.textContent).join(), before = shownTimes(), now = t.w.Date.now;
+  t.w.Date.now = () => now() + 3 * MIN;
+  t.intervals.filter(x => x.running && x.ms === MIN).pop().fn();
+  await wait(50);
+  t.w.Date.now = now;
+  const minute = { times: times.length, timers, ticked: times.filter((el, i) => el.textContent !== before.split(',')[i]).length };
+  step('relative times of the friend list update from one shared minute timer', minute.times >= FRIENDS - 5 && minute.timers <= 1 && minute.ticked === minute.times, minute);
 
   /* Conversation rows: a presence change renders only its row */
   t.d.querySelectorAll('.tc-nav').forEach(el => { if (el.textContent.trim().startsWith('Private messages')) el.click(); });

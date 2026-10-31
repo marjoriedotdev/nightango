@@ -4,7 +4,7 @@ function useApp() { return useContext(Ctx); }
 // The parts of the application context that stay the same object for the whole session.
 var ApiCtx = React.createContext(null);
 /**
- * Returns the parts of the application context that never change: actions, ui, nav, update, drafts and the state store.
+ * Returns the parts of the application context that never change: actions, ui, nav, update, drafts, the state store and the minute clock.
  * A component that reads only them renders again for its own props and state only. Its state is the shown state at the time it is read, for handlers:
  * a render takes what it shows from its props or useStatePart.
  */
@@ -16,6 +16,31 @@ function useAppApi() { return useContext(ApiCtx); }
 function useStatePart(part) {
   var store = useAppApi().store;
   return useSyncExternalStore(store.subscribe, function () { return part(store.shown()); });
+}
+/**
+ * Clock that ticks every minute on a single timer, running while something listens to it.
+ * @returns {{subscribe: function(Function): Function, now: function(): number}} Subscription, and time of the last tick.
+ */
+function minuteClock() {
+  var listeners = [], timer = null, now = Date.now();
+  return {
+    now: function () { return now; },
+    subscribe: function (l) {
+      if (!listeners.length) timer = setInterval(function () { now = Date.now(); listeners.forEach(function (f) { f(); }); }, MIN);
+      listeners.push(l);
+      return function () {
+        listeners = listeners.filter(function (x) { return x !== l; });
+        if (!listeners.length) clearInterval(timer);
+      };
+    }
+  };
+}
+/**
+ * Renders again on each tick of the minute clock of the application, which all relative times share.
+ */
+function useMinute() {
+  var clock = useAppApi().clock;
+  useSyncExternalStore(clock.subscribe, clock.now);
 }
 /**
  * Returns functions that keep their identity from one render to the next and call those of the latest render.
