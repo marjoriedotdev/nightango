@@ -44,10 +44,12 @@ function Root(props) {
   var u10 = useState(0), themeTick = u10[1];
   var prefs = state.prefs;
 
+  /*PROTOTYPE*/
   useEffect(function () {
     var hot = window.claude && window.claude.hot;
     if (hot && hot.snapshot) hot.snapshot(function () { return { state: stateRef.current }; });
   }, []);
+  /*END PROTOTYPE*/
 
   /* Theme, accent and display preferences applied to the root */
   useEffect(function () {

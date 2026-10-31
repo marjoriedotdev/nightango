@@ -64,7 +64,9 @@ async function deliverReact(w) {
 
 async function suite(userscript) {
   /* Home page, BetterChatango absent: the script starts it */
-  const a = page(userscript, 'https://st.chatango.com/');
+  // A page script can define the hosted prototype hook, which hands the interface a state and reads it back.
+  let hookReads = 0;
+  const a = page(userscript, 'https://st.chatango.com/', w => Object.defineProperty(w, 'claude', { get() { hookReads++; return { hot: {} }; } }));
   const starts = a.d.querySelectorAll('script[src="' + START + '"]');
   step('starts BetterChatango once on the home page', starts.length === 1);
   step('shows the BetterChatango loading text', a.d.querySelector('h1').textContent === 'Loading...');
@@ -91,6 +93,7 @@ async function suite(userscript) {
     a.injected.some(t => t.indexOf('__TORCH_SKIN__') >= 0) && a.w.__TORCH_SKIN__ === true && a.w.__TORCH_LIVE__ === true
       && typeof a.w.client.event.group.getratelimit === 'function' && !!host2 && !!host2.shadowRoot.querySelector('#app').children.length,
     { injected: a.injected.length, skin: a.w.__TORCH_SKIN__, live: a.w.__TORCH_LIVE__ });
+  step('userscript leaves the prototype hook out', !/\bwindow\.claude\b|\bclaude\.hot\b/.test(userscript) && hookReads === 0, hookReads);
 
   /* vissle bridge: only the signed-in profile is queried, without cookies */
   const replies = [];

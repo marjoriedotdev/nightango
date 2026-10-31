@@ -36,5 +36,13 @@ Recovery.prototype.render = function () { return this.state.failed ? h(RecoveryS
 function start(data) {
   ReactDOM.createRoot(window.__TORCH_MOUNT__ || document.getElementById('app')).render(h(Recovery, null, h(Root, { boot: data && data.state })));
 }
-var hotApi = window.claude && window.claude.hot;
-if (hotApi && hotApi.ready) hotApi.ready(start); else start((hotApi && hotApi.data) || {});
+// The build leaves PROTOTYPE blocks out of the userscripts: only the hosted prototype starts from its hook.
+function mount() {
+  /*PROTOTYPE*/
+  var hotApi = window.claude && window.claude.hot;
+  if (hotApi && hotApi.ready) return hotApi.ready(start);
+  if (hotApi) return start(hotApi.data || {});
+  /*END PROTOTYPE*/
+  start({});
+}
+mount();

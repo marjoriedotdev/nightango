@@ -80,6 +80,8 @@ The build opens the IIFE with two names: `APP_VERSION`, the `@version` of `src/l
 
 `bridge/live-parse.js` sits right before `bridge/live-bridge.js`, after `bridge/live-model.js` whose `FONT_FACES` it reads. Its functions become names of the single scope, shared with every file: a name that duplicates another replaces the first one without an error.
 
+Code between `/*PROTOTYPE*/` and `/*END PROTOTYPE*/` belongs to the hosted prototype only: its hook `window.claude.hot`, through which the hosted page starts the interface, can hand it a saved state and reads its state back (`app/start.js`, `app/root.js`). The build leaves these blocks out of the userscripts, since any script on st.chatango.com could define this hook. `dist/app.js` keeps them, like `dist/nightango.html`.
+
 The build rejects app code or a bundle that contains `</script`, a userscript stylesheet that still targets `:root` or `html,body{`, and a sign-in screen stylesheet that contains `url(` or `@import`.
 
 ## Userscript in two contexts
@@ -174,9 +176,9 @@ Both userscripts come out of the same `userscript()` function, which describes t
 
 jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 
-- `smoke`: hosted prototype, loaded from `dist/nightango.html`.
+- `smoke`: hosted prototype, loaded from `dist/nightango.html` and started through its hook.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
-- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal, recovery screen. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
+- `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal, recovery screen, prototype hook left out. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
 - `layers`: menus, dialogs and toasts of `core/ui.js` in a Shadow DOM, as in live, on the sources of `src/core/` and the design system bundle. The cases move the clock of the app timers forward themselves.
 - `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
