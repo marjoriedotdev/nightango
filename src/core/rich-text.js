@@ -210,7 +210,16 @@ var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
 var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 // No < and no parenthesis: the URL ends up in a CSS background, in the full profile as in custom_profile.css.
 var SAFE_IMAGE_URL = /^https:\/\/[^<>"'\\()\s]+$/;
-var MATHML_NS = 'http://www.w3.org/1998/Math/MathML';
+var MATHML_NS = 'http://www.w3.org/1998/Math/MathML', SVG_NS = 'http://www.w3.org/2000/svg';
+/**
+ * Tells whether an element of a full profile can give a link its address only once the frame shows it.
+ * @param {Element} el Element of the parsed member HTML.
+ */
+function setsLinkLater(el) {
+  // A declarative shadow root: the frame's parser attaches its content, which getElementsByTagName never visits.
+  if (el.localName === 'template') return true;
+  return el.namespaceURI === SVG_NS && (el.localName === 'animate' || el.localName === 'set') && /(?:^|:)href$/i.test(String(el.getAttribute('attributeName')).trim());
+}
 /**
  * Removes the address of every link of a full profile, parsed like the mini profile without running or loading anything.
  * @param {string} html HTML written by the member.
@@ -220,7 +229,8 @@ function unlinkFullProfile(html) {
   var links = [], body = richBody(html), out;
   function unlink() {
     var found = false;
-    Array.prototype.forEach.call(body.getElementsByTagName('*'), function (el) {
+    Array.prototype.slice.call(body.getElementsByTagName('*')).forEach(function (el) {
+      if (setsLinkLater(el)) { el.parentNode.removeChild(el); found = true; return; }
       // Firefox follows an href on any MathML element.
       if (el.localName !== 'a' && el.localName !== 'area' && el.namespaceURI !== MATHML_NS) return;
       Array.prototype.slice.call(el.attributes).forEach(function (attr) {
@@ -234,7 +244,7 @@ function unlinkFullProfile(html) {
     return found;
   }
   unlink();
-  // Parsed again until a parse finds no link: a serialized tree can parse into new elements (mutation XSS).
+  // Parsed again until a parse finds nothing to remove: a serialized tree can parse into new elements (mutation XSS).
   // outerHTML: the frame's parser still merges the attributes of the member's <body> onto its own.
   do { out = body.outerHTML; body = richBody(out); } while (unlink());
   return { html: out, links: links };

@@ -170,11 +170,14 @@ const ABOUT = encodeURIComponent('<b>Bold</b> hi<script>alert(1)</script><img sr
 // Chatango age, like BetterChatango: current year minus birth year.
 const ZOE_BIRTH = '1995-04-02', ZOE_ASL = (new Date().getFullYear() - +ZOE_BIRTH.slice(0, 4)) + ' · F · Lyon';
 // Links of the full profile: a repeated address, another scheme, a Chatango profile, a trusted host, SVG, an image map,
-// and a link that only a second parse of the serialized page creates (mutation XSS).
+// a link that only a second parse of the serialized page creates (mutation XSS), and two shapes that give a link
+// its address only in the frame: a declarative shadow root and an SVG animation, neither of them listed.
 const FULL_LINKS = ['https://example.com/p', 'https://abe.chatango.com/', 'https://i.imgur.com/g', 'https://svg.example/', 'https://area.example/', 'https://smuggled.example/'];
 const FULL = encodeURIComponent('<h1>Zoe page</h1><script>parent.alert(4)</script><img src="https://img.example/a.png">'
   + '<p><a href="https://example.com/p" target="_top">My site</a> <a href=" https://example.com/p ">again</a> <a href="javascript:alert(5)">Script link</a> <a href="https://abe.chatango.com/">abe</a> <a href="https://i.imgur.com/g">gallery</a></p>'
   + '<svg><a href="https://svg.example/"><text>S</text></a></svg><map name="m"><area href="https://area.example/" alt="Area"></map>'
+  + '<div><template shadowrootmode="open"><a target="_self" href="https://shadow.example/">Shadow</a></template></div>'
+  + '<svg><a><animate attributeName="href" values="https://animated.example/" fill="freeze"/><text>Animated</text></a><a id="set-link"><text>Set</text></a><set href="#set-link" attributeName="xlink:href" to="https://set.example/"/></svg>'
   + '<math><mtext><table><mglyph><style><a href="https://smuggled.example/">Smuggled</a>');
 // Premium background in the real custom_profile.css format (goddess account). Without a file, Chatango returns a JPEG image.
 const PREMIUM_END = Math.floor(Date.now() / 1000) + 30 * 86400;
@@ -1189,8 +1192,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   // Parsed like the frame parses its srcdoc: no element may keep an address, in any namespace.
   const frameDoc = new w.DOMParser().parseFromString(sd, 'text/html');
   const frameLinks = [...frameDoc.querySelectorAll('*')].filter(el => [...el.attributes].some(a => a.localName === 'href')).map(el => el.outerHTML);
-  step('full profile frame keeps the link text but can open nothing', !!frameEl && frameEl.getAttribute('sandbox') === '' && !frameLinks.length && frameDoc.body.textContent.includes('My site again Script link abe gallery'),
-    { sandbox: frameEl && frameEl.getAttribute('sandbox'), frameLinks });
+  // jsdom attaches no declarative shadow root and runs no SVG animation: the browser would, so neither may reach the frame.
+  const frameLate = [...frameDoc.querySelectorAll('template, animate, set')].map(el => el.outerHTML);
+  step('full profile frame keeps the link text but can open nothing', !!frameEl && frameEl.getAttribute('sandbox') === '' && !frameLinks.length && !frameLate.length
+    && frameDoc.body.textContent.includes('My site again Script link abe gallery') && frameDoc.body.textContent.includes('AnimatedSet'),
+    { sandbox: frameEl && frameEl.getAttribute('sandbox'), frameLinks, frameLate });
   const profileLinks = $$('.profile-links a').map(a => a.getAttribute('href'));
   step('each http(s) link of the full profile listed once below the frame', !!byText('.profile-links h3', 'Links in this profile') && JSON.stringify(profileLinks) === JSON.stringify(FULL_LINKS), profileLinks);
   const loadImages = byText('.dialog-foot button', 'Load images');
