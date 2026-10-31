@@ -36,7 +36,7 @@ const COMPONENTS = [
 
 - Decorative by default (\`aria-hidden\`). Give \`label\` only when the icon is the sole carrier of meaning, such as the muted marker on a nav item.
 - Never use emoji as icons.
-- \`x\` is a filled brand mark, the X logo, kept for a link to an X post.`,
+- \`x-logo\` is a filled brand mark, the X logo, kept for a link to an X post.`,
     `  return h('div', { className: 'row', style: { color: 'var(--text-2)' } }, ['search','plus','send','reply','smile','hash','users','bell','pin','lock','shield','crown','message','compass','sliders','trash'].map(function (n) { return h(T.Icon, { key: n, name: n, size: 18 }); }));`],
   ['Button', 'Actions', 96,
     'Text buttons in four variants: primary, secondary, ghost and danger.',

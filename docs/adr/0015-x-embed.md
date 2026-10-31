@@ -25,7 +25,7 @@ Owner decisions of 2026-10-31 (0.31.0), the mirrors and the layout close to an X
 - the text decides: without the oEmbed, the card turns back into a link that goes through the link warning, with a toast on click. Without the syndication, the card shows the author initials, the date of the oEmbed and no media
 - the author picture, the photo and the poster show in `<img referrerPolicy="no-referrer">` once the card shows (`T.Avatar` takes `referrerPolicy` for this). A media X flags as sensitive waits for a click. The video plays in `<video controls>` only after a click, like a video file
 - one reading per post and per page, a failure being read again at a click, as for TikTok
-- the X logo is a filled brand mark of the design system (`x`), taken from Simple Icons (CC0), only for a link to an X post
+- the X logo is a filled brand mark of the design system (`x-logo`), taken from Simple Icons (CC0), only for a link to an X post
 - the calls and the media join the closed lists of `docs/betterchatango-protocol.md#allowed-http-calls` ([ADR-0001](0001-password-never-read.md))
 - the prototype has no loader: its sample post shows a sample photo, any other post turns back into a link on click.
 

@@ -289,7 +289,7 @@ function XPostCard(p) {
     h('div', { className: 'embed-x-head' },
       h(T.Avatar, { name: post.handle, src: post.avatar, size: 40, referrerPolicy: 'no-referrer' }),
       h('div', { className: 'embed-x-who' }, h('span', { className: 'embed-x-author' }, post.author), h('span', { className: 'embed-x-handle' }, '@' + post.handle)),
-      mediaLink(app, post.link, 'embed-x-logo', h(T.Icon, { name: 'x', size: 18, label: 'Open on X' }))),
+      mediaLink(app, post.link, 'embed-x-logo', h(T.Icon, { name: 'x-logo', size: 18, label: 'Open on X' }))),
     post.text ? h('p', { className: 'embed-x-text' }, post.text) : null,
     post.media ? h(XPostMedia, { media: post.media, link: post.link }) : null,
     mediaLink(app, post.link, 'embed-x-date', post.time ? h('time', { dateTime: new Date(post.time).toISOString() }, when) : when));
