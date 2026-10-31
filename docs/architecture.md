@@ -177,7 +177,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `smoke`: hosted prototype, loaded from `dist/nightango.html`.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
 - `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle and TikTok bridges, diagnostic journal, recovery screen. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
-- `layers`: menus of `core/ui.js` in a Shadow DOM, as in live, on the sources of `src/core/` and the design system bundle. The cases move the clock of the app timers forward themselves.
+- `layers`: menus and toasts of `core/ui.js` in a Shadow DOM, as in live, on the sources of `src/core/` and the design system bundle. The cases move the clock of the app timers forward themselves.
 - `pm`: PM unreads and private history merge, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.

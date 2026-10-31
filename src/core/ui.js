@@ -265,15 +265,38 @@ function ConfirmDialog(p) {
   });
 }
 
+var TOAST_MS = 4500, TOAST_ACTION_MS = 7000;
 function Toasts(p) {
   return h(Portal, null, h('div', { className: 'toasts', role: 'status', 'aria-live': 'polite' },
-    p.toasts.map(function (t) {
-      return h('div', { key: t.id, className: 'toast' },
-        t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
-        h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
-        t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
-        h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
-    })));
+    p.toasts.map(function (t) { return h(Toast, { key: t.id, toast: t, dismiss: p.dismiss }); })));
+}
+/**
+ * Notification that closes once its delay has run.
+ * The delay of a toast with an action waits while the toast is hovered or holds the focus, so that its action stays within reach.
+ * @param {{toast: Object, dismiss: function(string)}} p Notification and its closing by id.
+ */
+function Toast(p) {
+  var t = p.toast;
+  var a = useState(false), hovered = a[0], setHovered = a[1];
+  var b = useState(false), focused = b[0], setFocused = b[1];
+  var left = useRef(t.action ? TOAST_ACTION_MS : TOAST_MS);
+  var held = !!t.action && (hovered || focused);
+  useEffect(function () {
+    if (held) return;
+    var start = Date.now(), timer = setTimeout(function () { p.dismiss(t.id); }, left.current);
+    return function () { clearTimeout(timer); left.current -= Date.now() - start; };
+  }, [held]);
+  return h('div', {
+    className: 'toast',
+    onMouseEnter: function () { setHovered(true); }, onMouseLeave: function () { setHovered(false); },
+    onFocus: function () { setFocused(true); },
+    // The focus moving from one of its buttons to the other keeps the toast held.
+    onBlur: function (e) { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }
+  },
+    t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
+    h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
+    t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
+    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
 }
 
 var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;

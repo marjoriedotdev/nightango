@@ -106,9 +106,8 @@ function Root(props) {
   }, []);
 
   var toast = useCallback(function (text, opts) {
-    var id = uid(), t = Object.assign({ id: id, text: text }, opts || {});
+    var t = Object.assign({ id: uid(), text: text }, opts || {});
     setToasts(function (list) { return list.concat([t]).slice(-4); });
-    setTimeout(function () { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }, t.action ? 7000 : 4500);
   }, []);
   function dismissToast(id) { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }
 

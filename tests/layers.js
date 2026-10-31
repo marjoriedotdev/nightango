@@ -1,4 +1,4 @@
-// Layers of src/core/ui.js, mounted in a Shadow DOM as in live: focus given back by menus.
+// Layers of src/core/ui.js, mounted in a Shadow DOM as in live: focus given back by menus and toast delays.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { concatSources, layerSources } = require('../scripts/build.mjs');
@@ -23,7 +23,7 @@ w.Date.now = () => now;
 w.setTimeout = (fn, ms) => { timers.set(nextTimer, { at: now + (ms || 0), fn }); return nextTimer++; };
 w.clearTimeout = id => { timers.delete(id); };
 
-w.eval(concatSources(ROOT, layerSources('core')) + '; window.ui = { MenuButton: MenuButton };');
+w.eval(concatSources(ROOT, layerSources('core')) + '; window.ui = { MenuButton: MenuButton, Toasts: Toasts };');
 const ui = w.ui, R = w.React, h = R.createElement;
 
 // Like skin-page.js: #app in the shadow root of the host, the layer next to it.
@@ -36,10 +36,15 @@ mount.id = 'app';
 shadow.appendChild(mount);
 w.__TORCH_MOUNT__ = mount;
 
+let api = null;
 function Harness() {
+  const [toasts, setToasts] = R.useState([]);
+  api = { setToasts };
   return h(R.Fragment, null,
     h('p', { id: 'blank' }, 'Plain text'),
-    h(ui.MenuButton, { label: 'Message options', items: [{ label: 'Copy text', onSelect() {} }] }));
+    h(ui.MenuButton, { label: 'Message options', items: [{ label: 'Copy text', onSelect() {} }] }),
+    h('button', { type: 'button', id: 'behind' }, 'Behind'),
+    h(ui.Toasts, { toasts, dismiss: id => setToasts(list => list.filter(t => t.id !== id)) }));
 }
 
 /* ---------- Helpers ---------- */
@@ -76,6 +81,13 @@ function pressBlank(el) {
   el.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, composed: true }));
   if (focused()) focused().blur();
 }
+/**
+ * Moves the pointer onto an element from outside it, or off it.
+ * @param {Element} el Element the pointer enters or leaves.
+ * @param {boolean} enter The pointer enters.
+ */
+function hover(el, enter) { el.dispatchEvent(new w.MouseEvent(enter ? 'mouseover' : 'mouseout', { bubbles: true, composed: true, relatedTarget: enter ? null : d.body })); }
+const toast = txt => $$('.toast').find(t => t.textContent.includes(txt));
 async function openMenu() { click(trigger()); await flush(); }
 const log = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
@@ -95,6 +107,34 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   await openMenu();
   pressBlank($('#blank')); await advance(0);
   step('a click outside closes the menu and focuses its button', !$('.menu') && focused() === trigger(), { menu: !!$('.menu'), focused: label(focused()) });
+
+  /* A toast with an action waits while it is hovered or focused */
+  api.setToasts([{ id: 'a', text: 'alice was banned from #test.', action: { label: 'Undo', run() {} } }, { id: 'p', text: 'Message deleted.' }]);
+  await flush();
+  await advance(3000);
+  hover(toast('alice'), true); await flush();
+  await advance(10000);
+  const hovered = { action: !!toast('alice'), plain: !!toast('Message deleted.') };
+  hover(toast('alice'), false); await flush();
+  await advance(3900);
+  const leftEarly = !!toast('alice');
+  await advance(200);
+  step('a toast with an action stays while hovered, then closes once the rest of its delay has run',
+    hovered.action && !hovered.plain && leftEarly && !toast('alice'), { hovered, leftEarly, after: !!toast('alice') });
+  api.setToasts([{ id: 'b', text: 'bob was banned from #test.', action: { label: 'Undo', run() {} } }]);
+  await flush();
+  await advance(1000);
+  toast('bob').querySelector('button').focus(); await flush();
+  await advance(10000);
+  toast('bob').querySelector('button[aria-label="Dismiss"]').focus(); await flush();
+  await advance(10000);
+  const held = !!toast('bob');
+  $('#behind').focus(); await flush();
+  await advance(5900);
+  const blurredEarly = !!toast('bob');
+  await advance(200);
+  step('a toast with an action stays while it holds the focus, then closes once the rest of its delay has run',
+    held && blurredEarly && !toast('bob'), { held, blurredEarly, after: !!toast('bob') });
 
   console.log(log.join('\n'));
   console.log('ERRORS: ' + (errors.length ? '\n' + errors.join('\n') : 'none'));
