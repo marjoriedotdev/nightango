@@ -194,7 +194,7 @@ Test policy: [ADR-0009](adr/0009-test-only-complex-behaviour.md) and `docs/codin
 
 - `.github/workflows/ci.yml`, `test` job: `pnpm install --frozen-lockfile` then `pnpm test` on every push and pull request to `main` and `beta`. Before the tests, it refuses a `-beta` `@version` on `main` or in a pull request to `main`.
 - Same workflow, `release` job: on a push to `main` or `beta`, after `test`. It reads the `@version` of `src/loader/skin-loader.js`, then, if the release `v` followed by this number does not exist yet, it runs `pnpm build` again and creates the tag on the tested commit and the GitHub release with both userscripts attached. Otherwise it publishes nothing. On `beta`, only a `X.Y.Z-beta.N` version is published, as a prerelease never marked latest. A stable version there publishes nothing. Releases run one at a time (`concurrency: release`).
-- Actions are pinned to the full commit SHA of their release, with the version in a comment. pnpm comes from the `packageManager` field of `package.json`.
+- Actions are pinned to the full commit SHA of their release, with the version in a comment. pnpm comes from the `packageManager` field of `package.json`, Node from its `engines.node` field, which a local run follows too: pnpm warns under another Node version.
 
 ## BetterChatango reference copy
 

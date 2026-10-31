@@ -46,7 +46,7 @@ For any question or problem, send a private message to [marjorie](https://marjor
 
 ## Development
 
-Requires Node.js and pnpm.
+Requires pnpm and Node.js 24, the version the CI uses (`engines` in `package.json`).
 
 ```
 pnpm install
