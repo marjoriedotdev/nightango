@@ -35,7 +35,7 @@ var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
  * Requests the next page when a sentinel approaches the visible area.
  * @param {Object} rootRef Ref of the scrolling area.
  * @param {Object} sentinelRef Ref of the sentinel.
- * @param {boolean} enabled A next page can be requested.
+ * @param {*} enabled A next page can be requested when truthy. Another truthy value observes the sentinel again, which reports it at once if it is still in view.
  * @param {Function} onReach Request for the next page.
  * @param {string} margin Approach margin in rootMargin format.
  */
@@ -48,6 +48,28 @@ function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
     io.observe(sentinelRef.current);
     return function () { io.disconnect(); };
   }, [enabled]);
+}
+
+var ROW_BATCH = 100;
+/**
+ * Renders a long list in batches: the first rows, then one more batch each time the sentinel after them approaches the visible area.
+ * Rendered rows stay until the list is reset, whatever the data updates.
+ * @param {Object} rootRef Ref of the scrolling area.
+ * @param {number} total Rows in the list, 0 while the list is not rendered.
+ * @param {string} reset Search, filter or tab of the list: a new value renders the first batch again.
+ * @returns {{limit: number, sentinel: ?Object}} Rows to render, and the element to place after them while rows are left.
+ */
+function useRowBatches(rootRef, total, reset) {
+  var st = useState({ reset: reset, limit: ROW_BATCH }), batch = st[0], setBatch = st[1];
+  var sentinelRef = useRef(null);
+  if (batch.reset !== reset) { batch = { reset: reset, limit: ROW_BATCH }; setBatch(batch); }
+  var more = total > batch.limit;
+  // The limit as enabled: each batch observes the sentinel again, so a sentinel still in view loads the next batch.
+  useInfiniteScroll(rootRef, sentinelRef, more && batch.limit, function () {
+    // Functional update: the observer keeps the callback of its batch, which can predate a reset.
+    setBatch(function (b) { return { reset: b.reset, limit: b.limit + ROW_BATCH }; });
+  }, LOAD_BELOW_MARGIN);
+  return { limit: batch.limit, sentinel: more ? h('div', { ref: sentinelRef, 'aria-hidden': 'true', style: { height: 1 } }) : null };
 }
 
 var FLOAT_UNPLACED = { position: 'fixed', visibility: 'hidden', top: 0, left: 0 };

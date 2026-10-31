@@ -17,6 +17,8 @@ function DMView(p) {
   var filters = [['all', 'All'], ['unread', 'Unread']];
   var section = p.tab === 'friends' || p.tab === 'meet' ? p.tab : 'chats';
   var term = section === 'chats' ? q.trim() : '', found = useDmSearch(term);
+  var scrollRef = useRef(null), loading = LIVE && !s.pmLoaded;
+  var batch = useRowBatches(scrollRef, section === 'chats' && !loading ? shown.length : 0, section + ':' + tab + ':' + q);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
     h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
@@ -36,9 +38,10 @@ function DMView(p) {
         filters.map(function (t) {
           return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
-    h('div', { className: 'scroll', style: { padding: '0 8px 12px' } },
-      LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
-        shown.length ? shown.map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
+    h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
+      loading ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
+        shown.length ? shown.slice(0, batch.limit).map(function (n) { return h(ChatRow, { key: n, name: n, current: id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
+        batch.sentinel,
         term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
   var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column, seek: p.seek })

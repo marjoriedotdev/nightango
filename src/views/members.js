@@ -1,6 +1,6 @@
 /**
  * Member list of a group.
- * @param {{g: Object}} p Shown group.
+ * @param {{g: Object, scrollRef: Object}} p Shown group and ref of its scrolling area.
  */
 function MembersList(p) {
   var app = useApp(), s = app.state, g = p.g;
@@ -8,7 +8,10 @@ function MembersList(p) {
   var others = g.members.filter(function (n) { return !roleOf(g, n); });
   var on = others.filter(function (n) { return userOf(s, n).status !== 'offline' || n === s.me; });
   var off = others.filter(function (n) { return userOf(s, n).status === 'offline' && n !== s.me; });
-  var guests = guestsOf(g);
+  var guests = guestsOf(g), showGuests = s.prefs.safety.showGuests && guests.count;
+  var loading = LIVE && !g.membersLoaded;
+  var batch = useRowBatches(p.scrollRef, loading ? 0 : staff.length + on.length + off.length + (showGuests ? guests.names.length : 0), g.id);
+  var before = 0;
   function row(n) {
     var u = userOf(s, n), isMe = n === s.me, status = isMe ? s.meStatus : u.status;
     return h('button', { key: n, type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, g.id); } },
@@ -16,14 +19,22 @@ function MembersList(p) {
       h('span', { className: 'grow', style: u.status === 'offline' && !isMe ? { color: 'var(--text-3)' } : null }, n),
       presenceSr(status), youBadge(isMe), developerBadge(n), roleBadge(roleOf(g, n)));
   }
-  return LIVE && !g.membersLoaded ? h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }))
-    : h('div', { className: 'members-list' },
-      h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staff.map(function (n) { return row(n); }),
-      h('h3', { className: 'mlabel' }, 'Online · ' + on.length), on.map(function (n) { return row(n); }),
-      off.length ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, off.map(function (n) { return row(n); }),
-      s.prefs.safety.showGuests && guests.count ? h(Frag, null,
-        h('h3', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + guests.count), guests.names.map(function (n) { return row(n); }),
-        g.guests ? h('p', { className: 'muted', style: { margin: 'var(--space-1) var(--space-2)' } }, g.guests.toLocaleString('en-US') + ' anonymous') : null) : null);
+  // Rows of a section within the rendered batches, null while a row before the section is left to render.
+  function rows(names) {
+    var from = before;
+    before += names.length;
+    return from > batch.limit ? null : names.slice(0, batch.limit - from).map(row);
+  }
+  if (loading) return h('div', { className: 'members-list' }, h(SkeletonRows, { count: 6, avatar: 28, label: 'Loading members' }));
+  var staffRows = rows(staff), onRows = rows(on), offRows = rows(off), guestRows = showGuests ? rows(guests.names) : null;
+  return h('div', { className: 'members-list' },
+    h('h3', { className: 'mlabel' }, 'Staff · ' + staff.length), staffRows,
+    onRows ? h('h3', { className: 'mlabel' }, 'Online · ' + on.length) : null, onRows,
+    off.length && offRows ? h('h3', { className: 'mlabel' }, 'Offline · ' + off.length) : null, offRows,
+    guestRows ? h(Frag, null,
+      h('h3', { className: 'mlabel', style: { marginTop: 16 } }, 'Guests · ' + guests.count), guestRows,
+      g.guests && !batch.sentinel ? h('p', { className: 'muted', style: { margin: 'var(--space-1) var(--space-2)' } }, g.guests.toLocaleString('en-US') + ' anonymous') : null) : null,
+    batch.sentinel);
 }
 
 /**
@@ -31,10 +42,11 @@ function MembersList(p) {
  * @param {{g: Object}} p Shown group.
  */
 function MembersPanel(p) {
+  var scrollRef = useRef(null);
   return h('aside', { className: 'col members', 'aria-label': 'Members of ' + p.g.id },
     useApp().season === 'halloween' ? h(SeasonWeb) : null,
     columnHeader('Members'),
-    h('div', { className: 'scroll' }, h(MembersList, { g: p.g })));
+    h('div', { ref: scrollRef, className: 'scroll' }, h(MembersList, { g: p.g, scrollRef: scrollRef })));
 }
 
 /**
@@ -42,15 +54,15 @@ function MembersPanel(p) {
  * @param {{g: Object, onClose: Function}} p Shown group and closing of the sheet.
  */
 function GroupInfoSheet(p) {
-  var g = p.g;
+  var g = p.g, scrollRef = useRef(null);
   return h(Dialog, { label: 'About #' + g.id, sheet: true, onClose: p.onClose },
     h('div', { className: 'topbar' },
       h('h2', { className: 'grow' }, g.id),
       h(T.IconButton, { icon: 'x', label: 'Close', onClick: p.onClose })),
-    h('div', { className: 'scroll' },
+    h('div', { ref: scrollRef, className: 'scroll' },
       g.topic ? h('div', { className: 'kv' }, h('h3', null, 'Description'), h('p', { className: 'about', dir: 'auto' }, g.topic)) : null,
       h('div', { className: 'kv' }, h('h3', null, 'Members')),
-      h(MembersList, { g: g })));
+      h(MembersList, { g: g, scrollRef: scrollRef })));
 }
 
 /* ---------- Member profile ---------- */
