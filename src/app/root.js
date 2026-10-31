@@ -57,8 +57,8 @@ function appStore(initial) {
 /**
  * Application state, with a ref to the latest state that handlers read and its update.
  * @param {?Object} boot State handed by the prototype hook.
- * @returns {{state: Object, stateRef: Object, update: function(function(Object)), inAnimationFrame: function(Function)}}
- *   State of this render, ref to the latest state, update, and scope whose updates wait for the next animation frame.
+ * @returns {{state: Object, stateRef: Object, update: function(function(Object)), inAnimationFrame: function(Function), store: Object}}
+ *   State of this render, ref to the latest state, update, scope whose updates wait for the next animation frame, and the store (appStore).
  */
 function useAppState(boot) {
   var store = useState(function () { return appStore(boot && boot.auth ? boot : initialState()); })[0];
@@ -69,7 +69,7 @@ function useAppState(boot) {
     if (hot && hot.snapshot) hot.snapshot(function () { return { state: store.ref.current }; });
   }, []);
   /*END PROTOTYPE*/
-  return { state: state, stateRef: store.ref, update: store.update, inAnimationFrame: store.inAnimationFrame };
+  return { state: state, stateRef: store.ref, update: store.update, inAnimationFrame: store.inAnimationFrame, store: store };
 }
 
 /**
@@ -189,8 +189,15 @@ function Root(props) {
   useSimulation(store, inbox, o.toast, act.actions);
   useLiveOps({ store: store, toast: o.toast, inbox: inbox, actions: act.actions, local: local, reconnection: reconnection, pms: pms });
 
-  var app = { state: state, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: resolvedTheme(state.prefs, VIEWER_THEME) };
-  return h(Layers, null, h(Ctx.Provider, { value: app },
+  // nav, actions and ui keep their identity: the context changes only with what the views show.
+  var api = useMemo(function () {
+    return { store: store.store, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, drafts: drafts, get state() { return store.store.shown(); } };
+  }, []);
+  var theme = resolvedTheme(state.prefs, VIEWER_THEME);
+  var app = useMemo(function () {
+    return { state: state, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: theme };
+  }, [state, o.navOpen, act.uploads, theme]);
+  return h(Layers, null, h(ApiCtx.Provider, { value: api }, h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
     state.auth.loggedIn && o.profile ? h(ProfileDialog, { name: o.profile.name, gid: o.profile.gid, onClose: function () { o.setProfile(null); } }) : null,
     state.auth.loggedIn && o.banCfg ? h(BanDialog, { name: o.banCfg.name, gid: o.banCfg.gid, msg: o.banCfg.msg, onClose: function () { o.setBan(null); } }) : null,
@@ -203,5 +210,5 @@ function Root(props) {
     state.auth.loggedIn && o.newDm ? h(NewDmDialog, { onClose: function () { o.setNewDm(false); } }) : null,
     o.confirmCfg ? h(ConfirmDialog, { confirm: o.confirmCfg, onClose: function () { o.setConfirm(null); } }) : null,
     state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
-    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast })));
+    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast }))));
 }

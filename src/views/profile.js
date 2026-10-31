@@ -114,7 +114,7 @@ function PhotoViewer(p) {
  * @param {string} name Member name.
  */
 function profileMeta(s, name) {
-  var asl = personAsl(s, name);
+  var asl = personAsl(userOf(s, name));
   if (asl) return h('span', { className: 'muted profile-line' }, asl);
   return isProfilePending(name, userOf(s, name)) ? h(T.Skeleton, { width: 120, height: 12 }) : null;
 }

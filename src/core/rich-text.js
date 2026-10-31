@@ -97,7 +97,7 @@ var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
 
 /* Message text: emphasis (parseContent segments, absent without emphasis), quotes, mentions and links */
 function MessageText(p) {
-  var app = useApp();
+  var app = useAppApi();
   // Hidden style (plain): like BetterChatango, bold, italic and underline drop but strikethrough stays.
   var marks = p.plain ? ['s'] : EMPHASIS;
   function mention(s, key) {

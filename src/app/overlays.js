@@ -21,7 +21,7 @@ function useOverlays() {
     setToasts(function (list) { return list.concat([t]).slice(-4); });
   }, []);
   function dismissToast(id) { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }
-  var ui = {
+  var ui = useMemo(function () { return {
     toast: toast,
     confirm: setConfirm,
     // The full profile dialog covers the profile dialog: a profile opened from its links would stay hidden under it.
@@ -36,7 +36,7 @@ function useOverlays() {
     ban: function (name, gid, msg) { setBan({ name: name, gid: gid, msg: msg || null }); },
     openNav: function () { setNavOpen(true); },
     closeNav: function () { setNavOpen(false); }
-  };
+  }; }, []);
   return {
     toast: toast, ui: ui, toasts: toasts, dismissToast: dismissToast,
     navOpen: navOpen, setNavOpen: setNavOpen, palette: palette, setPalette: setPalette,

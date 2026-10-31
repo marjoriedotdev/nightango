@@ -58,6 +58,8 @@ function GroupView(p) {
   var measured = useMemo(function () {
     return LIVE ? liveBridge.measure(p.gid, typed, { replyId: replyId, editId: editId, quote: quoted, style: s.ownStyle }) : typed.length;
   }, [p.gid, typed, replyId, editId, quoted, s.ownStyle]);
+  // Same functions for every render: the message rows render again only when their message or its context changes.
+  var calls = useLatestCalls({ reply: cm.enter('reply'), quote: cm.enter('quote'), edit: edit, mention: mention, jump: jumpTo });
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
@@ -78,7 +80,7 @@ function GroupView(p) {
     media.onKeyDown(e);
     if (!e.defaultPrevented) mentions.onKeyDown(e);
   }
-  var closeMode = cm.close, reply = cm.enter('reply'), quote = cm.enter('quote');
+  var closeMode = cm.close;
   function edit(m) { cm.edit(m, m.editCount || 0); }
   function send(text) {
     if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
@@ -119,8 +121,13 @@ function GroupView(p) {
         prev = null; continue;
       }
     }
-    var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted);
-    items.push(h(MessageRow, { key: m.id, m: m, g: g, original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, highlight: log.targetId === m.id, onReply: reply, onQuote: quote, onEdit: edit, onMention: mention, onJump: jumpTo }));
+    var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted), a = userOf(s, m.author);
+    items.push(h(MessageRow, {
+      key: m.id, m: m, gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg,
+      role: roleOf(g, m.author), staff: staff, canBan: canBanMember(g, me, m.author), seeIps: !!rights.seeIps,
+      original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, highlight: log.targetId === m.id,
+      onReply: calls.reply, onQuote: calls.quote, onEdit: calls.edit, onMention: calls.mention, onJump: calls.jump
+    }));
     prev = m;
   }
   var older = !LIVE || q ? null

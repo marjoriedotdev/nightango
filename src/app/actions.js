@@ -645,5 +645,5 @@ function useActions(k) {
     actions.clearBanSearch = function (gid) { groupUpdate(update, gid, function (g) { g.live.banSearch = null; }); };
     actions.saveGroupSettings = function (gid, draft, base) { return saveLiveSettings(stateRef.current.groups[gid], draft, base || stateRef.current.groups[gid].settings); };
   }
-  return { actions: actions, uploads: uploads };
+  return { actions: useLatestCalls(actions), uploads: uploads };
 }

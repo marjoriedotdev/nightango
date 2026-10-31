@@ -1,6 +1,35 @@
 /* ---------- Context and UI primitives ---------- */
 var Ctx = React.createContext(null);
 function useApp() { return useContext(Ctx); }
+// The parts of the application context that stay the same object for the whole session.
+var ApiCtx = React.createContext(null);
+/**
+ * Returns the parts of the application context that never change: actions, ui, nav, update, drafts and the state store.
+ * A component that reads only them renders again for its own props and state only. Its state is the shown state at the time it is read, for handlers:
+ * a render takes what it shows from its props or useStatePart.
+ */
+function useAppApi() { return useContext(ApiCtx); }
+/**
+ * Returns a part of the shown state and renders again only when that part changes.
+ * @param {function(Object): *} part Reads the part: a value of the state, never an object built on each call.
+ */
+function useStatePart(part) {
+  var store = useAppApi().store;
+  return useSyncExternalStore(store.subscribe, function () { return part(store.shown()); });
+}
+/**
+ * Returns functions that keep their identity from one render to the next and call those of the latest render.
+ * @param {Object<string, Function>} fns Functions of this render, always the same keys.
+ */
+function useLatestCalls(fns) {
+  var latest = useRef(fns), calls = useRef(null);
+  latest.current = fns;
+  if (!calls.current) {
+    calls.current = {};
+    Object.keys(fns).forEach(function (k) { calls.current[k] = function () { return latest.current[k].apply(null, arguments); }; });
+  }
+  return calls.current;
+}
 
 /* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
 var LayerCtx = React.createContext(null);
@@ -434,7 +463,7 @@ function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + st
  * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Account name, shown name if it differs, group the card opens from, avatar size, presence and outline of its dot, avatar without the name, plain text for someone without an account.
  */
 function Person(p) {
-  var app = useApp(), label = p.label || p.name;
+  var app = useAppApi(), label = p.label || p.name;
   var avatar = h(T.Avatar, { name: p.name, size: p.size, status: p.status, ring: p.ring }), text = p.avatarOnly ? null : h('span', { className: 'namebtn' }, label);
   if (p.inert) return h('span', { className: 'person-tag' }, avatar, text);
   return h('button', { type: 'button', className: p.avatarOnly ? 'avatar-btn' : 'person-tag', 'aria-label': 'View ' + label + "'s profile", onClick: function () { app.ui.openProfile(p.name, p.gid || null); } }, avatar, text);

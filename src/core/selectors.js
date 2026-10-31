@@ -18,7 +18,9 @@ function groupRights(group, name) {
  * @param {string} name Target member.
  */
 function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) && name !== me && roleOf(group, name) !== 'owner'; }
-function userOf(state, name) { return state.users[name] || { status: 'offline', about: '', style: {} }; }
+// One object for every unknown member: the rows that take its style as a prop keep the same props.
+var UNKNOWN_USER = { status: 'offline', about: '', style: {} };
+function userOf(state, name) { return state.users[name] || UNKNOWN_USER; }
 /**
  * Tells whether a member's messages are hidden: ignored member or blocked member when the block also applies in groups.
  * @param {Object} state Application state.

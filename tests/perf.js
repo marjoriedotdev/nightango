@@ -8,8 +8,11 @@ const GROUPS = ['busy0', 'busy1', 'busy2', 'busy3'];
 // Messages of each group: the first three at the cap (THREAD_MAX), the last one below it, for a history page that stays.
 const SIZES = [500, 500, 500, 300];
 const MEMBERS = 350, AUTHORS = 120, FRIENDS = 40, CHATS = 30, STALE = 600;
+// Time budgets per operation, render included, about seven times what the operations take here: far below the copy of the whole state,
+// 400 ms per message of a burst and 15 ms per message of a history page.
+const MS_PER_OP = 40, MS_PER_HISTORY_OP = 8;
 // Components whose renders are counted, by name.
-const COUNTED = ['Root', 'MessageRow'];
+const COUNTED = ['Root', 'MessageRow', 'MemberRow', 'ChatRow'];
 
 const errors = [];
 const log = [];
@@ -169,7 +172,7 @@ const show = async t => { t.paint(); await nextTask(); };
   };
   step('a message in one group leaves the other groups, the users map and the messages it keeps shared', Object.values(shared).every(Boolean), shared);
 
-  /* A burst of operations within one animation frame: one update, one render */
+  /* A burst of operations within one animation frame: one update, one render, only the new rows */
   const BURST = 30;
   t.reset();
   let start = Date.now();
@@ -182,6 +185,8 @@ const show = async t => { t.paint(); await nextTask(); };
   await wait(50);
   const burst = { roots: t.count('Root'), rows: t.count('MessageRow'), shown: t.d.body.textContent.includes('Burst ' + (BURST - 1)), perOp };
   step('a burst of messages within one animation frame gives one render', burst.roots === 1 && burst.shown, burst);
+  step('a burst of messages renders only the new rows', burst.rows <= BURST + 2, burst);
+  step('a burst of messages stays within ' + MS_PER_OP + ' ms per operation', perOp < MS_PER_OP, burst);
 
   /* A history page arrives together: one update */
   t.reset();
@@ -194,16 +199,26 @@ const show = async t => { t.paint(); await nextTask(); };
   await wait(50);
   const s3 = t.state(), page3 = s3.groups.busy3.messages;
   const history = { roots: t.count('Root'), rows: t.count('MessageRow'), length: page3.length, sorted: page3.every((m, i) => !i || page3[i - 1].ts <= m.ts), shown: s3.groups.busy0 === s2.groups.busy0, users: s3.users === s2.users, perOp };
-  step('a history page applies in one update without touching the shown group', history.roots === 1 && history.length === 350 && history.sorted && history.shown && history.users, history);
+  step('a history page applies in one update without touching the shown group', history.roots === 1 && history.rows === 0 && history.length === 350 && history.sorted && history.shown && history.users, history);
+  step('a history page stays within ' + MS_PER_HISTORY_OP + ' ms per operation', perOp < MS_PER_HISTORY_OP, history);
 
-  /* Presence: one render for the burst */
+  /* Presence: no message row renders again */
   t.reset();
   const s4 = t.state();
   for (let k = 1; k <= 20; k++) { t.private('wloffline', ['m0x' + k, String(Math.floor(Date.now() / 1000) - 60)]); await nextTask(); }
   t.paint(); await wait(50);
   const s5 = t.state();
-  const presence = { roots: t.count('Root'), rows: t.count('MessageRow'), offline: s5.users.m0x1.status, groups: s5.groups === s4.groups };
-  step('a presence burst gives one render and leaves the groups shared', presence.roots === 1 && presence.offline === 'offline' && presence.groups, presence);
+  const presence = { roots: t.count('Root'), rows: t.count('MessageRow'), members: t.count('MemberRow'), offline: s5.users.m0x1.status, groups: s5.groups === s4.groups };
+  step('a presence burst re-renders neither message rows nor the other members', presence.roots === 1 && presence.rows === 0 && presence.members <= 20 && presence.offline === 'offline' && presence.groups, presence);
+
+  /* Conversation rows: a presence change renders only its row */
+  t.d.querySelectorAll('.tc-nav').forEach(el => { if (el.textContent.trim().startsWith('Private messages')) el.click(); });
+  await wait(50); t.paint(); await wait(50);
+  const chats = t.d.querySelectorAll('.convs .conv').length;
+  t.reset();
+  t.private('wlonline', ['c3']);
+  t.paint(); await wait(50);
+  step('a presence change renders only the row of its conversation', chats === CHATS && t.count('ChatRow') <= 1 && t.count('Root') === 1, { chats, rows: t.count('ChatRow'), roots: t.count('Root') });
 
   console.log(log.join('\n'));
   console.log('ERRORS:', errors.length ? '\n' + [...new Set(errors)].slice(0, 15).join('\n---\n') : 'none');

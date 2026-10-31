@@ -40,7 +40,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
    * Shows a route and marks the group or the PM it opens read.
    * @param {{view: string, id: ?string}} route Route to show.
    */
-  function nav(route) {
+  var nav = useCallback(function (route) {
     update(function (d) {
       var cur = d.route;
       // Going back to the message log does not jump again to the message opened from Mentions or the PM search.
@@ -56,7 +56,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       if (route.view === 'group' && route.id) liveBridge.focus(route.id);
       liveBridge.focusPm(route.view === 'dm' && route.id ? route.id : false);
     }
-  }
+  }, []);
   /**
    * Notifies an incoming event after its state update, as the notification preferences ask.
    * @param {string} kind Preference of the event: mentions, pm, friendOn or friendOff.
