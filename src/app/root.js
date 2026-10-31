@@ -1,9 +1,5 @@
 /* ---------- Root ---------- */
 var IDLE_DELAY = 3 * MIN;
-// Chatango pushes no presence for a correspondent who is neither a friend nor connected since the last private connection.
-var PRESENCE_REFRESH = 5 * MIN;
-// Names per presence request, the page size of BetterChatango's Meet people.
-var PRESENCE_MAX = 40;
 var RELEASES_URL = REPO_URL + '/releases/';
 
 /**
@@ -147,6 +143,7 @@ function Root(props) {
   useUpdateCheck(state.auth.loggedIn, toast);
   var local = useLocalStore(state), localRef = local.ref;
   var reconnection = useReconnection(stateRef, update);
+  var pms = useLivePms(store, localRef, pmArchive);
 
   function nav(route) {
     update(function (d) {
@@ -557,7 +554,6 @@ function Root(props) {
   var profilePending = useRef({}), msgBgPending = useRef({});
   // Name checked by New private message: its refusal shows in the dialog, not as a toast.
   var offlineCount = useRef(0);
-  var presenceAt = useRef(0);
   function lastMessageOf(g, name) {
     for (var i = g.messages.length - 1; i >= 0; i--) { var m = g.messages[i]; if (m.kind === 'msg' && m.author === name && m.unid) return m; }
     return null;
@@ -837,7 +833,7 @@ function Root(props) {
     };
     actions.dismissPmr = function () { update(function (d) { d.pmrDismissed = true; }); };
     actions.exportDms = function () { return liveBridge.exportPm(); };
-    actions.importDms = function (records) { return liveBridge.importPm(records).then(function (r) { loadPmHistory(true); return r; }); };
+    actions.importDms = function (records) { return liveBridge.importPm(records).then(function (r) { pms.loadHistory(true); return r; }); };
     actions.createGroup = function (name, title, desc, listed) {
       return liveBridge.createGroup({ name: name, title: title, description: desc, discovery: listed }).then(function () {
         actions.joinGroup(name);
@@ -900,43 +896,6 @@ function Root(props) {
       u.style = Object.assign({}, u.style, style);
       u.styleTs = Math.max(u.styleTs || 0, Date.now());
     });
-  }
-  /**
-   * Merges the BetterChatango private history into the conversations on each OK and after an import without duplicates.
-   * @param {boolean=} imported True after an import, which may have added entries older than the loaded ones.
-   */
-  function loadPmHistory(imported) {
-    liveBridge.pmHistory(100).then(function (hist) {
-      var names = Object.keys(hist).filter(function (t) { return t !== stateRef.current.me; });
-      update(function (d) {
-        if (!d.auth.loggedIn) return;
-        d.pmLoaded = true;
-        d.pmHistoryRev++;
-        names.forEach(function (t) {
-          ensureLiveUser(d, t, localRef.current);
-          var c = pmConversation(d, t, { closed: localRef.current.hidden.indexOf(t) >= 0 });
-          // Set on the first OK: on a reconnection, the last 100 entries say nothing about the older pages already loaded. An import, however, can add some.
-          if (c.olderMore == null || (imported && hist[t].more)) c.olderMore = hist[t].more;
-          mergePmHistory(c, hist[t].list, pmAuthor(d, localRef.current));
-        });
-      });
-      // The conversation open in front of the user becomes read, the others take the unreads from the archive.
-      names.forEach(function (t) { if (isDmInView(stateRef.current, t)) readPm(pmArchive.current, update, t); });
-      syncPmUnread(pmArchive.current, update, names.filter(function (t) { return !isDmInView(stateRef.current, t); }));
-    });
-  }
-  /**
-   * Asks again for the presence of the listed correspondents who are not friends.
-   * @param {boolean} ifStale Only when the last request is older than PRESENCE_REFRESH.
-   */
-  function refreshPmPresence(ifStale) {
-    var s0 = stateRef.current;
-    // Before the friend list, a friend would get the approximate last online time of presence instead of the exact one of wl.
-    if (!s0.pmLoaded || !s0.friendsLoaded || (ifStale && Date.now() - presenceAt.current < PRESENCE_REFRESH)) return;
-    // The shown conversation follows its presence through connect, whose last online time is exact.
-    var shown = s0.route.view === 'dm' ? s0.route.id : null;
-    var names = listedDms(s0).filter(function (n) { return n !== s0.me && n !== shown && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
-    if (names.length && liveBridge.refreshPresence(names)) presenceAt.current = Date.now();
   }
 
 
@@ -1107,7 +1066,7 @@ function Root(props) {
       case 'session': update(function (d) {
         if (!d.session || SESSION_RANK[op.reason] >= SESSION_RANK[d.session.reason]) d.session = { reason: op.reason, attempts: 0 };
       }); break;
-      case 'visible': if (navigator.onLine) reconnection.reconnectClosed(); refreshPmPresence(true); break;
+      case 'visible': if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
       case 'online':
         reconnection.reconnectClosed();
         update(function (d) {
@@ -1151,7 +1110,7 @@ function Root(props) {
             update(function (d) { d.pmUnsaved = true; });
             if (JOURNAL) JOURNAL.add('app', 'Private message history is not available in this browser');
           }
-          loadPmHistory();
+          pms.loadHistory();
         });
         actions.checkPmr();
         break;
@@ -1204,12 +1163,6 @@ function Root(props) {
     }
   }
   useBridgeOps(handleLiveOp, state.auth.loggedIn);
-  useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);
-  useEffect(function () {
-    if (!LIVE || !state.auth.loggedIn) return;
-    var timer = setInterval(function () { if (document.visibilityState === 'visible') refreshPmPresence(true); }, MIN);
-    return function () { clearInterval(timer); };
-  }, [state.auth.loggedIn]);
 
   var app = { state: state, update: update, nav: nav, actions: actions, ui: o.ui, navOpen: o.navOpen, uploads: uploads, drafts: drafts, theme: resolvedTheme(prefs, VIEWER_THEME) };
 

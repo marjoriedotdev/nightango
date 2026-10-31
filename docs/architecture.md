@@ -52,7 +52,8 @@ src/
     state.js         persisted preferences
     live-state.js    live state built for Root: world at login, group, ban lists, session loss, account data kept in this browser (useLocalStore),
                      members and groups created on the fly with that data, presence, styles, group edits, group settings read from Chatango
-    pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database)
+    pm.js            PMs: reception, private history merge, unreads read from the archive (BetterChatango database, or memory in the prototype and without a database),
+                     useLivePms: private history loaded into the conversations in live and presence of their correspondents
     overlays.js      useOverlays: toasts, dialogs and navigation drawer, opened by the views through ui
     inbox.js         Mentions page log
     reconnection.js  useReconnection: reconnection of the groups and the private connection, on demand and automatic after a loss
