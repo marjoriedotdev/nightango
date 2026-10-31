@@ -647,6 +647,19 @@ function Root(props) {
   function setUpload(to, name) {
     setUploads(function (u) { var o = Object.assign({}, u); if (name) o[uploadKey(to)] = name; else delete o[uploadKey(to)]; return o; });
   }
+  /**
+   * Deletes the conversations whose private history BetterChatango cleared in this browser and keeps the others.
+   * @param {string[]} names Correspondents.
+   * @param {string} failure Toast shown if a history was not cleared, since its conversation would come back on reload.
+   */
+  function deleteLiveDms(names, failure) {
+    // Without a history database, BetterChatango keeps nothing in this browser that could come back.
+    var unsaved = stateRef.current.pmUnsaved;
+    var cleared = names.filter(function (n) { return liveBridge.clearPmHistory(n) || unsaved; });
+    cleared.forEach(function (n) { actions.closeDm(n); });
+    update(function (d) { cleared.forEach(function (n) { d.dms[n].messages = []; d.dms[n].olderMore = false; }); });
+    if (cleared.length < names.length) toast(failure);
+  }
 
   if (LIVE) {
     actions.logout = function () { location.reload(); };
@@ -819,11 +832,7 @@ function Root(props) {
       update(function (d) { ensureLiveUser(d, name)[key] = !was; });
       toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
-    actions.deleteDm = function (name) {
-      liveBridge.clearPmHistory(name);
-      actions.closeDm(name);
-      update(function (d) { d.dms[name].messages = []; d.dms[name].olderMore = false; });
-    };
+    actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
     actions.removeDmMessage = function (name, m) {
       liveBridge.removePm(name, m).then(function (ok) {
         if (!ok) { toast('This message could not be removed. Reload the page and try again.'); return; }
@@ -831,10 +840,7 @@ function Root(props) {
         syncPmUnread(pmArchive.current, update, [name]);
       });
     };
-    actions.deleteAllDms = function () {
-      Object.keys(stateRef.current.dms).forEach(function (n) { liveBridge.clearPmHistory(n); actions.closeDm(n); });
-      update(function (d) { Object.keys(d.dms).forEach(function (n) { d.dms[n].messages = []; d.dms[n].olderMore = false; }); });
-    };
+    actions.deleteAllDms = function () { deleteLiveDms(Object.keys(stateRef.current.dms), 'BetterChatango could not delete your saved conversations. Try again in a moment.'); };
     actions.checkPmr = function () {
       liveBridge.pmrStatus().then(function (st) { update(function (d) { if (d.auth.loggedIn) d.pmrStatus = st; }); });
     };

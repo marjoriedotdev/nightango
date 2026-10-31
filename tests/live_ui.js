@@ -1034,6 +1034,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !$('.dialog') && !hiddenStored().includes('dave'));
   const reopened = { hidden: hiddenStored().includes('dave'), listed: listed('dave'), history: !!$('.thread') && $('.thread').textContent.includes('Hello & welcome') };
   step('close keeps history and reopens', !closed.listed && !closed.cleared && closed.hidden && back && !reopened.hidden && reopened.listed && reopened.history, { closed, back, reopened });
+  // Like BetterChatango's clearHistory before the private connection opens: client.database.pm is not set yet.
+  const clearHistory = C.private.clearHistory;
+  C.private.clearHistory = () => { throw new w.TypeError("Cannot read properties of undefined (reading 'transaction')"); };
+  const daveShown = () => (($('.thread') || {}).textContent || '').includes('Hello & welcome');
+  click($('.thread button[aria-label="Conversation options"]')); await wait(30);
+  click(menuItem('Delete conversation')); await wait(30);
+  click(byText('.dialog-foot button', 'Delete')); await wait(50);
+  const keptOne = { listed: listed('dave'), shown: daveShown(), toast: !!byText('.toast', 'BetterChatango could not delete this conversation. Try again in a moment.') };
+  click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
+  click(byText('.tc-nav', 'Privacy')); await until(() => !!byText('button', 'Delete all'));
+  click(byText('button', 'Delete all')); await wait(30);
+  click(byText('.dialog-foot button', 'Delete all')); await wait(50);
+  const keptAll = { toast: !!byText('.toast', 'BetterChatango could not delete your saved conversations. Try again in a moment.') };
+  click(byText('.tc-nav', 'Back to chat')); await until(daveShown);
+  Object.assign(keptAll, { dave: listed('dave'), fay: listed('fay'), shown: daveShown() });
+  C.private.clearHistory = clearHistory;
+  step('delete and delete all keep a conversation whose BetterChatango history was not cleared, and say so',
+    keptOne.listed && keptOne.shown && keptOne.toast && keptAll.toast && keptAll.dave && keptAll.fay && keptAll.shown, { keptOne, keptAll });
   click($('.thread button[aria-label="Conversation options"]')); await wait(30);
   click(menuItem('Delete conversation')); await wait(30);
   click(byText('.dialog-foot button', 'Delete')); await wait(50);
