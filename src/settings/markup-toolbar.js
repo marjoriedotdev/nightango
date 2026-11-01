@@ -6,6 +6,8 @@ var TEXT_SIZES = [['Small', 11], ['Large', 18], ['Huge', 24]];
 var TEXT_ALIGNMENTS = [['Left', 'left'], ['Center', 'center'], ['Right', 'right']];
 // No Ctrl+K for the link: it opens the command palette across the whole application.
 var MARKUP_SHORTCUTS = { b: 'b', i: 'i', u: 'u' };
+// Font names written in face="…": installed font names, in the order of FONT_FACES, since the Chatango names are not fonts.
+var MARKUP_FACES = ['Arial', 'Comic Sans MS', 'Georgia', 'Lucida Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times New Roman', 'Courier New'];
 // Like RichText, only http(s) links are shown. With no quote or angle bracket, the URL cannot escape its attribute.
 var MARKUP_URL = /^https?:\/\/[^\s"<>]+$/i;
 
@@ -151,7 +153,7 @@ function useMarkupToolbar(inputRef, fieldId, disabled) {
     button('underline', 'Underline', function () { tag('u'); }, 'Control+U Meta+U'),
     sep,
     button('palette', 'Text color', function () { setDialog('color'); }),
-    menu('type', 'Font', FONT_FACES.map(function (f) { return { label: h('span', { style: { fontFamily: FONT_STACKS[f] } }, f), onSelect: function () { font('face', f); } }; })),
+    menu('type', 'Font', MARKUP_FACES.map(function (f, i) { return { label: h('span', { style: { fontFamily: FONT_STACKS[FONT_FACES[i]] } }, f), onSelect: function () { font('face', f); } }; })),
     menu('text-size', 'Text size', TEXT_SIZES.map(function (s) { return { label: s[0], onSelect: function () { font('size', String(s[1])); } }; })),
     menu('align-left', 'Alignment', TEXT_ALIGNMENTS.map(function (a) { return { label: a[0], icon: 'align-' + a[1], onSelect: function () { wrap('<p align="' + a[1] + '">', '</p>'); } }; })),
     sep,

@@ -60,8 +60,8 @@ function visitorPage(items, get) {
 var GROUP_FLAG = { NOANONS: 4, NOCOUNTER: 16, NOIMAGES: 32, NOLINKS: 64, NOVIDEOS: 128, CHANNELSDISABLED: 8192, NLP_SINGLEMSG: 16384, NLP_MSGQUEUE: 32768, BROADCAST_MODE: 65536, IS_CLOSED: 262144, NLP_NGRAM: 2097152, NO_PROXIES: 4194304 };
 var CHANNEL_FLAG = { red: 256, blue: 2048, mod: 32768 };
 var MSG_FLAG = { PREMIUM: 4, BG_ON: 8 };
-// Chatango fonts in the order of their number (0 to 8), the one used in the <f x…="n"> and <g x…="n"> tags.
-var FONT_FACES = ['Arial', 'Comic Sans MS', 'Georgia', 'Lucida Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times New Roman', 'Courier New'];
+// Chatango fonts under their Chatango name, in the order of their number (0 to 8), the one used in the <f x…="n"> and <g x…="n"> tags.
+var FONT_FACES = ['Arial', 'Comic', 'Georgia', 'Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times', 'Typewriter'];
 
 // BetterChatango emoticons in the order of client.html: sm:// tag name, data-entity shortcuts (the first is the one BetterChatango inserts), system emoji.
 var EMOTICONS = [
