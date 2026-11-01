@@ -29,13 +29,13 @@ function AppearancePage() {
   }
   var custom = prefs.customThemes || [];
   var palette = accents.some(function (a) { return a[1] === prefs.accent; });
-  return h(Page, { title: 'Appearance', lede: 'Changes apply right away and are saved on this device.' },
+  return h(Page, { title: 'Appearance', lede: 'Saved on this device.' },
     h(T.SettingsSection, { title: 'Theme', padded: true },
       h('div', { className: 'grid3', role: 'radiogroup', 'aria-label': 'Theme' }, themes.map(function (t) {
         return h('button', { key: t[0], type: 'button', role: 'radio', className: 'pick', 'aria-checked': String(prefs.theme === t[0]), onClick: function () { pr.set('theme', t[0]); } },
           thumb(t[2]), h('span', { className: 'pick-title' }, t[1]));
       }))),
-    h(T.SettingsSection, { title: 'Accent color', description: 'Used for buttons, mentions and unread markers. Nightango adjusts text on the accent so it stays readable.', padded: true },
+    h(T.SettingsSection, { title: 'Accent color', description: 'Buttons, mentions and unread markers. Text on it is adjusted for contrast.', padded: true },
       h('div', { className: 'swatches', role: 'radiogroup', 'aria-label': 'Accent color' },
         accents.map(function (a) {
           var on = prefs.accent === a[1];
@@ -46,16 +46,16 @@ function AppearancePage() {
         h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } },
           h('input', { type: 'color', className: 'color-in', value: prefs.accent, 'aria-label': 'Custom accent color', onChange: function (e) { pr.set('accent', e.target.value); }, style: !palette ? { boxShadow: '0 0 0 2px var(--bg), 0 0 0 4px var(--text)' } : null }),
           'Custom'))),
-    h(T.SettingsSection, { title: 'Sky', description: "Tonight's moon is computed on this device. Nothing is requested." },
+    h(T.SettingsSection, { title: 'Sky', description: 'Computed on this device, without a network request.' },
       h(T.SettingRow, {
-        title: 'Moon', description: 'The moon next to Nightango. Day dividers keep the moon of each night.',
+        title: 'Moon', description: "Next to the Nightango name. Day dividers show each night's moon.",
         control: h('select', { className: 'tc-input', style: { width: 'auto' }, value: String(prefs.sky.moon), onChange: function (e) { pr.set('sky.moon', e.target.value === 'auto' ? 'auto' : +e.target.value); } },
           h('option', { value: 'auto' }, "Auto (tonight's moon)"),
           T.moonNames.map(function (n, i) { return h('option', { key: i, value: String(i) }, n); }))
       }),
-      h(T.SettingRow, { title: 'Seasonal decorations', description: 'From October 24 to November 2: a violet night, a harvest moon, bats, cobwebs and costumes on avatars. Only you see them.', control: pr.sw('sky.season') }),
-      h(T.SettingRow, { title: 'Calm sky', description: 'Stops the clouds and the seasonal decorations moving.', control: pr.sw('sky.calm') }),
-      h(T.SettingRow, { title: 'Southern hemisphere', description: 'Draws the moon as it looks south of the equator. The phase is the same everywhere.', control: pr.sw('sky.south') })),
+      h(T.SettingRow, { title: 'Seasonal decorations', description: 'Halloween, October 24 to November 2. Only you see them.', control: pr.sw('sky.season') }),
+      h(T.SettingRow, { title: 'Calm sky', description: 'Stops clouds and seasonal decorations from moving.', control: pr.sw('sky.calm') }),
+      h(T.SettingRow, { title: 'Southern hemisphere', description: 'Draws the moon as seen south of the equator.', control: pr.sw('sky.south') })),
     h(T.SettingsSection, { title: 'Messages' },
       h(T.SettingRow, { asLabel: false, title: 'Density', description: 'Compact hides avatars and puts the time before the name.', control: h(T.SegmentedControl, { label: 'Density', value: prefs.density, onChange: function (v) { pr.set('density', v); }, options: [{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }] }) }),
       h(T.SettingRow, {
@@ -66,19 +66,19 @@ function AppearancePage() {
           h('span', { className: 'tnum', style: { width: 38, textAlign: 'right', fontSize: 12.5, color: 'var(--text-2)' } }, prefs.textSize + 'px'))
       }),
       h(T.SettingRow, { title: '24-hour time', description: 'Shows 14:05 instead of 2:05 PM.', control: pr.sw('h24') }),
-      h(T.SettingRow, { title: 'Show group announcements', description: 'Announcements staff post on a timer, and the banner at the top of a group.', control: pr.sw('announcements') }),
+      h(T.SettingRow, { title: 'Show group announcements', description: 'Timed staff announcements and the banner at the top of a group.', control: pr.sw('announcements') }),
       markdown === null ? null : h(T.SettingRow, {
         title: 'Format Markdown when sending', description: '*text* sends as italic, **text** as bold and __text__ as underlined, in groups and private messages.',
         control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveBetterChatangoSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
       })),
-    h(T.SettingsSection, { title: 'Chatango styles', description: 'Members can style their name, messages and mini profile on Chatango. Nightango corrects colors that would be hard to read.' },
+    h(T.SettingsSection, { title: 'Chatango styles', description: 'Styles members set on Chatango. Hard-to-read colors are corrected.' },
       h(T.SettingRow, { title: 'Name colors', description: 'The color each member picked for their username.', control: pr.sw('styles.names') }),
       h(T.SettingRow, { title: 'Fonts and text colors', description: 'Custom typefaces, text sizes and text colors in messages.', control: pr.sw('styles.fonts') }),
-      h(T.SettingRow, { title: 'Same text size for everyone', description: 'Messages use your text size, whatever size members picked. Mini profiles keep their sizes.', control: pr.sw('styles.sameSize') }),
+      h(T.SettingRow, { title: 'Same text size for everyone', description: 'Messages use your text size. Mini profiles keep theirs.', control: pr.sw('styles.sameSize') }),
       h(T.SettingRow, { title: 'Message backgrounds', description: 'Background colors and images set by Premium members.', control: pr.sw('styles.backgrounds') }),
       h(T.SettingRow, { title: 'Profile backgrounds', description: 'Colors and images Premium members set on their mini profile.', control: pr.sw('styles.profileBackgrounds') })),
     h(T.SettingsSection, {
-      title: 'Imported themes', description: 'Theme files (.json) exported from the old BetterChatango theme editor. Nightango uses their accent color.',
+      title: 'Imported themes', description: 'JSON files from the old BetterChatango theme editor. Only the accent color is used.',
       headerAside: h(JsonFileButton, { icon: 'upload', onFile: importFile }, 'Import file')
     },
       custom.length ? custom.map(function (t) {

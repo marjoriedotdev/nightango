@@ -10,7 +10,7 @@ function GSAnnouncementLive(p) {
       h('div', { className: 'tc-section-pad', style: { paddingTop: 14, borderTop: '1px solid var(--divider)' } },
         h(T.TextField, { id: 'ann-text', label: 'Text', multiline: true, rows: 3, maxLength: 500, value: a.text, disabled: !canEdit, labelAside: h('span', { className: 'tc-msg-time' }, a.text.length + ' / 500'), onChange: function (e) { set('text', e.target.value); } })),
       h(T.SettingRow, { asLabel: false, title: 'Post it every', control: liveSelect('ann-int', 'Repeat interval', a.interval || 15, options, function (v) { set('interval', v); }, !canEdit) }),
-      h(T.SettingRow, { title: 'Broadcast mode', description: 'Only staff with the broadcast permission can post. Use it for events.', control: h(T.Switch, { checked: !!a.broadcast, disabled: !canBroadcast, onChange: function (e) { set('broadcast', e.target.checked); } }) })),
+      h(T.SettingRow, { title: 'Broadcast mode', description: 'Only staff with the broadcast permission can post.', control: h(T.Switch, { checked: !!a.broadcast, disabled: !canBroadcast, onChange: function (e) { set('broadcast', e.target.checked); } }) })),
     a.text ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } }, h('h2', { className: 'side-label' }, 'Preview'), h(T.Banner, { title: 'Announcement' }, a.text)) : null);
 }
 
@@ -18,7 +18,7 @@ function GSAutoModLive(p) {
   var am = p.draft.automod, owner = p.myRole === 'owner';
   var canNlp = owner || p.perms.automod, canBw = owner || p.perms.bannedWords, canRes = owner || p.perms.editRestrictions;
   var slowOptions = withCurrent([[0, 'Off'], [5, '5 seconds'], [10, '10 seconds'], [30, '30 seconds'], [60, '1 minute']], am.slowMode, function (v) { return plural(v, 'second', 'seconds'); });
-  return h(Page, { title: 'AutoMod', lede: 'Filters Chatango applies before messages reach #' + p.g.id + '. Staff with the bypass permission are not filtered.' },
+  return h(Page, { title: 'AutoMod', lede: 'Applied by Chatango before messages reach #' + p.g.id + '. Staff with the bypass permission are exempt.' },
     h(AutoModFilters, { filters: am.filters, disabled: !canNlp, onChange: function (k, v) { p.edit(function (d) { d.automod.filters[k] = v; }); } }),
     h(T.SettingsSection, { title: 'Who can post' },
       h(ProxiesRow, { on: am.proxies, disabled: !canRes, onChange: function (v) { p.edit(function (d) { d.automod.proxies = v; }); } }),

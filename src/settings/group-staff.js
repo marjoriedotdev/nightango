@@ -23,7 +23,7 @@ function GSStaff(p) {
   function remove(n) { p.edit(function (d) { delete d.modFlags[n]; delete d.staff[n]; }); }
   var perms = sel ? flagsToPerms(draft.modFlags[sel]) : null;
   var colStyle = { display: 'flex', flexDirection: 'column', lineHeight: 1.3 };
-  return h(Page, { title: 'Staff and roles', lede: 'Chatango sets permissions for each moderator. Moderators who can change group settings are shown as admins.', wide: true },
+  return h(Page, { title: 'Staff and roles', lede: 'Chatango sets permissions per moderator. Those who can change group settings show as admins.', wide: true },
     canEdit ? null : h(T.Banner, { icon: 'lock' }, 'Only the owner and moderators allowed to manage moderators can change staff.'),
     h('div', { className: 'split' },
       h('section', { 'aria-label': 'Staff', className: 'tc-section', style: { flex: '1 1 240px', alignSelf: 'flex-start' } },

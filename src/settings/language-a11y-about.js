@@ -1,7 +1,7 @@
 function AccessibilityPage() {
   var app = useApp(), pr = usePref();
   var keys = [['Ctrl K', 'Search or jump to a group, person or setting'], ['Enter', 'Send the message'], ['Shift Enter', 'New line in the message'], ['Esc', 'Cancel a reply, close a menu or a dialog'], ['Tab', 'Move between controls. Focus is always visible.']];
-  return h(Page, { title: 'Accessibility', lede: 'Nightango follows your system settings for motion and contrast. These options add to them.' },
+  return h(Page, { title: 'Accessibility', lede: 'Your system motion and contrast settings apply. These add to them.' },
     h(T.SettingsSection, { title: 'Display' },
       h(T.SettingRow, { title: 'Reduce motion', description: 'Turns off transitions.', control: pr.sw('a11y.reduceMotion') }),
       h(T.SettingRow, { title: 'Always underline links', description: 'Links in messages are underlined, not only colored.', control: pr.sw('a11y.underlineLinks') }),
@@ -49,7 +49,7 @@ function DiagnosticsPage() {
   function copy() { copyText(journalText(list), function (ok) { app.ui.toast(ok ? 'Log copied.' : 'The log could not be copied. Download it instead.'); }); }
   function download() { var d = new Date(); downloadFile('torch-skin-log-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.txt', journalText(list), 'text/plain'); }
   function clear() { app.ui.confirm({ title: 'Clear the log?', body: 'Events recorded for this account are deleted from this browser.', confirmLabel: 'Clear log', danger: true, onConfirm: JOURNAL.clear }); }
-  return h(Page, { title: 'Diagnostics', lede: 'Connection and page events recorded by Nightango, to find out why a group or your private messages disconnect.' },
+  return h(Page, { title: 'Diagnostics', lede: 'Connection and page events, to trace why a group or private messages disconnect.' },
     h(T.Banner, { icon: 'lock' }, 'The log stays in this browser and is never sent. It holds no password and no message text, but it lists the groups you visited. To share it, copy it into a GitHub issue. Issues are public, so paste only what you want everyone to see.'),
     h(T.SettingsSection, {
       title: 'Log', description: plural(list.length, 'event', 'events') + ', newest first. Nightango keeps the latest ' + JOURNAL.limit.toLocaleString('en-US') + ' for this account' + (list.length > JOURNAL_SHOWN ? ' and shows ' + JOURNAL_SHOWN + '. Copy the log to see them all.' : '.'),
@@ -69,11 +69,11 @@ function DiagnosticsPage() {
 
 function AboutPage() {
   var app = useApp(), pr = usePref();
-  return h(Page, { title: 'About Nightango', lede: 'A skin for BetterChatango, the free, open-source web client for Chatango.' },
+  return h(Page, { title: 'About Nightango', lede: 'A skin for BetterChatango, an open-source Chatango client.' },
     h(T.SettingsSection, { title: 'Version', padded: true }, h('span', { className: 'mono' }, APP_VERSION)),
-    h(T.SettingsSection, { title: 'Open source', description: 'Nightango is released under the MIT license. Report a problem or suggest a change on GitHub.', padded: true },
+    h(T.SettingsSection, { title: 'Open source', description: 'MIT license. Report problems and suggest changes on GitHub.', padded: true },
       h('a', { href: REPO_URL, target: '_blank', rel: 'noopener noreferrer' }, 'Nightango source code and issue tracker')),
-    h(T.SettingsSection, { title: 'Built on BetterChatango', description: 'BetterChatango is made by Vissle and released under the MIT license.', padded: true },
+    h(T.SettingsSection, { title: 'Built on BetterChatango', description: 'By Vissle, under the MIT license.', padded: true },
       h('a', { href: 'https://github.com/Vissle-Drissle/Torch-Client', target: '_blank', rel: 'noopener noreferrer' }, 'BetterChatango source code and issue tracker')),
     h(T.SettingsSection, { title: 'Independent project', description: 'Nightango is not affiliated with, endorsed by or sponsored by BetterChatango or Chatango.' }),
     LIVE ? h(T.Banner, { icon: 'info' }, 'Test build. Nightango runs on top of BetterChatango on st.chatango.com. BetterChatango handles sign-in and the Chatango connection; Nightango never sees your password.') : null,

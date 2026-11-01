@@ -19,17 +19,17 @@ function GSOverview(p) {
 function GSAnnouncement(p) {
   var a = p.draft.announcement;
   function set(k, v) { p.edit(function (d) { d.announcement[k] = v; }); }
-  return h(Page, { title: 'Announcement', lede: 'A pinned notice shown above the conversation. Members can dismiss it for themselves.' },
+  return h(Page, { title: 'Announcement', lede: 'Pinned above the conversation. Each member can dismiss it.' },
     h(T.SettingsSection, null,
       h(T.SettingRow, { title: 'Show the announcement', control: h(T.Switch, { checked: a.enabled, onChange: function (e) { set('enabled', e.target.checked); } }) }),
       h('div', { className: 'tc-section-pad', style: { paddingTop: 14, borderTop: '1px solid var(--divider)' } },
         h(T.TextField, { id: 'ann-text', label: 'Text', multiline: true, rows: 3, maxLength: 500, value: a.text, labelAside: h('span', { className: 'tc-msg-time' }, a.text.length + ' / 500'), onChange: function (e) { set('text', e.target.value); } })),
       h(T.SettingRow, {
-        asLabel: false, title: 'Post it in the chat every', description: 'Only when more than 5 messages were sent since the last time.',
+        asLabel: false, title: 'Post it in the chat every', description: 'Only if more than 5 messages were sent since the last post.',
         control: h('select', { className: 'tc-input', style: { width: 'auto' }, 'aria-label': 'Repeat interval', value: a.interval, onChange: function (e) { set('interval', +e.target.value); } },
           [[0, 'Never'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour']].map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); }))
       }),
-      h(T.SettingRow, { title: 'Broadcast mode', description: 'Only staff with the broadcast permission can post. Use it for events.', control: h(T.Switch, { checked: a.broadcast, onChange: function (e) { set('broadcast', e.target.checked); } }) })),
+      h(T.SettingRow, { title: 'Broadcast mode', description: 'Only staff with the broadcast permission can post.', control: h(T.Switch, { checked: a.broadcast, onChange: function (e) { set('broadcast', e.target.checked); } }) })),
     a.text ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } }, h('h2', { className: 'side-label' }, 'Preview'), h(T.Banner, { title: 'Announcement' }, a.text)) : null);
 }
 
@@ -41,7 +41,7 @@ function AutoModFilters(p) {
   var f = p.filters;
   return h(T.SettingsSection, { title: 'Message filters' },
     h(T.SettingRow, {
-      asLabel: false, title: 'Nonsense detection', description: 'Hides keyboard mashing and random characters. Advanced also catches subtler nonsense.',
+      asLabel: false, title: 'Nonsense detection', description: 'Hides keyboard mashing and random characters. Advanced is stricter.',
       control: h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
         h('select', { className: 'tc-input', style: { width: 'auto', height: 32 }, 'aria-label': 'Nonsense detection sensitivity', disabled: p.disabled || !f.nonsense, value: f.nonsenseMode, onChange: function (e) { p.onChange('nonsenseMode', e.target.value); } }, h('option', null, 'Basic'), h('option', null, 'Advanced')),
         h(T.Switch, { label: 'Nonsense detection', checked: !!f.nonsense, disabled: p.disabled, onChange: function (e) { p.onChange('nonsense', e.target.checked); } }))
@@ -59,7 +59,7 @@ function ProxiesRow(p) {
 
 function GSAutoMod(p) {
   var am = p.draft.automod, canEdit = p.manage || p.perms.automod;
-  return h(Page, { title: 'AutoMod', lede: 'Filters messages before they reach the group. Staff whose role includes Bypass AutoMod are never filtered.' },
+  return h(Page, { title: 'AutoMod', lede: 'Filters messages before they reach the group. Staff with Bypass AutoMod are exempt.' },
     !canEdit ? h(T.Banner, { icon: 'lock' }, 'Your role can view AutoMod but not change it.') : null,
     h(AutoModFilters, { filters: am.filters, disabled: !canEdit, onChange: function (k, v) { p.edit(function (d) { d.automod.filters[k] = v; }); } }),
     h(T.SettingsSection, { title: 'Who can post' },

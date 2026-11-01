@@ -103,7 +103,7 @@ function ProfilePageLive() {
   var preview = draft.style ? miniStyleOf(s.prefs, { miniStyle: miniStyleOfForm(draft.style) }, app.theme) : miniStyleOf(s.prefs, me, app.theme);
   var locked = !base.loaded || saving;
   var bioMarkup = useMarkupToolbar(bioInput, 'pf-bio'), fullMarkup = useMarkupToolbar(fullInput, 'pf-full', locked || draft.full === null);
-  return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only BetterChatango users.', wide: true },
+  return h(Page, { title: 'Profile', lede: 'Your Chatango profile. Everyone on Chatango sees it.', wide: true },
     base.loaded ? null : h(T.Banner, { tone: 'warning', icon: 'info', action: h(T.Button, { size: 'sm', onClick: reload }, 'Try again') }, "BetterChatango hasn't loaded your profile yet. Saving stays off so nothing gets erased."),
     h('div', { className: 'split' },
       h('div', { className: 'grow' },
@@ -126,7 +126,7 @@ function ProfilePageLive() {
             h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, inputRef: bioInput, toolbar: bioMarkup.toolbar, onKeyDown: bioMarkup.onKeyDown, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }))),
         h(MiniBackgroundSection, { style: draft.style, failed: me.profileFailed, locked: locked, uploading: uploading, imageErr: imageErr, onChange: setStyle, onUpload: function () { bannerInput.current.click(); } }),
         h('input', { ref: bannerInput, type: 'file', accept: BANNER_TYPES, hidden: true, onChange: pickBanner }),
-        h(T.SettingsSection, { title: 'Full profile', description: 'Your page on chatango.com, written in HTML. Members open it from your mini profile.', padded: true },
+        h(T.SettingsSection, { title: 'Full profile', description: 'HTML page on chatango.com, opened from your mini profile.', padded: true },
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },
             h('div', null, h(T.SegmentedControl, { label: 'Full profile view', value: fullView, options: FULL_PROFILE_VIEWS, onChange: setFullView })),
             draft.full === null ? h('div', { className: 'btnrow', style: { alignItems: 'center' } },
@@ -158,7 +158,7 @@ function ProfilePageLive() {
  */
 function MiniBackgroundSection(p) {
   var st = p.style;
-  return h(T.SettingsSection, { title: 'Mini profile background', description: 'Colors and image of your mini profile. Chatango shows them to everyone while you have Premium.', padded: true },
+  return h(T.SettingsSection, { title: 'Mini profile background', description: 'Everyone sees them while you have Premium.', padded: true },
     st === null ? h('span', { className: 'tc-hint' }, p.failed ? 'Chatango did not return your mini profile. Reload the page to try again.' : 'Loading your mini profile from Chatango.')
       : st === false ? h('p', { className: 'muted', style: { margin: 0 } }, 'Mini profile backgrounds need Chatango Premium.')
         : h('fieldset', { disabled: p.locked, style: { border: 0, margin: 0, padding: 0, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 } },
