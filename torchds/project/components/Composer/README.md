@@ -2,7 +2,7 @@
 
 The message input with reply or edit context, optional tools and send button.
 
-Provide `placeholder` ("Message #community", "Message sable") and `onSend(text)`. Enter sends, Shift+Enter adds a line. A click anywhere in the composer outside its controls focuses the input.
+Provide `placeholder` ("Message #community", "Message sable") and `onSend(text)`. Enter sends, Shift+Enter adds a line. On a touch screen (`pointer: coarse`), Enter adds a line and only Send sends. A click anywhere in the composer outside its controls focuses the input.
 
 - `context` shows the message the send relates to, above the input: `{icon, verb, author, text, cancelLabel}`, such as `{icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply'}` or `{icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit'}`. `note` adds a line under it, with the `info` icon, that also describes the input: "Only visible to Nightango and BetterChatango users." A new context focuses the input with the cursor at the end. Escape and the cancel button call `onCancelContext`.
 - `status` shows a send in progress above the input, with a spinner and no cancel button: "Uploading cat.png".

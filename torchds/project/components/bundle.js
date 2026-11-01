@@ -428,7 +428,8 @@
         onKeyDown: function (e) {
           if (props.onKeyDown) props.onKeyDown(e);
           if (e.defaultPrevented) return;
-          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
+          // On a touch screen the keyboard has no Shift+Enter: Enter adds a line and Send sends.
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia('(pointer: coarse)').matches) { e.preventDefault(); send(); }
           if (e.key === 'Escape' && ctx && props.onCancelContext) props.onCancelContext();
         }
       }),
