@@ -8,7 +8,7 @@ function ProfilePage() {
   function set(k, v) { setDraft(function (d) { var n = JSON.parse(JSON.stringify(d)); setIn(n, k, v); return n; }); }
   var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
   var meta = [draft.age, genderShort(draft.gender), draft.location].filter(Boolean).join(' · ');
-  return h(Page, { title: 'Profile', lede: 'This is your Chatango profile. Everyone on Chatango sees it, not only BetterChatango users.', wide: true },
+  return h(Page, { title: 'Profile', lede: 'Your Chatango profile. Everyone on Chatango sees it.', wide: true },
     h('div', { className: 'split' },
       h('div', { className: 'grow' },
         h(T.SettingsSection, { title: 'About you', padded: true },
