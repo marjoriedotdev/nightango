@@ -44,10 +44,10 @@ function canEditGroupMessage(m, me) {
 /**
  * Group message row with its toolbar and its action menu.
  * It reads the state only through its props: a change that leaves them alone, a presence for example, does not render it again.
- * @param {{m: Object, gid: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, ignored: boolean, msgBg: (Object|null|undefined),
+ * @param {{m: Object, gid: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, ignored: boolean, msgBg: (Object|null|undefined), avatarV: (number|undefined),
  *   role: ?string, staff: boolean, canBan: boolean, seeIps: boolean, original: ?Object, continued: boolean, highlight: boolean,
  *   onReply: Function, onQuote: Function, onEdit: Function, onMention: Function, onJump: Function}} p Message, group, signed-in user, preferences,
- *   resolved theme, author's style, hidden style, ignore and message background (undefined while unread), author's role, whether the user is staff,
+ *   resolved theme, author's style, hidden style, ignore and message background (undefined while unread), version of the author's picture, author's role, whether the user is staff,
  *   ban right on the author and IP right, loaded original of a reply, follow-up of the previous message from the same author, highlight, and actions.
  */
 var MessageRow = React.memo(function MessageRow(p) {

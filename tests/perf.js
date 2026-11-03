@@ -66,7 +66,7 @@ function page(o) {
 
   const group = gid => ({ socket: { readyState: 1 }, user: { badge: 0, channel: { select: 0 } }, room: { owner: 'owner', information: { title: gid, description: '' } }, load: 5 });
   const C = {
-    event: { group: { b: noop, i: noop, participant: noop, g_participants: noop }, private: { wlonline: noop, wloffline: noop } },
+    event: { group: { b: noop, i: noop, participant: noop, g_participants: noop, updateprofile: noop }, private: { wlonline: noop, wloffline: noop, reload_profile: noop } },
     user: { name: o.account, avatar: { x0: 50, y0: 50, ts: 50 }, style: false },
     groups: Object.fromEntries(o.groups.map(gid => [gid, group(gid)])), focus: o.groups[0],
     settings: {
@@ -247,6 +247,30 @@ const show = async t => { t.paint(); await nextTask(); };
   const presence = { roots: t.count('Root'), rows: t.count('MessageRow'), members: t.count('MemberRow'), offline: s5.users.m0x1.status, groups: s5.groups === s4.groups };
   step('a presence burst re-renders neither message rows nor the other members', presence.roots === 1 && presence.rows === 0 && presence.members <= 20 && presence.offline === 'offline' && presence.groups, presence);
 
+  /* A profile change: one refresh per member for the frames of every group, and only the rows of that member render again */
+  const avatarOf = (el, name) => [...el.querySelectorAll('.tc-avatar-img')].find(img => img.getAttribute('src').includes('/' + name + '/thumb'));
+  const versioned = name => { const img = avatarOf(t.d, name); return !!img && /\?v=\d+$/.test(img.getAttribute('src')); };
+  const authored = [...t.d.querySelectorAll('.tc-msg')].filter(el => avatarOf(el, 'm0x1')).length;
+  t.reset();
+  GROUPS.forEach(gid => t.group('updateprofile', gid, ['m0x1']));
+  t.paint(); await wait(50);
+  const changed = { roots: t.count('Root'), rows: t.count('MessageRow'), authored, members: t.count('MemberRow'), version: t.state().users.m0x1.avatarV, shown: versioned('m0x1'), others: versioned('m0x2') };
+  step('a profile change renders again only the rows of its member, with a new picture address',
+    changed.roots === 1 && changed.authored > 0 && changed.rows === changed.authored && changed.members <= 1 && !!changed.version && changed.shown && !changed.others, changed);
+  t.reset();
+  t.group('updateprofile', 'busy0', ['m0x1']);
+  t.private('reload_profile', ['m0x1']);
+  t.paint(); await wait(50);
+  const held = { rows: t.count('MessageRow'), version: t.state().users.m0x1.avatarV };
+  const clock = t.w.Date.now;
+  t.w.Date.now = () => clock() + 3000;
+  t.private('reload_profile', ['m0x1']);
+  t.w.Date.now = clock;
+  t.paint(); await wait(50);
+  const later = { rows: t.count('MessageRow'), version: t.state().users.m0x1.avatarV };
+  step('profile change frames within three seconds of a refresh of their member are dropped',
+    held.rows === 0 && held.version === changed.version && later.rows === authored && later.version > changed.version, { held, later });
+
   /* Members nothing refers to any more are dropped */
   const keep = Array.from({ length: 100 }, (_, k) => 'S' + k + ':1700:U' + k + ':m3x' + k + ':None').join(';');
   t.group('g_participants', 'busy3', [keep]);
@@ -308,6 +332,13 @@ const show = async t => { t.paint(); await nextTask(); };
   t.private('wlonline', ['c3']);
   t.paint(); await wait(50);
   step('a presence change renders only the row of its conversation', chats === CHATS && t.count('ChatRow') <= 1 && t.count('Root') === 1, { chats, rows: t.count('ChatRow'), roots: t.count('Root') });
+  t.reset();
+  t.private('reload_profile', ['c3']);
+  t.paint(); await wait(50);
+  const convs = t.d.querySelector('.convs');
+  const pmChange = { rows: t.count('ChatRow'), roots: t.count('Root'), shown: versioned('c3'), others: versioned('c4') };
+  step('a PM profile change renders only the row of its conversation, with a new picture address',
+    pmChange.rows === 1 && pmChange.roots === 1 && pmChange.shown && !pmChange.others && !!convs && !!avatarOf(convs, 'c3'), pmChange);
 
   console.log(log.join('\n'));
   console.log('ERRORS:', errors.length ? '\n' + [...new Set(errors)].slice(0, 15).join('\n---\n') : 'none');

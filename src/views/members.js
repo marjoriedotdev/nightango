@@ -14,7 +14,7 @@ function MembersList(p) {
   var before = 0;
   function row(n) {
     var u = userOf(s, n), isMe = n === s.me;
-    return h(MemberRow, { key: n, name: n, gid: g.id, status: isMe ? s.meStatus : u.status, dim: u.status === 'offline' && !isMe, isMe: isMe, role: roleOf(g, n) });
+    return h(MemberRow, { key: n, name: n, gid: g.id, status: isMe ? s.meStatus : u.status, dim: u.status === 'offline' && !isMe, isMe: isMe, role: roleOf(g, n), avatarV: u.avatarV });
   }
   // Rows of a section within the rendered batches, null until they reach its first row: a heading never shows without its rows.
   function rows(names) {
@@ -36,8 +36,8 @@ function MembersList(p) {
 
 /**
  * Row of the member list, rendered again only when its props change.
- * @param {{name: string, gid: string, status: string, dim: boolean, isMe: boolean, role: ?string}} p Member, group, presence, dimmed when offline,
- *   signed-in user and role in the group.
+ * @param {{name: string, gid: string, status: string, dim: boolean, isMe: boolean, role: ?string, avatarV: (number|undefined)}} p Member, group, presence, dimmed when offline,
+ *   signed-in user, role in the group and picture version.
  */
 var MemberRow = React.memo(function MemberRow(p) {
   var app = useAppApi(), n = p.name;
