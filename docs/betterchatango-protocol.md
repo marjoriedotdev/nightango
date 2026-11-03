@@ -451,7 +451,11 @@ Chatango returns no request identifier. For three requests, the bridge waits for
 - `removemod:{name}`
 - `unbanall`
 - `clearall`
-- `getmodactions:prev:0:50` (offset 0 confirmed by a Pastebin script, less reliable source)
+- `getmodactions:prev:{offset}:50`: audit log in pages of 50, newest first. chadango `GetModActions` sends `getmodactions:{dir}:{offset}:50` and documents the offset as an action id, "Later ID - 1 for "prev"" ([group.go](https://github.com/n0h4rt/chadango/blob/d53b02a4d1e2cc7667f61b1693c8a42a55694d1b/group.go#L1343-L1368)).
+  - First page `getmodactions:prev:0:50`, sent when the group settings open (offset 0 also seen in a Pastebin script, less reliable source).
+  - Next page, on "Load older" at the end of the audit log: `getmodactions:prev:{id - 1}:50`, `id` being the smallest id of the loaded actions. Only users who see the audit log (owner, or the mod log right) have the button.
+  - `modactions` response: entries `id,type,author,IP,target,time in seconds,extra` URL-encoded and separated by `;`, as chadango `ParseModActions` reads them ([models/modaction.go](https://github.com/n0h4rt/chadango/blob/d53b02a4d1e2cc7667f61b1693c8a42a55694d1b/models/modaction.go#L333-L362)). The reply carries no offset: Nightango counts it as the next page while its request is pending, and appends it without duplicates (key `id`), sorted by time. Fewer than 50 entries, or a page that adds none, ends the log. A first page received again (settings reopened) only adds the newest actions and keeps the end of the log as paging left it.
+  - The `id - 1` of chadango implies that Chatango includes the action whose id equals the offset. Not checked on a real account: if it were excluded, each page would miss one action.
 
 ### Private messages
 
