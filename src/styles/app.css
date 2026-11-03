@@ -67,6 +67,32 @@ h1,h2,h3{text-wrap:balance}
 .costume-horns{width:100%;left:0;top:-22%}
 .costume-horns-fill{fill:var(--season-horns)}
 .costume-bat{width:88%;left:6%;top:-28%}
+.costume-beanie{width:80%;left:10%;top:-38%}
+.costume-knit{fill:var(--season-knit);stroke:var(--season-knit-edge);stroke-width:.6}
+.costume-knit-cuff{fill:var(--accent)}
+.costume-pompom{fill:var(--season-pompom);stroke:var(--season-knit-edge);stroke-width:.6}
+.costume-earmuffs{width:124%;left:-12%;top:-14%}
+.costume-muff-band{fill:none;stroke:var(--season-knit);stroke-width:2.2;stroke-linecap:round}
+.costume-muff{fill:var(--season-muff);stroke:var(--season-knit-edge);stroke-width:.6}
+.season-frost{position:absolute;top:0;right:0;width:96px;height:58px;fill:none;stroke:var(--season-frost);stroke-width:1.1;stroke-linecap:round}
+.season-fall{position:absolute;top:2px;animation:snow-fall 14s linear infinite}
+.season-fall-1{left:34px;top:6px;animation-delay:-2s}
+.season-fall-2{left:70px;animation-duration:17s;animation-delay:-9s}
+.season-fall-3{left:112px;top:10px;animation-delay:-6s}
+.season-fall-4{left:150px;animation-duration:19s;animation-delay:-13s}
+.season-fall-5{left:188px;top:12px;animation-duration:16s;animation-delay:-4s}
+.season-flake{display:block;width:9px;height:9px;fill:none;stroke:var(--season-snow);stroke-width:1.2;stroke-linecap:round}
+.season-fall-2 .season-flake,.season-fall-4 .season-flake{width:6px;height:6px}
+@keyframes snow-fall{from{transform:translate(0,-12px);opacity:0}15%,80%{opacity:1}to{transform:translate(10px,30px);opacity:0}}
+.season-garland{position:absolute;top:0;right:0;width:96px;height:40px;fill:var(--season-heart)}
+.season-garland-thread{fill:none;stroke:var(--season-thread);stroke-width:.8}
+.season-rise{position:absolute;top:22px;animation:heart-rise 12s ease-in-out infinite}
+.season-rise-1{left:44px;animation-delay:-3s}
+.season-rise-2{left:96px;top:16px;animation-duration:15s;animation-delay:-10s}
+.season-rise-3{left:140px;top:26px;animation-delay:-7s}
+.season-heart{display:block;width:9px;height:8px;fill:var(--season-heart)}
+.season-rise-2 .season-heart{width:6px;height:5.5px}
+@keyframes heart-rise{from{transform:translate(0,10px);opacity:0}20%,75%{opacity:.85}to{transform:translate(-8px,-22px);opacity:0}}
 .members{position:relative}
 .season-web{position:absolute;top:0;right:0;width:96px;height:96px;pointer-events:none}
 .season-web-threads{display:block;width:100%;height:100%;fill:none;stroke:var(--season-web);stroke-width:1}
@@ -75,7 +101,7 @@ h1,h2,h3{text-wrap:balance}
 .season-spider svg{width:16px;height:16px;fill:var(--season-spider)}
 .season-spider-legs{fill:none;stroke:var(--season-spider);stroke-width:1.3;stroke-linecap:round}
 @keyframes spider-bob{50%{transform:translateY(8px)}}
-.calm-sky .season-flight,.calm-sky .season-bat,.calm-sky .season-spider{animation:none}
+.calm-sky .season-flight,.calm-sky .season-bat,.calm-sky .season-spider,.calm-sky .season-fall,.calm-sky .season-rise{animation:none}
 .searchbtn{width:100%;height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:var(--radius-lg);background:var(--subtle);border:1px solid var(--border);color:var(--text-3);font-size:13px;cursor:pointer}
 .searchbtn:hover{border-color:var(--border-strong)}
 .kbd{font:400 11px var(--font-sans);color:var(--text-3);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 5px}
