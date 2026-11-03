@@ -221,10 +221,11 @@ function FullProfileDialog(p) {
 function ProfilePanel(p) {
   var app = useApp(), name = p.name;
   var actions = useProfileActions(name, null);
+  var mini = miniStyleOf(app.state.prefs, userOf(app.state, name), app.theme);
   return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + name },
     columnHeader('Profile'),
-    h('div', { className: 'scroll' },
-      h(ProfileSummary, { name: name, gid: null, heading: 'h3', size: 72, ring: 'var(--panel)', skin: null, nav: app.nav }),
+    h('div', { className: cx('scroll profile-sheet', mini && 'mini-skin'), style: mini ? miniSkin(mini) : null },
+      h(ProfileSummary, { name: name, gid: null, heading: 'h3', size: 72, ring: mini ? 'var(--raised)' : 'var(--panel)', skin: mini, nav: app.nav }),
       h('div', { style: { padding: '12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderTop: '1px solid var(--border)' } },
         actions.map(function (it) {
           return h('button', { key: it.id, type: 'button', className: 'mrow', disabled: it.disabled, 'aria-pressed': it.pressed == null ? undefined : String(it.pressed), style: it.danger ? { color: 'var(--danger)' } : null, onClick: it.onSelect },
