@@ -19,7 +19,7 @@ It requires the password (`p`): excluded by ADR-0001. BetterChatango does not ca
 
 ## What would reopen the question
 
-A frame or a call without the password, found in the code of BetterChatango or of a reference library (chadango, chatango-lib, ch.py).
+A frame or a call without the password, found in the code of BetterChatango, of a reference library (chadango, chatango-lib, ch.py) or of the official client. The official client was not searched: it became a source on 2026-11-03, after this decision.
 
 ## Sources consulted (2026-10-22)
 

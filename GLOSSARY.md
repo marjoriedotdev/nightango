@@ -19,7 +19,7 @@ This project: a skin for BetterChatango, shipped as a Tampermonkey userscript th
 _Avoid_: Torch Skin (former name), theme
 
 **Official client**:
-Chatango's own web client, used as a source for formats and text.
+Chatango's own web client, used as a source for frames, formats and text.
 
 **Reference library**:
 Maintained third-party project that implements the Chatango protocol and serves as the source for a frame: chadango, chatango-lib or ch.py.
