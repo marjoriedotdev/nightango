@@ -15,7 +15,7 @@ var COMPOSER_MODES = {
 
 /**
  * Composer line for the posting limits of a live group: temporary ban, message refused as too fast and slow mode, counted down every second.
- * @param {{ban: ?{until: number}, cooldown: ?{until: number, refused: boolean}, rate: ?number, bypass: boolean}} p Limits read from g.live and the bypass right of the user.
+ * @param {{ban: ?{until: number, length: number}, cooldown: ?{until: number, refused: boolean}, rate: ?number, bypass: boolean}} p Limits read from g.live and the bypass right of the user.
  */
 function ComposerLimit(p) {
   var tick = useState(0)[1], now = Date.now(), ban = p.ban, cd = p.cooldown;
@@ -27,7 +27,8 @@ function ComposerLimit(p) {
     var t = setTimeout(function () { tick(Date.now()); }, 1000);
     return function () { clearTimeout(t); };
   });
-  var text = banned ? (ban.until ? 'Posting ban: about ' + Math.ceil((ban.until - now) / MIN) + ' min left.' : 'Temporary posting ban.')
+  // No duration shown: the unit of the ban length is unconfirmed, read as minutes it could overstate the ban 60 times.
+  var text = banned ? 'Temporary posting ban. Try again later.'
     : wait && cd.refused ? 'Too fast. Try again in ' + wait + ' s.'
     : wait ? 'Slow mode: wait ' + wait + ' s.'
     : p.rate > 0 && !p.bypass ? 'Slow mode: ' + p.rate + ' s per message.' : null;

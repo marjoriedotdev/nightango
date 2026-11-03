@@ -1963,19 +1963,19 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => slowBox().value === 'Too quick');
   const refusedShown = { draft: slowBox().value, hint: limitHint() };
   g('show_nlp_tb', 'slow', ['3', '900']);
-  await until(() => /Posting ban/.test(limitHint()));
+  await until(() => /posting ban/.test(limitHint()));
   const banShown = { hint: limitHint(), canSend: !$('.composer-wrap .tc-send').disabled };
   g('b', 'slow', ['1700050000.1', 'Marjorie', '', 'u0', 'UNID0', 'tmp700', '9.9.9.9', '0', '', '<n000/><f x11000="0">Through']);
-  await until(() => !/Posting ban/.test(limitHint()));
+  await until(() => !/posting ban/.test(limitHint()));
   const banLifted = limitHint();
   g('getratelimit', 'test', ['10', '4']);
   click(byText('.tc-nav', 'test')); await wait(80);
   const ownerHint = limitHint();
-  step('getratelimit sent on join, slow mode counted down, a refused message back in the composer, a temporary ban shown with Send enabled, no countdown with the bypass right',
+  step('getratelimit sent on join, slow mode counted down, a refused message back in the composer, a posting ban shown without a duration and with Send enabled, no countdown with the bypass right',
     slowAsked.includes('getratelimit') && /^Slow mode: wait [34] s\.$/.test(onJoin) && draftAfterSend === ''
       && refusedShown.draft === 'Too quick' && /^Too fast\. Try again in [45] s\.$/.test(refusedShown.hint)
-      && banShown.hint === 'Posting ban: about 900 min left.' && banShown.canSend
-      && !/Posting ban/.test(banLifted) && !/Slow mode/.test(ownerHint),
+      && banShown.hint === 'Temporary posting ban. Try again later.' && banShown.canSend
+      && !/posting ban/.test(banLifted) && !/Slow mode/.test(ownerHint),
     { slowAsked, onJoin, draftAfterSend, refusedShown, banShown, banLifted, ownerHint });
 
   /* Private history import: only valid records of this account are written, as read, without overwriting an existing key */

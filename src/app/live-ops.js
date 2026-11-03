@@ -202,8 +202,8 @@ function useLiveOps(k) {
         g.live.cooldown = { until: Date.now() + op.seconds * 1000, refused: true };
         if (op.text) g.live.refused = op.text;
       }); break;
-      // Length 0: the ban is shown as on until a message of the user gets through.
-      case 'tempBan': groupUpdate(update, op.gid, function (g) { g.live.tempBan = { until: op.length ? Date.now() + op.length * MIN : 0 }; }); break;
+      // Raw length kept, end read as minutes like chadango: the longer reading, a message of the user that gets through ends the ban sooner.
+      case 'tempBan': groupUpdate(update, op.gid, function (g) { g.live.tempBan = { length: op.length, until: op.length ? Date.now() + op.length * MIN : 0 }; }); break;
       case 'bans': groupUpdate(update, op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;
