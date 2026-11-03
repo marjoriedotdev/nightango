@@ -1922,6 +1922,27 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && JSON.stringify(capGroup) === JSON.stringify({ rows: 500, first: 'Full 1', button: true, writes: [] }),
     { capReceived, capSent, capGroup });
 
+  /* Roles seen by a member who is not staff: Chatango sends no moderator list, the message badges tell them */
+  C.groups.badges = fakeGroup();
+  SB.renderGroup({ group: 'badges', header: 'Badges' });
+  g('ok', 'badges', ['dana', '', '', '', '1700000000', '', '', '0']);
+  g('i', 'badges', ['1700040002.1', 'Kim', '', 'u9', 'UNID9', 'K2=', '9.9.9.9', '128', '', '<n000/><f x11000="0">Newer']);
+  g('i', 'badges', ['1700040001.1', 'Kim', '', 'u9', 'UNID9', 'K1=', '9.9.9.9', '64', '', '<n000/><f x11000="0">Older']);
+  g('inited', 'badges', []);
+  g('g_participants', 'badges', ['S1:1700:U1:Kim:None;S2:1700:U2:Lee:None;S3:1700:U3:Dana:None']);
+  await until(() => !!byText('.tc-nav', 'badges'));
+  click(byText('.tc-nav', 'badges'));
+  g('b', 'badges', ['1700040003.1', 'Lee', '', 'u10', 'UNID10', 'tmp600', '8.8.8.8', '64', '', '<n000/><f x11000="0">Hello']);
+  const roleRow = n => ($$('.members .mrow').find(x => x.textContent.includes(n)) || {}).textContent || '';
+  await until(() => roleRow('lee').includes('Mod'));
+  const fromBadges = { kim: roleRow('kim'), lee: roleRow('lee'), dana: roleRow('dana') };
+  g('mods', 'badges', ['lee,' + MOD]);
+  await until(() => !roleRow('kim').includes('Admin'));
+  const fromList = { kim: roleRow('kim'), lee: roleRow('lee') };
+  step("roles come from message badges without a moderator list, the highest one stays, and Chatango's list replaces them",
+    fromBadges.kim.includes('Admin') && fromBadges.lee.includes('Mod') && fromBadges.dana.includes('Owner') && !/Admin|Mod/.test(fromList.kim) && fromList.lee.includes('Mod'),
+    { fromBadges, fromList });
+
   /* Private history import: only valid records of this account are written, as read, without overwriting an existing key */
   const chooseFile = (text, sel = 'input[type="file"]') => {
     const input = $(sel);

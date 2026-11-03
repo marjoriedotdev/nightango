@@ -32,8 +32,9 @@ function useBridgeOps(handle, loggedIn) {
  * @returns {boolean} True if the message joined the message log, false for a message already there or an edit applied to its original.
  */
 function addHistory(d, op, local) {
-  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style;
+  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style; delete hm.badge;
   var g = ensureLiveGroup(d, op.gid, local), u = ensureLiveUser(d, hm.author, local);
+  noteBadge(g, hm.author, op.msg.badge);
   mergeStyle(u, hs, hm.ts);
   if (plainOf(g.messages).some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return false;
   var o = editTarget(g, hm);
@@ -108,13 +109,14 @@ function useLiveOps(k) {
         break;
       }
       case 'msg': {
-        var m = Object.assign({}, op.msg), style = m.style; delete m.style;
+        var m = Object.assign({}, op.msg), style = m.style; delete m.style; delete m.badge;
         if (m.editId) {
           // Edit: applied to the original if it is loaded, otherwise shown as an edited message that keeps its reference.
           update(function (d) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, m.author, localRef.current), o = editTarget(g, m);
             mergeStyle(u, style, m.ts);
+            noteBadge(g, m.author, op.msg.badge);
             if (o) { applyGroupEdit(o, m); return; }
             m.edited = true;
             g.messages.push(withReply(g, m));
@@ -122,7 +124,11 @@ function useLiveOps(k) {
           break;
         }
         delete m.editId;
-        update(function (d) { if (!d.auth.loggedIn) return; ensureLiveGroup(d, op.gid, localRef.current); mergeStyle(ensureLiveUser(d, m.author, localRef.current), style, m.ts); });
+        update(function (d) {
+          if (!d.auth.loggedIn) return;
+          noteBadge(ensureLiveGroup(d, op.gid, localRef.current), m.author, op.msg.badge);
+          mergeStyle(ensureLiveUser(d, m.author, localRef.current), style, m.ts);
+        });
         receiveGroup(op.gid, m);
         break;
       }

@@ -57,7 +57,7 @@ var liveBridge = (function () {
     return {
       id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: name, text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
       style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags),
-      bg: !!(flags & MSG_FLAG.BG_ON) && premium
+      badge: badgeRoleOf(flags), bg: !!(flags & MSG_FLAG.BG_ON) && premium
     };
   }
 
