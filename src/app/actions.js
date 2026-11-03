@@ -57,12 +57,16 @@ function useActions(k) {
   var drafts = k.drafts, localRef = k.localRef, reconnection = k.reconnection, pms = k.pms;
   var up = useState({}), uploads = up[0], setUploads = up[1];
   /**
-   * Creates the sample world of the prototype with the PM archive that holds its unreads.
+   * Creates the sample world of the prototype with the PM archive that holds its received PMs and their unreads.
    * @param {string} me Signed-in account.
    */
   function sampleWorld(me) {
-    var world = seedWorld(me);
-    pmArchive.current = memoryPmArchive(Object.keys(world.dms).reduce(function (o, n) { o[n] = world.dms[n].unread; return o; }, {}));
+    var world = seedWorld(me), entries = [];
+    Object.keys(world.dms).forEach(function (n) {
+      var got = world.dms[n].messages.filter(function (m) { return m.from === n; });
+      got.forEach(function (m, i) { entries.push({ target: n, from: n, unread: i >= got.length - world.dms[n].unread, edit: false }); });
+    });
+    pmArchive.current = memoryPmArchive(entries);
     return world;
   }
   /**
@@ -144,6 +148,14 @@ function useActions(k) {
       readPm(pmArchive.current, update, name);
       var r = stateRef.current.route;
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
+    },
+    markDmUnread: function (name) {
+      var r = stateRef.current.route;
+      // Back to the Chats list first, without closeDm: the conversation left open would read its PMs again.
+      if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
+      unreadPm(pmArchive.current, update, name).then(function (flagged) {
+        if (!flagged) toast('No message from ' + name + ' is saved in this browser.');
+      }, function (e) { toast(e.message); });
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
     /**

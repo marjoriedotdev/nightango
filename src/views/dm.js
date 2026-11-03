@@ -216,7 +216,7 @@ function DmThread(p) {
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
-        label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id))
+        label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id, convo))
       })),
     h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
@@ -389,17 +389,20 @@ function keptCopyText(name, betterChatango) {
 }
 
 /**
- * Lists the close and delete actions of a conversation.
+ * Lists the mark unread, close and delete actions of a conversation.
  * @param {Object} app Application context.
  * @param {string} name Conversation member.
+ * @param {Object} c Conversation in the state.
  */
-function convActions(app, name) {
+function convActions(app, name, c) {
+  var received = c.messages.some(function (m) { return m.from === name; });
   return [
+    received && !c.unread ? { label: 'Mark as unread', short: 'Unread', icon: 'message', onSelect: function () { app.actions.markDmUnread(name); } } : null,
     { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },
     { label: 'Delete conversation…', short: 'Delete', icon: 'trash', danger: true, onSelect: function () {
       app.ui.confirm({ title: 'Delete this conversation?', body: keptCopyText(name, LIVE), confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
     } }
-  ];
+  ].filter(Boolean);
 }
 
 /**
@@ -489,7 +492,7 @@ function SwipeRow(p) {
 var ChatRow = React.memo(function ChatRow(p) {
   var app = useAppApi(), n = p.name;
   var draft = useDraftMarks(function (m) { return showsDraft(m, dmDraftKey(n), p.active); });
-  return h(SwipeRow, { name: n, actions: convActions(app, n) }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
+  return h(SwipeRow, { name: n, actions: convActions(app, n, p.convo) }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
 });
 
 function FriendsList(p) {
