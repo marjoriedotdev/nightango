@@ -47,6 +47,19 @@ h1,h2,h3{text-wrap:balance}
 /* Seen from the south the moon is turned half a turn: the phase is mirrored and the seas also flip top to bottom. */
 .moon-south .tc-moon-face{transform:scaleY(-1);transform-origin:10px 10px}
 .brand-name{flex:1;font-family:var(--font-display);font-size:28px;line-height:28px;font-weight:400;color:var(--text)}
+/* New Year: fireworks behind the panels and on the sky band above the name, never over text. The countdown sits under the moon. */
+.fw{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.fw-c1{color:var(--season-spark-1)}
+.fw-c2{color:var(--season-spark-2)}
+.fw-c3{color:var(--season-spark-3)}
+.fw-burst{position:absolute;width:0;height:0}
+.fw-burst::before{content:"";position:absolute;left:calc(var(--fw-r) * -1.4);top:calc(var(--fw-r) * -1.4);width:calc(var(--fw-r) * 2.8);height:calc(var(--fw-r) * 2.8);border-radius:50%;background:radial-gradient(closest-side,currentColor,transparent);opacity:0;animation:fw-flash 2.8s ease-out var(--fw-delay) infinite}
+.fw-ray{position:absolute;left:0;top:0;width:0;height:0}
+.fw-spark{position:absolute;left:0;top:-1px;width:7px;height:2px;border-radius:1px;background:currentColor;opacity:0;animation:fw-spark 2.8s cubic-bezier(.15,.7,.3,1) var(--fw-delay) infinite}
+@keyframes fw-spark{from{transform:translateX(0);opacity:0}6%{opacity:1}55%{opacity:.9}to{transform:translateX(var(--fw-r));opacity:0}}
+@keyframes fw-flash{8%{opacity:.3}50%,to{opacity:0}}
+.newyear-count{position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:11px;line-height:12px;color:var(--text-2);white-space:nowrap}
+.newyear-greeting{left:0;transform:none}
 
 /* Seasonal decorations: rendered only during their season, colored by its tokens. Never over text. */
 .season-sky{position:absolute;inset:0;z-index:-1;pointer-events:none}

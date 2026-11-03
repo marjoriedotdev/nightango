@@ -32,6 +32,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - The moon keeps its real phase; only its colors change. At Halloween it turns into a harvest moon, gold to rust. In winter and on Valentine's Day only its glow changes, cold or rose: surfaces and text keep the base theme.
 - Decorations are inline SVG, hidden from assistive technology, never over text or a control: silhouettes, frost, snowflakes or hearts on the sky band, a cobweb in a column corner, a costume on member avatars from 24px through the `decor` slot of `Avatar` at Halloween and in winter. Group icons wear none.
 - Seasonal motion stops with Calm sky and with reduced motion. Seasonal decorations, in Appearance, turns the whole season off.
+- New Year, on top of the season of the date: a countdown in `text-2` under the moon during the last minute of December 31, then "Happy New Year" and fireworks (`season-spark-*`) for the first minute of January 1, in the sky behind the panels and on the sky band above the name, never behind text. Only the greeting is announced, once. Calm sky and reduced motion keep the countdown and drop the fireworks.
 
 ## Typography
 
