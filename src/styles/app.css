@@ -195,6 +195,7 @@ h1,h2,h3{text-wrap:balance}
 .menu button:hover,.menu button:focus-visible{background:var(--hover);outline:none}
 .menu button[aria-checked="true"]{color:var(--text);font-weight:500}
 .menu .danger{color:var(--danger)}
+.row-error{color:var(--danger)}
 .menu hr{border:0;height:1px;background:var(--divider);margin:4px}
 .menu .swatch{width:10px;height:10px;border-radius:50%;flex:none}
 .menu .menu-presence{position:static;flex:none;width:13px;height:13px;--dot:13px;--presence-ring:transparent;background-clip:padding-box}

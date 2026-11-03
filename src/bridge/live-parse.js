@@ -150,6 +150,22 @@ function screenPmRecords(records, me) {
   if (skipped && foreign === skipped) return { valid: [], skipped: skipped, foreign: true };
   return { valid: valid, skipped: skipped, foreign: false };
 }
+// Chatango name of each PM setting of the account (chadango GetSettings and SetSettings).
+var PM_SETTING_NAMES = { hideIdle: 'disable_idle_time', allowAnon: 'allow_anon', emailOffline: 'email_offline_msg' };
+/**
+ * Reads the settings reply of the private connection.
+ * @param {Array<string>} data Frame split on :, name and on or off for each setting.
+ * @returns {?Object} hideIdle, allowAnon and emailOffline as booleans, null if one of them is missing.
+ */
+function parsePmSettings(data) {
+  var read = {}, out = {};
+  for (var i = 0; i + 1 < data.length; i += 2) read[data[i]] = data[i + 1];
+  return Object.keys(PM_SETTING_NAMES).every(function (k) {
+    var v = read[PM_SETTING_NAMES[k]];
+    out[k] = v === 'on';
+    return v === 'on' || v === 'off';
+  }) ? out : null;
+}
 /**
  * Splits a message body into emphasis segments.
  * BetterChatango allowlist (renderMessage): b, i without attributes, u, s and strike.

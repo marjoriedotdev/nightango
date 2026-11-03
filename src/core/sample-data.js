@@ -140,6 +140,7 @@ function seedWorld(me) {
   return {
     me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0,
     meStatus: 'online',
+    pmSettings: { hideIdle: false, allowAnon: true, emailOffline: false }, pmSettingSave: null,
     profile: { visibility: { meet: false } },
     route: { view: 'group', id: 'community', markerTs: now },
     sections: { favorites: true, groups: true, dms: true }

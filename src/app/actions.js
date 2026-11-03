@@ -91,6 +91,10 @@ function useActions(k) {
     resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
+    setPmSetting: function (key, value) {
+      update(function (d) { d.pmSettingSave = { key: key, value: value, failed: false }; });
+      setTimeout(function () { update(function (d) { d.pmSettings[key] = value; d.pmSettingSave = null; }); }, 700);
+    },
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
@@ -453,6 +457,7 @@ function useActions(k) {
   if (LIVE) {
     actions.logout = function () { location.reload(); };
     actions.setStatus = function (st2) { if (liveBridge.setStatus(st2)) update(function (d) { d.meStatus = st2; }); };
+    actions.setPmSetting = function (key, value) { if (liveBridge.setPmSetting(key, value)) update(function (d) { d.pmSettingSave = { key: key, value: value, failed: false }; }); };
     actions.sendGroup = function (gid, text, opts) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
