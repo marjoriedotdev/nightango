@@ -2,6 +2,28 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.33.0-beta.1] - 2026-11-03
+
+### Added
+
+- After a reload, messages that came in while you were away count as unread, and a bar leads to where you left off.
+- Mark as unread on a conversation in Chats and in the conversation menu.
+- Up in an empty message box edits your last message.
+- Paste a screenshot or drop a file on the message box to attach it.
+- Conversations with an unsent draft show Draft in the sidebar and in Chats.
+- Recently used emoticons at the top of the emoticon picker.
+- Desktop alerts name the sender, open their conversation on click, and replace each other per conversation.
+- The message box shows slow mode, a message refused as too fast, and a temporary posting ban. A refused message comes back in the box.
+- Privacy has a Chatango account section: hide your idle time, allow anonymous messages, email messages you get while offline. The wording is not final.
+- The Premium page shows when your Premium ends, and a reminder comes three days before.
+- Load older at the end of a group's audit log.
+- Winter and Valentine's Day seasons, and fireworks at midnight on New Year's Eve.
+
+### Changed
+
+- The channel you pick in a group stays picked for that group.
+- A member's new picture and profile show without a reload.
+
 ## [0.32.3] - 2026-11-03
 
 ### Fixed
