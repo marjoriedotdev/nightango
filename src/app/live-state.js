@@ -30,7 +30,7 @@ function liveWorld(me) {
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', unstyled: 'array', style: 'object', fav: 'array', muted: 'array', ignored: 'array' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', unstyled: 'array', style: 'object', fav: 'array', muted: 'array', ignored: 'array' };
 /**
  * Returns the account data stored in this browser without the values of another kind left by an older version or corrupted.
  * @param {*} stored Content of skinKey.
@@ -41,9 +41,9 @@ function storedLocal(stored) {
   Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
   return out;
 }
-function blankLocal() { return { hidden: [], channels: {}, unstyled: [], style: null }; }
+function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, unstyled: [], style: null }; }
 /**
- * Closed conversations, hidden channels, members with a hidden style and own style, kept by account in this browser in live.
+ * Closed conversations, hidden and sending channels, members with a hidden style and own style, kept by account in this browser in live.
  * @param {Object} state Application state.
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
@@ -76,6 +76,8 @@ function useLocalStore(state) {
     Object.keys(state.dms).forEach(function (n) { if (state.dms[n].closed) o.hidden.push(n); });
     Object.keys(prev.channels).forEach(function (k) { if (!state.groups[k]) o.channels[k] = prev.channels[k]; });
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
+    Object.keys(prev.sendChannels).forEach(function (k) { if (!state.groups[k]) o.sendChannels[k] = prev.sendChannels[k]; });
+    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].sendChannel !== 'none') o.sendChannels[k] = state.groups[k].sendChannel; });
     prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
     Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
     // Merged with the storage: the bridge also sets the unread migration flag there.
@@ -96,7 +98,7 @@ function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.
 function liveGroup(id, title) {
   var t = title || id;
   return {
-    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: Date.now(),
+    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: Date.now(),
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
     live: { flags: 0, mods: {}, badges: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
@@ -113,7 +115,7 @@ function liveGroup(id, title) {
  */
 function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
 /**
- * Returns a live group, created if needed with its BetterChatango favorite and mute and its channels hidden in this browser.
+ * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels kept in this browser.
  * @param {Object} d State being modified.
  * @param {string} gid Target group.
  * @param {Object} local Account data kept in this browser.
@@ -125,6 +127,7 @@ function ensureLiveGroup(d, gid, local) {
     g.favorite = (liveBridge.favoriteGroups() || []).indexOf(gid) >= 0;
     g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
     g.hiddenChannels = local.channels[gid] || [];
+    g.sendChannel = local.sendChannels[gid] || 'none';
   }
   return g;
 }

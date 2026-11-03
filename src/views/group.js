@@ -39,7 +39,6 @@ function useComposerMode(draft) {
 function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
-  var a4 = useState('none'), channel = a4[0], setChannel = a4[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
@@ -68,6 +67,8 @@ function GroupView(p) {
   var online = (LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length).toLocaleString('en-US');
   var ann = g.settings.announcement, annText = LIVE ? ann.displayText : ann.text;
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
+  // A kept channel the user may no longer use, the mod channel after losing staff rights, sends without a channel.
+  var channel = chans.indexOf(g.sendChannel) >= 0 ? g.sendChannel : 'none';
   // The sending channel is never hidden, even if it stays in the stored list.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
 
@@ -159,7 +160,7 @@ function GroupView(p) {
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
-          return { label: channelLabel(k), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { setChannel(k); } };
+          return { label: channelLabel(k), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { app.actions.setSendChannel(g.id, k); } };
         }).concat([{ divider: true }], chans.filter(function (k) { return k !== channel; }).map(function (k) {
           return { label: (hiddenChans.indexOf(k) >= 0 ? 'Show ' : 'Hide ') + (k === 'none' ? 'messages without a channel' : channelLabel(k)), icon: 'eye-off', onSelect: function () { app.actions.toggleHiddenChannel(g.id, k); } };
         })),
