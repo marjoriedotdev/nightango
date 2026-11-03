@@ -675,6 +675,11 @@ function useActions(k) {
     actions.setClosed = function (gid, closed) { liveBridge.setFlags(gid, closed ? GROUP_FLAG.IS_CLOSED : 0, closed ? 0 : GROUP_FLAG.IS_CLOSED); };
     actions.clearGroup = function (gid) { liveBridge.clearAll(gid); };
     actions.requestGroupSettings = function (gid) { liveBridge.requestSettings(gid); };
+    actions.olderModLog = function (gid) {
+      var ids = (stateRef.current.groups[gid].live.modlog || []).map(function (x) { return parseInt(x.id, 10); });
+      // Chadango GetModActions: the offset of the prev direction is the id of the oldest loaded action minus 1.
+      if (liveBridge.modLog(gid, Math.min.apply(null, ids) - 1)) groupUpdate(update, gid, function (g) { g.live.modlogPage.loading = true; });
+    };
     actions.requestBans = function (gid) {
       // The response to the first page replaces the list, even if a next page was awaited.
       groupUpdate(update, gid, function (g) { g.live.banPage.loading = false; g.live.banSearch = null; });

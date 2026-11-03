@@ -26,6 +26,8 @@ var liveBridge = (function () {
   var SOUND_AUDIO = { mention: 'message', online: 'play_online' };
   // Size of the ban and unban pages requested by BetterChatango.
   var BAN_PAGE = 50;
+  // Size of the audit log pages requested by chadango (GetModActions).
+  var MODLOG_PAGE = 50;
 
   // A message shown before its final id keeps the temporary id k:{key}, which Chatango refers to by the key alone.
   function withTempIds(ids) { return ids.concat(ids.map(function (id) { return 'k:' + id; })); }
@@ -184,7 +186,11 @@ var liveBridge = (function () {
       case 'bansearchresult': gotReply('searchban:' + room); emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
       case 'badbansearchstring': gotReply('searchban:' + room); emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
-      case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
+      case 'modactions': {
+        var actions = parseModLog(data);
+        emit({ op: 'modlog', gid: room, list: actions, more: actions.length >= MODLOG_PAGE });
+        break;
+      }
       case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
       case 'updateprofile': profileChanged(data[0]); break;
       case 'updgroupinfo': emit({ op: 'info', gid: room, title: unquote(data[0]), description: unquote(data.slice(1).join(':')) }); break;
@@ -1058,8 +1064,14 @@ var liveBridge = (function () {
     clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
     /* Group settings: frames found in chadango and chatango-lib */
     requestSettings: function (gid) {
-      ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:50'].forEach(function (f) { send(gid, f, 'Group settings could not be loaded.'); });
+      ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:' + MODLOG_PAGE].forEach(function (f) { send(gid, f, 'Group settings could not be loaded.'); });
     },
+    /**
+     * Requests the page of the audit log older than the offset like chadango.
+     * @param {string} gid Target group.
+     * @param {number} offset Id of the oldest loaded action minus 1.
+     */
+    modLog: function (gid, offset) { return send(gid, 'getmodactions:prev:' + offset + ':' + MODLOG_PAGE, 'Older audit log entries could not be loaded.'); },
     setFlags: function (gid, add, remove) { return send(gid, 'updategroupflags:' + add + ':' + remove, 'The group settings could not be saved.'); },
     setAnnouncement: function (gid, enabled, seconds, text, read) {
       var prefix = read.prefix || '<n000/><f x11000="0">';

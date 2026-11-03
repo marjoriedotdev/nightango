@@ -9,7 +9,7 @@ var MODLOG_TEXT = {
 var MODLOG_SYSTEM = { acls: 'The group closed automatically: no moderator was online.', aopn: 'The group reopened when a moderator signed in.' };
 
 function GSAuditLive(p) {
-  var g = p.g, log = g.live.modlog;
+  var app = useApp(), g = p.g, log = g.live.modlog, page = g.live.modlogPage;
   var a = useState('all'), actor = a[0], setActor = a[1];
   var list = log || [];
   var actors = Object.keys(list.reduce(function (o, x) { if (x.actor) o[x.actor] = 1; return o; }, {}));
@@ -23,5 +23,7 @@ function GSAuditLive(p) {
       var sys = MODLOG_SYSTEM[x.type], text = (MODLOG_TEXT[x.type] || 'did ' + x.type).replace('*t*', x.target || 'someone');
       return h(ActivityRow, { key: x.id, first: !i, at: x.at, lead: sys ? h('span', { className: 'role-ico' }, h(T.Icon, { name: 'lock', size: 14 })) : null },
         sys || h(Frag, null, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', text));
-    }) : h('p', { className: 'pal-empty' }, 'No entries.')));
+    }) : h('p', { className: 'pal-empty' }, 'No entries.'),
+    log && page.more ? h('div', { className: 'list-more' }, page.loading ? h(T.Spinner, { label: 'Loading older entries' })
+      : h(T.Button, { size: 'sm', onClick: function () { app.actions.olderModLog(g.id); } }, 'Load older')) : null));
 }

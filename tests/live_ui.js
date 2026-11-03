@@ -317,6 +317,19 @@ function frame(prefix) { return sent.map(x => x[1]).filter(f => f.indexOf(prefix
 function g(name, room, data) { C.event.group[name](C, {}, room, data); }
 function pm(name, data) { C.event.private[name](C, {}, 'private_message', data); }
 const log = [];
+/**
+ * Returns a modactions reply of count actions from id top downwards, one minute apart.
+ * @param {number} top Id of the newest action.
+ * @param {number} count Number of actions.
+ */
+function modPage(top, count) {
+  const entries = [];
+  for (let id = top; id > top - count; id--) {
+    const type = id === 149 ? 'chbw' : 'amod', target = id === 150 ? 'bob' : id === 149 ? '' : 'u' + id;
+    entries.push(encodeURIComponent(id + ',' + type + ',marjorie,1.1.1.1,' + target + ',' + (1700000000 - (150 - id) * 60) + ','));
+  }
+  return [entries.join(';')];
+}
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 const MOD = 64 | 16384 | 128 | 256 | 65536;
 
@@ -741,7 +754,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('getannc', 'test', ['1', 'test', '5', '900', '<nF00/><f x12F00="1">Be kind']);
   g('bw', 'test', ['spam%2Cscam', 'idiot']);
   g('getratelimit', 'test', ['0', '0']);
-  g('modactions', 'test', [encodeURIComponent('7,amod,marjorie,1.1.1.1,bob,1700000000,') + ';' + encodeURIComponent('6,chbw,bob,2.2.2.2,,1699990000,')]);
+  g('modactions', 'test', modPage(150, 50));
   await wait(80);
   click(byText('.tc-nav', 'Media and links')); await wait(50);
   const links = row('Allow links');
@@ -857,6 +870,26 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   click(byText('.tc-nav', 'Audit log')); await wait(50);
   step('audit entries', !!byText('.lrow', 'made bob a moderator') && !!byText('.lrow', 'changed banned words'));
+  // Chadango GetModActions: the offset of the prev direction is the id of the oldest loaded action minus 1.
+  const auditTail = () => $$('.spage .lrow').slice(-1)[0].textContent;
+  const loadOlder = () => byText('.spage .tc-btn', 'Load older');
+  const audit = { button: !!loadOlder() };
+  click(loadOlder()); await wait(30);
+  audit.second = frame('getmodactions:prev:').pop();
+  audit.pending = !loadOlder() && !!$('.spage .list-more .tc-spinner');
+  g('modactions', 'test', modPage(100, 50)); await wait(50);
+  audit.secondRows = $$('.spage .lrow').length;
+  audit.secondTail = auditTail();
+  click(loadOlder()); await wait(30);
+  audit.third = frame('getmodactions:prev:').pop();
+  g('modactions', 'test', modPage(50, 3)); await wait(50);
+  audit.thirdRows = $$('.spage .lrow').length;
+  audit.thirdTail = auditTail();
+  audit.ended = !loadOlder() && !$('.spage .list-more');
+  step('audit log loads older pages until a short page',
+    audit.button && audit.second === 'getmodactions:prev:100:50' && audit.pending && audit.secondRows === 100 && /made u51 a moderator/.test(audit.secondTail)
+      && audit.third === 'getmodactions:prev:50:50' && audit.thirdRows === 103 && /made u48 a moderator/.test(audit.thirdTail) && audit.ended,
+    audit);
 
   click(byText('.tc-nav', 'Media and links')); await wait(50);
   click(row('Allow videos')); await wait(20);
