@@ -99,7 +99,7 @@ function liveGroup(id, title) {
     id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: Date.now(),
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
-    live: { flags: 0, mods: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
+    live: { flags: 0, mods: {}, badges: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
     settings: mkSettings({ overview: { title: t, description: '' }, staff: {} })
   };
 }
@@ -241,11 +241,25 @@ function mergeStyle(u, style, ts) {
  * @param {Object} local Account data kept in this browser.
  */
 function pmAuthor(d, local) { return function (x) { mergeStyle(ensureLiveUser(d, x.from, local), x.style, x.ts); }; }
+/**
+ * Records the role shown by the badge of a group message, the highest seen during the session.
+ * @param {Object} g Group being modified.
+ * @param {string} name Message author.
+ * @param {?string} badge Role of the badge, as returned by badgeRoleOf.
+ */
+function noteBadge(g, name, badge) {
+  var seen = g.live.badges[name];
+  if (!badge || seen === badge || seen === 'admin') return;
+  g.live.badges[name] = badge;
+  deriveLive(g);
+}
 /** Translates the Chatango state of a group (flags, moderators, announcement) into the interface model. */
 function deriveLive(g) {
   var L = g.live, F = GROUP_FLAG, f = L.flags, s = g.settings, staff = {};
   if (L.owner) staff[L.owner] = 'owner';
   Object.keys(L.mods).forEach(function (n) { if (n !== L.owner) staff[n] = roleOfFlags(L.mods[n]); });
+  // Chatango sends the moderator list to staff only: other members learn roles from the badges on messages.
+  if (!Object.keys(L.mods).length) Object.keys(L.badges).forEach(function (n) { if (n !== L.owner) staff[n] = L.badges[n]; });
   s.staff = staff;
   s.modFlags = Object.assign({}, L.mods);
   if (L.owner) delete s.modFlags[L.owner];

@@ -465,8 +465,8 @@ h1,h2,h3{text-wrap:balance}
 .mini-about .about{color:inherit}
 .mini-about .linkbtn{align-self:flex-start}
 .mini-about-img{display:block;width:100%;height:120px;object-fit:cover;border-radius:var(--radius-lg)}
-.profile-dialog{position:relative}
-.profile-dialog .profile-card{position:relative}
+.profile-dialog,.profile-sheet{position:relative}
+.profile-dialog .profile-card,.profile-sheet .profile-card{position:relative}
 .profile-cover{position:absolute;top:0;left:0;right:0;height:120px;pointer-events:none}
 .profile-cover img{display:block;width:100%;height:100%;object-fit:cover}
 .profile-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,var(--raised))}

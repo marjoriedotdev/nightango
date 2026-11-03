@@ -2,6 +2,13 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.32.3] - 2026-11-03
+
+### Fixed
+
+- On a computer, the profile panel shows the member's background on the whole card, as on a phone.
+- Group moderators and admins show their role to members who are not staff, once they have a message with a visible badge.
+
 ## [0.32.2] - 2026-11-01
 
 ### Changed
