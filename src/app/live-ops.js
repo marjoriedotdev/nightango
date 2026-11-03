@@ -133,7 +133,10 @@ function useLiveOps(k) {
         delete m.editId;
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          noteBadge(ensureLiveGroup(d, op.gid, localRef.current), m.author, op.msg.badge);
+          var mg = ensureLiveGroup(d, op.gid, localRef.current);
+          // The duration unit of a temporary ban is unconfirmed: a message of the user that gets through ends it.
+          if (m.author === d.me && mg.live.tempBan) mg.live.tempBan = null;
+          noteBadge(mg, m.author, op.msg.badge);
           mergeStyle(ensureLiveUser(d, m.author, localRef.current), style, m.ts);
         });
         receiveGroup(op.gid, m);
@@ -197,7 +200,17 @@ function useLiveOps(k) {
       case 'annc': groupUpdate(update, op.gid, function (g) { g.live.annc = { mode: op.mode, enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
       case 'anncPost': if (op.text || op.embeds.length) groupUpdate(update, op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', annc: true, text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
       case 'bw': groupUpdate(update, op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
-      case 'rate': groupUpdate(update, op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;
+      case 'rate': groupUpdate(update, op.gid, function (g) {
+        g.live.rate = op.seconds;
+        if (op.wait) g.live.cooldown = { until: Date.now() + op.wait * 1000, refused: false };
+        deriveLive(g);
+      }); break;
+      case 'tooFast': groupUpdate(update, op.gid, function (g) {
+        g.live.cooldown = { until: Date.now() + op.seconds * 1000, refused: true };
+        if (op.text) g.live.refused = op.text;
+      }); break;
+      // Raw length kept, end read as minutes like chadango: the longer reading, a message of the user that gets through ends the ban sooner.
+      case 'tempBan': groupUpdate(update, op.gid, function (g) { g.live.tempBan = { length: op.length, until: op.length ? Date.now() + op.length * MIN : 0 }; }); break;
       case 'bans': groupUpdate(update, op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;

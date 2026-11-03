@@ -136,7 +136,7 @@ function liveGroup(id, title) {
     id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: null,
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
-    live: { flags: 0, mods: {}, badges: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
+    live: { flags: 0, mods: {}, badges: {}, owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
     settings: mkSettings({ overview: { title: t, description: '' }, staff: {} })
   };
 }
