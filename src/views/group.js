@@ -36,6 +36,16 @@ function useComposerMode(draft) {
   };
 }
 
+/**
+ * Tells whether a key pressed in a composer opens the edit of the user's last message.
+ * @param {KeyboardEvent} e Key pressed in the composer field.
+ * @param {string} draft Composer text.
+ * @param {?Object} mode Reply, edit or quote mode of the composer.
+ */
+function editsLastOnUp(e, draft, mode) {
+  return e.key === 'ArrowUp' && !draft && !mode && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey;
+}
+
 function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
@@ -79,6 +89,13 @@ function GroupView(p) {
   function onKeyDown(e) {
     media.onKeyDown(e);
     if (!e.defaultPrevented) mentions.onKeyDown(e);
+    if (!editsLastOnUp(e, draft, mode)) return;
+    var last = lastMatch(g.messages, function (m) {
+      return m.kind === 'msg' && !m.deleted && canEditGroupMessage(m, me) && (m.editCount || 0) < EDIT_MAX && shown(m) && !hiddenByChannel(m);
+    });
+    if (!last) return;
+    e.preventDefault();
+    edit(last);
   }
   var closeMode = cm.close;
   function edit(m) { cm.edit(m, m.editCount || 0); }
