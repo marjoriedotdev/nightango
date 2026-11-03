@@ -141,6 +141,7 @@ function seedWorld(me) {
     me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0,
     meStatus: 'online',
     pmSettings: { hideIdle: false, allowAnon: true, emailOffline: false }, pmSettingSave: null,
+    premium: { status: 200, until: now + 2 * 1440 * MIN + 5 * 60 * MIN },
     profile: { visibility: { meet: false } },
     route: { view: 'group', id: 'community', markerTs: now },
     sections: { favorites: true, groups: true, dms: true }

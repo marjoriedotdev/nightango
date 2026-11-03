@@ -222,7 +222,14 @@ function AccountPage() {
 }
 
 function PremiumPage() {
+  var s = useApp().state, p = s.premium, now = Date.now();
+  // Read from the premium frame of the private connection: nothing shows before it or while that connection is down.
+  var known = !!p && (!LIVE || s.pmConn === 'open');
   return h(Page, { title: 'Chatango Premium', lede: 'Custom backgrounds, media and badges for your account.' },
+    known ? h(T.SettingsSection, { title: 'Status' }, h(T.SettingRow, {
+      asLabel: false, title: premiumActive(p, now) ? 'Premium until ' + shortDate(p.until, true) : 'No Premium',
+      description: premiumEndsSoon(p, now) ? 'Renew on chatango.com to keep your backgrounds and badges.' : null
+    })) : null,
     h(T.Banner, { icon: 'info', title: 'Not available in Nightango', action: chatangoLink('Open chatango.com') },
       'Nightango does not take payments. Buy or gift Premium on chatango.com.'));
 }

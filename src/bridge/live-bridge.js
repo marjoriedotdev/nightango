@@ -253,6 +253,8 @@ var liveBridge = (function () {
         break;
       }
       case 'reload_profile': profileChanged(data[0]); break;
+      // BetterChatango reads the end time in seconds (inject.js:3301-3302).
+      case 'premium': emit({ op: 'premium', status: parseInt(data[0], 10) || 0, until: epochMs(data[1]) }); break;
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
       case 'settings': {
         var pmSettings = parsePmSettings(data);

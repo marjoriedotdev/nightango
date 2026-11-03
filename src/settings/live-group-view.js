@@ -8,7 +8,7 @@ function withCurrent(options, value, label) {
   return value == null || options.some(function (o) { return o[0] === value; }) ? options : options.concat([[value, label(value)]]);
 }
 function chatangoLink(label) {
-  return h('a', { className: 'tc-btn tc-btn-sm', href: 'https://chatango.com', target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, label, h(T.Icon, { name: 'external', size: 14 }));
+  return h('a', { className: 'tc-btn tc-btn-sm', href: CHATANGO_URL, target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, label, h(T.Icon, { name: 'external', size: 14 }));
 }
 
 function GroupSettingsViewLive(p) {

@@ -69,7 +69,7 @@ w.WebSocket.prototype.receive = function (frame) { if (this.readyState === 1) th
 // Held: client.connect opens a socket like socketEvent, whose ok registers the group and whose inited settles the attempt.
 let connectHeld = false;
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
-const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff', 'settings'];
+const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff', 'settings', 'premium'];
 // Record of the BetterChatango history database (saveMessage): key ts, the frame timestamp.
 const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const pmRecords = [
@@ -1594,6 +1594,29 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('account page has no password form', !$('input[type=password]') && !!byText('.tc-banner', 'never handles your password'));
   click(byText('.tc-nav', 'Chatango Premium')); await wait(50);
   step('premium page has no purchase form', !!byText('.tc-banner', 'does not take payments'));
+  /* Premium expiry: premium frame of the private connection, reminder at most once per day per account */
+  const DAY = 86400000, later = Date.now() + 40 * DAY, soon = Date.now() + 2 * DAY;
+  const reminders = () => $$('.toast').map(x => x.textContent).filter(t => t.indexOf('Your Chatango Premium ends on') === 0);
+  const premiumView = () => ({
+    status: ($$('.tc-row-title').find(x => /^(Premium until|No Premium)/.test(x.textContent)) || {}).textContent || null,
+    reminders: reminders(), link: !!byText('.toast button', 'Open chatango.com'),
+    marker: JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').premiumReminded || null
+  });
+  const longDate = ts => new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const today = new Date(), todayKey = today.getFullYear() + '-' + today.getMonth() + '-' + today.getDate();
+  const premiumSeen = [premiumView()];
+  pm('premium', ['200', String(later / 1000)]); await until(() => !!premiumView().status);
+  premiumSeen.push(premiumView());
+  pm('premium', ['210', String(soon / 1000)]); await until(() => reminders().length > 0);
+  // Chatango sends the frame again on each private connection.
+  pm('premium', ['210', String(soon / 1000)]); await wait(100);
+  premiumSeen.push(premiumView());
+  const remind = 'Your Chatango Premium ends on ' + new Date(soon).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '.';
+  step('premium page shows the expiry of the premium frame, reminder at most once per day with a link to chatango.com', JSON.stringify(premiumSeen) === JSON.stringify([
+    { status: null, reminders: [], link: false, marker: null },
+    { status: 'Premium until ' + longDate(later), reminders: [], link: false, marker: null },
+    { status: 'Premium until ' + longDate(soon), reminders: [remind + 'Open chatango.com'], link: true, marker: todayKey }
+  ]), premiumSeen);
   click(byText('.tc-nav', 'Notifications')); await wait(50);
   const soundRow = title => { const r = $$('section[aria-label="Sounds"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title); return r && { on: r.querySelector('[role=switch]').checked, range: r.querySelector('input[type=range]').disabled ? 'off' : r.querySelector('input[type=range]').value, value: r.textContent.match(/\d+%/)[0], play: !r.querySelector('button[aria-label="Play test sound"]').disabled }; };
   const sounds = { mention: soundRow('Mention sound'), online: soundRow('Friend online sound') };

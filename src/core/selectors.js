@@ -21,6 +21,19 @@ function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) &
 // One object for every unknown member: the rows that take its style as a prop keep the same props.
 var UNKNOWN_USER = { status: 'offline', about: '', style: {} };
 function userOf(state, name) { return state.users[name] || UNKNOWN_USER; }
+var PREMIUM_REMINDER_MS = 3 * 86400000;
+/**
+ * Tells whether the account has Premium according to the premium frame: status 200 (bought) or 210 (gifted) like BetterChatango, before its end.
+ * @param {?{status: number, until: number}} p Premium of the state, null before the frame.
+ * @param {number} now Current time in milliseconds.
+ */
+function premiumActive(p, now) { return !!p && (p.status === 200 || p.status === 210) && p.until > now; }
+/**
+ * Tells whether an active Premium ends within three days.
+ * @param {?{status: number, until: number}} p Premium of the state, null before the frame.
+ * @param {number} now Current time in milliseconds.
+ */
+function premiumEndsSoon(p, now) { return premiumActive(p, now) && p.until - now <= PREMIUM_REMINDER_MS; }
 /**
  * Tells whether a member's messages are hidden: ignored member or blocked member when the block also applies in groups.
  * @param {Object} state Application state.

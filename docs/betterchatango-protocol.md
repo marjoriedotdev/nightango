@@ -242,6 +242,15 @@ Three PM settings are stored by Chatango on the account and apply in every clien
 - Interface: Privacy, section "Chatango account" ("Saved on your Chatango account. They apply wherever you use Chatango."), in live and in the prototype. A switch shows only the value of the last `settings` reply. While a change waits, every switch of the section is disabled and the changed row says "Waiting for Chatango to confirm." The switch moves once a reply shows the new value. A reply to that request with the old value, or no reply in 8 s, leaves the switch in place with "Chatango didn't confirm this change. Try again." Before the first reply, the section says "Loads once private messages are connected." The prototype confirms after 0.7 s.
 - Not checked yet (gate before release, #83): what `disable_idle_time` hides exactly (idle time in presence frames, idle state, or both), and whether `allow_anon` covers anons only or guests too. The labels "Hide my idle time", "Allow anonymous messages" and "Email me messages I get while offline", and their descriptions, are provisional until then.
 
+### Premium status
+
+- Received frame only. BetterChatango sends `getpremium` on each private `OK` (`inject.js:4036`) and on each group connection (`inject.js:3227`). Chatango answers `premium:{status}:{timestamp}`. Nightango sends nothing and reads the answer of the private connection only.
+- `timestamp` is the end of Premium in seconds since the epoch: BetterChatango multiplies it by 1000 before comparing it with `Date.now()` (`inject.js:3301-3302`) and compares it with `Date.now() / 1000` elsewhere (`inject.js:9458`). The bridge turns it into milliseconds (`epochMs`).
+- `status`: `200` bought, `210` gifted, `101` own Premium, `111` gift of Premium, the last two with an end in the past (texts of `get premium`, `inject.js:9449-9462`). BetterChatango treats only `200` and `210` as active (`inject.js:4174`, `inject.js:4638`). Nightango does the same and also requires an end in the future (`premiumActive`, `core/selectors.js`).
+- BetterChatango keeps it in `client.private.premium` (`inject.js:4173-4180`) and `client.groups[room].user.premium` (`inject.js:3292-3300`). It warns of the end, less than three days before, only in its environment group (`inject.js:3301-3315`, `displayEpoch`, `inject.js:6368-6389`), which Nightango does not show.
+- The bridge emits `premium` (`status`, `until` in milliseconds). `app/live-ops.js` keeps it in the state (`premium`, `null` until the frame comes). Settings, Chatango Premium shows "Premium until 12 Dec 2026" or "No Premium" while the private connection is open, nothing otherwise.
+- Three days or less before the end, a toast "Your Chatango Premium ends on 12 Dec." with an "Open chatango.com" button, at most once per day: the day of the last reminder is kept under `torch-skin:<username>` (`premiumReminded`). The button opens `https://chatango.com` in a new tab, no call from our code. Nightango takes no payment.
+
 ### Friend presence
 
 On the private connection. Timestamps are in seconds. `None` or 0 means unknown.
