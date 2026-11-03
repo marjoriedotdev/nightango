@@ -197,7 +197,7 @@ function useUpdateCheck(loggedIn, toast) {
 function Root(props) {
   var store = useAppState(props.boot), state = store.state;
   // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
-  var drafts = useRef({});
+  var drafts = useState(draftStore)[0];
   var o = useOverlays();
   var inbox = useInbox(store.stateRef, store.update, o.toast, o.setNavOpen);
   var season = useDisplayPrefs(state.prefs);
