@@ -26,11 +26,11 @@ function liveWorld(me) {
     me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
     route: { view: 'discover' }, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
-    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, retrying: {}
+    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, premium: null, retrying: {}
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', unstyled: 'array', style: 'object', fav: 'array', muted: 'array', ignored: 'array' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', unstyled: 'array', style: 'object', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
 /**
  * Returns the account data stored in this browser without the values of another kind left by an older version or corrupted.
  * @param {*} stored Content of skinKey.

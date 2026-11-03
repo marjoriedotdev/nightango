@@ -2,6 +2,7 @@
 var MIN = 60000;
 var CONFIRM_TIMEOUT = 8000;
 var REPO_URL = 'https://github.com/marjoriedotdev/nightango';
+var CHATANGO_URL = 'https://chatango.com';
 function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -12,6 +13,12 @@ function fmtTime(ts, h24) {
   return (H % 12 || 12) + ':' + pad(M) + ' ' + (H >= 12 ? 'PM' : 'AM');
 }
 function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+/**
+ * Returns a date as 12 Dec, or 12 Dec 2026 with its year.
+ * @param {number} ts Time in milliseconds.
+ * @param {boolean} [withYear] Adds the year.
+ */
+function shortDate(ts, withYear) { return new Date(ts).toLocaleDateString('en-GB', withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); }
 function dayLabel(ts) {
   var d = new Date(ts), n = new Date();
   var a = new Date(d.getFullYear(), d.getMonth(), d.getDate()), b = new Date(n.getFullYear(), n.getMonth(), n.getDate());

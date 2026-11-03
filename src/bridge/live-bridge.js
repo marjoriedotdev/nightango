@@ -227,6 +227,8 @@ var liveBridge = (function () {
         emit({ op: 'people', list: people });
         break;
       }
+      // BetterChatango reads the end time in seconds (inject.js:3301-3302).
+      case 'premium': emit({ op: 'premium', status: parseInt(data[0], 10) || 0, until: epochMs(data[1]) }); break;
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
       case 'unblocked': emit({ op: 'pmUnblocked', name: lower(data[0]) }); break;
       case 'OK':
