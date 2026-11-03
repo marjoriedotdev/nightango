@@ -55,7 +55,7 @@ function addHistory(d, op, local) {
  */
 function useLiveOps(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast;
-  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, notify = k.inbox.notify, receiveGroup = k.inbox.receiveGroup;
+  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, notify = k.inbox.notify, notifyPm = k.inbox.notifyPm, receiveGroup = k.inbox.receiveGroup;
   var actions = k.actions, local = k.local, localRef = k.local.ref, reconnection = k.reconnection, pms = k.pms;
   var offlineCount = useRef(0);
   // History operations held for the animation frame: Chatango sends a page one frame per message.
@@ -262,12 +262,12 @@ function useLiveOps(k) {
         // Read created after the current stack: BetterChatango archives a received PM only after pm is emitted.
         if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
         if (edit) break;
-        if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
+        if (!focused && !op.offline && !ignored) notifyPm(op.from, messagePreview(op));
         // msgoff frames arrive in a burst right after the connection: a single notification for the whole burst.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
           offlineCount.current = 0;
-          notify('pm', { toast: plural(n, 'message', 'messages') + ' received while you were away.', icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'dm', id: null }); } } });
+          notify('pm', { toast: plural(n, 'message', 'messages') + ' received while you were away.', tag: 'pm-away', icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'dm', id: null }); } } });
         }, 1500);
         break;
       }
@@ -316,8 +316,8 @@ function useLiveOps(k) {
           var openDm = { label: 'Message', run: function () { actions.openDm(op.name); } };
           if (status === 'online' && before.status === 'offline') {
             if (isNotifyingOnline(stateRef.current, op.name)) toast(op.name + ' is online.', { icon: 'users', action: openDm });
-            else notify('friendOn', { toast: op.name + ' is online.', icon: 'users', action: openDm });
-          } else if (status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', icon: 'users' });
+            else notify('friendOn', { toast: op.name + ' is online.', title: op.name, tag: 'friend:' + op.name, icon: 'users', action: openDm });
+          } else if (status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', title: op.name, tag: 'friend:' + op.name, icon: 'users' });
         }
         break;
       }

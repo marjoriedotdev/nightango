@@ -46,6 +46,16 @@ function findMsg(g, id) {
   return null;
 }
 /**
+ * Returns the route of a group opened at one of its loaded messages.
+ * @param {Object} state Application state.
+ * @param {string} gid Group.
+ * @param {string} id Message id.
+ */
+function groupRouteAt(state, gid, id) {
+  var m = findMsg(state.groups[gid], id);
+  return m ? { view: 'group', id: gid, msgId: m.id } : { view: 'group', id: gid };
+}
+/**
  * Indexes the loaded messages of a group in one pass for repeated lookups.
  * @param {Object} g Group in the state.
  * @returns {function(?string): ?Object} Finds a message like findMsg.

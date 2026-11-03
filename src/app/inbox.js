@@ -30,7 +30,8 @@ function dropMentions(d, gid, ids) {
  * @param {Function} update State update.
  * @param {Function} toast Shows a notification.
  * @param {function(boolean)} setNavOpen Opens or closes the navigation drawer.
- * @returns {{pmArchive: Object, nav: Function, notify: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification and reception.
+ * @returns {{pmArchive: Object, nav: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification
+ *   of an event and of a PM, and reception.
  */
 function useInbox(stateRef, update, toast, setNavOpen) {
   // Only source of PM unreads: the BetterChatango database in live, an in-memory archive in the prototype or when that database is missing.
@@ -60,7 +61,8 @@ function useInbox(stateRef, update, toast, setNavOpen) {
   /**
    * Notifies an incoming event after its state update, as the notification preferences ask.
    * @param {string} kind Preference of the event: mentions, pm, friendOn or friendOff.
-   * @param {{toast: string, icon: string, action: ?Object}} info Text, icon and action of the notification.
+   * @param {{toast: string, icon: string, action: ?Object, tag: string, title: ?string, body: ?string}} info Text, icon and action of the notification,
+   *   and the conversation tag, title and text of its desktop alert, which a click opens through the action.
    */
   function notify(kind, info) {
     var p = stateRef.current.prefs, n = p.notify[kind];
@@ -70,8 +72,37 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     if (n.app && info.toast) toast(info.toast, info.action ? { action: info.action, icon: info.icon, clamp: kind === 'pm' } : { icon: info.icon, clamp: kind === 'pm' });
     // BetterChatango already shows its own desktop alert for a mention when push_desktop is on, but none for a PM.
     if (n.desktop && !focused && !(LIVE && kind === 'mentions' && liveBridge.setting('desktopMentions'))) {
-      try { if (window.Notification && window.Notification.permission === 'granted') new window.Notification('Nightango', { body: info.toast }); } catch (e) { /* system notifications unavailable */ }
+      try {
+        if (window.Notification && window.Notification.permission === 'granted') {
+          // Same tag: the alert replaces the previous one of its conversation. renotify (Chromium only) keeps the replacement audible: the app plays no sound of its own in live.
+          var shown = new window.Notification(info.title || 'Nightango', { body: info.body || info.toast, tag: info.tag, renotify: true });
+          shown.onclick = function () { window.focus(); shown.close(); if (info.action) info.action.run(); };
+        }
+      } catch (e) { /* system notifications unavailable */ }
     }
+  }
+  /**
+   * Notifies a received PM.
+   * @param {string} from Correspondent.
+   * @param {string} preview Text of the PM.
+   */
+  function notifyPm(from, preview) {
+    var show = stateRef.current.prefs.pmPreview;
+    notify('pm', {
+      toast: show ? from + ': ' + preview : 'New message from ' + from, title: from, body: show ? preview : 'New message', tag: 'pm:' + from,
+      icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } }
+    });
+  }
+  /**
+   * Returns the current id of a received mention.
+   * @param {Object} state Application state.
+   * @param {string} gid Group of the message.
+   * @param {Object} msg Message as received.
+   */
+  function mentionId(state, gid, msg) {
+    // A live message changes id once Chatango confirms it, and the mention log follows that change.
+    var e = state.mentionLog.filter(function (x) { return x.gid === gid && x.ts === msg.ts && x.author === msg.author; })[0];
+    return e ? e.id : msg.id;
   }
   /**
    * Adds a received group message, counts it unread unless its group is in view, and notifies a mention.
@@ -95,7 +126,13 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       if (focused) g.lastReadTs = Date.now();
     });
     if (mention && !quiet && !(s0.route.view === 'group' && s0.route.id === gid)) {
-      notify('mentions', { toast: msg.author + ' mentioned you in #' + gid, icon: 'at-sign', action: { label: 'Open', run: function () { nav({ view: 'group', id: gid }); } } });
+      var g0 = s0.groups[gid];
+      // A message the log hides keeps its text out of the system alert too.
+      var hidden = isHiddenAuthor(s0, msg.author) || (!s0.prefs.safety.guestMessages && isGuest(msg.author)) || !!(g0 && g0.hiddenChannels.indexOf(msg.channel || 'none') >= 0);
+      notify('mentions', {
+        toast: msg.author + ' mentioned you in #' + gid, title: msg.author + ' in #' + gid, body: hidden ? null : messagePreview(msg), tag: 'group:' + gid,
+        icon: 'at-sign', action: { label: 'Open', run: function () { var s = stateRef.current; nav(groupRouteAt(s, gid, mentionId(s, gid, msg))); } }
+      });
     }
   }
   /**
@@ -113,7 +150,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     });
     pmArchive.current.record(from, m, !focused);
     syncPmUnread(pmArchive.current, update, [from]);
-    if (!focused && !userOf(s0, from).ignored) notify('pm', { toast: s0.prefs.pmPreview ? from + ': ' + text : 'New message from ' + from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } } });
+    if (!focused && !userOf(s0, from).ignored) notifyPm(from, text);
   }
-  return { pmArchive: pmArchive, nav: nav, notify: notify, receiveGroup: receiveGroup, receiveDm: receiveDm };
+  return { pmArchive: pmArchive, nav: nav, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
 }
