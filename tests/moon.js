@@ -25,3 +25,21 @@ const svg = (iso) => Server.renderToStaticMarkup(React.createElement(T.Moon, { d
 const limb = (markup) => /d="M10 0A10 10 0 0 (\d)/.exec(markup)[1];
 check(limb(svg('2024-04-15T19:13Z')) === '1' && limb(svg('2024-05-01T11:27Z')) === '0', 'lit limb on the right while waxing, on the left while waning');
 check(svg('2024-04-23T23:49Z').includes('aria-label="Full moon, 100% lit"') && !Server.renderToStaticMarkup(React.createElement(T.Moon, null)).includes('aria-label'), 'named only when asked');
+
+/* Season dates, read on the local date: the first and last second of each season and the seconds around it, in both hemispheres */
+const util = {};
+vm.runInNewContext(fs.readFileSync(process.argv[2] + '/src/core/util.js', 'utf8'), util);
+const seasonAt = (south) => ([y, m, d, hh, mm, ss]) => util.seasonOf(new Date(y, m - 1, d, hh, mm, ss), south);
+const ranges = [
+  ['halloween', [2026, 10, 24], [2026, 11, 2], 'both'],
+  ['winter', [2026, 12, 1], [2027, 1, 6], 'north'],
+  ['winter', [2027, 6, 1], [2027, 7, 6], 'south'],
+  ['valentine', [2027, 2, 10], [2027, 2, 14], 'both']
+];
+for (const [season, first, last, where] of ranges) for (const south of [false, true]) {
+  const shown = where === 'both' || (where === 'south') === south, at = seasonAt(south);
+  const name = season + ' ' + first.join('-') + ' to ' + last.join('-') + ' in the ' + (south ? 'south' : 'north');
+  const inside = [[...first, 0, 0, 0], [...last, 23, 59, 59]], outside = [[first[0], first[1], first[2] - 1, 23, 59, 59], [last[0], last[1], last[2] + 1, 0, 0, 0]];
+  check(inside.every((t) => at(t) === (shown ? season : null)), name + (shown ? ': shown' : ': not shown') + ' from its first to its last second', inside.map(at));
+  check(outside.every((t) => at(t) === null), name + ': no season the second before and after', outside.map(at));
+}
