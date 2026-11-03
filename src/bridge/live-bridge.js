@@ -1280,6 +1280,25 @@ var liveBridge = (function () {
       }).catch(warn);
     },
     /**
+     * Flags unread the latest PM received from a member that is not an edit.
+     * @param {string} name Correspondent.
+     * @returns {Promise<boolean>} True if an entry was flagged, rejected when the private history cannot be opened or written.
+     */
+    markPmUnread: function (name) {
+      return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
+        var flagged = false, tx = db.transaction(['messages'], 'readwrite');
+        tx.objectStore('messages').index('target_ts_idx').openCursor(targetRange(name), 'prev').onsuccess = function (e) {
+          var cur = e.target.result;
+          if (!cur) return;
+          var x = pmRecordEntry(cur.value);
+          if (x && !x.editId && x.from === name) { cur.update(Object.assign(cur.value, { unread: 1 })); flagged = true; return; }
+          cur.continue();
+        };
+        tx.oncomplete = function () { resolve(flagged); };
+        tx.onabort = function () { warn(tx.error); reject(new Error('BetterChatango could not update your message history. Reload the page and try again.')); };
+      }); });
+    },
+    /**
      * Counts the unread PMs of a correspondent in the private history without the edits that BetterChatango archives separately.
      * @param {string} name Correspondent.
      * @returns {Promise<number>} Unread entries.

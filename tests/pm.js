@@ -42,7 +42,7 @@ function load(records, opts = {}) {
     window.__betterChatangoRefs = { client: window.client, chatango: {} };
   `);
   if (records) w.client.database.pm = { transaction };
-  w.eval(code + '; window.mod = { liveBridge: liveBridge, betterChatangoPmArchive: betterChatangoPmArchive, memoryPmArchive: memoryPmArchive, syncPmUnread: syncPmUnread, readPm: readPm, mergePmHistory: mergePmHistory, receivePm: receivePm, addSentPm: addSentPm, pmRecordEntry: pmRecordEntry };');
+  w.eval(code + '; window.mod = { liveBridge: liveBridge, betterChatangoPmArchive: betterChatangoPmArchive, memoryPmArchive: memoryPmArchive, syncPmUnread: syncPmUnread, readPm: readPm, unreadPm: unreadPm, mergePmHistory: mergePmHistory, receivePm: receivePm, addSentPm: addSentPm, pmRecordEntry: pmRecordEntry };');
   const d = { dms: {} };
   return { w, m: w.mod, d, journal, update: fn => fn(d) };
 }
@@ -73,6 +73,14 @@ function load(records, opts = {}) {
   const gusUnread = records.filter(r => r.target === 'gus' && r.unread).length;
   step('reading a conversation marks its history read and clears its count', gusUnread === 0 && t.d.dms.gus.unread === 0 && t.d.dms.ivan.unread === 2, { gusUnread, dms: t.d.dms });
 
+  /* Mark as unread: newer than the last received PM, an edit and an own PM are passed over */
+  records.push(record('gus', received('gus', '1700005025.5', '<n000/><iedit5555/><m v="1"><g x12s000="0"><eorig9876/>First, again</g></m>'), 0));
+  records.push(record('gus', 'msg:' + ME + ':' + ME + ':unknown:1700005028.5:0:<n000/>My reply', 0));
+  const flagged = await t.m.unreadPm(betterChatango, t.update, 'gus');
+  const gusFlagged = records.filter(r => r.target === 'gus' && r.unread).map(r => r.ts);
+  step('mark as unread flags the latest received PM that is not an edit and reads the count back',
+    flagged === true && JSON.stringify(gusFlagged) === '[1700005020.5]' && t.d.dms.gus.unread === 1 && t.d.dms.ivan.unread === 2, { flagged, gusFlagged, dms: t.d.dms });
+
   /* Browser without a database: the bridge reports it, nothing counts */
   t = load(null);
   t.d.dms = { gus: { messages: [], unread: 3 } };
@@ -81,7 +89,7 @@ function load(records, opts = {}) {
   step('browser without BetterChatango history reported', saved === false && t.d.dms.gus.unread === 0, { saved, unread: t.d.dms.gus.unread });
 
   /* In-memory archive: initial unreads, an edit does not count, a read touches only its own conversation */
-  const memory = t.m.memoryPmArchive({ kim: 2 });
+  const memory = t.m.memoryPmArchive([{ target: 'kim', from: 'kim', unread: true, edit: false }, { target: 'kim', from: 'kim', unread: true, edit: false }]);
   memory.record('kim', { editId: 'x' }, true);
   memory.record('lou', {}, true);
   memory.record('lou', {}, false);
