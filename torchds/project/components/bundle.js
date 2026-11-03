@@ -405,7 +405,18 @@
       e.preventDefault();
       ref.current.focus();
     }
-    return h('div', { className: 'tc-composer', onMouseDown: focusInput },
+    function hasFiles(dt) { return !!props.onFiles && !!dt && Array.prototype.indexOf.call(dt.types, 'Files') >= 0; }
+    function takeFiles(e, dt) {
+      // A text paste or drop keeps its native behaviour: only files are taken.
+      if (!props.onFiles || !dt || !dt.files || !dt.files.length) return;
+      e.preventDefault();
+      props.onFiles(dt.files);
+    }
+    return h('div', {
+      className: 'tc-composer', onMouseDown: focusInput,
+      onDragOver: function (e) { if (hasFiles(e.dataTransfer)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } },
+      onDrop: function (e) { takeFiles(e, e.dataTransfer); }
+    },
       props.status ? h('div', { className: 'tc-composer-context', role: 'status' },
         h(Spinner, { size: 14 }),
         h('span', { className: 'tc-composer-context-text' }, props.status)) : null,
@@ -425,6 +436,7 @@
       h('textarea', {
         id: id, ref: ref, rows: 1, placeholder: props.placeholder, value: value, 'aria-describedby': [ctx && ctx.note ? noteId : '', props.hint ? hintId : ''].join(' ').trim() || undefined,
         onChange: function (e) { setValue(e.target.value); if (props.onTyping) props.onTyping(); },
+        onPaste: function (e) { takeFiles(e, e.clipboardData); },
         onKeyDown: function (e) {
           if (props.onKeyDown) props.onKeyDown(e);
           if (e.defaultPrevented) return;
