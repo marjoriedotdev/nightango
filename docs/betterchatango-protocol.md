@@ -5,7 +5,7 @@ This document describes what Nightango knows about the BetterChatango client (vi
 ## Reference sources
 
 - BetterChatango: its code loaded by `https://vissle.me/client/start`, in particular `inject.js` (`kickingoff`, `DENIED`, `socketEvent`, `window.onoffline`, `saveMessage`, `renderMessage`). A read-only copy, downloaded on 2026-10-19, is in `reference/torch/` (`start.js`, `inject.js`, `client.html`, `client.css`). An `inject.js:NNNN` reference points to a line of this copy. The code served by vissle.me may have changed since: when in doubt, compare with the online version.
-- Official Chatango client: texts of the "Connection lost" window, private history format, "Delete" button, media prefixes.
+- Official Chatango client: texts of the "Connection lost" window, private history format, "Delete" button, media prefixes. Since 2026-11-03 also a frame source, under the conditions of [ADR-0002](adr/0002-no-invented-frames.md): cite the build, the file, the date of reading and a short excerpt, and mark the frame "official client, build {id}".
 - chadango (Go): https://github.com/n0h4rt/chadango
 - chatango-lib (Python): https://github.com/neokuze/chatango-lib
 - ch.py (Python, older): https://github.com/asl97/ch.py

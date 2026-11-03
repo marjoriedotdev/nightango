@@ -12,7 +12,7 @@ In live, the call does not go out from BetterChatango either: the bridge does no
 
 ## What would reopen the question
 
-A way to know whether one is blocked that reads only one's own account state, for example a Chatango refusal frame found in the code of BetterChatango or of a reference library (chadango, chatango-lib, ch.py), or an owner decision that reverses ADR-0005.
+A way to know whether one is blocked that reads only one's own account state, for example a Chatango refusal frame found in the code of BetterChatango, of a reference library (chadango, chatango-lib, ch.py) or of the official client, or an owner decision that reverses ADR-0005. The official client was not searched: it became a source on 2026-11-03, after this decision.
 
 ## Sources consulted (2026-10-23)
 
