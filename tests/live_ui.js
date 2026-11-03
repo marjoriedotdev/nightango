@@ -289,7 +289,8 @@ d.addEventListener('torch-skin:x-request', e => {
 
 // Stored by an older or broken version: values of another type than the default, next to a phase index that replaces "auto".
 w.localStorage.setItem('torch-prototype-prefs', JSON.stringify({ notify: null, a11y: 'on', volume: '70', customThemes: { night: 1 }, sky: { calm: 'no', moon: 3 } }));
-w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold' }));
+// The read position of #reads is a valid value of the previous session, the others are of another type.
+w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold', readTs: { reads: 1700000400000 } }));
 
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
@@ -325,6 +326,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   C.user.name = 'marjorie'; C.user.full = 'Marjorie';
   C.groups.test = fakeGroup();
   C.groups.edits = fakeGroup();
+  C.groups.reads = fakeGroup();
   C.emit('clientLogin', C);
   // Before the first signed-in render: a message in a group opened later, then the connection changes of a socket poll.
   g('b', 'edits', ['1700000100.1', 'Alice', '', 'u1', 'UNID1', 'tmp0', '1.2.3.4', '0', '', '<n000/><f x11000="0">Sent before the first render']);
@@ -358,7 +360,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('stored values of another type load with their defaults, the others are kept, and sign-in completes',
     !!storedPrefs.notify && storedPrefs.notify.pm.app === true && storedPrefs.a11y.reduceMotion === false && storedPrefs.volume === 70
       && Array.isArray(storedPrefs.customThemes) && storedPrefs.sky.calm === false && storedPrefs.sky.moon === 3
-      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated') && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
+      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated' || k === 'readTs') && storedAccount.readTs.reads === 1700000400000 && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
     { storedPrefs, storedAccount });
   step('stored preferences without a version read as the current schema and saved with its version', storedPrefs.version === 1 && storedPrefs.sky.moon === 3, storedPrefs.version);
   step('announcement requested after init', frame('getannouncement').length >= 1);
@@ -423,6 +425,17 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('i', 'test', ['1700000180.1', 'Ivy', '', 'u9', 'UNID9', 'H3=', '3.3.3.3', '0', '', '<n000/><f x11000="1">Ivy older']);
   await until(() => logFont('Ivy newer') !== null);
   step('group history batch keeps its newest style', /Impact/.test(logFont('Ivy newer') || ''), logFont('Ivy newer'));
+
+  /* Read position kept in this browser: after a reload, the history replayed on join counts from it */
+  const readsNav = () => $$('.tc-nav').find(x => { const l = x.querySelector('.tc-nav-label'); return l && l.textContent === 'reads'; });
+  g('i', 'reads', ['1700000500.1', 'Kai', '', 'u10', 'UNID10', 'R1=', '4.4.4.4', '0', '', '<n000/><f x11000="0">@marjorie are you there']);
+  g('i', 'reads', ['1700000450.1', 'Kai', '', 'u10', 'UNID10', 'R2=', '4.4.4.4', '0', '', '<n000/><f x11000="0">News since you left']);
+  g('i', 'reads', ['1700000300.1', 'Kai', '', 'u10', 'UNID10', 'R3=', '4.4.4.4', '0', '', '<n000/><f x11000="0">@marjorie old ping']);
+  await until(() => !!readsNav() && !!readsNav().querySelector('.tc-count'));
+  const readsRow = readsNav();
+  const readsView = { count: readsRow && (readsRow.querySelector('.tc-count') || {}).textContent, unread: !!readsRow && readsRow.classList.contains('tc-nav-unread'), alert: !!byText('.toast', 'mentioned you in #reads') };
+  step('history newer than the kept read position counts as unread and mentions, the older history and alerts do not',
+    readsView.count === '@1' && readsView.unread && !readsView.alert, readsView);
 
   /* Sending: escaping, reply, quote, channel */
   const ta = $('.tc-composer textarea');

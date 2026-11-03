@@ -44,6 +44,11 @@ function addHistory(d, op, local) {
   else { delete hm.editId; mergeEdits(g, hm); }
   g.messages.push(withReply(g, hm));
   logMention(d, op.gid, hm);
+  // History newer than the read position kept in this browser counts as unread, without an alert. The group in view reads it instead.
+  if (hm.kind === 'msg' && !hm.editId && hm.author !== d.me && g.lastReadTs != null && hm.ts > g.lastReadTs && !isGroupInView(d, op.gid)) {
+    g.unread += 1;
+    if (mentionsMe(d.me, hm.text)) g.mentions += 1;
+  }
   return true;
 }
 
@@ -73,6 +78,8 @@ function useLiveOps(k) {
         var g = d.groups[gid];
         g.messages.sort(function (a, b) { return a.ts - b.ts; });
         trimThread(g);
+        // A group without a kept read position takes its first history as read, as before read positions were kept.
+        if (g.lastReadTs == null || isGroupInView(d, gid)) g.lastReadTs = readThrough(g);
       });
     });
   }
@@ -103,7 +110,7 @@ function useLiveOps(k) {
           // Joining calls renderGroup again with recent: true, so owned never goes back to false.
           if (op.owned) g.owned = true;
           g.joined = !op.hidden;
-          if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: Date.now() }; }
+          if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: g.lastReadTs }; }
         });
         if (!op.hidden && unfocused) setTimeout(function () { var r = stateRef.current.route; if (r.view === 'group' && r.id === op.id) liveBridge.focus(op.id); }, 50);
         break;

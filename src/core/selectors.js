@@ -96,6 +96,15 @@ function commonGroups(state, name) {
 }
 function lastTs(c) { return c.messages.length ? c.messages[c.messages.length - 1].ts : 0; }
 /**
+ * Returns the read position of a group once its loaded messages are read.
+ * @param {Object} g Group in the state.
+ */
+function readThrough(g) {
+  // Only member messages carry the server time: event rows are stamped with the local clock.
+  for (var i = g.messages.length - 1; i >= 0; i--) if (g.messages[i].kind === 'msg') return Math.max(g.lastReadTs || 0, g.messages[i].ts);
+  return g.lastReadTs;
+}
+/**
  * Lists the shown conversations without closed conversations from newest to oldest.
  * @param {Object} state Application state.
  */
@@ -114,6 +123,12 @@ function unreadDmCount(state) { return listedDms(state).filter(function (n) { re
  * @param {string} name Conversation member.
  */
 function isDmInView(state, name) { return state.route.view === 'dm' && state.route.id === name && document.visibilityState === 'visible'; }
+/**
+ * Tells whether a group is open in front of the user.
+ * @param {Object} state Application state.
+ * @param {string} gid Group.
+ */
+function isGroupInView(state, gid) { return state.route.view === 'group' && state.route.id === gid && document.visibilityState === 'visible'; }
 // Words and media as a sorted set: BetterChatango archives an image URL typed in the text as an <i s> tag.
 function pmContentKey(m) {
   var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
