@@ -288,6 +288,19 @@ function useLiveOps(k) {
           op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name, localRef.current); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
         });
         break;
+      case 'pmSettings':
+        update(function (d) {
+          d.pmSettings = op.values;
+          var save = d.pmSettingSave;
+          if (!save || save.failed) return;
+          // A reply to an earlier request can still show the old value: only the reply to the request of this change refuses it.
+          if (op.values[save.key] === save.value) d.pmSettingSave = null;
+          else if (op.asked) d.pmSettingSave = { key: save.key, value: save.value, failed: true };
+        });
+        break;
+      case 'pmSettingsTimeout':
+        update(function (d) { var save = d.pmSettingSave; if (save && !save.failed) d.pmSettingSave = { key: save.key, value: save.value, failed: true }; });
+        break;
       case 'friendTimeout':
         if (!stateRef.current.friendAdds[op.name]) break;
         update(function (d) { delete d.friendAdds[op.name]; });

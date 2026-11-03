@@ -69,7 +69,7 @@ w.WebSocket.prototype.receive = function (frame) { if (this.readyState === 1) th
 // Held: client.connect opens a socket like socketEvent, whose ok registers the group and whose inited settles the attempt.
 let connectHeld = false;
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
-const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
+const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff', 'settings'];
 // Record of the BetterChatango history database (saveMessage): key ts, the frame timestamp.
 const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const pmRecords = [
@@ -1599,6 +1599,28 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { on: true, status: null, asked: [] }, { on: true, status: PMR_TEXT, asked: PMR_URL },
     { on: false, status: null, asked: PMR_URL, betterChatango: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
   ]), pmrSeen);
+
+  /* Chatango account PM settings: a switch follows the settings reply only, setsettings in chadango's format */
+  const ACCOUNT_ROWS = ['Hide my idle time', 'Allow anonymous messages', 'Email me messages I get while offline'];
+  const accountRow = title => $$('section[aria-label="Chatango account"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title);
+  const accountView = () => ACCOUNT_ROWS.map(t => {
+    const r = accountRow(t), sw = r && r.querySelector('[role=switch]');
+    return r ? (sw.checked ? 'on' : 'off') + (sw.disabled ? ' pending' : '') + ((r.querySelector('.tc-row-desc') || {}).textContent === "Chatango didn't confirm this change. Try again." ? ' failed' : '') : null;
+  });
+  const accountSeen = [accountView()];
+  pm('settings', ['disable_idle_time', 'off', 'allow_anon', 'on', 'email_offline_msg', 'off']); await wait(50);
+  accountSeen.push(accountView());
+  const sentBeforeAccount = sent.length;
+  if (accountRow(ACCOUNT_ROWS[0])) { click(accountRow(ACCOUNT_ROWS[0]).querySelector('[role=switch]')); await wait(50); }
+  const accountFrames = sent.slice(sentBeforeAccount).map(x => x[0] + ' ' + x[1]);
+  accountSeen.push(accountView());
+  pm('settings', ['disable_idle_time', 'on', 'allow_anon', 'on', 'email_offline_msg', 'off']); await wait(50);
+  accountSeen.push(accountView());
+  if (accountRow(ACCOUNT_ROWS[2])) { click(accountRow(ACCOUNT_ROWS[2]).querySelector('[role=switch]')); await wait(50); }
+  pm('settings', ['disable_idle_time', 'on', 'allow_anon', 'on', 'email_offline_msg', 'off']); await wait(50);
+  accountSeen.push(accountView());
+  step('Chatango PM settings change only once the settings reply confirms them', JSON.stringify(accountFrames) === JSON.stringify(['private_message setsettings:disable_idle_time:on', 'private_message settings'])
+    && JSON.stringify(accountSeen) === JSON.stringify([[null, null, null], ['off', 'on', 'off'], ['off pending', 'on pending', 'off pending'], ['on', 'on', 'off'], ['on', 'on', 'off failed']]), { accountFrames, accountSeen });
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   const pmrBanner = () => { const b = $('.convs .tc-banner'); return b && b.textContent; };
