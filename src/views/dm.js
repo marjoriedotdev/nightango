@@ -178,7 +178,13 @@ function DmThread(p) {
   }, [p.seek, len, convo.loadingOlder]);
 
   var u = userOf(s, id);
-  var calls = useLatestCalls({ jump: function (o) { log.jumpTo(o.id); }, reply: cm.enter('reply'), quote: cm.enter('quote'), edit: function (x) { cm.edit(x, (x.editKeys || []).length); } });
+  function edit(x) { cm.edit(x, (x.editKeys || []).length); }
+  function editLast() {
+    var last = lastMatch(convo.messages, function (m) { return canEditPm(m, s.me) && (m.editKeys || []).length < EDIT_MAX; });
+    if (last) edit(last);
+    return !!last;
+  }
+  var calls = useLatestCalls({ jump: function (o) { log.jumpTo(o.id); }, reply: cm.enter('reply'), quote: cm.enter('quote'), edit: edit });
   var rows = [], prev = null, lastDay = null, byKey = Object.create(null);
   convo.messages.forEach(function (m) { if (m.key && !byKey[m.key]) byKey[m.key] = m; });
   convo.messages.forEach(function (m) {
@@ -201,7 +207,7 @@ function DmThread(p) {
     };
   var bottom;
   if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
-  else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close });
+  else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close, onEditLast: editLast });
   return h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
       h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
@@ -218,6 +224,13 @@ function DmThread(p) {
 }
 
 /**
+ * Tells whether the user can edit a PM.
+ * @param {Object} m PM.
+ * @param {string} me Signed-in user.
+ */
+function canEditPm(m, me) { return m.from === me && !!m.key; }
+
+/**
  * Private message row with its Reply button and its action menu, rendered again only when its props change.
  * A message without a PM key, sent by the official Chatango client, has neither Reply nor Edit: they could not point to it.
  * @param {{m: Object, peer: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, continued: boolean, highlight: boolean, original: ?Object,
@@ -231,7 +244,7 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
   var ms = memberStyles({ style: p.style, unstyled: p.unstyled }, prefs.styles, p.theme, false);
   // A sent PM gets its archive key only at the next OK: its remove entry appears only after that.
   var canRemove = !LIVE || !!m.archiveTs;
-  var canEdit = !!p.onEdit && m.from === me && !!m.key, canQuote = !!p.onQuote && !!m.text && !!mentionHandle(m.from);
+  var canEdit = !!p.onEdit && canEditPm(m, me), canQuote = !!p.onQuote && !!m.text && !!mentionHandle(m.from);
   var items = [canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
     canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
     copyTextItem(app, m), m.from !== me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
@@ -254,7 +267,8 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
 
 /**
  * Private conversation composer with its reply, edit or quote, emoticon and media picker, :name completion and file upload.
- * @param {{id: string, draft: Array, mode: ?Object, onCancelMode: Function}} p Conversation correspondent, draft (useDraft), mode (useComposerMode) and its end.
+ * @param {{id: string, draft: Array, mode: ?Object, onCancelMode: Function, onEditLast: function(): boolean}} p Conversation correspondent, draft (useDraft),
+ *   mode (useComposerMode) and its end, and edit of the user's last message, false if none can be edited.
  */
 function DmComposer(p) {
   var app = useApp(), id = p.id, mode = p.mode, kind = mode && mode.kind;
@@ -262,8 +276,12 @@ function DmComposer(p) {
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'dm', id: id }, setDraft);
+  function onKeyDown(e) {
+    media.onKeyDown(e);
+    if (editsLastOnUp(e, draft, mode) && p.onEditLast()) e.preventDefault();
+  }
   return h(Frag, null, media.panel, h(T.Composer, {
-    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: media.onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
+    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
     // An edit changes only the text: the picked file waits for the next message.
     onAttach: kind === 'edit' ? null : attach.onAttach, attachment: kind === 'edit' ? null : attach.attachment,
     context: mode ? Object.assign({ author: mode.m.from, text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,

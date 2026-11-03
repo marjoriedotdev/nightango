@@ -80,6 +80,15 @@ function trimEnd(text) {
 }
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
 function isGuest(name) { return /^[!#]/.test(name); }
+/**
+ * Returns the last element of a list that passes a test.
+ * @param {Array} list List searched from its end.
+ * @param {function(*): boolean} test Test of an element.
+ */
+function lastMatch(list, test) {
+  for (var i = list.length - 1; i >= 0; i--) if (test(list[i])) return list[i];
+  return null;
+}
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
 function storageMerge(key, patch) { return storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
