@@ -30,7 +30,10 @@ function liveWorld(me) {
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', readTs: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array' };
+// The read position of the group in view moves with each message: its writes wait and go out together.
+var READ_SAVE_MS = 2000;
+var READ_POSITIONS_MAX = 100;
 /**
  * Returns the account data stored in this browser without the values of another kind left by an older version or corrupted.
  * @param {*} stored Content of skinKey.
@@ -41,14 +44,38 @@ function storedLocal(stored) {
   Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
   return out;
 }
-function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, unstyled: [], style: null }; }
+function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, readTs: {}, unstyled: [], style: null }; }
 /**
- * Closed conversations, hidden and sending channels, members with a hidden style and own style, kept by account in this browser in live.
+ * Returns the most recent read positions of a map of read positions.
+ * @param {Object} reads Server time of the newest read message by group.
+ */
+function newestReads(reads) {
+  var keys = Object.keys(reads), out = {};
+  if (keys.length <= READ_POSITIONS_MAX) return reads;
+  keys.sort(function (a, b) { return reads[b] - reads[a]; }).slice(0, READ_POSITIONS_MAX).forEach(function (k) { out[k] = reads[k]; });
+  return out;
+}
+/**
+ * Closed conversations, hidden and sending channels, read positions, members with a hidden style and own style, kept by account in this browser in live.
  * @param {Object} state Application state.
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
 function useLocalStore(state) {
-  var localRef = useRef(blankLocal());
+  var localRef = useRef(blankLocal()), pending = useRef(null);
+  function flush() {
+    var p = pending.current;
+    if (!p) return;
+    pending.current = null;
+    clearTimeout(p.timer);
+    storageMerge(skinKey(p.me), p.o);
+  }
+  // A reload is also how live signs out: the read position waiting to be written goes out before the page leaves or is hidden, which a phone may end without pagehide.
+  useEffect(function () {
+    function onHidden() { if (document.visibilityState === 'hidden') flush(); }
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onHidden);
+    return function () { window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', onHidden); };
+  }, []);
   /**
    * Reads the account data at sign-in.
    * @param {string} me Signed-in account.
@@ -78,10 +105,18 @@ function useLocalStore(state) {
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
     Object.keys(prev.sendChannels).forEach(function (k) { if (!state.groups[k]) o.sendChannels[k] = prev.sendChannels[k]; });
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].sendChannel !== 'none') o.sendChannels[k] = state.groups[k].sendChannel; });
+    Object.keys(prev.readTs).forEach(function (k) { if (!state.groups[k]) o.readTs[k] = prev.readTs[k]; });
+    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].lastReadTs != null) o.readTs[k] = state.groups[k].lastReadTs; });
+    o.readTs = newestReads(o.readTs);
     prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
     Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
+    if (JSON.stringify(o) === JSON.stringify(prev)) return;
+    var readOnly = JSON.stringify(Object.assign({}, o, { readTs: null })) === JSON.stringify(Object.assign({}, prev, { readTs: null }));
+    localRef.current = o;
     // Merged with the storage: the bridge also sets the unread migration flag there.
-    if (JSON.stringify(o) !== JSON.stringify(prev)) { localRef.current = o; storageMerge(skinKey(me), o); }
+    if (pending.current) pending.current.o = o;
+    else pending.current = { me: me, o: o, timer: setTimeout(flush, READ_SAVE_MS) };
+    if (!readOnly) flush();
   }, [me, state.ownStyle, state.dms, state.groups, state.users]);
   return { ref: localRef, restore: restore };
 }
@@ -98,7 +133,7 @@ function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.
 function liveGroup(id, title) {
   var t = title || id;
   return {
-    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: Date.now(),
+    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: null,
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
     live: { flags: 0, mods: {}, badges: {}, owner: null, rate: null, bw: null, annc: null, modlog: null, banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
@@ -115,7 +150,7 @@ function liveGroup(id, title) {
  */
 function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
 /**
- * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels kept in this browser.
+ * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels and read position kept in this browser.
  * @param {Object} d State being modified.
  * @param {string} gid Target group.
  * @param {Object} local Account data kept in this browser.
@@ -128,6 +163,7 @@ function ensureLiveGroup(d, gid, local) {
     g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
     g.hiddenChannels = local.channels[gid] || [];
     g.sendChannel = local.sendChannels[gid] || 'none';
+    g.lastReadTs = local.readTs[gid] || null;
   }
   return g;
 }

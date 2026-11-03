@@ -46,7 +46,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       // Going back to the message log does not jump again to the message opened from Mentions or the PM search.
       if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; delete cur.seek; }
       var r = Object.assign({}, route);
-      if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = Date.now(); g.unread = 0; g.mentions = 0; }
+      if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = readThrough(g); g.unread = 0; g.mentions = 0; }
       if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
       d.route = r;
     });
@@ -83,7 +83,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     var mention = msg.kind === 'msg' && mentionsMe(me, msg.text);
     // Like in BetterChatango, a mention in a muted group or from an ignored author does not alert, and the counters still change.
     var quiet = !!(s0.groups[gid] && s0.groups[gid].muted) || !!userOf(s0, msg.author).ignored;
-    var focused = s0.route.view === 'group' && s0.route.id === gid && document.visibilityState === 'visible';
+    var focused = isGroupInView(s0, gid);
     update(function (d) {
       var g = d.groups[gid]; if (!g) return;
       // The reply is resolved on the up-to-date state: the final id of the original can arrive just before.
@@ -92,7 +92,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       trimThread(g);
       logMention(d, gid, msg);
       if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
-      if (focused) g.lastReadTs = Date.now();
+      if (focused) g.lastReadTs = readThrough(g);
     });
     if (mention && !quiet && !(s0.route.view === 'group' && s0.route.id === gid)) {
       notify('mentions', { toast: msg.author + ' mentioned you in #' + gid, icon: 'at-sign', action: { label: 'Open', run: function () { nav({ view: 'group', id: gid }); } } });

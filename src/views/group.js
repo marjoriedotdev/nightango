@@ -46,6 +46,43 @@ function editsLastOnUp(e, draft, mode) {
   return e.key === 'ArrowUp' && !draft && !mode && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey;
 }
 
+/**
+ * Bar that leads to the New messages line while it is above the view.
+ * @param {{logRef: Object, count: number, beyond: boolean, since: number, h24: boolean, older: ?Object}} p Ref of the group's message log, new messages loaded,
+ *   read position older than the loaded history, read position, 24-hour clock, and log head of MessageLog whose load pages back.
+ */
+function NewSinceBar(p) {
+  var a = useState(false), above = a[0], setAbove = a[1];
+  var b = useState(false), seeking = b[0], setSeeking = b[1];
+  function mark() { return p.logRef.current && p.logRef.current.querySelector('.newmark'); }
+  useEffect(function () {
+    var el = p.logRef.current;
+    if (!el) return;
+    function check() { var m = mark(); setAbove(!!m && m.getBoundingClientRect().bottom < el.getBoundingClientRect().top); }
+    // Messages added below and a log that gets shorter move the line up without a scroll event.
+    var ro = new ResizeObserver(check);
+    ro.observe(el);
+    ro.observe(el.firstChild);
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    return function () { ro.disconnect(); el.removeEventListener('scroll', check); };
+  }, []);
+  // Jump past the loaded history: one page at a time until the read position is loaded or the history ends.
+  var ready = !!p.older && p.older.status === 'more' && p.older.ready;
+  useEffect(function () {
+    if (!seeking) return;
+    if (p.beyond) { if (ready) p.older.load(); return; }
+    setSeeking(false);
+    var m = mark();
+    if (m) m.scrollIntoView({ block: 'start' });
+  }, [seeking, p.beyond, ready]);
+  if (!p.count || !(p.beyond || above)) return null;
+  var label = p.count.toLocaleString('en-US') + (p.beyond ? '+' : '') + (p.count === 1 && !p.beyond ? ' new message' : ' new messages') + ' since ' + fmtTime(p.since, p.h24);
+  return h('div', { className: 'new-since' },
+    h('span', { className: 'grow' }, label),
+    h(T.Button, { variant: 'ghost', size: 'sm', disabled: seeking, onClick: function () { setSeeking(true); } }, seeking ? 'Loading' : 'Jump'));
+}
+
 function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
@@ -121,14 +158,14 @@ function GroupView(p) {
     log.jumpTo(o.id);
   }
 
-  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g);
+  var items = [], prev = null, lastDay = null, marker = false, newCount = 0, findOriginal = msgFinder(g), markerTs = s.route.markerTs;
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
     if (dk !== lastDay) { items.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    if (!q && prefs.markNew && !marker && s.route.markerTs && m.ts > s.route.markerTs && m.author !== me && m.kind === 'msg') {
-      items.push(h('div', { key: 'n' + m.id, className: 'newmark', role: 'separator' }, 'New messages')); marker = true; prev = null;
-    }
+    var isNew = !q && prefs.markNew && markerTs && m.ts > markerTs && m.author !== me && m.kind === 'msg';
+    if (isNew && !marker) { items.push(h('div', { key: 'n' + m.id, className: 'newmark', role: 'separator' }, 'New messages')); marker = true; prev = null; }
+    if (isNew && !isHiddenAuthor(s, m.author)) newCount++;
     if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), m.user + ' was banned')); prev = null; continue; }
     if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null)); prev = null; continue; }
     if (isHiddenAuthor(s, m.author)) {
@@ -221,6 +258,7 @@ function GroupView(p) {
         h('label', { htmlFor: 'gsearch', className: 'tc-sr' }, 'Search messages'),
         h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
         h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
+      h(NewSinceBar, { logRef: log.view.ref, count: newCount, beyond: !!newCount && !!older && older.status === 'more' && markerTs < g.messages[0].ts, since: markerTs, h24: prefs.h24, older: older }),
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
