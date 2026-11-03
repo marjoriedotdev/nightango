@@ -228,6 +228,11 @@ var liveBridge = (function () {
         break;
       }
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
+      case 'settings': {
+        var pmSettings = parsePmSettings(data);
+        if (pmSettings) emit({ op: 'pmSettings', values: pmSettings, asked: gotReply('settings') });
+        break;
+      }
       case 'unblocked': emit({ op: 'pmUnblocked', name: lower(data[0]) }); break;
       case 'OK':
         // Chatango forgets the connect of the previous connection, and BetterChatango builds a new client.private after this handler.
@@ -842,6 +847,7 @@ var liveBridge = (function () {
       if (pmOpen()) {
         // Session already open: the friend list and the history were received before us, so we request them again.
         emit({ op: 'pmReady' });
+        send('private_message', 'settings', '');
         send('private_message', 'wl', '');
         send('private_message', 'getblock', '');
       } else {
@@ -1052,6 +1058,19 @@ var liveBridge = (function () {
     removeFriend: function (name) { return send('private_message', 'wldelete:' + name, 'The friend could not be removed.'); },
     block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', 'The block could not be sent.'); },
     unblock: function (name) { return send('private_message', 'unblock:' + name, 'The unblock could not be sent.'); },
+    /**
+     * Changes a PM setting of the Chatango account then asks for the settings again to confirm it.
+     * @param {string} key PM_SETTING_NAMES key.
+     * @param {boolean} on New value.
+     * @returns {boolean} True if the frames were handed to BetterChatango.
+     */
+    setPmSetting: function (key, on) {
+      if (!send('private_message', 'setsettings:' + PM_SETTING_NAMES[key] + ':' + (on ? 'on' : 'off'), 'Your Chatango setting could not be saved.')) return false;
+      // chadango sends setsettings without waiting for a reply: only the settings reply tells the new value.
+      send('private_message', 'settings', '');
+      awaitReply('settings', CONFIRM_TIMEOUT, { op: 'pmSettingsTimeout' });
+      return true;
+    },
     /**
      * History archived by BetterChatango in IndexedDB and grouped by correspondent with the read state of each message.
      * @param {number} perTarget Number of entries kept per correspondent, the most recent ones.
