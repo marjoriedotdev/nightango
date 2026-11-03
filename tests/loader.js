@@ -94,6 +94,7 @@ async function suite(userscript) {
       && typeof a.w.client.event.group.getratelimit === 'function' && !!host2 && !!host2.shadowRoot.querySelector('#app').children.length,
     { injected: a.injected.length, skin: a.w.__TORCH_SKIN__, live: a.w.__TORCH_LIVE__ });
   step('userscript leaves the prototype hook out', !/\bwindow\.claude\b|\bclaude\.hot\b/.test(userscript) && hookReads === 0, hookReads);
+  step('userscript leaves the New Year review of the prototype out', !/showNewYear|torch-new-year/.test(userscript) && !('showNewYear' in a.w));
 
   /* vissle bridge: only the signed-in profile is queried, without cookies */
   const replies = [];

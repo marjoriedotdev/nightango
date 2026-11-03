@@ -31,21 +31,23 @@ var Shell = React.memo(function Shell() {
   else if (r.view === 'mentions') main = h(MentionsView, null);
   else main = h(Discover, null);
   return h('div', { className: cx('shell', app.navOpen && 'nav-open') },
+    h(NewYearSky, null),
     h(Sidebar, null),
     h('div', { className: 'scrim', onClick: app.ui.closeNav }),
     main);
 });
 
-// Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames).
-function BrandMark() {
+// Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames). The startup screen leaves New Year out.
+function BrandMark(p) {
   var moon = useApp().state.prefs.sky.moon;
-  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true, phase: moon === 'auto' ? undefined : moon / 8 }));
+  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true, phase: moon === 'auto' ? undefined : moon / 8 }),
+    p.startup ? null : h(NewYearMark, null));
 }
 
 function StartupScreen() {
   return h('main', { className: 'main' },
     h('div', { className: 'empty', role: 'status' },
-      h(BrandMark),
+      h(BrandMark, { startup: true }),
       h('p', { className: 'startup' }, h(T.Spinner, null), 'Signing in')));
 }
 

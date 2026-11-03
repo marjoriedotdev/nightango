@@ -58,3 +58,92 @@ function SeasonWeb() {
         h('ellipse', { cx: 10, cy: 12, rx: 3.6, ry: 4.2 }),
         h('circle', { cx: 10, cy: 6.8, r: 2.3 }))));
 }
+
+// -- New Year -----------------------------------------------------------------
+
+// Bursts as [left, top, radius in px, delay in s]: in the sky, on the gutters around the panels, on the band, above the name.
+var SKY_BURSTS = [
+  ['calc(var(--size-sidebar) + 15px)', '6%', 46, 0], ['calc(100% - var(--size-members) - 15px)', '12%', 52, -1.1],
+  ['4px', '30%', 40, -1.8], ['calc(100% - 4px)', '22%', 44, -0.5], ['calc(var(--size-sidebar) + 15px)', '58%', 50, -2.2],
+  ['calc(100% - var(--size-members) - 15px)', '72%', 42, -1.5], ['38%', '4px', 46, -0.8], ['66%', 'calc(100% - 4px)', 40, -2.6]
+];
+var BAND_BURSTS = [['66px', '-24px', 16, 0], ['142px', '-34px', 20, -1.2], ['212px', '-22px', 15, -2.1]];
+var FIREWORK_RAYS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
+
+function newYearNow() { return Date.now(); }
+/*PROTOTYPE*/
+// Review of the hosted prototype: plays the last ten seconds of the year, then the fireworks, whatever the date.
+window.showNewYear = function () {
+  var shift = new Date(new Date().getFullYear() + 1, 0, 1).getTime() - 10000 - Date.now();
+  newYearNow = function () { return Date.now() + shift; };
+  window.dispatchEvent(new Event('torch-new-year'));
+};
+/*END PROTOTYPE*/
+
+/**
+ * Returns where the device time stands around New Year's midnight (newYearAt), rendered again each time it changes.
+ */
+function useNewYear() {
+  var s = useState(newYearNow), now = s[0], setNow = s[1];
+  var at = newYearAt(now);
+  useEffect(function () {
+    // An hour at most: a timer runs late after the device sleeps, and setTimeout fires at once past 24 days.
+    var timer = setTimeout(function () { setNow(newYearNow()); }, Math.min(at.next, 60 * MIN));
+    return function () { clearTimeout(timer); };
+  }, [now]);
+  /*PROTOTYPE*/
+  useEffect(function () {
+    function show() { setNow(newYearNow()); }
+    window.addEventListener('torch-new-year', show);
+    return function () { window.removeEventListener('torch-new-year', show); };
+  }, []);
+  /*END PROTOTYPE*/
+  return at;
+}
+
+/**
+ * Tells whether the sky may move: neither Calm sky nor reduced motion, in Nightango or on the device.
+ * @param {Object} prefs Preferences.
+ */
+function skyMoves(prefs) {
+  return !prefs.sky.calm && !prefs.a11y.reduceMotion && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Fireworks bursting behind what follows them, colored by the New Year tokens.
+ * @param {{bursts: Array}} p Bursts: left, top, radius in px and delay in s.
+ */
+function Fireworks(p) {
+  return h('span', { className: 'fw', 'aria-hidden': 'true' }, p.bursts.map(function (b, i) {
+    return h('span', { key: i, className: 'fw-burst fw-c' + (i % 3 + 1), style: { left: b[0], top: b[1], '--fw-r': b[2] + 'px', '--fw-delay': b[3] + 's' } },
+      FIREWORK_RAYS.map(function (a) { return h('span', { key: a, className: 'fw-ray', style: { transform: 'rotate(' + a + 'deg)' } }, h('span', { className: 'fw-spark' })); }));
+  }));
+}
+
+/**
+ * Fireworks in the sky behind the panels during the first minute of the year. Puts the class of their colors on the root.
+ */
+function NewYearSky() {
+  var prefs = useApp().state.prefs, at = useNewYear();
+  var on = prefs.sky.season && at.phase === 'fireworks' && skyMoves(prefs);
+  useEffect(function () {
+    if (!on) return;
+    ROOT_EL.classList.add('season-new-year');
+    return function () { ROOT_EL.classList.remove('season-new-year'); };
+  }, [on]);
+  return on ? h(Fireworks, { bursts: SKY_BURSTS }) : null;
+}
+
+/**
+ * Countdown under the moon in the last minute of the year, then the greeting and fireworks on the sky band in the first minute.
+ */
+function NewYearMark() {
+  var prefs = useApp().state.prefs, at = useNewYear();
+  if (!prefs.sky.season || !at.phase) return null;
+  var midnight = at.phase === 'fireworks';
+  // The live region exists from the countdown on: only the greeting is announced, once, at midnight.
+  return h(Frag, null,
+    midnight && skyMoves(prefs) ? h(Fireworks, { bursts: BAND_BURSTS }) : null,
+    h('span', { className: cx('newyear-count tnum', midnight && 'newyear-greeting'), 'aria-hidden': 'true' }, midnight ? 'Happy New Year' : String(at.seconds)),
+    h('span', { className: 'tc-sr', 'aria-live': 'polite' }, midnight ? 'Happy New Year' : ''));
+}

@@ -69,6 +69,23 @@ function isNewerVersion(a, b) {
 }
 function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many); }
 /**
+ * Returns where a local time stands around New Year's midnight: the countdown in the last minute of December 31,
+ * the fireworks in the first minute of January 1, or nothing.
+ * @param {number} ts Time read on the device.
+ * @returns {{phase: ?string, seconds: (number|undefined), next: number}} Phase, seconds left in the countdown,
+ *   and the delay until what is shown changes.
+ */
+function newYearAt(ts) {
+  var year = new Date(ts).getFullYear(), midnight = new Date(year + 1, 0, 1).getTime(), started = new Date(year, 0, 1).getTime();
+  var left = midnight - ts;
+  if (left <= MIN) {
+    var seconds = Math.ceil(left / 1000);
+    return { phase: 'countdown', seconds: seconds, next: left - (seconds - 1) * 1000 };
+  }
+  if (ts - started < MIN) return { phase: 'fireworks', next: started + MIN - ts };
+  return { phase: null, next: left - MIN };
+}
+/**
  * Returns a text without its trailing white space.
  * @param {string} text Text to trim.
  */
