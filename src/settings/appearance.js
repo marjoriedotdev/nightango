@@ -53,9 +53,9 @@ function AppearancePage() {
           h('option', { value: 'auto' }, "Auto (tonight's moon)"),
           T.moonNames.map(function (n, i) { return h('option', { key: i, value: String(i) }, n); }))
       }),
-      h(T.SettingRow, { title: 'Seasonal decorations', description: 'Halloween, October 24 to November 2. Only you see them.', control: pr.sw('sky.season') }),
+      h(T.SettingRow, { title: 'Seasonal decorations', description: "Halloween, winter and Valentine's Day, by this device's date. Only you see them.", control: pr.sw('sky.season') }),
       h(T.SettingRow, { title: 'Calm sky', description: 'Stops clouds and seasonal decorations from moving.', control: pr.sw('sky.calm') }),
-      h(T.SettingRow, { title: 'Southern hemisphere', description: 'Draws the moon as seen south of the equator.', control: pr.sw('sky.south') })),
+      h(T.SettingRow, { title: 'Southern hemisphere', description: 'Draws the moon as seen south of the equator and moves winter to June.', control: pr.sw('sky.south') })),
     h(T.SettingsSection, { title: 'Messages' },
       h(T.SettingRow, { asLabel: false, title: 'Density', description: 'Compact hides avatars and puts the time before the name.', control: h(T.SegmentedControl, { label: 'Density', value: prefs.density, onChange: function (v) { pr.set('density', v); }, options: [{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }] }) }),
       h(T.SettingRow, {
