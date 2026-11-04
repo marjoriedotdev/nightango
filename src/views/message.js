@@ -32,6 +32,16 @@ function memberStyles(u, styles, theme, highlighted, msgBg) {
 }
 
 /**
+ * Tells whether the user can edit a group message.
+ * @param {Object} m Group message.
+ * @param {string} me Signed-in user.
+ */
+function canEditGroupMessage(m, me) {
+  // Like a reply, an edit waits for the message's final id.
+  return m.author === me && (!LIVE || liveBridge.delivered(m.id));
+}
+
+/**
  * Group message row with its toolbar and its action menu.
  * It reads the state only through its props: a change that leaves them alone, a presence for example, does not render it again.
  * @param {{m: Object, gid: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, ignored: boolean, msgBg: (Object|null|undefined),
@@ -53,8 +63,7 @@ var MessageRow = React.memo(function MessageRow(p) {
   // Chatango lets only staff delete and ban, from a message received from the server.
   var canDelete = p.staff;
   var canBan = p.canBan && (!LIVE || !!m.unid);
-  // Like a reply, an edit waits for the message's final id.
-  var canEdit = m.author === me && (!LIVE || liveBridge.delivered(m.id));
+  var canEdit = canEditGroupMessage(m, me);
   var handle = m.author !== me ? mentionHandle(m.author) : null;
   var showIp = LIVE && m.ip && p.seeIps;
   var canQuote = !!m.text && !!mentionHandle(m.author);
