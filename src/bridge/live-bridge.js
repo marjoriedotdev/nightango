@@ -70,6 +70,20 @@ var liveBridge = (function () {
     if (hit) return Promise.resolve(hit.data);
     return load().then(function (data) { store[n] = { at: Date.now(), data: data }; return data; });
   }
+  // A change reaches every group the member shares with us, one frame each. Like BetterChatango's avatar cache, the frames that follow a refresh are dropped for a while.
+  var refreshedAt = {}, REFRESH_MS = 3000;
+  /**
+   * Refreshes a member's pictures and drops their cached profiles after an updateprofile or reload_profile frame, at most once per member per REFRESH_MS.
+   * @param {string} name Member named by the frame.
+   */
+  function profileChanged(name) {
+    var n = lower(name), now = Date.now();
+    if (!/^[a-z0-9_-]{1,20}$/.test(n) || now - (refreshedAt[n] || 0) < REFRESH_MS) return;
+    refreshedAt[n] = AVATAR_VERSION[n] = now;
+    // Own caches hold the version just saved: mod1.xml and mod2.xml can come back older from the HTTP cache, and the next save would send it back.
+    if (n !== lower(C.user && C.user.name)) { delete profileCache[n]; delete fullProfileCache[n]; }
+    emit({ op: 'profileStale', name: n, v: now });
+  }
   // Like BetterChatango, only a reply of the expected type counts: without a style file, Chatango returns a small JPEG image.
   function memberFile(url, type, parse) {
     return fetch(url).then(function (r) { return r.ok && type.test(r.headers.get('content-type')) ? r.text().then(parse) : null; })
@@ -172,6 +186,7 @@ var liveBridge = (function () {
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
       case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
       case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
+      case 'updateprofile': profileChanged(data[0]); break;
       case 'updgroupinfo': emit({ op: 'info', gid: room, title: unquote(data[0]), description: unquote(data.slice(1).join(':')) }); break;
       case 'denied':
         // Neither inited nor participants will arrive: the message log and the members stop waiting.
@@ -237,6 +252,7 @@ var liveBridge = (function () {
         emit({ op: 'people', list: people });
         break;
       }
+      case 'reload_profile': profileChanged(data[0]); break;
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
       case 'unblocked': emit({ op: 'pmUnblocked', name: lower(data[0]) }); break;
       case 'OK':

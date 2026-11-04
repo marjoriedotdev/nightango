@@ -345,6 +345,8 @@ function useLiveOps(k) {
         Object.keys(d.users).forEach(function (n) { if (d.users[n].blocked && op.list.indexOf(n) < 0) d.users[n].blocked = false; });
         op.list.forEach(function (n) { ensureLiveUser(d, n, localRef.current).blocked = true; });
       }); break;
+      // A new avatarV gives the memoized rows of the member new props: their avatars render again with the picture AVATAR_VERSION now points to.
+      case 'profileStale': update(function (d) { if (d.users[op.name]) d.users[op.name].avatarV = op.v; }); break;
       case 'msgBgStale': update(function (d) { if (d.users[op.name]) delete d.users[op.name].msgBg; }); break;
       case 'people': update(function (d) { op.list.forEach(function (x) { applyPresence(ensureLiveUser(d, x.name, localRef.current), x); }); }); break;
       case 'pmUnblocked': update(function (d) { if (d.users[op.name]) d.users[op.name].blocked = false; }); break;

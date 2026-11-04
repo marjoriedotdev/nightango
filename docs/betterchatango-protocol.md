@@ -118,7 +118,7 @@ These are not calls from the application code but resources that the browser loa
 - The `www.youtube-nocookie.com/embed/` iframe, created only on click. The `i.ytimg.com` thumbnail is shown if `embedVideos` is on and if `proxyMedia` is off or `i.ytimg.com` is trusted.
 - Message images and media library thumbnails (`chatango.com/pmmessageimg` or an https URL, with http loaded as https and `fp.chatango.com` on `ust.chatango.com` like BetterChatango, `inject.js:1112`, and an image uploaded to Chatango, `ust.chatango.com/um/…/img/t_{id}.jpg`, loaded at its full size `l_{id}.jpg`, the one BetterChatango opens, `inject.js:8317`) depending on `embedImages`, `proxyMedia` and the trusted hosts (see BetterChatango startup settings, Trusted hosts).
 - Message video (mp4, webm) and audio (mp3, ogg, wav) files, as an https URL from any host (http loaded as https, like images), in `<video>` or `<audio>`, depending on `embedVideos` and the trusted hosts: created only on click, or as soon as shown without autoplay for a trusted host.
-- The member avatars `ust.chatango.com/profileimg/…/thumb.jpg` or `thumb_m.jpg`, in `<img>`. Group avatars show the group's initial without a request: for an account without a picture, Chatango serves a "?" image (`profileimg/noimage.jpg`, `inject.js:233`) instead of an error, so the initial underneath never shows.
+- The member avatars `ust.chatango.com/profileimg/…/thumb.jpg` or `thumb_m.jpg`, in `<img>`, with `?v={timestamp}` after a change of the picture (see Profile changes). Group avatars show the group's initial without a request: for an account without a picture, Chatango serves a "?" image (`profileimg/noimage.jpg`, `inject.js:233`) instead of an error, so the initial underneath never shows.
 - The full profile picture `ust.chatango.com/profileimg/…/full.jpg`, in `<img>` `referrerPolicy="no-referrer"`, loaded only on click on the mini profile avatar, or in the cropping of one's own picture.
 - After an upload or a crop, the pictures of one's own account carry `?v={timestamp}` (see Cropping).
 - The message background image `ust.chatango.com/profileimg/…/msgbg.jpg`, as a CSS background of the row (an `<img>` cannot tile), so with the page referrer, sent to Chatango only, and only if `embedImages` is on and `proxyMedia` off ([ADR-0004](adr/0004-member-html-never-injected.md)).
@@ -294,9 +294,17 @@ On the private connection. Timestamps are in seconds. `None` or 0 means unknown.
 
 - Folder of a member: `https://ust.chatango.com/profileimg/{1st letter}/{2nd letter, or 1st if the name has only one}/{name}/`. For names that start with `_` or `-`, the path becomes `profileimg/sp/sp{name}/`.
 - Avatars: `thumb.jpg` (small) or `thumb_m.jpg` in this folder. Full picture: `full.jpg`, same path (`inject.js:226`).
-- Mini profile: `mod1.xml`, tags `b` (date of birth), `s`, `l`, `body` (URL-encoded) and `d` (Premium end). The bridge caches a read for 5 minutes. A 5xx response is a read failure, never cached: the next opening of the profile reads the file again. A 4xx or a non-XML 200 response counts as an account without a public profile, like BetterChatango, which reads any unparsable reply that way (`inject.js:938-953`).
+- Mini profile: `mod1.xml`, tags `b` (date of birth), `s`, `l`, `body` (URL-encoded) and `d` (Premium end). The bridge caches a read for 5 minutes, or until a profile change (see Profile changes). A 5xx response is a read failure, never cached: the next opening of the profile reads the file again. A 4xx or a non-XML 200 response counts as an account without a public profile, like BetterChatango, which reads any unparsable reply that way (`inject.js:938-953`).
 - Full profile: `mod2.xml`, tag `body`.
 - Message background: `msgbg.xml`, in the same folder but without the `sp/sp` prefix (BetterChatango `chatango.subdomain.msgbg`, `inject.js:229`), read by a plain `fetch` without `credential` (`inject.js:504`). Format: the attributes of the first element (`inject.js:509-514`), which are the fields of the BetterChatango background form (`client.html:404-458`): `bgc` (hex color without `#`), `bgalp` (color opacity, 0 to 100), `useimg` (0 or 1), `ialp` (image opacity, 0 to 100), `align` (`tl`, `tr`, `bl` or `br`), `tile` (0 or 1), `hasrec` and `isvid`. The image is `msgbg.jpg`, in the same folder (`inject.js:492`).
+
+### Profile changes
+
+- Received frames only: the group frame `updateprofile:{name}` (`inject.js:3873-3910`) and the PM frame `reload_profile:{name}` (`inject.js:4205-4210`) say that a member changed their picture or profile. BetterChatango's handlers still run under the bridge: the first reloads the member's pictures with `cache: "reload"`, the second drops its own profile cache.
+- The bridge drops the member's mini and full profile from its cache, so the next card reads `mod1.xml` and `mod2.xml` again. One's own stay: they hold the version just saved, which the HTTP cache can still hide (see Own profile).
+- It sets the member's `AVATAR_VERSION` and emits `profileStale`, which writes the same version into `u.avatarV`. The memoized rows of the member (message log, member list, Chats) get a new prop and render again: their avatars load the thumb with `?v={timestamp}`. Rows of other members stay memoized.
+- A change arrives once per group the member shares with us. Like BetterChatango, which ignores the frame while its reload of the same member runs (`client.cache.avatar`, `inject.js:3874-3908`), the bridge ignores the frames for a member within 3 s of their last refresh.
+- No frame sent and no new HTTP call: the re-read is the avatar already on the allowed list.
 
 ### Bio rendering
 
@@ -348,7 +356,7 @@ The formatting toolbar of the Profile page inserts only what all clients show.
 
 - Sending: `auth=token`, `arch=h5`, `src=group`, `action=thumb`, `x0`, `y0` (top left corner) and `ts` (side), integers in pixels of `full.jpg` (`inject.js:1390-1406`, `cropper.getData()` rounded). Chatango derives `thumb.jpg` and `thumb_m.jpg` from it. The response is that of `updateprofile` and must carry `x0`.
 - Current crop: `client.user.avatar`. A negative value counts as 0 for `x0` and `y0`, and as the full width for `ts` (`inject.js:8473-8476`). The square stays inside the image (`clampCrop`).
-- After an upload or a crop, the pictures of one's account carry `?v={timestamp}` (`AVATAR_VERSION`): the browser HTTP cache would otherwise keep the old one. BetterChatango reloads its own with `cache: "reload"` on the `updateprofile` frame (`inject.js:3873-3884`).
+- After an upload or a crop, the pictures of one's account carry `?v={timestamp}` (`AVATAR_VERSION`): the browser HTTP cache would otherwise keep the old one. BetterChatango reloads its own with `cache: "reload"` on the `updateprofile` frame (`inject.js:3873-3884`), which also refreshes the pictures of other members (see Profile changes).
 
 ### Writing the Premium background
 
