@@ -91,7 +91,7 @@ function useActions(k) {
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
       text = (opts.quote || '') + text;
-      update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = Date.now(); });
+      update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = readThrough(d.groups[gid]); });
       var g = stateRef.current.groups[gid];
       if (gid === 'bots' && text.charAt(0) === '!') {
         var cmd = text.slice(1).split(/\s+/)[0].toLowerCase();
