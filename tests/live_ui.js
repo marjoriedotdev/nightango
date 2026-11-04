@@ -289,8 +289,8 @@ d.addEventListener('torch-skin:x-request', e => {
 
 // Stored by an older or broken version: values of another type than the default, next to a phase index that replaces "auto".
 w.localStorage.setItem('torch-prototype-prefs', JSON.stringify({ notify: null, a11y: 'on', volume: '70', customThemes: { night: 1 }, sky: { calm: 'no', moon: 3 } }));
-// The read position of #reads is a valid value of the previous session, the others are of another type.
-w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold', readTs: { reads: 1700000400000 } }));
+// The read position of #reads and the roles of #badges are valid values of the previous session, the others are of another type.
+w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold', readTs: { reads: 1700000400000 }, badges: { badges: { ola: 'admin', kim: 'mod' } } }));
 
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
@@ -373,7 +373,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('stored values of another type load with their defaults, the others are kept, and sign-in completes',
     !!storedPrefs.notify && storedPrefs.notify.pm.app === true && storedPrefs.a11y.reduceMotion === false && storedPrefs.volume === 70
       && Array.isArray(storedPrefs.customThemes) && storedPrefs.sky.calm === false && storedPrefs.sky.moon === 3
-      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated' || k === 'readTs') && storedAccount.readTs.reads === 1700000400000 && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
+      && !['fav', 'muted', 'ignored'].some(k => k in storedAccount) && [storedAccount.hidden, storedAccount.unstyled].every(x => x === undefined || Array.isArray(x))
+      && !Array.isArray(storedAccount.channels) && storedAccount.style !== 'bold' && storedAccount.readTs.reads === 1700000400000 && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
     { storedPrefs, storedAccount });
   step('stored preferences without a version read as the current schema and saved with its version', storedPrefs.version === 1 && storedPrefs.sky.moon === 3, storedPrefs.version);
   step('announcement requested after init', frame('getannouncement').length >= 1);
@@ -1998,19 +1999,25 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('i', 'badges', ['1700040002.1', 'Kim', '', 'u9', 'UNID9', 'K2=', '9.9.9.9', '128', '', '<n000/><f x11000="0">Newer']);
   g('i', 'badges', ['1700040001.1', 'Kim', '', 'u9', 'UNID9', 'K1=', '9.9.9.9', '64', '', '<n000/><f x11000="0">Older']);
   g('inited', 'badges', []);
-  g('g_participants', 'badges', ['S1:1700:U1:Kim:None;S2:1700:U2:Lee:None;S3:1700:U3:Dana:None']);
+  g('g_participants', 'badges', ['S1:1700:U1:Kim:None;S2:1700:U2:Lee:None;S3:1700:U3:Dana:None;S4:1700:U4:Ola:None']);
   await until(() => !!byText('.tc-nav', 'badges'));
   click(byText('.tc-nav', 'badges'));
   g('b', 'badges', ['1700040003.1', 'Lee', '', 'u10', 'UNID10', 'tmp600', '8.8.8.8', '64', '', '<n000/><f x11000="0">Hello']);
   const roleRow = n => ($$('.members .mrow').find(x => x.textContent.includes(n)) || {}).textContent || '';
   await until(() => roleRow('lee').includes('Mod'));
-  const fromBadges = { kim: roleRow('kim'), lee: roleRow('lee'), dana: roleRow('dana') };
+  const fromBadges = { kim: roleRow('kim'), lee: roleRow('lee'), dana: roleRow('dana'), ola: roleRow('ola') };
+  const storedRoles = () => (JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').badges || {}).badges;
+  const rolesKept = storedRoles();
   g('mods', 'badges', ['lee,' + MOD]);
   await until(() => !roleRow('kim').includes('Admin'));
-  const fromList = { kim: roleRow('kim'), lee: roleRow('lee') };
+  const fromList = { kim: roleRow('kim'), lee: roleRow('lee'), ola: roleRow('ola') };
   step("roles come from message badges without a moderator list, the highest one stays, and Chatango's list replaces them",
     fromBadges.kim.includes('Admin') && fromBadges.lee.includes('Mod') && fromBadges.dana.includes('Owner') && !/Admin|Mod/.test(fromList.kim) && fromList.lee.includes('Mod'),
     { fromBadges, fromList });
+  step('roles seen in an earlier session show before the member speaks, a badge of this session replaces them, and both are kept in this browser',
+    fromBadges.ola.includes('Admin') && JSON.stringify(rolesKept) === JSON.stringify({ ola: 'admin', kim: 'admin', lee: 'mod' })
+      && !/Admin|Mod/.test(fromList.ola) && JSON.stringify(storedRoles()) === JSON.stringify({ lee: 'mod' }),
+    { ola: fromBadges.ola, rolesKept, afterList: storedRoles() });
 
   /* Posting limits: slow mode read on join, a message refused as too fast, a temporary ban, the bypass right */
   C.groups.slow = fakeGroup();
