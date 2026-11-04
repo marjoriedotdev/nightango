@@ -39,7 +39,7 @@ function seedWorld(me) {
 
   function group(id, o) {
     return Object.assign({
-      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: now,
+      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: now,
       members: [], guests: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false
     }, o);
   }
@@ -140,6 +140,7 @@ function seedWorld(me) {
   return {
     me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0,
     meStatus: 'online',
+    premium: { status: 200, until: now + 2 * 1440 * MIN + 5 * 60 * MIN },
     profile: { visibility: { meet: false } },
     route: { view: 'group', id: 'community', markerTs: now },
     sections: { favorites: true, groups: true, dms: true }

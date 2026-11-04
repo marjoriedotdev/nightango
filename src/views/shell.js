@@ -31,21 +31,23 @@ var Shell = React.memo(function Shell() {
   else if (r.view === 'mentions') main = h(MentionsView, null);
   else main = h(Discover, null);
   return h('div', { className: cx('shell', app.navOpen && 'nav-open') },
+    h(NewYearSky, null),
     h(Sidebar, null),
     h('div', { className: 'scrim', onClick: app.ui.closeNav }),
     main);
 });
 
-// Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames).
-function BrandMark() {
+// Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames). The startup screen leaves New Year out.
+function BrandMark(p) {
   var moon = useApp().state.prefs.sky.moon;
-  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true, phase: moon === 'auto' ? undefined : moon / 8 }));
+  return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true, phase: moon === 'auto' ? undefined : moon / 8 }),
+    p.startup ? null : h(NewYearMark, null));
 }
 
 function StartupScreen() {
   return h('main', { className: 'main' },
     h('div', { className: 'empty', role: 'status' },
-      h(BrandMark),
+      h(BrandMark, { startup: true }),
       h('p', { className: 'startup' }, h(T.Spinner, null), 'Signing in')));
 }
 
@@ -55,10 +57,15 @@ function Sidebar() {
   var favs = joined.filter(function (g) { return g.favorite; }), rest = joined.filter(function (g) { return !g.favorite; });
   var groupsLoading = LIVE && !s.groupsSeen;
   var dmNames = listedDms(s).slice(0, 4);
+  var drafted = useDraftMarks(function (m) { return m; });
   function toggle(k) { app.update(function (d) { d.sections[k] = !d.sections[k]; }); }
+  function markedLabel(name, key, active) {
+    return showsDraft(drafted, key, active) ? h('span', { className: 'nav-draft' }, h('span', { className: 'nav-draft-name' }, name), h(DraftMark)) : name;
+  }
   function groupItem(g) {
+    var active = r.view === 'group' && r.id === g.id;
     return h(T.NavItem, {
-      key: g.id, label: g.id, active: r.view === 'group' && r.id === g.id, unread: g.unread > 0 && !g.muted,
+      key: g.id, label: markedLabel(g.id, groupDraftKey(g.id), active), active: active, unread: g.unread > 0 && !g.muted,
       count: g.mentions || 0, mention: !!g.mentions, muted: g.muted && !g.mentions,
       avatar: h(T.Avatar, { name: g.id, square: true, size: 22 }),
       onClick: function () { app.nav({ view: 'group', id: g.id }); }
@@ -73,7 +80,7 @@ function Sidebar() {
   var onlineFriends = Object.keys(s.users).filter(function (n) { return n !== s.me && s.users[n].friend && s.users[n].status !== 'offline'; }).length;
   return h('nav', { className: 'sidebar', 'aria-label': 'Groups and messages' },
     h('div', { className: 'brand' },
-      app.season === 'halloween' ? h(SeasonSky) : null,
+      app.season ? h(SeasonSky, { season: app.season }) : null,
       h(BrandMark),
       h('span', { className: 'brand-name' }, 'Nightango'),
       h(MenuButton, {
@@ -96,9 +103,9 @@ function Sidebar() {
       groupsLoading || rest.length || !joined.length ? section('groups', 'Groups', groupsLoading ? h(SkeletonRows, { count: 3, avatar: 22, square: true, label: 'Loading groups' })
         : rest.length ? rest.map(groupItem) : h('p', { className: 'pal-empty' }, 'Join a group from Discover.')) : null,
       section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.length ? dmNames.map(function (n) {
-        var u = userOf(s, n), c = s.dms[n];
+        var u = userOf(s, n), c = s.dms[n], active = r.view === 'dm' && r.id === n;
         return h(T.NavItem, {
-          key: n, label: h(Frag, null, n, presenceSr(u.status)), active: r.view === 'dm' && r.id === n, unread: c.unread > 0, count: c.unread || 0,
+          key: n, label: h(Frag, null, markedLabel(n, dmDraftKey(n), active), presenceSr(u.status)), active: active, unread: c.unread > 0, count: c.unread || 0,
           avatar: h(T.Avatar, { name: n, size: 22, status: u.status, ring: 'var(--sidebar)' }),
           onClick: function () { app.nav({ view: 'dm', id: n }); }
         });

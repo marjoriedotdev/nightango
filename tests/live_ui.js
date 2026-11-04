@@ -69,7 +69,7 @@ w.WebSocket.prototype.receive = function (frame) { if (this.readyState === 1) th
 // Held: client.connect opens a socket like socketEvent, whose ok registers the group and whose inited settles the attempt.
 let connectHeld = false;
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
-const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff'];
+const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff', 'premium'];
 // Record of the BetterChatango history database (saveMessage): key ts, the frame timestamp.
 const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const pmRecords = [
@@ -289,7 +289,8 @@ d.addEventListener('torch-skin:x-request', e => {
 
 // Stored by an older or broken version: values of another type than the default, next to a phase index that replaces "auto".
 w.localStorage.setItem('torch-prototype-prefs', JSON.stringify({ notify: null, a11y: 'on', volume: '70', customThemes: { night: 1 }, sky: { calm: 'no', moon: 3 } }));
-w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold' }));
+// The read position of #reads is a valid value of the previous session, the others are of another type.
+w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold', readTs: { reads: 1700000400000 } }));
 
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
@@ -316,6 +317,19 @@ function frame(prefix) { return sent.map(x => x[1]).filter(f => f.indexOf(prefix
 function g(name, room, data) { C.event.group[name](C, {}, room, data); }
 function pm(name, data) { C.event.private[name](C, {}, 'private_message', data); }
 const log = [];
+/**
+ * Returns a modactions reply of count actions from id top downwards, one minute apart.
+ * @param {number} top Id of the newest action.
+ * @param {number} count Number of actions.
+ */
+function modPage(top, count) {
+  const entries = [];
+  for (let id = top; id > top - count; id--) {
+    const type = id === 149 ? 'chbw' : 'amod', target = id === 150 ? 'bob' : id === 149 ? '' : 'u' + id;
+    entries.push(encodeURIComponent(id + ',' + type + ',marjorie,1.1.1.1,' + target + ',' + (1700000000 - (150 - id) * 60) + ','));
+  }
+  return [entries.join(';')];
+}
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 const MOD = 64 | 16384 | 128 | 256 | 65536;
 
@@ -325,6 +339,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   C.user.name = 'marjorie'; C.user.full = 'Marjorie';
   C.groups.test = fakeGroup();
   C.groups.edits = fakeGroup();
+  C.groups.reads = fakeGroup();
   C.emit('clientLogin', C);
   // Before the first signed-in render: a message in a group opened later, then the connection changes of a socket poll.
   g('b', 'edits', ['1700000100.1', 'Alice', '', 'u1', 'UNID1', 'tmp0', '1.2.3.4', '0', '', '<n000/><f x11000="0">Sent before the first render']);
@@ -358,7 +373,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('stored values of another type load with their defaults, the others are kept, and sign-in completes',
     !!storedPrefs.notify && storedPrefs.notify.pm.app === true && storedPrefs.a11y.reduceMotion === false && storedPrefs.volume === 70
       && Array.isArray(storedPrefs.customThemes) && storedPrefs.sky.calm === false && storedPrefs.sky.moon === 3
-      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated') && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
+      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated' || k === 'readTs') && storedAccount.readTs.reads === 1700000400000 && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
     { storedPrefs, storedAccount });
   step('stored preferences without a version read as the current schema and saved with its version', storedPrefs.version === 1 && storedPrefs.sky.moon === 3, storedPrefs.version);
   step('announcement requested after init', frame('getannouncement').length >= 1);
@@ -423,6 +438,17 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('i', 'test', ['1700000180.1', 'Ivy', '', 'u9', 'UNID9', 'H3=', '3.3.3.3', '0', '', '<n000/><f x11000="1">Ivy older']);
   await until(() => logFont('Ivy newer') !== null);
   step('group history batch keeps its newest style', /Impact/.test(logFont('Ivy newer') || ''), logFont('Ivy newer'));
+
+  /* Read position kept in this browser: after a reload, the history replayed on join counts from it */
+  const readsNav = () => $$('.tc-nav').find(x => { const l = x.querySelector('.tc-nav-label'); return l && l.textContent === 'reads'; });
+  g('i', 'reads', ['1700000500.1', 'Kai', '', 'u10', 'UNID10', 'R1=', '4.4.4.4', '0', '', '<n000/><f x11000="0">@marjorie are you there']);
+  g('i', 'reads', ['1700000450.1', 'Kai', '', 'u10', 'UNID10', 'R2=', '4.4.4.4', '0', '', '<n000/><f x11000="0">News since you left']);
+  g('i', 'reads', ['1700000300.1', 'Kai', '', 'u10', 'UNID10', 'R3=', '4.4.4.4', '0', '', '<n000/><f x11000="0">@marjorie old ping']);
+  await until(() => !!readsNav() && !!readsNav().querySelector('.tc-count'));
+  const readsRow = readsNav();
+  const readsView = { count: readsRow && (readsRow.querySelector('.tc-count') || {}).textContent, unread: !!readsRow && readsRow.classList.contains('tc-nav-unread'), alert: !!byText('.toast', 'mentioned you in #reads') };
+  step('history newer than the kept read position counts as unread and mentions, the older history and alerts do not',
+    readsView.count === '@1' && readsView.unread && !readsView.alert, readsView);
 
   /* Sending: escaping, reply, quote, channel */
   const ta = $('.tc-composer textarea');
@@ -728,7 +754,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('getannc', 'test', ['1', 'test', '5', '900', '<nF00/><f x12F00="1">Be kind']);
   g('bw', 'test', ['spam%2Cscam', 'idiot']);
   g('getratelimit', 'test', ['0', '0']);
-  g('modactions', 'test', [encodeURIComponent('7,amod,marjorie,1.1.1.1,bob,1700000000,') + ';' + encodeURIComponent('6,chbw,bob,2.2.2.2,,1699990000,')]);
+  g('modactions', 'test', modPage(150, 50));
   await wait(80);
   click(byText('.tc-nav', 'Media and links')); await wait(50);
   const links = row('Allow links');
@@ -844,6 +870,26 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   click(byText('.tc-nav', 'Audit log')); await wait(50);
   step('audit entries', !!byText('.lrow', 'made bob a moderator') && !!byText('.lrow', 'changed banned words'));
+  // Chadango GetModActions: the offset of the prev direction is the id of the oldest loaded action minus 1.
+  const auditTail = () => $$('.spage .lrow').slice(-1)[0].textContent;
+  const loadOlder = () => byText('.spage .tc-btn', 'Load older');
+  const audit = { button: !!loadOlder() };
+  click(loadOlder()); await wait(30);
+  audit.second = frame('getmodactions:prev:').pop();
+  audit.pending = !loadOlder() && !!$('.spage .list-more .tc-spinner');
+  g('modactions', 'test', modPage(100, 50)); await wait(50);
+  audit.secondRows = $$('.spage .lrow').length;
+  audit.secondTail = auditTail();
+  click(loadOlder()); await wait(30);
+  audit.third = frame('getmodactions:prev:').pop();
+  g('modactions', 'test', modPage(50, 3)); await wait(50);
+  audit.thirdRows = $$('.spage .lrow').length;
+  audit.thirdTail = auditTail();
+  audit.ended = !loadOlder() && !$('.spage .list-more');
+  step('audit log loads older pages until a short page',
+    audit.button && audit.second === 'getmodactions:prev:100:50' && audit.pending && audit.secondRows === 100 && /made u51 a moderator/.test(audit.secondTail)
+      && audit.third === 'getmodactions:prev:50:50' && audit.thirdRows === 103 && /made u48 a moderator/.test(audit.thirdTail) && audit.ended,
+    audit);
 
   click(byText('.tc-nav', 'Media and links')); await wait(50);
   click(row('Allow videos')); await wait(20);
@@ -1581,6 +1627,29 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('account page has no password form', !$('input[type=password]') && !!byText('.tc-banner', 'never handles your password'));
   click(byText('.tc-nav', 'Chatango Premium')); await wait(50);
   step('premium page has no purchase form', !!byText('.tc-banner', 'does not take payments'));
+  /* Premium expiry: premium frame of the private connection, reminder at most once per day per account */
+  const DAY = 86400000, later = Date.now() + 40 * DAY, soon = Date.now() + 2 * DAY;
+  const reminders = () => $$('.toast').map(x => x.textContent).filter(t => t.indexOf('Your Chatango Premium ends on') === 0);
+  const premiumView = () => ({
+    status: ($$('.tc-row-title').find(x => /^(Premium until|No Premium)/.test(x.textContent)) || {}).textContent || null,
+    reminders: reminders(), link: !!byText('.toast button', 'Open chatango.com'),
+    marker: JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').premiumReminded || null
+  });
+  const longDate = ts => new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const today = new Date(), todayKey = today.getFullYear() + '-' + today.getMonth() + '-' + today.getDate();
+  const premiumSeen = [premiumView()];
+  pm('premium', ['200', String(later / 1000)]); await until(() => !!premiumView().status);
+  premiumSeen.push(premiumView());
+  pm('premium', ['210', String(soon / 1000)]); await until(() => reminders().length > 0);
+  // Chatango sends the frame again on each private connection.
+  pm('premium', ['210', String(soon / 1000)]); await wait(100);
+  premiumSeen.push(premiumView());
+  const remind = 'Your Chatango Premium ends on ' + new Date(soon).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '.';
+  step('premium page shows the expiry of the premium frame, reminder at most once per day with a link to chatango.com', JSON.stringify(premiumSeen) === JSON.stringify([
+    { status: null, reminders: [], link: false, marker: null },
+    { status: 'Premium until ' + longDate(later), reminders: [], link: false, marker: null },
+    { status: 'Premium until ' + longDate(soon), reminders: [remind + 'Open chatango.com'], link: true, marker: todayKey }
+  ]), premiumSeen);
   click(byText('.tc-nav', 'Notifications')); await wait(50);
   const soundRow = title => { const r = $$('section[aria-label="Sounds"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title); return r && { on: r.querySelector('[role=switch]').checked, range: r.querySelector('input[type=range]').disabled ? 'off' : r.querySelector('input[type=range]').value, value: r.textContent.match(/\d+%/)[0], play: !r.querySelector('button[aria-label="Play test sound"]').disabled }; };
   const sounds = { mention: soundRow('Mention sound'), online: soundRow('Friend online sound') };
@@ -1942,6 +2011,41 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step("roles come from message badges without a moderator list, the highest one stays, and Chatango's list replaces them",
     fromBadges.kim.includes('Admin') && fromBadges.lee.includes('Mod') && fromBadges.dana.includes('Owner') && !/Admin|Mod/.test(fromList.kim) && fromList.lee.includes('Mod'),
     { fromBadges, fromList });
+
+  /* Posting limits: slow mode read on join, a message refused as too fast, a temporary ban, the bypass right */
+  C.groups.slow = fakeGroup();
+  SB.renderGroup({ group: 'slow', header: 'Slow' });
+  g('ok', 'slow', ['dana', '', '', '', '1700000000', '', '', '0']);
+  const limitFrom = sent.length;
+  g('inited', 'slow', []);
+  await until(() => !!byText('.tc-nav', 'slow'));
+  click(byText('.tc-nav', 'slow')); await wait(50);
+  const slowAsked = sent.slice(limitFrom).filter(x => x[0] === 'slow').map(x => x[1]);
+  const limitHint = () => ($('.composer-wrap .tc-composer-hint') || {}).textContent || '';
+  g('getratelimit', 'slow', ['10', '4']);
+  await until(() => /Slow mode: wait/.test(limitHint()));
+  const onJoin = limitHint();
+  const slowBox = () => $('.tc-composer textarea');
+  type(slowBox(), 'Too quick'); key(slowBox(), 'Enter'); await wait(30);
+  const draftAfterSend = slowBox().value;
+  g('ratelimited', 'slow', ['5']);
+  await until(() => slowBox().value === 'Too quick');
+  const refusedShown = { draft: slowBox().value, hint: limitHint() };
+  g('show_nlp_tb', 'slow', ['3', '900']);
+  await until(() => /posting ban/.test(limitHint()));
+  const banShown = { hint: limitHint(), canSend: !$('.composer-wrap .tc-send').disabled };
+  g('b', 'slow', ['1700050000.1', 'Marjorie', '', 'u0', 'UNID0', 'tmp700', '9.9.9.9', '0', '', '<n000/><f x11000="0">Through']);
+  await until(() => !/posting ban/.test(limitHint()));
+  const banLifted = limitHint();
+  g('getratelimit', 'test', ['10', '4']);
+  click(byText('.tc-nav', 'test')); await wait(80);
+  const ownerHint = limitHint();
+  step('getratelimit sent on join, slow mode counted down, a refused message back in the composer, a posting ban shown without a duration and with Send enabled, no countdown with the bypass right',
+    slowAsked.includes('getratelimit') && /^Slow mode: wait [34] s\.$/.test(onJoin) && draftAfterSend === ''
+      && refusedShown.draft === 'Too quick' && /^Too fast\. Try again in [45] s\.$/.test(refusedShown.hint)
+      && banShown.hint === 'Temporary posting ban. Try again later.' && banShown.canSend
+      && !/posting ban/.test(banLifted) && !/Slow mode/.test(ownerHint),
+    { slowAsked, onJoin, draftAfterSend, refusedShown, banShown, banLifted, ownerHint });
 
   /* Private history import: only valid records of this account are written, as read, without overwriting an existing key */
   const chooseFile = (text, sel = 'input[type="file"]') => {

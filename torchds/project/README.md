@@ -27,11 +27,12 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 
 ## Seasons
 
-- A season dresses the night for a few days a year, read from the device date: Halloween from October 24 to November 2. Its tokens (`color.seasons` in `tokens.json`) replace the tokens of the same name under the `season-<id>` class on the root, in both themes, and add the colors of its decorations (`season-*`).
+- A season dresses the night for a few days a year, read from the device date: Halloween from October 24 to November 2, winter from December 1 to January 6 (June 1 to July 6 with the southern sky), Valentine's Day from February 10 to 14. Its tokens (`color.seasons` in `tokens.json`) replace the tokens of the same name under the `season-<id>` class on the root, in both themes, and add the colors of its decorations (`season-*`).
 - A season keeps every contrast rule above: text at 4.5:1 on every surface, and `bg` and `selected` at least as far from text as in the base theme, since member colors and the accent as text are corrected against the base values. The accent stays the reader's choice.
-- The moon keeps its real phase; only its colors change. At Halloween it turns into a harvest moon, gold to rust.
-- Decorations are inline SVG, hidden from assistive technology, never over text or a control: silhouettes on the sky band, a cobweb in a column corner, a costume on member avatars from 24px through the `decor` slot of `Avatar`. Group icons wear none.
+- The moon keeps its real phase; only its colors change. At Halloween it turns into a harvest moon, gold to rust. In winter and on Valentine's Day only its glow changes, cold or rose: surfaces and text keep the base theme.
+- Decorations are inline SVG, hidden from assistive technology, never over text or a control: silhouettes, frost, snowflakes or hearts on the sky band, a cobweb in a column corner, a costume on member avatars from 24px through the `decor` slot of `Avatar` at Halloween and in winter. Group icons wear none.
 - Seasonal motion stops with Calm sky and with reduced motion. Seasonal decorations, in Appearance, turns the whole season off.
+- New Year, on top of the season of the date: a countdown in `text-2` under the moon during the last minute of December 31, then "Happy New Year" and fireworks (`season-spark-*`) for the first minute of January 1, in the sky behind the panels and on the sky band above the name, never behind text. Only the greeting is announced, once. Calm sky and reduced motion keep the countdown and drop the fireworks.
 
 ## Typography
 

@@ -47,6 +47,19 @@ h1,h2,h3{text-wrap:balance}
 /* Seen from the south the moon is turned half a turn: the phase is mirrored and the seas also flip top to bottom. */
 .moon-south .tc-moon-face{transform:scaleY(-1);transform-origin:10px 10px}
 .brand-name{flex:1;font-family:var(--font-display);font-size:28px;line-height:28px;font-weight:400;color:var(--text)}
+/* New Year: fireworks behind the panels and on the sky band above the name, never over text. The countdown sits under the moon. */
+.fw{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.fw-c1{color:var(--season-spark-1)}
+.fw-c2{color:var(--season-spark-2)}
+.fw-c3{color:var(--season-spark-3)}
+.fw-burst{position:absolute;width:0;height:0}
+.fw-burst::before{content:"";position:absolute;left:calc(var(--fw-r) * -1.4);top:calc(var(--fw-r) * -1.4);width:calc(var(--fw-r) * 2.8);height:calc(var(--fw-r) * 2.8);border-radius:50%;background:radial-gradient(closest-side,currentColor,transparent);opacity:0;animation:fw-flash 2.8s ease-out var(--fw-delay) infinite}
+.fw-ray{position:absolute;left:0;top:0;width:0;height:0}
+.fw-spark{position:absolute;left:0;top:-1px;width:7px;height:2px;border-radius:1px;background:currentColor;opacity:0;animation:fw-spark 2.8s cubic-bezier(.15,.7,.3,1) var(--fw-delay) infinite}
+@keyframes fw-spark{from{transform:translateX(0);opacity:0}6%{opacity:1}55%{opacity:.9}to{transform:translateX(var(--fw-r));opacity:0}}
+@keyframes fw-flash{8%{opacity:.3}50%,to{opacity:0}}
+.newyear-count{position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:11px;line-height:12px;color:var(--text-2);white-space:nowrap}
+.newyear-greeting{left:0;transform:none}
 
 /* Seasonal decorations: rendered only during their season, colored by its tokens. Never over text. */
 .season-sky{position:absolute;inset:0;z-index:-1;pointer-events:none}
@@ -67,6 +80,32 @@ h1,h2,h3{text-wrap:balance}
 .costume-horns{width:100%;left:0;top:-22%}
 .costume-horns-fill{fill:var(--season-horns)}
 .costume-bat{width:88%;left:6%;top:-28%}
+.costume-beanie{width:80%;left:10%;top:-38%}
+.costume-knit{fill:var(--season-knit);stroke:var(--season-knit-edge);stroke-width:.6}
+.costume-knit-cuff{fill:var(--accent)}
+.costume-pompom{fill:var(--season-pompom);stroke:var(--season-knit-edge);stroke-width:.6}
+.costume-earmuffs{width:124%;left:-12%;top:-14%}
+.costume-muff-band{fill:none;stroke:var(--season-knit);stroke-width:2.2;stroke-linecap:round}
+.costume-muff{fill:var(--season-muff);stroke:var(--season-knit-edge);stroke-width:.6}
+.season-frost{position:absolute;top:0;right:0;width:96px;height:58px;fill:none;stroke:var(--season-frost);stroke-width:1.1;stroke-linecap:round}
+.season-fall{position:absolute;top:2px;animation:snow-fall 14s linear infinite}
+.season-fall-1{left:34px;top:6px;animation-delay:-2s}
+.season-fall-2{left:70px;animation-duration:17s;animation-delay:-9s}
+.season-fall-3{left:112px;top:10px;animation-delay:-6s}
+.season-fall-4{left:150px;animation-duration:19s;animation-delay:-13s}
+.season-fall-5{left:188px;top:12px;animation-duration:16s;animation-delay:-4s}
+.season-flake{display:block;width:9px;height:9px;fill:none;stroke:var(--season-snow);stroke-width:1.2;stroke-linecap:round}
+.season-fall-2 .season-flake,.season-fall-4 .season-flake{width:6px;height:6px}
+@keyframes snow-fall{from{transform:translate(0,-12px);opacity:0}15%,80%{opacity:1}to{transform:translate(10px,30px);opacity:0}}
+.season-garland{position:absolute;top:0;right:0;width:96px;height:40px;fill:var(--season-heart)}
+.season-garland-thread{fill:none;stroke:var(--season-thread);stroke-width:.8}
+.season-rise{position:absolute;top:22px;animation:heart-rise 12s ease-in-out infinite}
+.season-rise-1{left:44px;animation-delay:-3s}
+.season-rise-2{left:96px;top:16px;animation-duration:15s;animation-delay:-10s}
+.season-rise-3{left:140px;top:26px;animation-delay:-7s}
+.season-heart{display:block;width:9px;height:8px;fill:var(--season-heart)}
+.season-rise-2 .season-heart{width:6px;height:5.5px}
+@keyframes heart-rise{from{transform:translate(0,10px);opacity:0}20%,75%{opacity:.85}to{transform:translate(-8px,-22px);opacity:0}}
 .members{position:relative}
 .season-web{position:absolute;top:0;right:0;width:96px;height:96px;pointer-events:none}
 .season-web-threads{display:block;width:100%;height:100%;fill:none;stroke:var(--season-web);stroke-width:1}
@@ -75,7 +114,7 @@ h1,h2,h3{text-wrap:balance}
 .season-spider svg{width:16px;height:16px;fill:var(--season-spider)}
 .season-spider-legs{fill:none;stroke:var(--season-spider);stroke-width:1.3;stroke-linecap:round}
 @keyframes spider-bob{50%{transform:translateY(8px)}}
-.calm-sky .season-flight,.calm-sky .season-bat,.calm-sky .season-spider{animation:none}
+.calm-sky .season-flight,.calm-sky .season-bat,.calm-sky .season-spider,.calm-sky .season-fall,.calm-sky .season-rise{animation:none}
 .searchbtn{width:100%;height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:var(--radius-lg);background:var(--subtle);border:1px solid var(--border);color:var(--text-3);font-size:13px;cursor:pointer}
 .searchbtn:hover{border-color:var(--border-strong)}
 .kbd{font:400 11px var(--font-sans);color:var(--text-3);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 5px}
@@ -158,6 +197,7 @@ h1,h2,h3{text-wrap:balance}
 .chan-trigger{height:28px;border:1px solid var(--border-strong);font-size:12px}
 .ignored-row{display:flex;align-items:center;gap:8px;padding:4px 20px 4px 68px;color:var(--text-3);font-size:12.5px}
 .jump{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:5;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:1px solid var(--border-strong);border-radius:var(--radius-full);background:var(--raised);color:var(--text);font-size:13px;font-weight:500;box-shadow:var(--shadow-floating);cursor:pointer;animation:tc-fade-in var(--duration-base) var(--ease-out)}
+.limit-alert{flex:none;color:var(--warning)}
 .composer-wrap{flex:none;position:relative;padding:0 20px 16px;padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
 .notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-lg);background:var(--subtle);border:1px solid var(--border);color:var(--text-2);font-size:13px}
 .notice .grow{min-width:200px}
@@ -286,6 +326,9 @@ h1,h2,h3{text-wrap:balance}
 .conv-name{flex:1;min-width:0;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conv-prev,.conv-meta{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-3)}
 .conv.unread .conv-name{font-weight:600}
+.draft-mark{display:inline-flex;flex:none;align-items:center;gap:var(--space-1);margin-right:var(--space-1);font-size:12px;font-weight:500;color:var(--accent-text);vertical-align:baseline}
+.nav-draft{display:flex;align-items:baseline;gap:var(--space-1);min-width:0}
+.nav-draft-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .conv.unread .conv-prev{color:var(--text-body)}
 .conv-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name end" "meta meta" "prev count";column-gap:8px;align-items:baseline}
 .conv-grid .conv-name{grid-area:name}

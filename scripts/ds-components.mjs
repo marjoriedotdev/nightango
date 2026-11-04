@@ -201,6 +201,7 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
 - \`status\` shows a send in progress above the input, with a spinner and no cancel button: "Uploading cat.png".
 - \`attachment\` shows the file that leaves with the next send, above the input: \`{name, preview, icon, note, onRemove}\`. \`preview\` is an image address for the thumbnail, otherwise \`icon\` stands in (\`image\`, \`play\`, \`volume\`). \`note\` says where the file goes, such as "vissle.me hosts it when you send. Anyone with the link can open it." While it is set, Send works with an empty input. Leave out \`onRemove\` while the file is being sent.
 - \`onEmoji\` and \`onAttach\` each show their tool button; leave them out when the feature does not exist.
+- \`onFiles(files)\` receives the files pasted in the input or dropped on the composer, such as a screenshot. A paste or drop without files keeps its native behaviour. Leave it out wherever a file cannot be attached, such as while editing.
 - \`aside\` holds the channel picker. \`beforeSend\` holds one icon button placed right before Send, such as the message style.
 - Pass \`value\` and \`onChange\` when the view writes into the input, such as a mention, and \`inputRef\` to focus it afterwards.
 - \`onKeyDown(e)\` sees each key before the composer does. Call \`e.preventDefault()\` to keep the key from it, such as Tab completing a mention. Leave Tab alone when there is nothing to complete, so focus moves on.

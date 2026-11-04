@@ -14,6 +14,29 @@ var COMPOSER_MODES = {
 };
 
 /**
+ * Composer line for the posting limits of a live group: temporary ban, message refused as too fast and slow mode, counted down every second.
+ * @param {{ban: ?{until: number, length: number}, cooldown: ?{until: number, refused: boolean}, rate: ?number, bypass: boolean}} p Limits read from g.live and the bypass right of the user.
+ */
+function ComposerLimit(p) {
+  var tick = useState(0)[1], now = Date.now(), ban = p.ban, cd = p.cooldown;
+  var banned = !!ban && (!ban.until || ban.until > now);
+  var wait = cd && cd.until > now && (cd.refused || !p.bypass) ? Math.ceil((cd.until - now) / 1000) : 0;
+  var ticking = wait > 0 || banned && ban.until > 0;
+  useEffect(function () {
+    if (!ticking) return;
+    var t = setTimeout(function () { tick(Date.now()); }, 1000);
+    return function () { clearTimeout(t); };
+  });
+  // No duration shown: the unit of the ban length is unconfirmed, read as minutes it could overstate the ban 60 times.
+  var text = banned ? 'Temporary posting ban. Try again later.'
+    : wait && cd.refused ? 'Too fast. Try again in ' + wait + ' s.'
+    : wait ? 'Slow mode: wait ' + wait + ' s.'
+    : p.rate > 0 && !p.bypass ? 'Slow mode: ' + p.rate + ' s per message.' : null;
+  if (!text) return null;
+  return h(Frag, null, banned || wait && cd.refused ? h(T.Icon, { name: 'alert', size: 14, className: 'limit-alert' }) : null, text);
+}
+
+/**
  * Reply, edit or quote mode of a composer.
  * During an edit, the draft holds the edited text and the typed draft waits aside.
  * @param {Array} draft useDraft result of the composer.
@@ -36,14 +59,23 @@ function useComposerMode(draft) {
   };
 }
 
+/**
+ * Tells whether a key pressed in a composer opens the edit of the user's last message.
+ * @param {KeyboardEvent} e Key pressed in the composer field.
+ * @param {string} draft Composer text.
+ * @param {?Object} mode Reply, edit or quote mode of the composer.
+ */
+function editsLastOnUp(e, draft, mode) {
+  return e.key === 'ArrowUp' && !draft && !mode && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey;
+}
+
 function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
-  var a4 = useState('none'), channel = a4[0], setChannel = a4[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
-  var a9 = useDraft('group:' + p.gid), draft = a9[0], setDraft = a9[1];
+  var a9 = useDraft(groupDraftKey(p.gid)), draft = a9[0], setDraft = a9[1];
   var cm = useComposerMode(a9), mode = cm.mode, setMode = cm.setMode;
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
@@ -51,7 +83,7 @@ function GroupView(p) {
   var log = useMessageLog();
   var count = g ? g.messages.length : 0;
   var q = search ? search.trim().toLowerCase() : '';
-  // Jump asked by the Mentions page: jumpTo, declared below, refuses a message the log hides.
+  // Jump asked by the route: jumpTo, declared below, refuses a message the log hides.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
   var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m.author, mode.m.text) : null;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
@@ -60,6 +92,13 @@ function GroupView(p) {
   }, [p.gid, typed, replyId, editId, quoted, s.ownStyle]);
   // Same functions for every render: the message rows render again only when their message or its context changes.
   var calls = useLatestCalls({ reply: cm.enter('reply'), quote: cm.enter('quote'), edit: edit, mention: mention, jump: jumpTo });
+  // A message Chatango refused as too fast comes back to the composer, before what was typed since.
+  var refused = g && g.live ? g.live.refused : null;
+  useEffect(function () {
+    if (!refused) return;
+    setDraft(function (v) { return v ? refused + ' ' + v : refused; });
+    app.update(function (d) { d.groups[p.gid].live.refused = null; });
+  }, [refused]);
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
@@ -68,6 +107,8 @@ function GroupView(p) {
   var online = (LIVE && g.liveCount ? g.liveCount : g.members.filter(function (n) { return userOf(s, n).status !== 'offline' || n === me; }).length).toLocaleString('en-US');
   var ann = g.settings.announcement, annText = LIVE ? ann.displayText : ann.text;
   var chans = Object.keys(CHANNELS).filter(function (k) { return k !== 'mod' || staff; });
+  // A kept channel the user may no longer use, the mod channel after losing staff rights, sends without a channel.
+  var channel = chans.indexOf(g.sendChannel) >= 0 ? g.sendChannel : 'none';
   // The sending channel is never hidden, even if it stays in the stored list.
   var hiddenChans = chans.filter(function (k) { return k !== channel && g.hiddenChannels.indexOf(k) >= 0; });
 
@@ -79,6 +120,13 @@ function GroupView(p) {
   function onKeyDown(e) {
     media.onKeyDown(e);
     if (!e.defaultPrevented) mentions.onKeyDown(e);
+    if (!editsLastOnUp(e, draft, mode)) return;
+    var last = lastMatch(g.messages, function (m) {
+      return m.kind === 'msg' && !m.deleted && canEditGroupMessage(m, me) && (m.editCount || 0) < EDIT_MAX && shown(m) && !hiddenByChannel(m);
+    });
+    if (!last) return;
+    e.preventDefault();
+    edit(last);
   }
   var closeMode = cm.close;
   function edit(m) { cm.edit(m, m.editCount || 0); }
@@ -103,14 +151,13 @@ function GroupView(p) {
     log.jumpTo(o.id);
   }
 
-  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g);
+  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g), markerTs = s.route.markerTs;
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
     if (dk !== lastDay) { items.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
-    if (!q && prefs.markNew && !marker && s.route.markerTs && m.ts > s.route.markerTs && m.author !== me && m.kind === 'msg') {
-      items.push(h('div', { key: 'n' + m.id, className: 'newmark', role: 'separator' }, 'New messages')); marker = true; prev = null;
-    }
+    var isNew = !q && prefs.markNew && markerTs && m.ts > markerTs && m.author !== me && m.kind === 'msg';
+    if (isNew && !marker) { items.push(h('div', { key: 'n' + m.id, className: 'newmark', role: 'separator' }, 'New messages')); marker = true; prev = null; }
     if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), m.user + ' was banned')); prev = null; continue; }
     if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null)); prev = null; continue; }
     if (isHiddenAuthor(s, m.author)) {
@@ -123,7 +170,7 @@ function GroupView(p) {
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted), a = userOf(s, m.author);
     items.push(h(MessageRow, {
-      key: m.id, m: m, gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg,
+      key: m.id, m: m, gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg, avatarV: a.avatarV,
       role: roleOf(g, m.author), staff: staff, canBan: canBanMember(g, me, m.author), seeIps: !!rights.seeIps,
       original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, highlight: log.targetId === m.id,
       onReply: calls.reply, onQuote: calls.quote, onEdit: calls.edit, onMention: calls.mention, onJump: calls.jump
@@ -150,16 +197,17 @@ function GroupView(p) {
     var left = GROUP_MESSAGE_MAX - measured;
     composer = h(Frag, null, media.panel, mentions.panel, h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: mentions.onChange, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
-      hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
+      hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left'
+        : g.live ? h(ComposerLimit, { ban: g.live.tempBan, cooldown: g.live.cooldown, rate: g.live.rate, bypass: !!rights.bypass }) : null,
       hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
       // An edit changes only the text: the picked file waits for the next message.
-      onAttach: kind === 'edit' ? null : attach.onAttach, attachment: kind === 'edit' ? null : attach.attachment,
+      onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
-          return { label: channelLabel(k), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { setChannel(k); } };
+          return { label: channelLabel(k), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { app.actions.setSendChannel(g.id, k); } };
         }).concat([{ divider: true }], chans.filter(function (k) { return k !== channel; }).map(function (k) {
           return { label: (hiddenChans.indexOf(k) >= 0 ? 'Show ' : 'Hide ') + (k === 'none' ? 'messages without a channel' : channelLabel(k)), icon: 'eye-off', onSelect: function () { app.actions.toggleHiddenChannel(g.id, k); } };
         })),

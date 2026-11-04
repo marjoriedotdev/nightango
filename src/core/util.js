@@ -2,6 +2,7 @@
 var MIN = 60000;
 var CONFIRM_TIMEOUT = 8000;
 var REPO_URL = 'https://github.com/marjoriedotdev/nightango';
+var CHATANGO_URL = 'https://chatango.com';
 function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -12,6 +13,12 @@ function fmtTime(ts, h24) {
   return (H % 12 || 12) + ':' + pad(M) + ' ' + (H >= 12 ? 'PM' : 'AM');
 }
 function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+/**
+ * Returns a date as 12 Dec, or 12 Dec 2026 with its year.
+ * @param {number} ts Time in milliseconds.
+ * @param {boolean} [withYear] Adds the year.
+ */
+function shortDate(ts, withYear) { return new Date(ts).toLocaleDateString('en-GB', withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); }
 function dayLabel(ts) {
   var d = new Date(ts), n = new Date();
   var a = new Date(d.getFullYear(), d.getMonth(), d.getDate()), b = new Date(n.getFullYear(), n.getMonth(), n.getDate());
@@ -48,13 +55,19 @@ function daySpan(days) {
   if (months < 12) return { n: months, unit: 'month' };
   return { n: Math.round(days / 365.25), unit: 'year' };
 }
+var SEASONS = ['halloween', 'winter', 'valentine'];
 /**
- * Returns the season of a local date, or null outside every season: Halloween runs from October 24 to November 2.
+ * Returns the season of a local date, or null outside every season: Halloween from October 24 to November 2,
+ * winter from December 1 to January 6 (June 1 to July 6 in the southern hemisphere), Valentine's Day from February 10 to 14.
  * @param {Date} d Date read on the device.
+ * @param {boolean} south Sky seen from the southern hemisphere.
  */
-function seasonOf(d) {
-  var m = d.getMonth(), day = d.getDate();
-  return (m === 9 && day >= 24) || (m === 10 && day <= 2) ? 'halloween' : null;
+function seasonOf(d, south) {
+  var m = d.getMonth(), day = d.getDate(), winter = south ? 5 : 11;
+  if ((m === 9 && day >= 24) || (m === 10 && day <= 2)) return 'halloween';
+  if (m === winter || (m === (winter + 1) % 12 && day <= 6)) return 'winter';
+  if (m === 1 && day >= 10 && day <= 14) return 'valentine';
+  return null;
 }
 /**
  * Tells whether a version number X.Y.Z comes after another, which may be a beta X.Y.Z-beta.N.
@@ -69,6 +82,23 @@ function isNewerVersion(a, b) {
 }
 function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many); }
 /**
+ * Returns where a local time stands around New Year's midnight: the countdown in the last minute of December 31,
+ * the fireworks in the first minute of January 1, or nothing.
+ * @param {number} ts Time read on the device.
+ * @returns {{phase: ?string, seconds: (number|undefined), next: number}} Phase, seconds left in the countdown,
+ *   and the delay until what is shown changes.
+ */
+function newYearAt(ts) {
+  var year = new Date(ts).getFullYear(), midnight = new Date(year + 1, 0, 1).getTime(), started = new Date(year, 0, 1).getTime();
+  var left = midnight - ts;
+  if (left <= MIN) {
+    var seconds = Math.ceil(left / 1000);
+    return { phase: 'countdown', seconds: seconds, next: left - (seconds - 1) * 1000 };
+  }
+  if (ts - started < MIN) return { phase: 'fireworks', next: started + MIN - ts };
+  return { phase: null, next: left - MIN };
+}
+/**
  * Returns a text without its trailing white space.
  * @param {string} text Text to trim.
  */
@@ -80,6 +110,15 @@ function trimEnd(text) {
 }
 function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
 function isGuest(name) { return /^[!#]/.test(name); }
+/**
+ * Returns the last element of a list that passes a test.
+ * @param {Array} list List searched from its end.
+ * @param {function(*): boolean} test Test of an element.
+ */
+function lastMatch(list, test) {
+  for (var i = list.length - 1; i >= 0; i--) if (test(list[i])) return list[i];
+  return null;
+}
 function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
 function storageMerge(key, patch) { return storageSet(key, Object.assign(storageGet(key) || {}, patch)); }

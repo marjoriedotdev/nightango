@@ -57,12 +57,16 @@ function useActions(k) {
   var drafts = k.drafts, localRef = k.localRef, reconnection = k.reconnection, pms = k.pms;
   var up = useState({}), uploads = up[0], setUploads = up[1];
   /**
-   * Creates the sample world of the prototype with the PM archive that holds its unreads.
+   * Creates the sample world of the prototype with the PM archive that holds its received PMs and their unreads.
    * @param {string} me Signed-in account.
    */
   function sampleWorld(me) {
-    var world = seedWorld(me);
-    pmArchive.current = memoryPmArchive(Object.keys(world.dms).reduce(function (o, n) { o[n] = world.dms[n].unread; return o; }, {}));
+    var world = seedWorld(me), entries = [];
+    Object.keys(world.dms).forEach(function (n) {
+      var got = world.dms[n].messages.filter(function (m) { return m.from === n; });
+      got.forEach(function (m, i) { entries.push({ target: n, from: n, unread: i >= got.length - world.dms[n].unread, edit: false }); });
+    });
+    pmArchive.current = memoryPmArchive(entries);
     return world;
   }
   /**
@@ -82,7 +86,7 @@ function useActions(k) {
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
   var actions = {
-    login: function (name) { var world = sampleWorld(name); drafts.current = {}; update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
+    login: function (name) { var world = sampleWorld(name); drafts.clear(); update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
     resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
@@ -91,7 +95,7 @@ function useActions(k) {
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
       text = (opts.quote || '') + text;
-      update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = Date.now(); });
+      update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = readThrough(d.groups[gid]); });
       var g = stateRef.current.groups[gid];
       if (gid === 'bots' && text.charAt(0) === '!') {
         var cmd = text.slice(1).split(/\s+/)[0].toLowerCase();
@@ -144,6 +148,14 @@ function useActions(k) {
       readPm(pmArchive.current, update, name);
       var r = stateRef.current.route;
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
+    },
+    markDmUnread: function (name) {
+      var r = stateRef.current.route;
+      // Back to the Chats list first, without closeDm: the conversation left open would read its PMs again.
+      if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
+      unreadPm(pmArchive.current, update, name).then(function (flagged) {
+        if (!flagged) toast('No message from ' + name + ' is saved in this browser.');
+      }, function (e) { toast(e.message); });
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
     /**
@@ -234,6 +246,7 @@ function useActions(k) {
     toggleHiddenChannel: function (gid, k) {
       update(function (d) { var l = d.groups[gid].hiddenChannels, i = l.indexOf(k); if (i >= 0) l.splice(i, 1); else l.push(k); });
     },
+    setSendChannel: function (gid, k) { update(function (d) { d.groups[gid].sendChannel = k; }); },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
     /**
      * Adds a trusted host without duplicates or removes it.
@@ -264,7 +277,7 @@ function useActions(k) {
       update(function (d) {
         var staff = {}; staff[me] = 'owner';
         d.groups[name] = {
-          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], unread: 0, mentions: 0, lastReadTs: now,
+          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: now,
           members: [me], guests: 0, closed: false, dismissedAnnouncement: false, bans: [],
           settings: mkSettings({ overview: { title: title, description: desc }, staff: staff }),
           audit: [{ id: uid(), at: now, actor: me, text: 'Created the group' }],
@@ -404,6 +417,7 @@ function useActions(k) {
   function sendStyled(gid, text, opts, outcome) {
     var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
     if (style) setOwnStyle(style); else if (outcome) messageFailed(gid, outcome);
+    if (style) update(function (d) { var L = d.groups[gid].live; L.cooldown = L.rate > 0 ? { until: Date.now() + L.rate * 1000, refused: false } : null; });
     return !!style;
   }
   /**
@@ -656,6 +670,11 @@ function useActions(k) {
     actions.setClosed = function (gid, closed) { liveBridge.setFlags(gid, closed ? GROUP_FLAG.IS_CLOSED : 0, closed ? 0 : GROUP_FLAG.IS_CLOSED); };
     actions.clearGroup = function (gid) { liveBridge.clearAll(gid); };
     actions.requestGroupSettings = function (gid) { liveBridge.requestSettings(gid); };
+    actions.olderModLog = function (gid) {
+      var ids = (stateRef.current.groups[gid].live.modlog || []).map(function (x) { return parseInt(x.id, 10); });
+      // Chadango GetModActions: the offset of the prev direction is the id of the oldest loaded action minus 1.
+      if (liveBridge.modLog(gid, Math.min.apply(null, ids) - 1)) groupUpdate(update, gid, function (g) { g.live.modlogPage.loading = true; });
+    };
     actions.requestBans = function (gid) {
       // The response to the first page replaces the list, even if a next page was awaited.
       groupUpdate(update, gid, function (g) { g.live.banPage.loading = false; g.live.banSearch = null; });

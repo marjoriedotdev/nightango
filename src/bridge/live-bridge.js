@@ -26,6 +26,8 @@ var liveBridge = (function () {
   var SOUND_AUDIO = { mention: 'message', online: 'play_online' };
   // Size of the ban and unban pages requested by BetterChatango.
   var BAN_PAGE = 50;
+  // Size of the audit log pages requested by chadango (GetModActions).
+  var MODLOG_PAGE = 50;
 
   // A message shown before its final id keeps the temporary id k:{key}, which Chatango refers to by the key alone.
   function withTempIds(ids) { return ids.concat(ids.map(function (id) { return 'k:' + id; })); }
@@ -69,6 +71,20 @@ var liveBridge = (function () {
     var hit = fresh(store, n);
     if (hit) return Promise.resolve(hit.data);
     return load().then(function (data) { store[n] = { at: Date.now(), data: data }; return data; });
+  }
+  // A change reaches every group the member shares with us, one frame each. Like BetterChatango's avatar cache, the frames that follow a refresh are dropped for a while.
+  var refreshedAt = {}, REFRESH_MS = 3000;
+  /**
+   * Refreshes a member's pictures and drops their cached profiles after an updateprofile or reload_profile frame, at most once per member per REFRESH_MS.
+   * @param {string} name Member named by the frame.
+   */
+  function profileChanged(name) {
+    var n = lower(name), now = Date.now();
+    if (!/^[a-z0-9_-]{1,20}$/.test(n) || now - (refreshedAt[n] || 0) < REFRESH_MS) return;
+    refreshedAt[n] = AVATAR_VERSION[n] = now;
+    // Own caches hold the version just saved: mod1.xml and mod2.xml can come back older from the HTTP cache, and the next save would send it back.
+    if (n !== lower(C.user && C.user.name)) { delete profileCache[n]; delete fullProfileCache[n]; }
+    emit({ op: 'profileStale', name: n, v: now });
   }
   // Like BetterChatango, only a reply of the expected type counts: without a style file, Chatango returns a small JPEG image.
   function memberFile(url, type, parse) {
@@ -134,6 +150,7 @@ var liveBridge = (function () {
       case 'inited':
         emit({ op: 'inited', gid: room });
         send(room, 'getannouncement', '');
+        send(room, 'getratelimit', '');
         // BetterChatango loads the group title and description right after the connection.
         setTimeout(function () { var info = roomInfo(room); if (info) emit({ op: 'info', gid: room, title: info.title, description: info.description }); }, 3000);
         break;
@@ -154,7 +171,14 @@ var liveBridge = (function () {
         break;
       }
       case 'bw': emit({ op: 'bw', gid: room, part: unquote(data[0]), whole: unquote(data[1]) }); break;
-      case 'getratelimit': case 'ratelimitset': emit({ op: 'rate', gid: room, seconds: parseInt(data[0], 10) || 0 }); break;
+      // getratelimit carries the cooldown left before the next message in data[1], ratelimitset only the delay.
+      case 'getratelimit': case 'ratelimitset': emit({ op: 'rate', gid: room, seconds: parseInt(data[0], 10) || 0, wait: name === 'getratelimit' ? parseInt(data[1], 10) || 0 : 0 }); break;
+      case 'ratelimited': {
+        var refused = lastSent[room] || '';
+        delete lastSent[room];
+        emit({ op: 'tooFast', gid: room, seconds: parseInt(data[0], 10) || 0, text: refused });
+        break;
+      }
       case 'blocklist': banPage(room, 'block', data); break;
       case 'unblocklist': banPage(room, 'unblock', data); break;
       case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', guest: !data[2], by: lower(data[3]), at: Date.now() } }); break;
@@ -162,8 +186,13 @@ var liveBridge = (function () {
       case 'bansearchresult': gotReply('searchban:' + room); emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
       case 'badbansearchstring': gotReply('searchban:' + room); emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
       case 'allunblocked': emit({ op: 'unbannedAll', gid: room }); break;
-      case 'modactions': emit({ op: 'modlog', gid: room, list: parseModLog(data) }); break;
+      case 'modactions': {
+        var actions = parseModLog(data);
+        emit({ op: 'modlog', gid: room, list: actions, more: actions.length >= MODLOG_PAGE });
+        break;
+      }
       case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
+      case 'updateprofile': profileChanged(data[0]); break;
       case 'updgroupinfo': emit({ op: 'info', gid: room, title: unquote(data[0]), description: unquote(data.slice(1).join(':')) }); break;
       case 'denied':
         // Neither inited nor participants will arrive: the message log and the members stop waiting.
@@ -173,7 +202,9 @@ var liveBridge = (function () {
       case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator.' }); break;
       case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions." }); break;
       case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.' }); break;
-      case 'show_tb': case 'tb': emit({ op: 'notice', gid: room, text: 'You are temporarily banned from posting in #' + room + '.' }); break;
+      // Unit unconfirmed: chadango reads minutes, its own show_nlp_tb:3:900 sample suggests seconds.
+      case 'show_tb': case 'tb': case 'nlptb': emit({ op: 'tempBan', gid: room, length: parseInt(data[0], 10) || 0 }); break;
+      case 'show_nlp_tb': emit({ op: 'tempBan', gid: room, length: parseInt(data[1], 10) || 0 }); break;
       default: break;
     }
   }
@@ -227,6 +258,9 @@ var liveBridge = (function () {
         emit({ op: 'people', list: people });
         break;
       }
+      case 'reload_profile': profileChanged(data[0]); break;
+      // BetterChatango reads the end time in seconds (inject.js:3301-3302).
+      case 'premium': emit({ op: 'premium', status: parseInt(data[0], 10) || 0, until: epochMs(data[1]) }); break;
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
       case 'unblocked': emit({ op: 'pmUnblocked', name: lower(data[0]) }); break;
       case 'OK':
@@ -245,7 +279,7 @@ var liveBridge = (function () {
     }
   }
   // Frames that BetterChatango does not listen to: we add a handler, which its dispatcher calls like its own.
-  var EXTRA = { group: ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb'], private: [] };
+  var EXTRA = { group: ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb', 'nlptb', 'show_nlp_tb', 'ratelimited'], private: [] };
   function wrapTable(table, kind) {
     if (!table) return;
     EXTRA[kind].forEach(function (name) { if (!(name in table)) table[name] = function () { /* handler added by Nightango */ }; });
@@ -420,6 +454,8 @@ var liveBridge = (function () {
     }
     try { C.socket(gid, frame, failure); return true; } catch (e) { warn(e); return false; }
   }
+  // Text of the last message sent to each group: a ratelimited refusal names no message, and it always answers the latest one.
+  var lastSent = {};
   // Last correspondent requested by connect, to which a reply with an empty name belongs.
   var connectTarget = '';
   // Chatango returns no request id: a reply is recognized by its key, and a newer request replaces the wait of the previous one.
@@ -898,7 +934,9 @@ var liveBridge = (function () {
       var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
       var user = (C.groups[gid] && C.groups[gid].user) || {};
       var flag = (CHANNEL_FLAG[opts.channel] || 0) + (parseInt(user.badge, 10) || 0);
-      return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure) ? built.style : null;
+      if (!send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure)) return null;
+      lastSent[gid] = text;
+      return built.style;
     },
     /**
      * Measures the body that send would send without the bm prefix like the BetterChatango counter.
@@ -1020,8 +1058,14 @@ var liveBridge = (function () {
     clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
     /* Group settings: frames found in chadango and chatango-lib */
     requestSettings: function (gid) {
-      ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:50'].forEach(function (f) { send(gid, f, 'Group settings could not be loaded.'); });
+      ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:' + MODLOG_PAGE].forEach(function (f) { send(gid, f, 'Group settings could not be loaded.'); });
     },
+    /**
+     * Requests the page of the audit log older than the offset like chadango.
+     * @param {string} gid Target group.
+     * @param {number} offset Id of the oldest loaded action minus 1.
+     */
+    modLog: function (gid, offset) { return send(gid, 'getmodactions:prev:' + offset + ':' + MODLOG_PAGE, 'Older audit log entries could not be loaded.'); },
     setFlags: function (gid, add, remove) { return send(gid, 'updategroupflags:' + add + ':' + remove, 'The group settings could not be saved.'); },
     setAnnouncement: function (gid, enabled, seconds, text, read) {
       var prefix = read.prefix || '<n000/><f x11000="0">';
@@ -1278,6 +1322,25 @@ var liveBridge = (function () {
       return openPmDb().then(function (db) {
         if (db) return markRead(db, targetRange(name));
       }).catch(warn);
+    },
+    /**
+     * Flags unread the latest PM received from a member that is not an edit.
+     * @param {string} name Correspondent.
+     * @returns {Promise<boolean>} True if an entry was flagged, rejected when the private history cannot be opened or written.
+     */
+    markPmUnread: function (name) {
+      return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
+        var flagged = false, tx = db.transaction(['messages'], 'readwrite');
+        tx.objectStore('messages').index('target_ts_idx').openCursor(targetRange(name), 'prev').onsuccess = function (e) {
+          var cur = e.target.result;
+          if (!cur) return;
+          var x = pmRecordEntry(cur.value);
+          if (x && !x.editId && x.from === name) { cur.update(Object.assign(cur.value, { unread: 1 })); flagged = true; return; }
+          cur.continue();
+        };
+        tx.oncomplete = function () { resolve(flagged); };
+        tx.onabort = function () { warn(tx.error); reject(new Error('BetterChatango could not update your message history. Reload the page and try again.')); };
+      }); });
     },
     /**
      * Counts the unread PMs of a correspondent in the private history without the edits that BetterChatango archives separately.

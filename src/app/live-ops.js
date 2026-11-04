@@ -44,6 +44,11 @@ function addHistory(d, op, local) {
   else { delete hm.editId; mergeEdits(g, hm); }
   g.messages.push(withReply(g, hm));
   logMention(d, op.gid, hm);
+  // History newer than the read position kept in this browser counts as unread, without an alert. The group in view reads it instead.
+  if (hm.kind === 'msg' && !hm.editId && hm.author !== d.me && g.lastReadTs != null && hm.ts > g.lastReadTs && !isGroupInView(d, op.gid)) {
+    g.unread += 1;
+    if (mentionsMe(d.me, hm.text)) g.mentions += 1;
+  }
   return true;
 }
 
@@ -55,7 +60,7 @@ function addHistory(d, op, local) {
  */
 function useLiveOps(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast;
-  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, notify = k.inbox.notify, receiveGroup = k.inbox.receiveGroup;
+  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, notify = k.inbox.notify, notifyPm = k.inbox.notifyPm, receiveGroup = k.inbox.receiveGroup;
   var actions = k.actions, local = k.local, localRef = k.local.ref, reconnection = k.reconnection, pms = k.pms;
   var offlineCount = useRef(0);
   // History operations held for the animation frame: Chatango sends a page one frame per message.
@@ -73,6 +78,8 @@ function useLiveOps(k) {
         var g = d.groups[gid];
         g.messages.sort(function (a, b) { return a.ts - b.ts; });
         trimThread(g);
+        // A group without a kept read position takes its first history as read, as before read positions were kept.
+        if (g.lastReadTs == null || isGroupInView(d, gid)) g.lastReadTs = readThrough(g);
       });
     });
   }
@@ -103,7 +110,7 @@ function useLiveOps(k) {
           // Joining calls renderGroup again with recent: true, so owned never goes back to false.
           if (op.owned) g.owned = true;
           g.joined = !op.hidden;
-          if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: Date.now() }; }
+          if (g.joined && !d.liveFocused && d.route.view === 'discover') { d.liveFocused = true; d.route = { view: 'group', id: op.id, markerTs: g.lastReadTs }; }
         });
         if (!op.hidden && unfocused) setTimeout(function () { var r = stateRef.current.route; if (r.view === 'group' && r.id === op.id) liveBridge.focus(op.id); }, 50);
         break;
@@ -126,7 +133,10 @@ function useLiveOps(k) {
         delete m.editId;
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          noteBadge(ensureLiveGroup(d, op.gid, localRef.current), m.author, op.msg.badge);
+          var mg = ensureLiveGroup(d, op.gid, localRef.current);
+          // The duration unit of a temporary ban is unconfirmed: a message of the user that gets through ends it.
+          if (m.author === d.me && mg.live.tempBan) mg.live.tempBan = null;
+          noteBadge(mg, m.author, op.msg.badge);
           mergeStyle(ensureLiveUser(d, m.author, localRef.current), style, m.ts);
         });
         receiveGroup(op.gid, m);
@@ -190,7 +200,17 @@ function useLiveOps(k) {
       case 'annc': groupUpdate(update, op.gid, function (g) { g.live.annc = { mode: op.mode, enabled: op.enabled, interval: op.interval, text: op.text, displayText: op.displayText, embeds: op.embeds, prefix: op.prefix || '' }; deriveLive(g); }); break;
       case 'anncPost': if (op.text || op.embeds.length) groupUpdate(update, op.gid, function (g) { g.messages.push({ id: uid(), kind: 'system', annc: true, text: 'Announcement: ' + op.text, embeds: op.embeds, ts: Date.now() }); }); break;
       case 'bw': groupUpdate(update, op.gid, function (g) { g.live.bw = { part: op.part, whole: op.whole }; deriveLive(g); }); break;
-      case 'rate': groupUpdate(update, op.gid, function (g) { g.live.rate = op.seconds; deriveLive(g); }); break;
+      case 'rate': groupUpdate(update, op.gid, function (g) {
+        g.live.rate = op.seconds;
+        if (op.wait) g.live.cooldown = { until: Date.now() + op.wait * 1000, refused: false };
+        deriveLive(g);
+      }); break;
+      case 'tooFast': groupUpdate(update, op.gid, function (g) {
+        g.live.cooldown = { until: Date.now() + op.seconds * 1000, refused: true };
+        if (op.text) g.live.refused = op.text;
+      }); break;
+      // Raw length kept, end read as minutes like chadango: the longer reading, a message of the user that gets through ends the ban sooner.
+      case 'tempBan': groupUpdate(update, op.gid, function (g) { g.live.tempBan = { length: op.length, until: op.length ? Date.now() + op.length * MIN : 0 }; }); break;
       case 'bans': groupUpdate(update, op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;
@@ -215,11 +235,16 @@ function useLiveOps(k) {
       // BetterChatango only logs allunblocked: the unban list is requested again the next time it is shown.
       case 'unbannedAll': groupUpdate(update, op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
       case 'modlog': groupUpdate(update, op.gid, function (g) {
-        var known = {}, list = (g.live.modlog || []).slice();
+        var page = g.live.modlogPage, next = page.loading, known = {}, list = (g.live.modlog || []).slice();
         list.forEach(function (x) { known[x.id] = true; });
-        op.list.forEach(function (x) { if (!known[x.id]) list.push(x); });
+        var fresh = op.list.filter(function (x) { return !known[x.id]; });
+        list.push.apply(list, fresh);
         list.sort(function (a, b) { return b.at - a.at; });
         g.live.modlog = list;
+        // A first page sent again when the settings reopen only adds the newest actions: the end of the log stays as paging left it.
+        if (next || !page.loaded) page.more = op.more && (!next || fresh.length > 0);
+        page.loaded = true;
+        page.loading = false;
       }); break;
       case 'conn':
         reconnection.follow(op);
@@ -228,7 +253,7 @@ function useLiveOps(k) {
           if (!d.auth.loggedIn) return;
           var g = d.groups[op.gid];
           // A pending history request gets no response on a closed socket.
-          if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; } }
+          if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; g.live.modlogPage.loading = false; } }
           d.session = sessionAfterConn(d, op);
         }); break;
       case 'session': update(function (d) {
@@ -262,12 +287,12 @@ function useLiveOps(k) {
         // Read created after the current stack: BetterChatango archives a received PM only after pm is emitted.
         if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
         if (edit) break;
-        if (!focused && !op.offline && !ignored) notify('pm', { toast: s0.prefs.pmPreview ? op.from + ': ' + messagePreview(op) : 'New message from ' + op.from, icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: op.from }); } } });
+        if (!focused && !op.offline && !ignored) notifyPm(op.from, messagePreview(op));
         // msgoff frames arrive in a burst right after the connection: a single notification for the whole burst.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
           offlineCount.current = 0;
-          notify('pm', { toast: plural(n, 'message', 'messages') + ' received while you were away.', icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'dm', id: null }); } } });
+          notify('pm', { toast: plural(n, 'message', 'messages') + ' received while you were away.', tag: 'pm-away', icon: 'message', action: { label: 'Open', run: function () { nav({ view: 'dm', id: null }); } } });
         }, 1500);
         break;
       }
@@ -282,6 +307,16 @@ function useLiveOps(k) {
         });
         actions.checkPmr();
         break;
+      case 'premium': {
+        var premium = { status: op.status, until: op.until }, today = dayKey(Date.now()), key = skinKey(stateRef.current.me);
+        update(function (d) { if (d.auth.loggedIn) d.premium = premium; });
+        // Chatango sends the frame on each private connection: the day of the last reminder is kept for the account.
+        if (premiumEndsSoon(premium, Date.now()) && (storageGet(key) || {}).premiumReminded !== today) {
+          storageMerge(key, { premiumReminded: today });
+          toast('Your Chatango Premium ends on ' + shortDate(op.until) + '.', { icon: 'star', action: { label: 'Open chatango.com', run: function () { window.open(CHATANGO_URL, '_blank', 'noopener,noreferrer'); } } });
+        }
+        break;
+      }
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;
@@ -316,8 +351,8 @@ function useLiveOps(k) {
           var openDm = { label: 'Message', run: function () { actions.openDm(op.name); } };
           if (status === 'online' && before.status === 'offline') {
             if (isNotifyingOnline(stateRef.current, op.name)) toast(op.name + ' is online.', { icon: 'users', action: openDm });
-            else notify('friendOn', { toast: op.name + ' is online.', icon: 'users', action: openDm });
-          } else if (status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', icon: 'users' });
+            else notify('friendOn', { toast: op.name + ' is online.', title: op.name, tag: 'friend:' + op.name, icon: 'users', action: openDm });
+          } else if (status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', title: op.name, tag: 'friend:' + op.name, icon: 'users' });
         }
         break;
       }
@@ -325,6 +360,8 @@ function useLiveOps(k) {
         Object.keys(d.users).forEach(function (n) { if (d.users[n].blocked && op.list.indexOf(n) < 0) d.users[n].blocked = false; });
         op.list.forEach(function (n) { ensureLiveUser(d, n, localRef.current).blocked = true; });
       }); break;
+      // A new avatarV gives the memoized rows of the member new props: their avatars render again with the picture AVATAR_VERSION now points to.
+      case 'profileStale': update(function (d) { if (d.users[op.name]) d.users[op.name].avatarV = op.v; }); break;
       case 'msgBgStale': update(function (d) { if (d.users[op.name]) delete d.users[op.name].msgBg; }); break;
       case 'people': update(function (d) { op.list.forEach(function (x) { applyPresence(ensureLiveUser(d, x.name, localRef.current), x); }); }); break;
       case 'pmUnblocked': update(function (d) { if (d.users[op.name]) d.users[op.name].blocked = false; }); break;

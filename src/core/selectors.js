@@ -21,6 +21,19 @@ function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) &
 // One object for every unknown member: the rows that take its style as a prop keep the same props.
 var UNKNOWN_USER = { status: 'offline', about: '', style: {} };
 function userOf(state, name) { return state.users[name] || UNKNOWN_USER; }
+var PREMIUM_REMINDER_MS = 3 * 86400000;
+/**
+ * Tells whether the account has Premium according to the premium frame: status 200 (bought) or 210 (gifted) like BetterChatango, before its end.
+ * @param {?{status: number, until: number}} p Premium of the state, null before the frame.
+ * @param {number} now Current time in milliseconds.
+ */
+function premiumActive(p, now) { return !!p && (p.status === 200 || p.status === 210) && p.until > now; }
+/**
+ * Tells whether an active Premium ends within three days.
+ * @param {?{status: number, until: number}} p Premium of the state, null before the frame.
+ * @param {number} now Current time in milliseconds.
+ */
+function premiumEndsSoon(p, now) { return premiumActive(p, now) && p.until - now <= PREMIUM_REMINDER_MS; }
 /**
  * Tells whether a member's messages are hidden: ignored member or blocked member when the block also applies in groups.
  * @param {Object} state Application state.
@@ -44,6 +57,16 @@ function findMsg(g, id) {
   var plain = plainMsgId(id), list = plainOf(g.messages);
   for (var i = list.length - 1; i >= 0; i--) { var x = list[i]; if (x.id === plain || x.id === 'k:' + plain) return g.messages[i]; }
   return null;
+}
+/**
+ * Returns the route of a group opened at one of its loaded messages.
+ * @param {Object} state Application state.
+ * @param {string} gid Group.
+ * @param {string} id Message id.
+ */
+function groupRouteAt(state, gid, id) {
+  var m = findMsg(state.groups[gid], id);
+  return m ? { view: 'group', id: gid, msgId: m.id } : { view: 'group', id: gid };
 }
 /**
  * Indexes the loaded messages of a group in one pass for repeated lookups.
@@ -96,6 +119,15 @@ function commonGroups(state, name) {
 }
 function lastTs(c) { return c.messages.length ? c.messages[c.messages.length - 1].ts : 0; }
 /**
+ * Returns the read position of a group once its loaded messages are read.
+ * @param {Object} g Group in the state.
+ */
+function readThrough(g) {
+  // Only member messages carry the server time: event rows are stamped with the local clock.
+  for (var i = g.messages.length - 1; i >= 0; i--) if (g.messages[i].kind === 'msg') return Math.max(g.lastReadTs || 0, g.messages[i].ts);
+  return g.lastReadTs;
+}
+/**
  * Lists the shown conversations without closed conversations from newest to oldest.
  * @param {Object} state Application state.
  */
@@ -114,6 +146,12 @@ function unreadDmCount(state) { return listedDms(state).filter(function (n) { re
  * @param {string} name Conversation member.
  */
 function isDmInView(state, name) { return state.route.view === 'dm' && state.route.id === name && document.visibilityState === 'visible'; }
+/**
+ * Tells whether a group is open in front of the user.
+ * @param {Object} state Application state.
+ * @param {string} gid Group.
+ */
+function isGroupInView(state, gid) { return state.route.view === 'group' && state.route.id === gid && document.visibilityState === 'visible'; }
 // Words and media as a sorted set: BetterChatango archives an image URL typed in the text as an <i s> tag.
 function pmContentKey(m) {
   var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });

@@ -27,9 +27,9 @@ function MentionsView() {
   var app = useApp(), s = app.state;
   var shown = s.mentionLog.filter(function (e) { return !isHiddenAuthor(s, e.author); });
   function open(e) {
-    var m = findMsg(s.groups[e.gid], e.id);
-    app.nav(m ? { view: 'group', id: e.gid, msgId: m.id } : { view: 'group', id: e.gid });
-    if (!m) app.ui.toast('This message is no longer loaded.');
+    var route = groupRouteAt(s, e.gid, e.id);
+    app.nav(route);
+    if (!route.msgId) app.ui.toast('This message is no longer loaded.');
   }
   return h('main', { className: 'main' },
     pageHeader('Mentions'),

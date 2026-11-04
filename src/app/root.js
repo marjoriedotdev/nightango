@@ -95,8 +95,8 @@ function useAppState(boot) {
  */
 function useDisplayPrefs(prefs) {
   var rerender = useState(0)[1];
-  // Read on each render: a page left open past November 2 loses its decorations without a reload.
-  var season = prefs.sky.season ? seasonOf(new Date()) : null;
+  // Read on each render: a page left open past the last day of a season loses its decorations without a reload.
+  var season = prefs.sky.season ? seasonOf(new Date(), prefs.sky.south) : null;
   useEffect(function () {
     var root = ROOT_EL;
     if (prefs.theme === 'dark' || prefs.theme === 'light') root.setAttribute('data-theme', prefs.theme);
@@ -114,7 +114,7 @@ function useDisplayPrefs(prefs) {
     root.classList.toggle('underline-links', !!prefs.a11y.underlineLinks);
     root.classList.toggle('calm-sky', !!prefs.sky.calm);
     root.classList.toggle('moon-south', !!prefs.sky.south);
-    root.classList.toggle('season-halloween', season === 'halloween');
+    SEASONS.forEach(function (id) { root.classList.toggle('season-' + id, season === id); });
     storageSet(PREFS_KEY, prefs);
   }, [prefs, season]);
   useEffect(function () {
@@ -197,7 +197,7 @@ function useUpdateCheck(loggedIn, toast) {
 function Root(props) {
   var store = useAppState(props.boot), state = store.state;
   // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
-  var drafts = useRef({});
+  var drafts = useState(draftStore)[0];
   var o = useOverlays();
   var inbox = useInbox(store.stateRef, store.update, o.toast, o.setNavOpen);
   var season = useDisplayPrefs(state.prefs);
