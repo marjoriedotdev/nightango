@@ -30,7 +30,7 @@ function liveWorld(me) {
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', unstyled: 'array', style: 'object', fav: 'array', muted: 'array', ignored: 'array' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array' };
 /**
  * Returns the account data stored in this browser without the values of another kind left by an older version or corrupted.
  * @param {*} stored Content of skinKey.
