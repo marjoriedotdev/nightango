@@ -160,7 +160,7 @@ function DmThread(p) {
   var asked = useRef(false);
   var len = convo.messages.length;
   var log = useMessageLog();
-  var draft = useDraft('dm:' + id), cm = useComposerMode(draft);
+  var draft = useDraft(dmDraftKey(id)), cm = useComposerMode(draft);
   var personActions = useProfileActions(id, null);
   // Search result: older pages load one by one until it is reached.
   useEffect(function () {
@@ -347,8 +347,9 @@ function useProfiles(names) {
  * @param {string} me Signed-in user.
  * @param {Function} onClick Opens the conversation.
  * @param {boolean} active The conversation is open.
+ * @param {boolean} [draft] The conversation keeps an unsent draft.
  */
-function personRow(n, u, c, me, onClick, active) {
+function personRow(n, u, c, me, onClick, active, draft) {
   var last = c && c.messages[c.messages.length - 1];
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': active ? 'page' : undefined, onClick: onClick },
     h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
@@ -356,7 +357,7 @@ function personRow(n, u, c, me, onClick, active) {
       h('span', { className: 'conv-name' }, n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(n, u),
-      c ? h('span', { className: 'conv-prev', dir: 'auto' }, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
+      c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
 }
 
@@ -469,7 +470,8 @@ function SwipeRow(p) {
  */
 var ChatRow = React.memo(function ChatRow(p) {
   var app = useAppApi(), n = p.name;
-  return h(SwipeRow, { name: n, actions: convActions(app, n) }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active));
+  var draft = useDraftMarks(function (m) { return showsDraft(m, dmDraftKey(n), p.active); });
+  return h(SwipeRow, { name: n, actions: convActions(app, n) }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
 });
 
 function FriendsList(p) {

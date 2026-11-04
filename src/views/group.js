@@ -43,7 +43,7 @@ function GroupView(p) {
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
-  var a9 = useDraft('group:' + p.gid), draft = a9[0], setDraft = a9[1];
+  var a9 = useDraft(groupDraftKey(p.gid)), draft = a9[0], setDraft = a9[1];
   var cm = useComposerMode(a9), mode = cm.mode, setMode = cm.setMode;
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
