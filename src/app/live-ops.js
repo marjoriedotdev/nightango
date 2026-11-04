@@ -302,6 +302,16 @@ function useLiveOps(k) {
         });
         actions.checkPmr();
         break;
+      case 'premium': {
+        var premium = { status: op.status, until: op.until }, today = dayKey(Date.now()), key = skinKey(stateRef.current.me);
+        update(function (d) { if (d.auth.loggedIn) d.premium = premium; });
+        // Chatango sends the frame on each private connection: the day of the last reminder is kept for the account.
+        if (premiumEndsSoon(premium, Date.now()) && (storageGet(key) || {}).premiumReminded !== today) {
+          storageMerge(key, { premiumReminded: today });
+          toast('Your Chatango Premium ends on ' + shortDate(op.until) + '.', { icon: 'star', action: { label: 'Open chatango.com', run: function () { window.open(CHATANGO_URL, '_blank', 'noopener,noreferrer'); } } });
+        }
+        break;
+      }
       case 'friends':
         update(function (d) {
           if (!op.added) d.friendsLoaded = true;
