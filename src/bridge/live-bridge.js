@@ -134,6 +134,7 @@ var liveBridge = (function () {
       case 'inited':
         emit({ op: 'inited', gid: room });
         send(room, 'getannouncement', '');
+        send(room, 'getratelimit', '');
         // BetterChatango loads the group title and description right after the connection.
         setTimeout(function () { var info = roomInfo(room); if (info) emit({ op: 'info', gid: room, title: info.title, description: info.description }); }, 3000);
         break;
@@ -154,7 +155,14 @@ var liveBridge = (function () {
         break;
       }
       case 'bw': emit({ op: 'bw', gid: room, part: unquote(data[0]), whole: unquote(data[1]) }); break;
-      case 'getratelimit': case 'ratelimitset': emit({ op: 'rate', gid: room, seconds: parseInt(data[0], 10) || 0 }); break;
+      // getratelimit carries the cooldown left before the next message in data[1], ratelimitset only the delay.
+      case 'getratelimit': case 'ratelimitset': emit({ op: 'rate', gid: room, seconds: parseInt(data[0], 10) || 0, wait: name === 'getratelimit' ? parseInt(data[1], 10) || 0 : 0 }); break;
+      case 'ratelimited': {
+        var refused = lastSent[room] || '';
+        delete lastSent[room];
+        emit({ op: 'tooFast', gid: room, seconds: parseInt(data[0], 10) || 0, text: refused });
+        break;
+      }
       case 'blocklist': banPage(room, 'block', data); break;
       case 'unblocklist': banPage(room, 'unblock', data); break;
       case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', guest: !data[2], by: lower(data[3]), at: Date.now() } }); break;
@@ -173,7 +181,9 @@ var liveBridge = (function () {
       case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator.' }); break;
       case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions." }); break;
       case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.' }); break;
-      case 'show_tb': case 'tb': emit({ op: 'notice', gid: room, text: 'You are temporarily banned from posting in #' + room + '.' }); break;
+      // Unit unconfirmed: chadango reads minutes, its own show_nlp_tb:3:900 sample suggests seconds.
+      case 'show_tb': case 'tb': case 'nlptb': emit({ op: 'tempBan', gid: room, length: parseInt(data[0], 10) || 0 }); break;
+      case 'show_nlp_tb': emit({ op: 'tempBan', gid: room, length: parseInt(data[1], 10) || 0 }); break;
       default: break;
     }
   }
@@ -245,7 +255,7 @@ var liveBridge = (function () {
     }
   }
   // Frames that BetterChatango does not listen to: we add a handler, which its dispatcher calls like its own.
-  var EXTRA = { group: ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb'], private: [] };
+  var EXTRA = { group: ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb', 'nlptb', 'show_nlp_tb', 'ratelimited'], private: [] };
   function wrapTable(table, kind) {
     if (!table) return;
     EXTRA[kind].forEach(function (name) { if (!(name in table)) table[name] = function () { /* handler added by Nightango */ }; });
@@ -420,6 +430,8 @@ var liveBridge = (function () {
     }
     try { C.socket(gid, frame, failure); return true; } catch (e) { warn(e); return false; }
   }
+  // Text of the last message sent to each group: a ratelimited refusal names no message, and it always answers the latest one.
+  var lastSent = {};
   // Last correspondent requested by connect, to which a reply with an empty name belongs.
   var connectTarget = '';
   // Chatango returns no request id: a reply is recognized by its key, and a newer request replaces the wait of the previous one.
@@ -898,7 +910,9 @@ var liveBridge = (function () {
       var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
       var user = (C.groups[gid] && C.groups[gid].user) || {};
       var flag = (CHANNEL_FLAG[opts.channel] || 0) + (parseInt(user.badge, 10) || 0);
-      return send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure) ? built.style : null;
+      if (!send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure)) return null;
+      lastSent[gid] = text;
+      return built.style;
     },
     /**
      * Measures the body that send would send without the bm prefix like the BetterChatango counter.

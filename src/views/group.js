@@ -14,6 +14,29 @@ var COMPOSER_MODES = {
 };
 
 /**
+ * Composer line for the posting limits of a live group: temporary ban, message refused as too fast and slow mode, counted down every second.
+ * @param {{ban: ?{until: number, length: number}, cooldown: ?{until: number, refused: boolean}, rate: ?number, bypass: boolean}} p Limits read from g.live and the bypass right of the user.
+ */
+function ComposerLimit(p) {
+  var tick = useState(0)[1], now = Date.now(), ban = p.ban, cd = p.cooldown;
+  var banned = !!ban && (!ban.until || ban.until > now);
+  var wait = cd && cd.until > now && (cd.refused || !p.bypass) ? Math.ceil((cd.until - now) / 1000) : 0;
+  var ticking = wait > 0 || banned && ban.until > 0;
+  useEffect(function () {
+    if (!ticking) return;
+    var t = setTimeout(function () { tick(Date.now()); }, 1000);
+    return function () { clearTimeout(t); };
+  });
+  // No duration shown: the unit of the ban length is unconfirmed, read as minutes it could overstate the ban 60 times.
+  var text = banned ? 'Temporary posting ban. Try again later.'
+    : wait && cd.refused ? 'Too fast. Try again in ' + wait + ' s.'
+    : wait ? 'Slow mode: wait ' + wait + ' s.'
+    : p.rate > 0 && !p.bypass ? 'Slow mode: ' + p.rate + ' s per message.' : null;
+  if (!text) return null;
+  return h(Frag, null, banned || wait && cd.refused ? h(T.Icon, { name: 'alert', size: 14, className: 'limit-alert' }) : null, text);
+}
+
+/**
  * Reply, edit or quote mode of a composer.
  * During an edit, the draft holds the edited text and the typed draft waits aside.
  * @param {Array} draft useDraft result of the composer.
@@ -106,6 +129,13 @@ function GroupView(p) {
   }, [p.gid, typed, replyId, editId, quoted, s.ownStyle]);
   // Same functions for every render: the message rows render again only when their message or its context changes.
   var calls = useLatestCalls({ reply: cm.enter('reply'), quote: cm.enter('quote'), edit: edit, mention: mention, jump: jumpTo });
+  // A message Chatango refused as too fast comes back to the composer, before what was typed since.
+  var refused = g && g.live ? g.live.refused : null;
+  useEffect(function () {
+    if (!refused) return;
+    setDraft(function (v) { return v ? refused + ' ' + v : refused; });
+    app.update(function (d) { d.groups[p.gid].live.refused = null; });
+  }, [refused]);
   if (!g) return h('main', { className: 'main' }, h('div', { className: 'empty' }, h('h2', null, 'This group is gone'), h(T.Button, { onClick: function () { app.nav({ view: 'discover' }); } }, 'Discover groups')));
 
   var myRole = roleOf(g, me), staff = isStaffRole(myRole);
@@ -205,7 +235,8 @@ function GroupView(p) {
     var left = GROUP_MESSAGE_MAX - measured;
     composer = h(Frag, null, media.panel, mentions.panel, h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: mentions.onChange, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
-      hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left' : null,
+      hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left'
+        : g.live ? h(ComposerLimit, { ban: g.live.tempBan, cooldown: g.live.cooldown, rate: g.live.rate, bypass: !!rights.bypass }) : null,
       hintTone: left < 0 ? 'warning' : null,
       context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,

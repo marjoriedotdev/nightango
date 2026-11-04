@@ -1956,6 +1956,41 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     fromBadges.kim.includes('Admin') && fromBadges.lee.includes('Mod') && fromBadges.dana.includes('Owner') && !/Admin|Mod/.test(fromList.kim) && fromList.lee.includes('Mod'),
     { fromBadges, fromList });
 
+  /* Posting limits: slow mode read on join, a message refused as too fast, a temporary ban, the bypass right */
+  C.groups.slow = fakeGroup();
+  SB.renderGroup({ group: 'slow', header: 'Slow' });
+  g('ok', 'slow', ['dana', '', '', '', '1700000000', '', '', '0']);
+  const limitFrom = sent.length;
+  g('inited', 'slow', []);
+  await until(() => !!byText('.tc-nav', 'slow'));
+  click(byText('.tc-nav', 'slow')); await wait(50);
+  const slowAsked = sent.slice(limitFrom).filter(x => x[0] === 'slow').map(x => x[1]);
+  const limitHint = () => ($('.composer-wrap .tc-composer-hint') || {}).textContent || '';
+  g('getratelimit', 'slow', ['10', '4']);
+  await until(() => /Slow mode: wait/.test(limitHint()));
+  const onJoin = limitHint();
+  const slowBox = () => $('.tc-composer textarea');
+  type(slowBox(), 'Too quick'); key(slowBox(), 'Enter'); await wait(30);
+  const draftAfterSend = slowBox().value;
+  g('ratelimited', 'slow', ['5']);
+  await until(() => slowBox().value === 'Too quick');
+  const refusedShown = { draft: slowBox().value, hint: limitHint() };
+  g('show_nlp_tb', 'slow', ['3', '900']);
+  await until(() => /posting ban/.test(limitHint()));
+  const banShown = { hint: limitHint(), canSend: !$('.composer-wrap .tc-send').disabled };
+  g('b', 'slow', ['1700050000.1', 'Marjorie', '', 'u0', 'UNID0', 'tmp700', '9.9.9.9', '0', '', '<n000/><f x11000="0">Through']);
+  await until(() => !/posting ban/.test(limitHint()));
+  const banLifted = limitHint();
+  g('getratelimit', 'test', ['10', '4']);
+  click(byText('.tc-nav', 'test')); await wait(80);
+  const ownerHint = limitHint();
+  step('getratelimit sent on join, slow mode counted down, a refused message back in the composer, a posting ban shown without a duration and with Send enabled, no countdown with the bypass right',
+    slowAsked.includes('getratelimit') && /^Slow mode: wait [34] s\.$/.test(onJoin) && draftAfterSend === ''
+      && refusedShown.draft === 'Too quick' && /^Too fast\. Try again in [45] s\.$/.test(refusedShown.hint)
+      && banShown.hint === 'Temporary posting ban. Try again later.' && banShown.canSend
+      && !/posting ban/.test(banLifted) && !/Slow mode/.test(ownerHint),
+    { slowAsked, onJoin, draftAfterSend, refusedShown, banShown, banLifted, ownerHint });
+
   /* Private history import: only valid records of this account are written, as read, without overwriting an existing key */
   const chooseFile = (text, sel = 'input[type="file"]') => {
     const input = $(sel);

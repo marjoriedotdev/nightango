@@ -446,6 +446,8 @@ Chatango returns no request identifier. For three requests, the bridge waits for
 - `setbannedwords:{partial}:{exact}` (URL-encoded)
 - `getbannedwords`
 - `getratelimit`, `setratelimit:{s}`
+  - `getratelimit` is sent when group settings open and on each `inited` of a group, for every user: the composer shows slow mode from its reply. Like `getannouncement`, it goes out without a failure text.
+  - `getratelimit` response: `getratelimit:{delay}:{remaining}`, both in seconds, the delay between two messages and the cooldown left before the next one ([group.go](https://github.com/n0h4rt/chadango/blob/d53b02a4d1e2cc7667f61b1693c8a42a55694d1b/group.go#L582-L588)). `ratelimitset:{delay}` carries the delay only (`group.go#L612-L613`).
   - `setratelimit:0` turns slow mode off. In chadango, the moderation action `chrl` (rate limit changed) with value 0 takes the `flood_cont` template ("flood controlled", without slow mode), any other value `slow_mode`: [models/modaction.go](https://github.com/n0h4rt/chadango/blob/d53b02a4d1e2cc7667f61b1693c8a42a55694d1b/models/modaction.go#L251-L257).
   - The role of the group flag `RATELIMITREGIMEON` next to `setratelimit` is not established.
 - `addmod:{name}:{rights}` (add and update)
@@ -453,6 +455,14 @@ Chatango returns no request identifier. For three requests, the bridge waits for
 - `unbanall`
 - `clearall`
 - `getmodactions:prev:0:50` (offset 0 confirmed by a Pastebin script, less reliable source)
+
+### Posting limits
+
+Received frames only: nothing is sent. BetterChatango has no handler for them, the bridge adds one (`EXTRA`). Source: chadango, [group.go](https://github.com/n0h4rt/chadango/blob/d53b02a4d1e2cc7667f61b1693c8a42a55694d1b/group.go#L397-L429), frames answering a `bm`.
+
+- `ratelimited:{seconds}`: the last message was refused as too fast, `{seconds}` left before the next one (`group.go#L425-L429`). The frame names no message: the bridge gives the text of the last message it sent to that group back to the composer, before what was typed since.
+- `show_tb:{n}`, `tb:{n}`, `nlptb:{n}` (`group.go#L397-L400`, `L417-L420`) and `show_nlp_tb:{x}:{n}` (`group.go#L410-L416`, sample `show_nlp_tb:3:900`, meaning of `{x}` unknown): posting ban, flood (`tb`) or AutoMod (`nlp`). chadango reads `{n}` as minutes (`eventRestrictUpdate`, `group.go#L1726-L1729`), but its own sample suggests seconds: the unit is unconfirmed. Until the unit is confirmed on a real account, the composer shows no duration, only "Temporary posting ban. Try again later.", and keeps Send enabled. The bridge keeps `{n}` in `g.live.tempBan.length`. The line ends when a message of the user gets through, or at the latest after `{n}` minutes, the longer reading.
+- The composer counts the slow mode delay down after each message the bridge sends, from the `getratelimit` remaining cooldown on join and from `ratelimited`. Staff with the "Bypass AutoMod and rate limits" right (`PERM_FLAG.bypass`) see no slow mode line, but a refusal or a posting ban still shows.
 
 ### Private messages
 

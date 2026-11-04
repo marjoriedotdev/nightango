@@ -102,6 +102,10 @@ List of words, partial or whole, refused in a group's messages.
 Block of a member or a guest in a group, made from one of their messages.
 _Avoid_: block (reserved for PMs)
 
+**Posting ban**:
+Temporary stop on posting that Chatango puts on a member by itself, for flooding or through AutoMod, for a set time. Not made by a moderator.
+_Avoid_: ban (reserved for a moderator's ban), temp ban
+
 ## Private messages
 
 **PM**:

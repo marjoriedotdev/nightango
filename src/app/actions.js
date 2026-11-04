@@ -417,6 +417,7 @@ function useActions(k) {
   function sendStyled(gid, text, opts, outcome) {
     var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
     if (style) setOwnStyle(style); else if (outcome) messageFailed(gid, outcome);
+    if (style) update(function (d) { var L = d.groups[gid].live; L.cooldown = L.rate > 0 ? { until: Date.now() + L.rate * 1000, refused: false } : null; });
     return !!style;
   }
   /**
