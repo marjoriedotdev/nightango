@@ -29,17 +29,20 @@ function fakePmDb(records, onWrite) {
     const request = run => { const req = {}; pending++; requests++; setTimeout(() => { run(req); done(); }, 0); return req; };
     // Cursor in microtasks after a first task: a slow walk would make short waits fail under load.
     // Like IndexedDB, continue(key) on an index skips to the first record whose key reaches key in the cursor direction.
+    // Like IndexedDB, a cursor left without continue ends its request.
     const cursor = (list, keyOf, prev) => {
       const req = {}; let i = 0; pending++; requests++;
       const reached = (rec, key) => (prev ? -1 : 1) * keyCmp(keyOf(rec), key) >= 0;
       const read = () => {
         const rec = list[i];
+        let continued = false;
         req.onsuccess({ target: { result: rec ? { value: Object.assign({}, rec), update(v) { Object.assign(rec, v); }, delete() { drop(rec); }, continue(key) {
+          continued = true;
           i++;
           if (key !== undefined) while (list[i] && !reached(list[i], key)) i++;
           Promise.resolve().then(read);
         } } : null } });
-        if (!rec) done();
+        if (!continued) done();
       };
       setTimeout(read, 0); return req;
     };

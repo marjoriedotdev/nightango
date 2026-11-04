@@ -2,26 +2,33 @@
 
 /**
  * BetterChatango PM archive in live: BetterChatango writes each PM to it itself, the bridge marks it read and counts the unreads in it.
- * @returns {{record: Function, markRead: function(string): Promise, unread: function(string): Promise<number>}} Archive.
+ * @returns {{record: Function, markRead: function(string): Promise, markUnread: function(string): Promise<boolean>, unread: function(string): Promise<number>}} Archive.
  */
 function betterChatangoPmArchive() {
   return {
     record: function () {},
     markRead: function (target) { return liveBridge.markPmRead(target); },
+    markUnread: function (target) { return liveBridge.markPmUnread(target); },
     unread: function (target) { return liveBridge.pmUnread(target); }
   };
 }
 /**
  * In-memory PM archive with the unread flag of each entry: the prototype one and the live one when the BetterChatango database is missing.
- * @param {Object=} seed Starting unreads by correspondent.
- * @returns {{record: Function, markRead: function(string): Promise, unread: function(string): Promise<number>}} Archive.
+ * @param {Array=} seed Starting entries {target, from, unread, edit}.
+ * @returns {{record: Function, markRead: function(string): Promise, markUnread: function(string): Promise<boolean>, unread: function(string): Promise<number>}} Archive.
  */
 function memoryPmArchive(seed) {
-  var entries = [];
-  Object.keys(seed || {}).forEach(function (t) { for (var i = 0; i < seed[t]; i++) entries.push({ target: t, unread: true, edit: false }); });
+  var entries = (seed || []).slice();
   return {
-    record: function (target, m, unread) { entries.push({ target: target, unread: !!unread, edit: !!m.editId }); },
+    record: function (target, m, unread) { entries.push({ target: target, from: m.from, unread: !!unread, edit: !!m.editId }); },
     markRead: function (target) { entries.forEach(function (e) { if (e.target === target) e.unread = false; }); return Promise.resolve(); },
+    markUnread: function (target) {
+      for (var i = entries.length - 1; i >= 0; i--) {
+        var e = entries[i];
+        if (e.target === target && e.from === target && !e.edit) { e.unread = true; return Promise.resolve(true); }
+      }
+      return Promise.resolve(false);
+    },
     unread: function (target) { return Promise.resolve(entries.filter(function (e) { return e.target === target && e.unread && !e.edit; }).length); }
   };
 }
@@ -47,6 +54,16 @@ function syncPmUnread(archive, update, names) {
  */
 function readPm(archive, update, name) {
   return archive.markRead(name).then(function () { return syncPmUnread(archive, update, [name]); }, warn);
+}
+/**
+ * Marks the latest PM received in a conversation unread in the archive and copies its counter back.
+ * @param {Object} archive PM archive.
+ * @param {Function} update State update.
+ * @param {string} name Correspondent.
+ * @returns {Promise<boolean>} True if a PM was marked, rejected when the archive cannot be written.
+ */
+function unreadPm(archive, update, name) {
+  return archive.markUnread(name).then(function (flagged) { return syncPmUnread(archive, update, [name]).then(function () { return flagged; }); });
 }
 
 /**
