@@ -2,6 +2,12 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.33.1] - 2026-11-04
+
+### Fixed
+
+- Group roles you have already seen stay after a reload: moderators and admins show their badge before they speak again.
+
 ## [0.33.0] - 2026-11-04
 
 ### Added
