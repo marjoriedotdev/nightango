@@ -235,11 +235,16 @@ function useLiveOps(k) {
       // BetterChatango only logs allunblocked: the unban list is requested again the next time it is shown.
       case 'unbannedAll': groupUpdate(update, op.gid, function (g) { g.bans = []; g.live.banPage.more = false; g.live.unbans = []; g.live.unbanPage = blankBanPage(); }); break;
       case 'modlog': groupUpdate(update, op.gid, function (g) {
-        var known = {}, list = (g.live.modlog || []).slice();
+        var page = g.live.modlogPage, next = page.loading, known = {}, list = (g.live.modlog || []).slice();
         list.forEach(function (x) { known[x.id] = true; });
-        op.list.forEach(function (x) { if (!known[x.id]) list.push(x); });
+        var fresh = op.list.filter(function (x) { return !known[x.id]; });
+        list.push.apply(list, fresh);
         list.sort(function (a, b) { return b.at - a.at; });
         g.live.modlog = list;
+        // A first page sent again when the settings reopen only adds the newest actions: the end of the log stays as paging left it.
+        if (next || !page.loaded) page.more = op.more && (!next || fresh.length > 0);
+        page.loaded = true;
+        page.loading = false;
       }); break;
       case 'conn':
         reconnection.follow(op);
@@ -248,7 +253,7 @@ function useLiveOps(k) {
           if (!d.auth.loggedIn) return;
           var g = d.groups[op.gid];
           // A pending history request gets no response on a closed socket.
-          if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; } }
+          if (g && g.joined) { g.conn = op.state; if (op.state !== 'open') { g.loadingMore = false; g.live.banPage.loading = false; g.live.unbanPage.loading = false; g.live.modlogPage.loading = false; } }
           d.session = sessionAfterConn(d, op);
         }); break;
       case 'session': update(function (d) {
