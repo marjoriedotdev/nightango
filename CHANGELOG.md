@@ -2,6 +2,12 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.33.2] - 2026-11-05
+
+### Fixed
+
+- On a phone, the Alerts table in Settings, Notifications fits the screen: each event shows its checkboxes below it, no more sideways scrolling.
+
 ## [0.33.1] - 2026-11-04
 
 ### Fixed
