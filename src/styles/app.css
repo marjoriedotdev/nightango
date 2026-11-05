@@ -393,6 +393,21 @@ h1,h2,h3{text-wrap:balance}
 .matrix th[scope="row"]{padding-left:20px;text-align:left;font-weight:400}
 .matrix td{text-align:center;width:84px}
 .matrix tr:last-child th,.matrix tr:last-child td{border-bottom:0}
+.matrix td .tc-checkline>span{display:none}
+/* Narrow screens: one block per event, the column name next to each box since the header is hidden. */
+@media (max-width:640px){
+  .matrix{min-width:0}
+  .matrix thead{display:none}
+  .matrix,.matrix tbody,.matrix tr{display:block}
+  .matrix tr{padding:12px 20px;border-bottom:1px solid var(--divider)}
+  .matrix tr:first-child{border-top:1px solid var(--border)}
+  .matrix tr:last-child{border-bottom:0}
+  .matrix th[scope="row"],.matrix td{display:block;padding:0;border:0}
+  .matrix th[scope="row"]{padding-bottom:4px}
+  .matrix td{display:inline-block;width:auto;margin-right:20px}
+  .matrix td .tc-checkline{min-height:var(--size-touch)}
+  .matrix td .tc-checkline>span{display:inline}
+}
 .pick{display:block;padding:10px;border:1px solid var(--border-strong);border-radius:var(--radius-xl);background:none;text-align:left;cursor:pointer;width:100%}
 .pick:hover{border-color:var(--control-strong)}
 .pick[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
