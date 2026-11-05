@@ -12,25 +12,12 @@ Nightango is a Tampermonkey userscript for [st.chatango.com](https://st.chatango
 
 ## Install
 
-1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.
-2. Download `nightango.min.user.js` and `SHA256SUMS` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest).
-3. Check the file, as shown in [Check the download](#check-the-download).
-4. In Tampermonkey, create a new script and replace its content with the file. Save.
-5. Open https://st.chatango.com/ and sign in on the BetterChatango screen. Nightango appears once the session is open.
+1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.\
+   1.5 **Chromium browsers only** (Chrome, Brave...): in Tampermonkey's extension details, turn on **Allow User Scripts** (**Developer mode** on older versions).
+2. Open `nightango.min.user.js` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest). Tampermonkey recognizes it and shows its install page: click **Install**.
+3. Open https://st.chatango.com/ and sign in on the BetterChatango screen. Nightango appears once the session is open.
 
-To update, check the new release the same way, then paste it over the same script. Settings > What's new lists the changes of each version.
-
-### Check the download
-
-`SHA256SUMS` lists the SHA-256 checksum of both userscripts of the release, taken from the files the CI tested before publishing them. In the folder where you saved the file, compute the checksum of your copy:
-
-- macOS: `shasum -a 256 nightango.min.user.js`
-- Linux: `sha256sum nightango.min.user.js`
-- Windows, in PowerShell: `Get-FileHash nightango.min.user.js`
-
-Compare the result with the `nightango.min.user.js` line of `SHA256SUMS`. PowerShell prints it in capital letters: apart from the case, the two values must be the same. If they differ, don't install the file: download it again from the release page.
-
-A matching checksum tells you that your copy is the file the release published, the one the CI tested. The checksum comes from the same release, so it can't vouch for the release itself.
+To update, open the file of the new release the same way: Tampermonkey shows its update page. Settings > What's new lists the changes of each version.
 
 ## Preview
 
@@ -82,6 +69,22 @@ Docs:
 - [docs/adr/](docs/adr/): architecture decisions
 
 Bug reports go to the [issue tracker](https://github.com/marjoriedotdev/nightango/issues).
+
+## Security
+
+### Check the download (optional)
+
+Worth doing when your copy didn't come straight from the release page: someone sent it to you, you found it elsewhere, or you're not sure which version sits in your downloads.
+
+`SHA256SUMS`, attached to each release, lists the SHA-256 checksum of both userscripts, taken from the files the CI tested before publishing them. In the folder where you saved the file, compute the checksum of your copy:
+
+- macOS: `shasum -a 256 nightango.min.user.js`
+- Linux: `sha256sum nightango.min.user.js`
+- Windows, in PowerShell: `Get-FileHash nightango.min.user.js`
+
+Compare the result with the `nightango.min.user.js` line of `SHA256SUMS`. PowerShell prints it in capital letters: apart from the case, the two values must be the same. If they differ, don't install the file: download it again from the release page.
+
+A matching checksum tells you that your copy is the file the release published, the one the CI tested. The checksum comes from the same release, so it can't vouch for the release itself.
 
 ## License
 
