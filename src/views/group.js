@@ -82,6 +82,7 @@ function GroupView(p) {
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid }, setDraft);
+  var voice = useVoiceRecorder(uploadKey({ kind: 'group', id: p.gid }), attach.onFiles);
   var log = useMessageLog();
   var count = g ? g.messages.length : 0;
   var q = search ? search.trim().toLowerCase() : '';
@@ -197,7 +198,7 @@ function GroupView(p) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
     var left = GROUP_MESSAGE_MAX - measured;
-    composer = h(Frag, null, media.panel, mentions.panel, h(T.Composer, {
+    composer = h(Frag, null, media.panel, mentions.panel, voice.panel, h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: mentions.onChange, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left'
         : g.live ? h(ComposerLimit, { ban: g.live.tempBan, cooldown: g.live.cooldown, rate: g.live.rate, bypass: !!rights.bypass }) : null,
@@ -206,7 +207,7 @@ function GroupView(p) {
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
       // An edit changes only the text: the picked file waits for the next message.
       onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
-      beforeSend: h(MessageStyleButton, null),
+      beforeSend: h(Frag, null, kind === 'edit' ? null : voice.button, h(MessageStyleButton, null)),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
           return { label: channelLabel(k), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { app.actions.setSendChannel(g.id, k); } };

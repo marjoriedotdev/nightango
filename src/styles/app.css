@@ -275,6 +275,10 @@ h1,h2,h3{text-wrap:balance}
 .member-note p{margin:0;font-size:12.5px}
 .note-actions{display:flex;justify-content:flex-end}
 .note-label{margin-left:var(--space-2);color:var(--text-3);font-size:12px;font-style:italic}
+.voice-panel{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);border:1px solid var(--border-strong);border-radius:var(--radius-xl);background:var(--raised);font-size:13.5px}
+.voice-panel audio{min-width:180px;height:32px}
+.voice-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:var(--shadow-glow)}
+.voice-time{font-variant-numeric:tabular-nums}
 .media-note{margin:0;padding:var(--space-2);color:var(--text-3);font-size:13px}
 .media-more{display:flex;justify-content:center;min-height:var(--size-control-sm)}
 .suggest{position:absolute;left:var(--space-5);right:var(--space-5);bottom:100%;z-index:20;margin:0;padding:var(--space-1);list-style:none;border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);animation:tc-fade-in var(--duration-base) var(--ease-out)}

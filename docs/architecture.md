@@ -211,6 +211,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `perf`: cost of the live operations on a busy state (four groups, three at their message cap, hundreds of members, thousands of known users), started in live mode through the prototype hook that `dist/app.js` keeps, with a fake BetterChatango client and the animation frames run by the test. It counts what an operation shares with the previous state, the renders of a burst of operations within one animation frame, the sorts of a history page, the rows rendered again, the members dropped and those kept while a dialog shows them, and the minute timers, with a time budget per operation. The counts carry the checks: the budget leaves a wide margin for slow machines.
 - `allowed_calls`: every `fetch`, `client.post` and `GM_xmlhttpRequest` call site, the `@grant` and `@connect` of the userscript and the `credential` option, against the closed list of `docs/betterchatango-protocol.md` (Allowed HTTP calls), on the sources of `src/`.
 - `new_year`: the countdown and fireworks minutes around local midnight on January 1, at their boundaries, and the delay until what is shown changes, on `src/core/util.js`.
+- `voice`: the WAV file of a voice message (header, sizes, 16-bit samples clipped), the downmix of a stereo recording and its cut at the length limit, on `src/views/voice.js`.
 
 Test policy: [ADR-0009](adr/0009-test-only-complex-behaviour.md) and `docs/coding-conventions.md`.
 

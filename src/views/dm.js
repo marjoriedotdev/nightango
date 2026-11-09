@@ -280,11 +280,12 @@ function DmComposer(p) {
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'dm', id: id }, setDraft);
+  var voice = useVoiceRecorder(uploadKey({ kind: 'dm', id: id }), attach.onFiles);
   function onKeyDown(e) {
     media.onKeyDown(e);
     if (editsLastOnUp(e, draft, mode) && p.onEditLast()) e.preventDefault();
   }
-  return h(Frag, null, media.panel, h(T.Composer, {
+  return h(Frag, null, media.panel, voice.panel, h(T.Composer, {
     placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
     // An edit changes only the text: the picked file waits for the next message.
     onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
@@ -296,7 +297,7 @@ function DmComposer(p) {
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
       if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
       p.onCancelMode();
-    }, beforeSend: h(MessageStyleButton, null)
+    }, beforeSend: h(Frag, null, kind === 'edit' ? null : voice.button, h(MessageStyleButton, null))
   }), emoji.picker, attach.input);
 }
 
