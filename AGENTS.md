@@ -21,6 +21,7 @@ Decisions that follow from these and must not be "fixed":
 - the loader runs in two contexts, sandbox and page ([ADR-0003](docs/adr/0003-two-context-loader.md))
 - the diagnostic journal stays in the browser and observes neither socket sends nor frame contents ([ADR-0011](docs/adr/0011-diagnostic-journal.md))
 - PM unreads come only from BetterChatango's private history, the state keeps only a copy read back from it ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
+- private notes on members stay in this browser, per account, and are never sent or logged ([ADR-0016](docs/adr/0016-private-member-notes.md)).
 - the update check asks GitHub once per sign-in and never installs code on its own ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
 - TikTok is reached on click, or for the cover under the rules of the YouTube thumbnail: one anonymous call per link through the loader, which reads the post page and returns the post link and the cover address only ([ADR-0014](docs/adr/0014-tiktok-embed.md)).
 - X is reached under the same rules: per post, two anonymous calls through the loader, the documented oEmbed for the text and the undocumented syndication for the author picture, time and first media, which return the card fields only. Mirror links (fxtwitter...) are rebuilt on X, never called. `widgets.js` is never loaded ([ADR-0015](docs/adr/0015-x-embed.md)).
