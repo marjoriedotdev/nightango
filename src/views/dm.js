@@ -311,7 +311,7 @@ function DmComposer(p) {
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
       if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
       p.onCancelMode();
-    }, beforeSend: h(Frag, null, kind === 'edit' ? null : voice.button, h(MessageStyleButton, null))
+    }, attachMenu: kind === 'edit' ? null : attachMenu(attach, voice), beforeSend: h(MessageStyleButton, null)
   }), emoji.picker, attach.input);
 }
 

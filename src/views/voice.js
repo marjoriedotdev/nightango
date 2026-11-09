@@ -52,7 +52,7 @@ function voiceClock(s) { return Math.floor(s / 60) + ':' + ('0' + Math.floor(s %
  * Nothing leaves the browser before the composer sends the file.
  * @param {string} key Group or PM of the composer, as uploadKey names it: a recording never moves to another conversation.
  * @param {?function(Array<File>)} onFiles File intake of the composer, null while it takes none.
- * @returns {{button: ?Object, panel: ?Object}} Microphone button and recording panel to render in composer-wrap.
+ * @returns {{start: Function, busy: boolean, panel: ?Object}} Start of a recording, whether one is under way, and recording panel to render in composer-wrap.
  */
 function useVoiceRecorder(key, onFiles) {
   var app = useApp();
@@ -130,6 +130,22 @@ function useVoiceRecorder(key, onFiles) {
       h(T.Button, { size: 'sm', variant: 'ghost', onClick: reset }, 'Discard'),
       h(T.Button, { size: 'sm', variant: 'primary', disabled: !onFiles, onClick: attach }, 'Attach'));
   }
-  var button = canRecordVoice() ? h(T.IconButton, { icon: 'mic', label: 'Record a voice message', size: 30, iconSize: 16, pressed: !!rec, disabled: !onFiles || !!rec, onClick: start }) : null;
-  return { button: button, panel: panel };
+  return { start: start, busy: !!rec, panel: panel };
+}
+
+/**
+ * Plus menu of a composer: attach a file or record a voice message.
+ * Where the browser cannot record, the composer keeps its plain attach button.
+ * @param {{onAttach: ?Function, onFiles: ?Function}} attach File picker of the composer.
+ * @param {{start: Function, busy: boolean}} voice Voice recorder of the composer.
+ */
+function attachMenu(attach, voice) {
+  if (!canRecordVoice()) return null;
+  return h(MenuButton, {
+    icon: 'plus', label: 'Add to your message', size: 30, iconSize: 16, up: true, align: 'left',
+    items: [
+      { label: 'Attach a file', icon: 'paperclip', disabled: !attach.onAttach, onSelect: function () { attach.onAttach(); } },
+      { label: 'Record a voice message', icon: 'mic', disabled: !attach.onFiles || voice.busy, onSelect: voice.start }
+    ]
+  });
 }

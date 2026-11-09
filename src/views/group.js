@@ -209,7 +209,8 @@ function GroupView(p) {
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
       // An edit changes only the text: the picked file waits for the next message.
       onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
-      beforeSend: h(Frag, null, kind === 'edit' ? null : voice.button, h(MessageStyleButton, null)),
+      attachMenu: kind === 'edit' ? null : attachMenu(attach, voice),
+      beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
           return { label: channelLabel(k), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { app.actions.setSendChannel(g.id, k); } };
