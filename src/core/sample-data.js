@@ -138,7 +138,7 @@ function seedWorld(me) {
     pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60) }
   };
   return {
-    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, mediaRev: 0,
+    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0,
     meStatus: 'online',
     premium: { status: 200, until: now + 2 * 1440 * MIN + 5 * 60 * MIN },
     profile: { visibility: { meet: false } },

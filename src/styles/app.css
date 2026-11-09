@@ -312,6 +312,10 @@ h1,h2,h3{text-wrap:balance}
 .pal-item .muted{margin-left:auto;font-size:12.5px}
 .pip{display:flex;height:100%;min-height:0;background:var(--bg)}
 .pip>.main{border:0;border-radius:0;box-shadow:none}
+.space-bar{display:flex;align-items:center;gap:var(--space-1);padding:0 10px 8px;overflow-x:auto;scrollbar-width:none}
+.space-chip{display:inline-flex;flex:none;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius-full);background:transparent;color:var(--text-2);font:inherit;font-size:12.5px;cursor:pointer}
+.space-chip:hover{background:var(--hover);color:var(--text)}
+.space-chip[aria-pressed="true"]{background:var(--selected);border-color:transparent;color:var(--text);font-weight:600}
 .pal-hint{margin:0;padding:8px 16px 12px;border-top:1px solid var(--border);color:var(--text-3);font-size:12.5px}
 .pal-empty{padding:24px 16px;text-align:center;color:var(--text-3)}
 .navlist .pal-empty{margin:4px 10px;padding:0;font-size:13px;text-align:left}

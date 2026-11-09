@@ -247,6 +247,7 @@ function GroupView(p) {
             { label: g.favorite ? 'Remove from favorites' : 'Add to favorites', icon: 'star', onSelect: function () { app.actions.toggleFavorite(g.id); } },
             { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } },
             popOutItem(app, { view: 'group', id: g.id }),
+            spacesItem(app, { view: 'group', id: g.id }),
             { label: 'Group color…', icon: 'palette', onSelect: function () { setColorOpen(true); } },
             { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com'); }); } },
             { divider: true },

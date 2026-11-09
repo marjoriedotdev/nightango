@@ -23,14 +23,14 @@ function sessionAfterConn(d, op) {
 function liveWorld(me) {
   var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
   return {
-    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
+    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
     route: { view: 'discover' }, split: null, pip: null, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
     groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, premium: null, retrying: {}
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', readTs: 'object', badges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
 // The read position of the group in view moves with each message: its writes wait and go out together.
 var READ_SAVE_MS = 2000;
 var READ_POSITIONS_MAX = 100;
@@ -59,7 +59,19 @@ function storedNotes(stored) {
   });
   return out;
 }
-function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, readTs: {}, badges: {}, unstyled: [], style: null }; }
+var SPACE_MEMBER = /^(group|dm):[a-z0-9_-]{1,20}$/;
+/**
+ * Returns the spaces kept in this browser without the entries of another shape.
+ * @param {Array} stored Spaces, untrusted.
+ */
+function storedSpaces(stored) {
+  return stored.filter(function (x) {
+    return kindOf(x) === 'object' && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim() && kindOf(x.members) === 'array';
+  }).slice(0, SPACE_MAX).map(function (x) {
+    return { id: x.id, name: x.name.trim().slice(0, SPACE_NAME_MAX), quiet: x.quiet === true, members: x.members.filter(function (m) { return typeof m === 'string' && SPACE_MEMBER.test(m); }) };
+  });
+}
+function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, spaces: [], space: '', readTs: {}, badges: {}, unstyled: [], style: null }; }
 /**
  * Returns the most recent read positions of a map of read positions.
  * @param {Object} reads Server time of the newest read message by group.
@@ -71,7 +83,7 @@ function newestReads(reads) {
   return out;
 }
 /**
- * Closed conversations, hidden and sending channels, group colors, private notes, read positions, roles of group members, members with a hidden style and own style, kept by account in this browser in live.
+ * Closed conversations, hidden and sending channels, group colors, private notes, spaces, read positions, roles of group members, members with a hidden style and own style, kept by account in this browser in live.
  * @param {Object} state Application state.
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
@@ -111,6 +123,8 @@ function useLocalStore(state) {
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
     o.notes = state.notes;
+    o.spaces = state.spaces;
+    o.space = state.space || '';
     // Local favorites, mutes and ignored members that BetterChatango has not accepted yet: kept for the next sign-in.
     o.fav = prev.fav;
     o.muted = prev.muted;
@@ -137,7 +151,7 @@ function useLocalStore(state) {
     if (pending.current) pending.current.o = o;
     else pending.current = { me: me, o: o, timer: setTimeout(flush, READ_SAVE_MS) };
     if (!readOnly) flush();
-  }, [me, state.ownStyle, state.notes, state.dms, state.groups, state.users]);
+  }, [me, state.ownStyle, state.notes, state.spaces, state.space, state.dms, state.groups, state.users]);
   return { ref: localRef, restore: restore };
 }
 /** Key of a ban list entry: unid and IP, like removeblock. */

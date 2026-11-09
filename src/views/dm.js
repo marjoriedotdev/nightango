@@ -7,7 +7,7 @@ function DMView(p) {
   if (p.compact) column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(id, null); } };
   var convo = id ? s.dms[id] : null;
 
-  var names = listedDms(s);
+  var names = listedDms(s).filter(function (n) { return inCurrentSpace(s, 'dm', n); });
   useProfiles(names);
   var shown = names.filter(function (n) {
     var c = s.dms[n];
@@ -220,7 +220,7 @@ function DmThread(p) {
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
-        label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id })].concat(personActions, [{ divider: true }], convActions(app, id, convo))
+        label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id }), spacesItem(app, { view: 'dm', id: id })].concat(personActions, [{ divider: true }], convActions(app, id, convo))
       }),
       p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
     h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),

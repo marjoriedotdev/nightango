@@ -129,6 +129,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
    * @param {string} preview Text of the PM.
    */
   function notifyPm(from, preview) {
+    if (quietOutsideSpace(stateRef.current, from)) return;
     var show = stateRef.current.prefs.pmPreview;
     notify('pm', {
       toast: show ? from + ': ' + preview : 'New message from ' + from, title: from, body: show ? preview : 'New message', tag: 'pm:' + from,

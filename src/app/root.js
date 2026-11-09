@@ -232,6 +232,8 @@ function Root(props) {
     state.auth.loggedIn && o.palette ? h(Palette, { onClose: function () { o.setPalette(false); } }) : null,
     state.auth.loggedIn && o.create ? h(CreateGroupDialog, { prefill: o.create.prefill, onClose: function () { o.setCreate(null); } }) : null,
     state.auth.loggedIn && o.newDm ? h(NewDmDialog, { onClose: function () { o.setNewDm(false); } }) : null,
+    state.auth.loggedIn && o.spacesFor ? h(ConversationSpacesDialog, { route: o.spacesFor, onClose: function () { o.setSpacesFor(null); } }) : null,
+    state.auth.loggedIn && o.spaceEditor ? h(SpaceEditorDialog, { id: o.spaceEditor.id, add: o.spaceEditor.add || null, onClose: function () { o.setSpaceEditor(null); } }) : null,
     o.confirmCfg ? h(ConfirmDialog, { confirm: o.confirmCfg, onClose: function () { o.setConfirm(null); } }) : null,
     state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
     h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast })))));

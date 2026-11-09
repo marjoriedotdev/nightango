@@ -103,6 +103,24 @@ function useActions(k) {
      */
     setNote: function (name, n) { update(function (d) { if (n.label || n.note) d.notes[name] = n; else delete d.notes[name]; }); },
     clearNotes: function () { update(function (d) { d.notes = {}; }); },
+    setSpace: function (id) { update(function (d) { d.space = id; }); },
+    /**
+     * Creates a space and opens it.
+     * @param {string} name Space name, trimmed.
+     * @param {boolean} quiet Mutes private messages from outside it while it is open.
+     * @param {?string} first Conversation it starts with, as spaceKey names it.
+     */
+    createSpace: function (name, quiet, first) {
+      var id = uid();
+      update(function (d) { d.spaces.push({ id: id, name: name, quiet: quiet, members: first ? [first] : [] }); d.space = id; });
+    },
+    updateSpace: function (id, patch) { update(function (d) { d.spaces.forEach(function (x) { if (x.id === id) Object.assign(x, patch); }); }); },
+    deleteSpace: function (id) { update(function (d) { d.spaces = d.spaces.filter(function (x) { return x.id !== id; }); if (d.space === id) d.space = null; }); },
+    toggleInSpace: function (id, key) {
+      update(function (d) {
+        d.spaces.forEach(function (x) { if (x.id !== id) return; var i = x.members.indexOf(key); if (i >= 0) x.members.splice(i, 1); else x.members.push(key); });
+      });
+    },
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
       text = (opts.quote || '') + text;

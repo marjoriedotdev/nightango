@@ -79,14 +79,15 @@ function StartupScreen() {
 function Sidebar(p) {
   var app = useApp(), s = app.state, r = s.route;
   var cm = useState(null), ctx = cm[0], setCtx = cm[1];
-  // Right click on a conversation: its menu at the pointer, where two panes fit.
+  // Right click on a conversation: its menu at the pointer.
   function contextMenu(route) {
-    return p.wide ? function (e) { e.preventDefault(); setCtx({ at: { x: e.clientX, y: e.clientY }, route: route }); } : undefined;
+    return function (e) { e.preventDefault(); setCtx({ at: { x: e.clientX, y: e.clientY }, route: route }); };
   }
-  var joined = Object.keys(s.groups).map(function (k) { return s.groups[k]; }).filter(function (g) { return g.joined; });
+  var space = currentSpace(s);
+  var joined = Object.keys(s.groups).map(function (k) { return s.groups[k]; }).filter(function (g) { return g.joined && inCurrentSpace(s, 'group', g.id); });
   var favs = joined.filter(function (g) { return g.favorite; }), rest = joined.filter(function (g) { return !g.favorite; });
   var groupsLoading = LIVE && !s.groupsSeen;
-  var dmNames = listedDms(s).slice(0, 4);
+  var dmNames = listedDms(s).filter(function (n) { return inCurrentSpace(s, 'dm', n); }).slice(0, 4);
   var drafted = useDraftMarks(function (m) { return m; });
   function toggle(k) { app.update(function (d) { d.sections[k] = !d.sections[k]; }); }
   function markedLabel(name, key, active) {
@@ -123,6 +124,7 @@ function Sidebar(p) {
     h('div', { style: { padding: '0 10px 8px' } },
       h('button', { type: 'button', className: 'searchbtn', onClick: app.ui.openPalette },
         h(T.Icon, { name: 'search', size: 15 }), h('span', { className: 'grow', style: { textAlign: 'left' } }, 'Search or jump to'), h('kbd', { className: 'kbd hide-mobile' }, 'Ctrl K'))),
+    h(SpaceBar, null),
     h('div', { className: 'navlist' },
       h(T.NavItem, { icon: 'compass', label: 'Discover groups', active: r.view === 'discover', onClick: function () { app.nav({ view: 'discover' }); } }),
       h(T.NavItem, { icon: 'message', label: 'Private messages', active: r.view === 'dm' && !r.tab, count: unreadDmCount(s), onClick: function () { app.nav({ view: 'dm', id: null }); } }),
@@ -131,7 +133,7 @@ function Sidebar(p) {
       h(T.NavItem, { icon: 'at-sign', label: 'Mentions', active: r.view === 'mentions', onClick: function () { app.nav({ view: 'mentions' }); } }),
       favs.length ? section('favorites', 'Favorites', favs.map(groupItem)) : null,
       groupsLoading || rest.length || !joined.length ? section('groups', 'Groups', groupsLoading ? h(SkeletonRows, { count: 3, avatar: 22, square: true, label: 'Loading groups' })
-        : rest.length ? rest.map(groupItem) : h('p', { className: 'pal-empty' }, 'Join a group from Discover.')) : null,
+        : rest.length ? rest.map(groupItem) : h('p', { className: 'pal-empty' }, space ? 'No group in ' + space.name + '. Add one from its menu, Spaces…' : 'Join a group from Discover.')) : null,
       section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.length ? dmNames.map(function (n) {
         var u = userOf(s, n), c = s.dms[n], active = isPaneOpen(s, 'dm', n);
         return h(T.NavItem, {
@@ -139,7 +141,7 @@ function Sidebar(p) {
           avatar: h(T.Avatar, { name: n, size: 22, status: u.status, ring: 'var(--sidebar)' }),
           onClick: function () { app.nav({ view: 'dm', id: n }); }, onContextMenu: contextMenu({ view: 'dm', id: n })
         });
-      }) : h('p', { className: 'pal-empty' }, 'No conversations yet.'))),
+      }) : h('p', { className: 'pal-empty' }, space ? 'No private message in ' + space.name + '.' : 'No conversations yet.'))),
     h('div', { className: 'me' },
       h(MenuButton, {
         up: true, align: 'left', items: [
@@ -159,6 +161,6 @@ function Sidebar(p) {
     ctx ? h(MenuButton, {
       open: true, at: ctx.at, align: 'left', onOpenChange: function (o) { if (!o) setCtx(null); },
       renderTrigger: function () { return null; },
-      items: [{ label: 'Open', icon: ctx.route.view === 'group' ? 'hash' : 'message', onSelect: function () { app.nav(ctx.route); } }, splitItem(app, p.wide, ctx.route)]
+      items: [{ label: 'Open', icon: ctx.route.view === 'group' ? 'hash' : 'message', onSelect: function () { app.nav(ctx.route); } }, splitItem(app, p.wide, ctx.route), spacesItem(app, ctx.route)]
     }) : null);
 }
