@@ -159,8 +159,32 @@ function ProfileSummary(p) {
       p.skin ? coverReveal(cover, p.skin) : null),
     profileAbout(u, !!p.skin),
     p.guest ? null : h('div', { className: 'profile-full' }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'id-card', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')),
+    p.guest || name === s.me ? null : h(MemberNote, { key: name, name: name }),
     common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length),
       common.map(function (c) { return h('button', { key: c, type: 'button', className: 'mrow common-row', onClick: function () { p.nav({ view: 'group', id: c }); } }, h(T.Avatar, { name: c, square: true, size: 22 }), h('span', { className: 'grow' }, c)); })) : null);
+}
+
+/**
+ * Private label and note on a member, kept in this browser only (ADR-0016).
+ * @param {{name: string}} p Member name.
+ */
+function MemberNote(p) {
+  var app = useApp(), saved = app.state.notes[p.name] || { label: '', note: '' };
+  var a = useState(saved.label), label = a[0], setLabel = a[1];
+  var b = useState(saved.note), note = b[0], setNote = b[1];
+  var next = { label: label.trim(), note: note.trim() };
+  var changed = next.label !== saved.label || next.note !== saved.note;
+  function save() {
+    app.actions.setNote(p.name, next);
+    setLabel(next.label); setNote(next.note);
+    app.ui.toast(next.label || next.note ? 'Note saved.' : 'Note deleted.', { icon: 'check' });
+  }
+  return h('div', { className: 'kv member-note' },
+    h('h3', null, 'Private note'),
+    h('p', { className: 'muted' }, 'Only you see it. Kept in this browser, never sent.'),
+    h(T.TextField, { id: 'note-label-' + p.name, label: 'Label', value: label, maxLength: NOTE_LABEL_MAX, placeholder: 'Shown next to their name', onChange: function (e) { setLabel(e.target.value); } }),
+    h(T.TextField, { id: 'note-text-' + p.name, label: 'Note', multiline: true, rows: 3, maxLength: NOTE_TEXT_MAX, value: note, onChange: function (e) { setNote(e.target.value); } }),
+    h('div', { className: 'note-actions' }, h(T.Button, { size: 'sm', disabled: !changed, onClick: save }, 'Save note')));
 }
 
 /**

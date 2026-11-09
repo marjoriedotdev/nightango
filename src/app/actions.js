@@ -92,6 +92,13 @@ function useActions(k) {
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
+    /**
+     * Keeps a private note on a member, or deletes it when both fields are empty.
+     * @param {string} name Member name.
+     * @param {{label: string, note: string}} n Label and note text, trimmed.
+     */
+    setNote: function (name, n) { update(function (d) { if (n.label || n.note) d.notes[name] = n; else delete d.notes[name]; }); },
+    clearNotes: function () { update(function (d) { d.notes = {}; }); },
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
       text = (opts.quote || '') + text;

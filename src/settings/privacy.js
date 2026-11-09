@@ -8,8 +8,21 @@ function PrivacyPage() {
         asLabel: false, title: 'Delete saved conversations', description: 'Removes the sample private messages from this prototype.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every sample private message is removed until you reset the sample data.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
+    h(NotesSection, null),
     h(StartupSection, { value: prefs.privacy, onChange: function (k, v) { pr.set('privacy.' + k, v); } }),
     h(BrowserTabSection, null));
+}
+
+/**
+ * Private notes on members kept for this account (ADR-0016).
+ */
+function NotesSection() {
+  var app = useApp(), count = Object.keys(app.state.notes).length;
+  return h(T.SettingsSection, { title: 'Private notes' },
+    h(T.SettingRow, {
+      asLabel: false, title: 'Delete private notes', description: count ? plural(count, 'note', 'notes') + ' on members, kept in this browser. Nobody else sees them.' : 'No note yet. Add one from a member profile.',
+      control: h(T.Button, { variant: 'danger', size: 'sm', disabled: !count, onClick: function () { app.ui.confirm({ title: 'Delete private notes?', body: 'Every label and note you wrote on members of this account is removed from this browser.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.clearNotes }); } }, 'Delete all')
+    }));
 }
 
 function BrowserTabSection() {
