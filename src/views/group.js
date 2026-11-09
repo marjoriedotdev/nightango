@@ -77,6 +77,8 @@ function GroupView(p) {
   var a10 = useState(false), colorOpen = a10[0], setColorOpen = a10[1];
   var a11 = useState(false), sharedOpen = a11[0], setSharedOpen = a11[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
+  // Side by side, the members open as a sheet: a right column would leave no room for the messages.
+  if (p.compact) column = { open: false, pressed: null, toggle: function () { setInfoOpen(true); } };
   var a9 = useDraft(groupDraftKey(p.gid)), draft = a9[0], setDraft = a9[1];
   var cm = useComposerMode(a9), mode = cm.mode, setMode = cm.setMode;
   var inputRef = useRef(null);
@@ -154,7 +156,7 @@ function GroupView(p) {
     log.jumpTo(o.id);
   }
 
-  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g), markerTs = s.route.markerTs;
+  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g), markerTs = p.markerTs;
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
@@ -228,7 +230,7 @@ function GroupView(p) {
     h('main', { className: 'main', style: g.accent ? accentScope(g.accent, app.theme) : undefined },
       h('header', { className: 'topbar' },
         h(MobileNavButton, null),
-        h('h1', null, g.id),
+        h(p.onClose ? 'h2' : 'h1', { className: 'pane-title' }, g.id),
         g.topic ? h(Frag, null, h('span', { className: 'vsep' }), h('p', { className: 'topic' }, g.topic)) : null,
         // The topic pushes the buttons to the right on desktop: without one, this spacer does it.
         h('span', { className: g.topic ? 'grow only-mobile' : 'grow' }),
@@ -247,14 +249,15 @@ function GroupView(p) {
             { divider: true },
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
           ]
-        })),
+        }),
+        p.onClose ? h(T.IconButton, { icon: 'x', label: 'Close #' + g.id + ' side by side', onClick: p.onClose }) : null),
       prefs.announcements && ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
         h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } },
           // The text as key: a new announcement shows collapsed.
           h(AnnouncementText, { key: annText, text: annText }), LIVE && ann.embeds.length ? h(MessageEmbeds, { embeds: ann.embeds }) : null)) : null,
       search != null ? h('div', { className: 'searchbar' },
-        h('label', { htmlFor: 'gsearch', className: 'tc-sr' }, 'Search messages'),
-        h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
+        h('label', { htmlFor: 'gsearch-' + g.id, className: 'tc-sr' }, 'Search messages'),
+        h('input', { id: 'gsearch-' + g.id, className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
         h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,

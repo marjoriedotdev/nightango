@@ -310,6 +310,7 @@ h1,h2,h3{text-wrap:balance}
 .pal-item{display:flex;align-items:center;gap:10px;width:100%;height:38px;padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-body);text-align:left;cursor:pointer}
 .pal-item[aria-selected="true"]{background:var(--hover);color:var(--text)}
 .pal-item .muted{margin-left:auto;font-size:12.5px}
+.pal-hint{margin:0;padding:8px 16px 12px;border-top:1px solid var(--border);color:var(--text-3);font-size:12.5px}
 .pal-empty{padding:24px 16px;text-align:center;color:var(--text-3)}
 .navlist .pal-empty{margin:4px 10px;padding:0;font-size:13px;text-align:left}
 .profile-card{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:28px 20px 16px;overflow-wrap:anywhere}

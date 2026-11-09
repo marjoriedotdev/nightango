@@ -3,7 +3,8 @@ function DMView(p) {
   var app = useApp(), s = app.state, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
   var a2 = useState(''), q = a2[0], setQ = a2[1];
-  var column = useRightColumn(function () { app.ui.openProfile(id, null); });
+  var column = useRightColumn(function () { app.ui.openProfile(id, null); }), wide = useWideLayout();
+  if (p.compact) column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(id, null); } };
   var convo = id ? s.dms[id] : null;
 
   var names = listedDms(s);
@@ -40,7 +41,7 @@ function DMView(p) {
         }))),
     h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
       loading ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
-        shown.length ? shown.slice(0, batch.limit).map(function (n) { return h(ChatRow, { key: n, name: n, user: userOf(s, n), convo: s.dms[n], me: s.me, active: n === id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
+        shown.length ? shown.slice(0, batch.limit).map(function (n) { return h(ChatRow, { key: n, name: n, user: userOf(s, n), convo: s.dms[n], me: s.me, active: n === id, beside: wide && !!id && n !== id && !isPaneOpen(s, 'dm', n) }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
         batch.sentinel,
         term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
@@ -49,6 +50,8 @@ function DMView(p) {
       h(T.Icon, { name: 'message', size: 28, strokeWidth: 1.6 }), h('h2', null, 'Select a conversation'),
       h('p', { style: { margin: 0 } }, 'Or start a new one with a friend or someone from a group.'),
       h(T.Button, { variant: 'primary', icon: 'edit', onClick: app.ui.openNewDm }, 'New message')));
+  // Side by side, an open conversation shows alone: the list and the profile would leave no room for it.
+  if (p.compact && convo) return h('div', { className: 'main', style: { flexDirection: 'row' } }, thread);
   return h('div', { className: 'main', style: { flexDirection: 'row' } },
     h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
     convo && column.open ? h(ProfilePanel, { name: id }) : null);
@@ -218,7 +221,8 @@ function DmThread(p) {
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
         label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }].concat(personActions, [{ divider: true }], convActions(app, id, convo))
-      })),
+      }),
+      p.onClose ? h(T.IconButton, { icon: 'x', label: 'Close the conversation with ' + id + ' side by side', onClick: p.onClose }) : null),
     h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom)),
@@ -226,6 +230,16 @@ function DmThread(p) {
 }
 
 function dmAuthorOf(m) { return m.from; }
+
+/**
+ * Private conversation in the pane beside the main one.
+ * @param {{id: string}} p Conversation member.
+ */
+function SplitDm(p) {
+  var app = useApp();
+  var column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(p.id, null); } };
+  return h('div', { className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: p.id, column: column, onClose: app.actions.closeSplit }));
+}
 
 /**
  * Tells whether the user can edit a PM.
@@ -425,7 +439,7 @@ function friendActions(app, name) {
 var SWIPE_REVEAL = 144;
 /**
  * List row with swipe actions and a menu that also opens the profile.
- * @param {{name: string, actions: Array, children: *}} p Row member, row actions and main button.
+ * @param {{name: string, actions: Array, extra: ?Object, children: *}} p Row member, row actions, menu entry shown before them, and main button.
  */
 function SwipeRow(p) {
   var app = useAppApi(), n = p.name, actions = p.actions;
@@ -484,20 +498,21 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + n, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null), whoItem(app, n)].concat(actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + n, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null), whoItem(app, n), p.extra || null].concat(actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
 
 /**
  * Chats list row with its conversation actions, rendered again only when its props change.
- * @param {{name: string, user: Object, convo: Object, me: string, active: boolean}} p Conversation member, the member and the conversation in the state,
- *   signed-in user, and whether the conversation is open.
+ * @param {{name: string, user: Object, convo: Object, me: string, active: boolean, beside: boolean}} p Conversation member, the member and the conversation in the state,
+ *   signed-in user, whether the conversation is open, and whether it can open beside the open one.
  */
 var ChatRow = React.memo(function ChatRow(p) {
   var app = useAppApi(), n = p.name;
   var draft = useDraftMarks(function (m) { return showsDraft(m, dmDraftKey(n), p.active); });
-  return h(SwipeRow, { name: n, actions: convActions(app, n, p.convo) }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
+  var beside = p.beside ? { label: 'Open side by side', icon: 'panel', onSelect: function () { app.actions.openSplit({ view: 'dm', id: n }); } } : null;
+  return h(SwipeRow, { name: n, actions: convActions(app, n, p.convo), extra: beside }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
 });
 
 function FriendsList(p) {

@@ -25,6 +25,19 @@ function dropMentions(d, gid, ids) {
 }
 
 /**
+ * Returns a route with the group or PM it opens marked read, and the group's previous read position for its New messages line.
+ * @param {Object} d State being modified.
+ * @param {Object} route Route to show.
+ */
+function opened(d, route) {
+  var r = Object.assign({}, route);
+  if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = readThrough(g); g.unread = 0; g.mentions = 0; }
+  if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
+  return r;
+}
+function sameConversation(a, b) { return !!a && !!b && a.view === b.view && a.id === b.id; }
+
+/**
  * Messages that reach the user and their reading: the PM archive that holds the unreads, the reception and notification of an incoming event, and the navigation that marks the opened conversation read.
  * @param {Object} stateRef Ref to the application state.
  * @param {Function} update State update.
@@ -46,18 +59,34 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       var cur = d.route;
       // Going back to the message log does not jump again to the message opened from Mentions or the PM search.
       if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; delete cur.seek; }
-      var r = Object.assign({}, route);
-      if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = readThrough(g); g.unread = 0; g.mentions = 0; }
-      if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
-      d.route = r;
+      d.route = opened(d, route);
+      // The same conversation never shows in both panes, and only a conversation keeps one beside it.
+      if (d.split && (sameConversation(d.split, d.route) || (d.route.view !== 'group' && d.route.view !== 'dm'))) d.split = null;
     });
     setNavOpen(false);
     if (route.view === 'dm' && route.id) readPm(pmArchive.current, update, route.id);
-    if (LIVE) {
-      if (route.view === 'group' && route.id) liveBridge.focus(route.id);
-      liveBridge.focusPm(route.view === 'dm' && route.id ? route.id : false);
-    }
+    if (LIVE && route.view === 'group' && route.id) liveBridge.focus(route.id);
+    focusPms();
   }, []);
+  /**
+   * Opens a group or a PM beside the main one and marks it read.
+   * A conversation already in the main pane, or a main pane without a conversation, simply shows it there.
+   * @param {{view: string, id: string}} route Conversation to show beside.
+   */
+  var openSplit = useCallback(function (route) {
+    var r0 = stateRef.current.route;
+    if (sameConversation(r0, route) || !r0.id || (r0.view !== 'group' && r0.view !== 'dm')) { nav(route); return; }
+    update(function (d) { d.split = opened(d, route); });
+    if (route.view === 'dm') readPm(pmArchive.current, update, route.id);
+    focusPms();
+  }, []);
+  var closeSplit = useCallback(function () { update(function (d) { d.split = null; }); focusPms(); }, []);
+  // BetterChatango's PM sound follows one open PM: the main one first, the one beside otherwise.
+  function focusPms() {
+    if (!LIVE) return;
+    var s = stateRef.current, r = s.route.view === 'dm' && s.route.id ? s.route : s.split && s.split.view === 'dm' ? s.split : null;
+    liveBridge.focusPm(r ? r.id : false);
+  }
   /**
    * Notifies an incoming event after its state update, as the notification preferences ask.
    * @param {string} kind Preference of the event: mentions, pm, friendOn or friendOff.
@@ -125,7 +154,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
       if (focused) g.lastReadTs = readThrough(g);
     });
-    if (mention && !quiet && !(s0.route.view === 'group' && s0.route.id === gid)) {
+    if (mention && !quiet && !isPaneOpen(s0, 'group', gid)) {
       var g0 = s0.groups[gid];
       // A message the log hides keeps its text out of the system alert too.
       var hidden = isHiddenAuthor(s0, msg.author) || (!s0.prefs.safety.guestMessages && isGuest(msg.author)) || !!(g0 && g0.hiddenChannels.indexOf(msg.channel || 'none') >= 0);
@@ -152,5 +181,5 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     syncPmUnread(pmArchive.current, update, [from]);
     if (!focused && !userOf(s0, from).ignored) notifyPm(from, text);
   }
-  return { pmArchive: pmArchive, nav: nav, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
+  return { pmArchive: pmArchive, nav: nav, openSplit: openSplit, closeSplit: closeSplit, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
 }

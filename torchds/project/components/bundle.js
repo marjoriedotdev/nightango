@@ -233,7 +233,7 @@
           : props.muted ? h(Icon, { name: 'volume-x', size: 14, label: 'Muted' }) : null;
     var cls = cx('tc-nav', !props.active && props.unread && 'tc-nav-unread', !props.active && props.muted && 'tc-nav-muted', props.className);
     var inner = [leading, h('span', { key: 'l', className: 'tc-nav-label' }, props.label), trailing];
-    var common = { className: cls, 'aria-current': props.active ? 'page' : undefined, onClick: props.onClick, title: props.title };
+    var common = { className: cls, 'aria-current': props.active ? 'page' : undefined, onClick: props.onClick, onContextMenu: props.onContextMenu, title: props.title };
     return props.href
       ? h.apply(null, ['a', Object.assign({ href: props.href }, common)].concat(inner))
       : h.apply(null, ['button', Object.assign({ type: 'button' }, common)].concat(inner));

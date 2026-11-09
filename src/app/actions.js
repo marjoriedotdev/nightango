@@ -53,7 +53,7 @@ function wordList(v) { return String(v || '').split(/[,\n]/).map(function (x) { 
  */
 function useActions(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast, setNavOpen = k.setNavOpen;
-  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, receiveGroup = k.inbox.receiveGroup, receiveDm = k.inbox.receiveDm;
+  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, openSplit = k.inbox.openSplit, closeSplit = k.inbox.closeSplit, receiveGroup = k.inbox.receiveGroup, receiveDm = k.inbox.receiveDm;
   var drafts = k.drafts, localRef = k.localRef, reconnection = k.reconnection, pms = k.pms;
   var up = useState({}), uploads = up[0], setUploads = up[1];
   /**
@@ -86,6 +86,8 @@ function useActions(k) {
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
   var actions = {
+    openSplit: openSplit,
+    closeSplit: closeSplit,
     login: function (name) { var world = sampleWorld(name); drafts.clear(); update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
     resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },

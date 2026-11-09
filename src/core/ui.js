@@ -210,18 +210,25 @@ function useFloating(anchorRef, floatRef, open, onClose, o) {
 // Only breakpoint of the right column: app.css does not repeat it, the column is only rendered above it.
 var NARROW_LAYOUT = '(max-width:1180px)';
 /**
+ * Tells whether the window is wide enough for a right column or two conversations side by side, and follows its changes.
+ */
+function useWideLayout() {
+  var a = useState(function () { return !window.matchMedia(NARROW_LAYOUT).matches; }), wide = a[0], setWide = a[1];
+  useEffect(function () {
+    var mq = window.matchMedia(NARROW_LAYOUT);
+    function onChange() { setWide(!mq.matches); }
+    mq.addEventListener('change', onChange);
+    return function () { mq.removeEventListener('change', onChange); };
+  }, []);
+  return wide;
+}
+/**
  * Toggles the right column when the window leaves room for it and otherwise opens its content full screen.
  * @param {Function} openFull Opens the same content full screen.
  */
 function useRightColumn(openFull) {
-  var a = useState(function () { return !window.matchMedia(NARROW_LAYOUT).matches; }), fits = a[0], setFits = a[1];
+  var fits = useWideLayout();
   var b = useState(true), shown = b[0], setShown = b[1];
-  useEffect(function () {
-    var mq = window.matchMedia(NARROW_LAYOUT);
-    function onChange() { setFits(!mq.matches); }
-    mq.addEventListener('change', onChange);
-    return function () { mq.removeEventListener('change', onChange); };
-  }, []);
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
 

@@ -168,7 +168,7 @@ function banItem(app, name, gid, msg) {
 function useProfileActions(name, gid) {
   var app = useApp(), s = app.state, u = userOf(s, name), busy = !!s.friendAdds[name];
   var g = gid ? s.groups[gid] : null;
-  var inDm = s.route.view === 'dm' && s.route.id === name;
+  var inDm = isPaneOpen(s, 'dm', name);
   var friendLabel = busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend';
   return [
     inDm ? null : { id: 'message', label: 'Message', icon: 'message', disabled: u.blocked, closes: true, onSelect: function () { app.actions.openDm(name); } },

@@ -51,8 +51,7 @@ function useReconnection(stateRef, update) {
    * @param {string} gid Group or private_message.
    */
   function reconnectAuto(gid) {
-    var r = stateRef.current.route;
-    reconnect(gid, gid !== 'private_message' && !(r.view === 'group' && r.id === gid));
+    reconnect(gid, gid !== 'private_message' && !isPaneOpen(stateRef.current, 'group', gid));
   }
   /**
    * Starts a sequence of automatic attempts with an immediate first one.

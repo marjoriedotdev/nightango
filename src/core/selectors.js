@@ -141,17 +141,27 @@ function listedDms(state) {
  */
 function unreadDmCount(state) { return listedDms(state).filter(function (n) { return state.dms[n].unread; }).length; }
 /**
+ * Tells whether a conversation is shown, in the main pane or side by side.
+ * @param {Object} state Application state.
+ * @param {string} view group or dm.
+ * @param {string} id Group or conversation member.
+ */
+function isPaneOpen(state, view, id) {
+  function is(r) { return !!r && r.view === view && r.id === id; }
+  return is(state.route) || is(state.split);
+}
+/**
  * Tells whether a conversation is open in front of the user.
  * @param {Object} state Application state.
  * @param {string} name Conversation member.
  */
-function isDmInView(state, name) { return state.route.view === 'dm' && state.route.id === name && document.visibilityState === 'visible'; }
+function isDmInView(state, name) { return isPaneOpen(state, 'dm', name) && document.visibilityState === 'visible'; }
 /**
  * Tells whether a group is open in front of the user.
  * @param {Object} state Application state.
  * @param {string} gid Group.
  */
-function isGroupInView(state, gid) { return state.route.view === 'group' && state.route.id === gid && document.visibilityState === 'visible'; }
+function isGroupInView(state, gid) { return isPaneOpen(state, 'group', gid) && document.visibilityState === 'visible'; }
 // Words and media as a sorted set: BetterChatango archives an image URL typed in the text as an <i s> tag.
 function pmContentKey(m) {
   var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
