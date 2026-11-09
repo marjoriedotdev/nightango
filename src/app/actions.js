@@ -247,6 +247,7 @@ function useActions(k) {
       update(function (d) { var l = d.groups[gid].hiddenChannels, i = l.indexOf(k); if (i >= 0) l.splice(i, 1); else l.push(k); });
     },
     setSendChannel: function (gid, k) { update(function (d) { d.groups[gid].sendChannel = k; }); },
+    setGroupAccent: function (gid, hex) { update(function (d) { d.groups[gid].accent = hex; }); },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
     /**
      * Adds a trusted host without duplicates or removes it.
@@ -277,7 +278,7 @@ function useActions(k) {
       update(function (d) {
         var staff = {}; staff[me] = 'owner';
         d.groups[name] = {
-          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: now,
+          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: now,
           members: [me], guests: 0, closed: false, dismissedAnnouncement: false, bans: [],
           settings: mkSettings({ overview: { title: title, description: desc }, staff: staff }),
           audit: [{ id: uid(), at: now, actor: me, text: 'Created the group' }],

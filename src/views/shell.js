@@ -67,7 +67,7 @@ function Sidebar() {
     return h(T.NavItem, {
       key: g.id, label: markedLabel(g.id, groupDraftKey(g.id), active), active: active, unread: g.unread > 0 && !g.muted,
       count: g.mentions || 0, mention: !!g.mentions, muted: g.muted && !g.mentions,
-      avatar: h(T.Avatar, { name: g.id, square: true, size: 22 }),
+      avatar: h(T.Avatar, { name: g.id, square: true, size: 22, color: g.accent || undefined, style: g.accent ? { color: onAccentOf(g.accent) } : undefined }),
       onClick: function () { app.nav({ view: 'group', id: g.id }); }
     });
   }

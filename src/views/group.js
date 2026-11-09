@@ -74,6 +74,7 @@ function GroupView(p) {
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
+  var a10 = useState(false), colorOpen = a10[0], setColorOpen = a10[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
   var a9 = useDraft(groupDraftKey(p.gid)), draft = a9[0], setDraft = a9[1];
   var cm = useComposerMode(a9), mode = cm.mode, setMode = cm.setMode;
@@ -222,7 +223,7 @@ function GroupView(p) {
 
   var waitingCount = LIVE && !g.membersLoaded && !g.liveCount;
   return h(Frag, null,
-    h('main', { className: 'main' },
+    h('main', { className: 'main', style: g.accent ? accentScope(g.accent, app.theme) : undefined },
       h('header', { className: 'topbar' },
         h(MobileNavButton, null),
         h('h1', null, g.id),
@@ -238,6 +239,7 @@ function GroupView(p) {
           label: 'Group options', items: [
             staff ? { label: 'Group settings', icon: 'sliders', onSelect: function () { app.nav({ view: 'gsettings', id: g.id, page: myRole === 'owner' || rights.manageMods ? 'overview' : 'automod' }); } } : null,
             { label: g.favorite ? 'Remove from favorites' : 'Add to favorites', icon: 'star', onSelect: function () { app.actions.toggleFavorite(g.id); } },
+            { label: 'Group color…', icon: 'palette', onSelect: function () { setColorOpen(true); } },
             { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com'); }); } },
             { divider: true },
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
@@ -255,7 +257,20 @@ function GroupView(p) {
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
     column.open ? h(MembersPanel, { g: g }) : null,
-    infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null);
+    infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null,
+    colorOpen ? h(GroupColorDialog, { g: g, onClose: function () { setColorOpen(false); } }) : null);
+}
+
+function GroupColorDialog(p) {
+  var app = useApp(), g = p.g;
+  function set(hex) { app.actions.setGroupAccent(g.id, hex); }
+  return h(Dialog, {
+    title: 'Group color', description: 'Buttons, mentions and links in #' + g.id + ' use it, and the group shows it in the sidebar. Only you see it.', onClose: p.onClose,
+    footer: [
+      h(T.Button, { key: 'r', variant: 'ghost', disabled: !g.accent, onClick: function () { set(null); } }, 'Use the app accent'),
+      h(T.Button, { key: 'd', variant: 'primary', onClick: p.onClose }, 'Done')
+    ]
+  }, h('div', { className: 'dialog-body' }, h(AccentSwatches, { label: 'Group color', value: g.accent, fallback: app.state.prefs.accent, onChange: set })));
 }
 
 /**
