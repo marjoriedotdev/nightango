@@ -230,7 +230,8 @@ function GroupView(p) {
   return h(Frag, null,
     h('main', { className: 'main', style: g.accent ? accentScope(g.accent, app.theme) : undefined },
       h('header', { className: 'topbar' },
-        h(MobileNavButton, null),
+        // A pane beside or a floating window has no navigation of its own.
+        p.onClose ? null : h(MobileNavButton, null),
         h(p.onClose ? 'h2' : 'h1', { className: 'pane-title' }, g.id),
         g.topic ? h(Frag, null, h('span', { className: 'vsep' }), h('p', { className: 'topic' }, g.topic)) : null,
         // The topic pushes the buttons to the right on desktop: without one, this spacer does it.
@@ -245,13 +246,14 @@ function GroupView(p) {
             staff ? { label: 'Group settings', icon: 'sliders', onSelect: function () { app.nav({ view: 'gsettings', id: g.id, page: myRole === 'owner' || rights.manageMods ? 'overview' : 'automod' }); } } : null,
             { label: g.favorite ? 'Remove from favorites' : 'Add to favorites', icon: 'star', onSelect: function () { app.actions.toggleFavorite(g.id); } },
             { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } },
+            popOutItem(app, { view: 'group', id: g.id }),
             { label: 'Group color…', icon: 'palette', onSelect: function () { setColorOpen(true); } },
             { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com'); }); } },
             { divider: true },
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
           ]
         }),
-        p.onClose ? h(T.IconButton, { icon: 'x', label: 'Close #' + g.id + ' side by side', onClick: p.onClose }) : null),
+        p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
       prefs.announcements && ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
         h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } },
           // The text as key: a new announcement shows collapsed.

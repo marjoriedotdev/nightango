@@ -24,7 +24,7 @@ function columnHeader(title) {
 var Shell = React.memo(function Shell() {
   var app = useApp(), s = app.state, r = s.route, main;
   var wide = useWideLayout();
-  var split = wide && splitShown(s) ? s.split : null;
+  var split = wide && s.split && paneShown(s, s.split) ? s.split : null;
   // A window too narrow for two panes, or a conversation that went away, closes the pane beside.
   useEffect(function () { if (s.split && !split) app.actions.closeSplit(); }, [!!s.split, !!split]);
   if (r.view === 'settings') return h(SettingsView, { page: r.page });
@@ -35,24 +35,22 @@ var Shell = React.memo(function Shell() {
   else if (r.view === 'mentions') main = h(MentionsView, null);
   else main = h(Discover, null);
   var side = !split ? null : split.view === 'group'
-    ? h(GroupView, { key: 'split:' + split.id, gid: split.id, markerTs: split.markerTs, compact: true, onClose: app.actions.closeSplit })
+    ? h(GroupView, { key: 'split:' + split.id, gid: split.id, markerTs: split.markerTs, compact: true, onClose: app.actions.closeSplit, closeLabel: 'Close #' + split.id + ' side by side' })
     : h(SplitDm, { key: 'split:' + split.id, id: split.id });
   return h('div', { className: cx('shell', app.navOpen && 'nav-open', split && 'side-by-side') },
     h(NewYearSky, null),
     h(Sidebar, { wide: wide }),
     h('div', { className: 'scrim', onClick: app.ui.closeNav }),
-    main, side);
+    main, side,
+    h(PipHost, null));
 });
 
 /**
- * Tells whether the pane beside can show its conversation: a joined group or a known PM.
+ * Tells whether a pane can show its conversation: a joined group or a known PM.
  * @param {Object} s Application state.
+ * @param {{view: string, id: string}} t Conversation of the pane.
  */
-function splitShown(s) {
-  var t = s.split;
-  if (!t) return false;
-  return t.view === 'group' ? !!(s.groups[t.id] && s.groups[t.id].joined) : !!s.dms[t.id];
-}
+function paneShown(s, t) { return t.view === 'group' ? !!(s.groups[t.id] && s.groups[t.id].joined) : !!s.dms[t.id]; }
 
 /**
  * Menu entry that opens a conversation beside the main one, absent where two panes do not fit.

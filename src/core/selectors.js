@@ -141,27 +141,26 @@ function listedDms(state) {
  */
 function unreadDmCount(state) { return listedDms(state).filter(function (n) { return state.dms[n].unread; }).length; }
 /**
- * Tells whether a conversation is shown, in the main pane or side by side.
+ * Tells whether a conversation is shown, in the main pane, side by side or in the floating window.
  * @param {Object} state Application state.
  * @param {string} view group or dm.
  * @param {string} id Group or conversation member.
  */
 function isPaneOpen(state, view, id) {
-  function is(r) { return !!r && r.view === view && r.id === id; }
-  return is(state.route) || is(state.split);
+  return isTarget(state.route, view, id) || isTarget(state.split, view, id) || isTarget(state.pip, view, id);
 }
+function isTarget(r, view, id) { return !!r && r.view === view && r.id === id; }
 /**
- * Tells whether a conversation is open in front of the user.
+ * Tells whether a conversation is in front of the user: shown in this tab while it is visible, or in the floating window, which stays on top.
  * @param {Object} state Application state.
- * @param {string} name Conversation member.
+ * @param {string} view group or dm.
+ * @param {string} id Group or conversation member.
  */
-function isDmInView(state, name) { return isPaneOpen(state, 'dm', name) && document.visibilityState === 'visible'; }
-/**
- * Tells whether a group is open in front of the user.
- * @param {Object} state Application state.
- * @param {string} gid Group.
- */
-function isGroupInView(state, gid) { return isPaneOpen(state, 'group', gid) && document.visibilityState === 'visible'; }
+function isInView(state, view, id) {
+  return isTarget(state.pip, view, id) || ((isTarget(state.route, view, id) || isTarget(state.split, view, id)) && document.visibilityState === 'visible');
+}
+function isDmInView(state, name) { return isInView(state, 'dm', name); }
+function isGroupInView(state, gid) { return isInView(state, 'group', gid); }
 // Words and media as a sorted set: BetterChatango archives an image URL typed in the text as an <i s> tag.
 function pmContentKey(m) {
   var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });

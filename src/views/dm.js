@@ -214,15 +214,15 @@ function DmThread(p) {
   else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close, onEditLast: editLast });
   return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
-      h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
+      p.onClose ? null : h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
       h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
       h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
-        label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }].concat(personActions, [{ divider: true }], convActions(app, id, convo))
+        label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id })].concat(personActions, [{ divider: true }], convActions(app, id, convo))
       }),
-      p.onClose ? h(T.IconButton, { icon: 'x', label: 'Close the conversation with ' + id + ' side by side', onClick: p.onClose }) : null),
+      p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
     h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom)),
@@ -238,7 +238,7 @@ function dmAuthorOf(m) { return m.from; }
 function SplitDm(p) {
   var app = useApp();
   var column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(p.id, null); } };
-  return h('div', { className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: p.id, column: column, onClose: app.actions.closeSplit }));
+  return h('div', { className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: p.id, column: column, onClose: app.actions.closeSplit, closeLabel: 'Close the conversation with ' + p.id + ' side by side' }));
 }
 
 /**

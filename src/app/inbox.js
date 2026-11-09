@@ -81,6 +81,19 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     focusPms();
   }, []);
   var closeSplit = useCallback(function () { update(function (d) { d.split = null; }); focusPms(); }, []);
+  /**
+   * Pops a group or a PM out into the floating window and marks it read. Called from a click: the browser opens the window only on a user action.
+   * @param {{view: string, id: string}} route Conversation to pop out.
+   */
+  var openPip = useCallback(function (route) {
+    openPipWindow(function () { update(function (d) { d.pip = null; }); }).then(function () {
+      update(function (d) { d.pip = opened(d, route); if (sameConversation(d.split, d.pip)) d.split = null; });
+      if (route.view === 'dm') readPm(pmArchive.current, update, route.id);
+    }, function (e) {
+      warn(e);
+      toast('The floating window could not open. Try again.');
+    });
+  }, []);
   // BetterChatango's PM sound follows one open PM: the main one first, the one beside otherwise.
   function focusPms() {
     if (!LIVE) return;
@@ -181,5 +194,5 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     syncPmUnread(pmArchive.current, update, [from]);
     if (!focused && !userOf(s0, from).ignored) notifyPm(from, text);
   }
-  return { pmArchive: pmArchive, nav: nav, openSplit: openSplit, closeSplit: closeSplit, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
+  return { pmArchive: pmArchive, nav: nav, openSplit: openSplit, closeSplit: closeSplit, openPip: openPip, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
 }

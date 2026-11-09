@@ -30,6 +30,7 @@ export const APP_SOURCES = [
   'views/message-log.js',
   'views/members.js',
   'views/dm.js',
+  'views/pip.js',
   'views/meet.js',
   'views/mentions.js',
   'views/profile.js',

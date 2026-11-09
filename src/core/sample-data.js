@@ -142,7 +142,7 @@ function seedWorld(me) {
     meStatus: 'online',
     premium: { status: 200, until: now + 2 * 1440 * MIN + 5 * 60 * MIN },
     profile: { visibility: { meet: false } },
-    route: { view: 'group', id: 'community', markerTs: now }, split: null,
+    route: { view: 'group', id: 'community', markerTs: now }, split: null, pip: null,
     sections: { favorites: true, groups: true, dms: true }
   };
 }

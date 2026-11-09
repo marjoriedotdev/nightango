@@ -24,7 +24,7 @@ function liveWorld(me) {
   var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
   return {
     me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
-    route: { view: 'discover' }, split: null, lastChat: { view: 'discover' },
+    route: { view: 'discover' }, split: null, pip: null, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
     groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, premium: null, retrying: {}
   };
