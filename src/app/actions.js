@@ -235,6 +235,12 @@ function useActions(k) {
       }, function (e) { toast(e.message); });
     },
     exportMedia: function () { return mediaLib.exportMedia(); },
+    /** GIFs of the media library that a message would show, by name. */
+    gifMedia: function () {
+      return mediaLib.exportMedia().then(function (list) {
+        return list.filter(function (e) { return mediaEntryOk(e) && GIF_URL.test(e.url); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+      });
+    },
     importMedia: function (entries) { return mediaLib.importMedia(entries).then(function (r) { mediaChanged(); return r; }); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
