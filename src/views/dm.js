@@ -162,6 +162,7 @@ function DmThread(p) {
   var log = useMessageLog();
   var draft = useDraft(dmDraftKey(id)), cm = useComposerMode(draft);
   var personActions = useProfileActions(id, null);
+  var sh = useState(false), sharedOpen = sh[0], setSharedOpen = sh[1];
   // Search result: older pages load one by one until it is reached.
   useEffect(function () {
     var seek = p.seek, failed = asked.current && convo.olderFailed;
@@ -208,7 +209,7 @@ function DmThread(p) {
   var bottom;
   if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
   else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close, onEditLast: editLast });
-  return h('main', { className: 'thread' },
+  return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
       h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
       h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
@@ -216,12 +217,15 @@ function DmThread(p) {
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
-        label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id, convo))
+        label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }].concat(personActions, [{ divider: true }], convActions(app, id, convo))
       })),
     h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
-    h('div', { className: 'composer-wrap' }, bottom));
+    h('div', { className: 'composer-wrap' }, bottom)),
+    sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + id, messages: convo.messages, authorOf: dmAuthorOf, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
 }
+
+function dmAuthorOf(m) { return m.from; }
 
 /**
  * Tells whether the user can edit a PM.

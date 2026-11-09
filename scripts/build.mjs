@@ -38,6 +38,7 @@ export const APP_SOURCES = [
   'views/emoji-picker.js',
   'views/attach.js',
   'views/media.js',
+  'views/shared-media.js',
   'views/commands.js',
   'views/discover.js',
   'views/palette.js',
