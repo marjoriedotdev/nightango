@@ -2,7 +2,7 @@ function defaultPrefs() {
   return {
     // Schema version of the stored preferences: those stored without one have the schema of version 1.
     version: 1,
-    theme: 'system', accent: '#f27a3f', density: 'comfortable', textSize: 14, h24: true, announcements: true,
+    theme: 'system', accent: DEFAULT_ACCENT, density: 'comfortable', textSize: 14, h24: true, announcements: true,
     styles: { names: true, fonts: true, sameSize: true, backgrounds: false, profileBackgrounds: true },
     notify: {
       mentions: { app: true, sound: true, desktop: true },

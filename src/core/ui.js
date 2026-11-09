@@ -350,6 +350,24 @@ function ColorField(p) {
 }
 
 /**
+ * Accent color swatches followed by a custom color.
+ * @param {{label: string, value: ?string, fallback: string, onChange: function(string)}} p Group label, chosen #rrggbb color or null for none, color of the custom field without a choice, and change callback.
+ */
+function AccentSwatches(p) {
+  var custom = p.value != null && !ACCENTS.some(function (a) { return a[1] === p.value; });
+  return h('div', { className: 'swatches', role: 'radiogroup', 'aria-label': p.label },
+    ACCENTS.map(function (a) {
+      var on = p.value === a[1];
+      return h('button', { key: a[1], type: 'button', role: 'radio', className: 'sw-dot', 'aria-checked': String(on), 'aria-label': a[0], title: a[0], style: { background: a[1] }, onClick: function () { p.onChange(a[1]); } },
+        on ? h(T.Icon, { name: 'check', size: 16, strokeWidth: 2.6, style: { color: onAccentOf(a[1]) } }) : null);
+    }),
+    h('span', { className: 'vsep', style: { margin: '0 4px' } }),
+    h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } },
+      h('input', { type: 'color', className: 'color-in', value: p.value || p.fallback, 'aria-label': 'Custom ' + p.label.toLowerCase(), onChange: function (e) { p.onChange(e.target.value); }, style: custom ? { boxShadow: '0 0 0 2px var(--bg), 0 0 0 4px var(--text)' } : null }),
+      'Custom'));
+}
+
+/**
  * Button that opens the JSON file picker.
  * @param {{onFile: function(File), icon: ?string, size: ?string, children: *}} p Callback for the chosen file, icon, size and button label.
  */
