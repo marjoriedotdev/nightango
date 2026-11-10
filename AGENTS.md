@@ -22,7 +22,7 @@ Decisions that follow from these and must not be "fixed":
 - the diagnostic journal stays in the browser and observes neither socket sends nor frame contents ([ADR-0011](docs/adr/0011-diagnostic-journal.md))
 - PM unreads come only from BetterChatango's private history, the state keeps only a copy read back from it ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
 - private notes on members stay in this browser, per account, and are never sent or logged ([ADR-0016](docs/adr/0016-private-member-notes.md)).
-- the update check asks GitHub once per sign-in and never installs code on its own ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
+- the update check asks GitHub and GitLab once per sign-in, announces the newer stable release and never installs code on its own ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
 - TikTok is reached on click, or for the cover under the rules of the YouTube thumbnail: one anonymous call per link through the loader, which reads the post page and returns the post link and the cover address only ([ADR-0014](docs/adr/0014-tiktok-embed.md)).
 - X is reached under the same rules: per post, two anonymous calls through the loader, the documented oEmbed for the text and the undocumented syndication for the author picture, time and first media, which return the card fields only. Mirror links (fxtwitter...) are rebuilt on X, never called. `widgets.js` is never loaded ([ADR-0015](docs/adr/0015-x-embed.md)).
 
@@ -62,14 +62,14 @@ The runner `tests/run.mjs` judges each suite on its exit code and on its output 
 3. Run `pnpm test`: every suite green, build included.
 4. Ship `dist/nightango.min.user.js`, the only file the user installs, by one of two paths:
    - send the file directly to the user
-   - merge into `main`: once the tests are green, the CI creates the `vX.Y.Z` tag from `@version` and the GitHub release with both userscripts attached. A `@version` that already has its release publishes nothing: no increment, no release. Do not push a tag by hand.
+   - merge into `main`: once the tests are green, each CI creates the `vX.Y.Z` tag from `@version` and its release with both userscripts and `SHA256SUMS` attached, a GitHub release from `.github/workflows/ci.yml`, a GitLab release from `.gitlab-ci.yml` (`scripts/release.mjs`). A `@version` that already has its release publishes nothing: no increment, no release. Do not push a tag by hand.
 
-The CI (`.github/workflows/ci.yml`) runs `pnpm test` on every push and pull request to `main` and `beta`, then publishes the release on a push to either branch.
+The code lives in two repositories, `github.com/marjoriedotdev/nightango` and `gitlab.com/marjoriedotdev/nightango`, pushed by hand with no automatic mirroring: GitHub first, GitLab while GitHub is down (the GitHub account has been suspended since 2026-11-09). Each has the same CI, `.github/workflows/ci.yml` and `.gitlab-ci.yml`: `pnpm test` on every push and pull or merge request to `main` and `beta`, then the release on a push to either branch. Keep both pipelines in step.
 
 ### Shipping a beta
 
 1. On the `beta` branch, set `@version` to `X.Y.Z-beta.N`, `X.Y.Z` being the next stable version, and add its section `## [X.Y.Z-beta.N] - YYYY-MM-DD` at the top of `CHANGELOG.md`.
-2. Push to `beta`: once the tests are green, the CI publishes the GitHub prerelease `vX.Y.Z-beta.N`. GitHub never marks it as latest, so the update check of stable users ignores it ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
+2. Push to `beta`: once the tests are green, the CI publishes the release `vX.Y.Z-beta.N`, a prerelease on GitHub, an ordinary release on GitLab. The update check keeps `vX.Y.Z` tags only, so stable users ignore it ([ADR-0013](docs/adr/0013-update-check-at-sign-in.md)).
 3. To ship the stable version, on `beta`: set `@version` to `X.Y.Z` and merge the `X.Y.Z-beta.N` sections of `CHANGELOG.md` into a single `## [X.Y.Z]` section, since stable users never saw the betas. A push to `beta` with a stable `@version` publishes nothing. Then open the pull request from `beta` to `main`.
 
 The CI refuses a `-beta` `@version` on `main` and in any pull request to `main`. A stable hotfix ships from `main` as usual, then `main` is merged into `beta`.
@@ -91,7 +91,7 @@ The skills of the `mattpocock-skills` plugin (MIT, `.claude/skills/LICENSE`) are
 
 ### Issue tracker
 
-Issues on GitHub, public repository `marjoriedotdev/nightango`, through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues on GitHub, public repository `marjoriedotdev/nightango`, through the `gh` CLI. See `docs/agents/issue-tracker.md`. While the GitHub account is suspended, issues #1 to #121 are out of reach and new ones go to the GitLab project.
 
 ### Triage labels
 
