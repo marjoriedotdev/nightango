@@ -14,7 +14,7 @@ Nightango is a Tampermonkey userscript for [st.chatango.com](https://st.chatango
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.\
    1.5 **Chromium browsers only** (Chrome, Brave...): in Tampermonkey's extension details, turn on **Allow User Scripts** (**Developer mode** on older versions).
-2. Open `nightango.min.user.js` from the [latest release](https://github.com/marjoriedotdev/nightango/releases/latest). Tampermonkey recognizes it and shows its install page: click **Install**.
+2. Open `nightango.min.user.js` from the latest release, on [GitHub](https://github.com/marjoriedotdev/nightango/releases/latest) or, while GitHub is down, on [GitLab](https://gitlab.com/marjoriedotdev/nightango/-/releases) (take the newest `vX.Y.Z`, not a `-beta`). Tampermonkey recognizes it and shows its install page: click **Install**.
 3. Open https://st.chatango.com/ and sign in on the BetterChatango screen. Nightango appears once the session is open.
 
 To update, open the file of the new release the same way: Tampermonkey shows its update page. Settings > What's new lists the changes of each version.
@@ -68,7 +68,7 @@ Docs:
 - [docs/coding-conventions.md](docs/coding-conventions.md): code and test conventions
 - [docs/adr/](docs/adr/): architecture decisions
 
-Bug reports go to the [issue tracker](https://github.com/marjoriedotdev/nightango/issues).
+Bug reports go to the issue tracker, on [GitHub](https://github.com/marjoriedotdev/nightango/issues) or [GitLab](https://gitlab.com/marjoriedotdev/nightango/-/issues).
 
 ## Security
 

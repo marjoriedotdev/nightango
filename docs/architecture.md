@@ -79,6 +79,8 @@ src/
     login.css        BetterChatango sign-in screen in Nightango colors, put in the document by skin-page.js
 scripts/
   build.mjs          Node build (concatenation, userscript assembly, esbuild minification)
+  changelog.mjs      reads CHANGELOG.md, for the build (What's new) and the GitLab release notes
+  release.mjs        GitLab release of the tested userscripts, run by the release job of .gitlab-ci.yml
   ds-components.mjs  regenerates README.md and preview.html of the design system components
 tests/               jsdom suites and run.mjs runner
 torchds/project/     design system: tokens, components/bundle.js (namespace window.Torch), CSS, types
@@ -219,9 +221,13 @@ Test policy: [ADR-0009](adr/0009-test-only-complex-behaviour.md) and `docs/codin
 
 ## Continuous integration
 
+The code is pushed by hand to GitHub and to GitLab, with no automatic mirroring. Each host runs its own copy of the same pipeline and publishes its own releases: keep both in step.
+
 - `.github/workflows/ci.yml`, `test` job: `pnpm install --frozen-lockfile` then `pnpm test` on every push and pull request to `main` and `beta`. Before the tests, it refuses a `-beta` `@version` on `main` or in a pull request to `main`. After them, it hands the SHA-256 checksums of both userscripts it tested to the `release` job.
-- Same workflow, `release` job: on a push to `main` or `beta`, after `test`. It runs `pnpm build` again and checks both userscripts against the checksums of the tested ones: a single byte of difference stops it. No action carries `dist/` from one job to the other, since that would be a new dependency. It then reads the `@version` of `src/loader/skin-loader.js` and, if the release `v` followed by this number does not exist yet, creates the tag on the tested commit and the GitHub release with both userscripts and their checksums (`SHA256SUMS`) attached. Otherwise it publishes nothing. On `beta`, only a `X.Y.Z-beta.N` version is published, as a prerelease never marked latest. A stable version there publishes nothing. Releases run one at a time (`concurrency: release`).
-- Actions are pinned to the full commit SHA of their release, with the version in a comment. pnpm comes from the `packageManager` field of `package.json`, Node from its `engines.node` field, which a local run follows too: pnpm warns under another Node version.
+- Same workflow, `release` job: on a push to `main` or `beta`, after `test`. It runs `pnpm build` again and checks both userscripts against the checksums of the tested ones: a single byte of difference stops it. No action carries `dist/` from one job to the other, since that would be a new dependency. It then reads the `@version` of `src/loader/skin-loader.js` and, if the release `v` followed by this number does not exist yet, creates the tag on the tested commit and the GitHub release with both userscripts and their checksums (`SHA256SUMS`) attached. Otherwise it publishes nothing. On `beta`, only a `X.Y.Z-beta.N` version is published, as a prerelease never marked latest. A stable version there publishes nothing. Releases run one at a time (`concurrency: release`). Actions are pinned to the full commit SHA of their release, with the version in a comment.
+- `.gitlab-ci.yml`, `test` job: same checks and tests, for merge requests and pushes to `main` and `beta`, in `node:24-bookworm-slim` pinned by digest, with pnpm from `packageManager` through corepack. It writes `SHA256SUMS` and keeps both userscripts and the checksums as job artifacts.
+- Same pipeline, `release` job: on a push to `main` or `beta`, after `test`, on the artifacts of that job, checked against `SHA256SUMS` first. `scripts/release.mjs` applies the same rules as the GitHub job (one release per `@version`, betas from `beta` only, stable only from `main`), uploads the three files to the project's generic package registry and creates the release on the tested commit, with links to them and the notes of `CHANGELOG.md` (`scripts/changelog.mjs`, shared with the build). It uses the CI job token only. GitLab has no prerelease flag: a beta is an ordinary release, which the update check skips by its tag. Releases run one at a time (`resource_group: release`).
+- pnpm comes from the `packageManager` field of `package.json`, Node from its `engines.node` field, which a local run follows too: pnpm warns under another Node version.
 
 ## BetterChatango reference copy
 

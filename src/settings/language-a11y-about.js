@@ -71,8 +71,10 @@ function AboutPage() {
   var app = useApp(), pr = usePref();
   return h(Page, { title: 'About Nightango', lede: 'A skin for BetterChatango, an open-source Chatango client.' },
     h(T.SettingsSection, { title: 'Version', padded: true }, h('span', { className: 'mono' }, APP_VERSION)),
-    h(T.SettingsSection, { title: 'Open source', description: 'MIT license. Report problems and suggest changes on GitHub.', padded: true },
-      h('a', { href: REPO_URL, target: '_blank', rel: 'noopener noreferrer' }, 'Nightango source code and issue tracker')),
+    h(T.SettingsSection, { title: 'Open source', description: 'MIT license. The same code is on GitHub and GitLab: report problems and suggest changes on either.', padded: true },
+      h('span', null, 'Source code and issue tracker on ',
+        h('a', { href: REPO_URLS.github, target: '_blank', rel: 'noopener noreferrer' }, 'GitHub'), ' and ',
+        h('a', { href: REPO_URLS.gitlab, target: '_blank', rel: 'noopener noreferrer' }, 'GitLab'))),
     h(T.SettingsSection, { title: 'Built on BetterChatango', description: 'By Vissle, under the MIT license.', padded: true },
       h('a', { href: 'https://github.com/Vissle-Drissle/Torch-Client', target: '_blank', rel: 'noopener noreferrer' }, 'BetterChatango source code and issue tracker')),
     h(T.SettingsSection, { title: 'Independent project', description: 'Nightango is not affiliated with, endorsed by or sponsored by BetterChatango or Chatango.' }),
