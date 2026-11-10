@@ -14,7 +14,7 @@ function MembersList(p) {
   var before = 0;
   function row(n) {
     var u = userOf(s, n), isMe = n === s.me;
-    return h(MemberRow, { key: n, name: n, gid: g.id, status: isMe ? s.meStatus : u.status, dim: u.status === 'offline' && !isMe, isMe: isMe, role: roleOf(g, n), avatarV: u.avatarV });
+    return h(MemberRow, { key: n, name: n, gid: g.id, status: isMe ? s.meStatus : u.status, dim: u.status === 'offline' && !isMe, isMe: isMe, role: roleOf(g, n), avatarV: u.avatarV, label: s.notes[n] ? s.notes[n].label : '' });
   }
   // Rows of a section within the rendered batches, null until they reach its first row: a heading never shows without its rows.
   function rows(names) {
@@ -36,14 +36,14 @@ function MembersList(p) {
 
 /**
  * Row of the member list, rendered again only when its props change.
- * @param {{name: string, gid: string, status: string, dim: boolean, isMe: boolean, role: ?string, avatarV: (number|undefined)}} p Member, group, presence, dimmed when offline,
- *   signed-in user, role in the group and picture version.
+ * @param {{name: string, gid: string, status: string, dim: boolean, isMe: boolean, role: ?string, avatarV: (number|undefined), label: string}} p Member, group, presence, dimmed when offline,
+ *   signed-in user, role in the group, picture version and private label.
  */
 var MemberRow = React.memo(function MemberRow(p) {
   var app = useAppApi(), n = p.name;
   return h('button', { type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, p.gid); } },
     h(T.Avatar, { name: n, size: 28, status: p.status, ring: 'var(--panel)' }),
-    h('span', { className: 'grow', style: p.dim ? { color: 'var(--text-3)' } : null }, n),
+    h('span', { className: 'grow', style: p.dim ? { color: 'var(--text-3)' } : null }, n, p.label ? h('span', { className: 'note-label', title: 'Your private label' }, p.label) : null),
     presenceSr(p.status), youBadge(p.isMe), developerBadge(n), roleBadge(p.role));
 });
 
@@ -168,7 +168,7 @@ function banItem(app, name, gid, msg) {
 function useProfileActions(name, gid) {
   var app = useApp(), s = app.state, u = userOf(s, name), busy = !!s.friendAdds[name];
   var g = gid ? s.groups[gid] : null;
-  var inDm = s.route.view === 'dm' && s.route.id === name;
+  var inDm = isPaneOpen(s, 'dm', name);
   var friendLabel = busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend';
   return [
     inDm ? null : { id: 'message', label: 'Message', icon: 'message', disabled: u.blocked, closes: true, onSelect: function () { app.actions.openDm(name); } },

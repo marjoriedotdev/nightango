@@ -53,7 +53,7 @@ function wordList(v) { return String(v || '').split(/[,\n]/).map(function (x) { 
  */
 function useActions(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast, setNavOpen = k.setNavOpen;
-  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, receiveGroup = k.inbox.receiveGroup, receiveDm = k.inbox.receiveDm;
+  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, openSplit = k.inbox.openSplit, closeSplit = k.inbox.closeSplit, openPip = k.inbox.openPip, receiveGroup = k.inbox.receiveGroup, receiveDm = k.inbox.receiveDm;
   var drafts = k.drafts, localRef = k.localRef, reconnection = k.reconnection, pms = k.pms;
   var up = useState({}), uploads = up[0], setUploads = up[1];
   /**
@@ -86,12 +86,41 @@ function useActions(k) {
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
   var actions = {
+    openSplit: openSplit,
+    closeSplit: closeSplit,
+    openPip: openPip,
+    closePip: closePipWindow,
     login: function (name) { var world = sampleWorld(name); drafts.clear(); update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
     resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
+    /**
+     * Keeps a private note on a member, or deletes it when both fields are empty.
+     * @param {string} name Member name.
+     * @param {{label: string, note: string}} n Label and note text, trimmed.
+     */
+    setNote: function (name, n) { update(function (d) { if (n.label || n.note) d.notes[name] = n; else delete d.notes[name]; }); },
+    clearNotes: function () { update(function (d) { d.notes = {}; }); },
+    setSpace: function (id) { update(function (d) { d.space = id; }); },
+    /**
+     * Creates a space and opens it.
+     * @param {string} name Space name, trimmed.
+     * @param {boolean} quiet Mutes private messages from outside it while it is open.
+     * @param {?string} first Conversation it starts with, as spaceKey names it.
+     */
+    createSpace: function (name, quiet, first) {
+      var id = uid();
+      update(function (d) { d.spaces.push({ id: id, name: name, quiet: quiet, members: first ? [first] : [] }); d.space = id; });
+    },
+    updateSpace: function (id, patch) { update(function (d) { d.spaces.forEach(function (x) { if (x.id === id) Object.assign(x, patch); }); }); },
+    deleteSpace: function (id) { update(function (d) { d.spaces = d.spaces.filter(function (x) { return x.id !== id; }); if (d.space === id) d.space = null; }); },
+    toggleInSpace: function (id, key) {
+      update(function (d) {
+        d.spaces.forEach(function (x) { if (x.id !== id) return; var i = x.members.indexOf(key); if (i >= 0) x.members.splice(i, 1); else x.members.push(key); });
+      });
+    },
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
       text = (opts.quote || '') + text;
@@ -235,6 +264,12 @@ function useActions(k) {
       }, function (e) { toast(e.message); });
     },
     exportMedia: function () { return mediaLib.exportMedia(); },
+    /** GIFs of the media library that a message would show, by name. */
+    gifMedia: function () {
+      return mediaLib.exportMedia().then(function (list) {
+        return list.filter(function (e) { return mediaEntryOk(e) && GIF_URL.test(e.url); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+      });
+    },
     importMedia: function (entries) { return mediaLib.importMedia(entries).then(function (r) { mediaChanged(); return r; }); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
@@ -247,6 +282,7 @@ function useActions(k) {
       update(function (d) { var l = d.groups[gid].hiddenChannels, i = l.indexOf(k); if (i >= 0) l.splice(i, 1); else l.push(k); });
     },
     setSendChannel: function (gid, k) { update(function (d) { d.groups[gid].sendChannel = k; }); },
+    setGroupAccent: function (gid, hex) { update(function (d) { d.groups[gid].accent = hex; }); },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
     /**
      * Adds a trusted host without duplicates or removes it.
@@ -277,7 +313,7 @@ function useActions(k) {
       update(function (d) {
         var staff = {}; staff[me] = 'owner';
         d.groups[name] = {
-          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: now,
+          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: now,
           members: [me], guests: 0, closed: false, dismissedAnnouncement: false, bans: [],
           settings: mkSettings({ overview: { title: title, description: desc }, staff: staff }),
           audit: [{ id: uid(), at: now, actor: me, text: 'Created the group' }],

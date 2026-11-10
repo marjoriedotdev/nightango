@@ -23,14 +23,14 @@ function sessionAfterConn(d, op) {
 function liveWorld(me) {
   var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
   return {
-    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
-    route: { view: 'discover' }, lastChat: { view: 'discover' },
+    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
+    route: { view: 'discover' }, split: null, pip: null, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
     groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, premium: null, retrying: {}
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', readTs: 'object', badges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
 // The read position of the group in view moves with each message: its writes wait and go out together.
 var READ_SAVE_MS = 2000;
 var READ_POSITIONS_MAX = 100;
@@ -44,7 +44,34 @@ function storedLocal(stored) {
   Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
   return out;
 }
-function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, readTs: {}, badges: {}, unstyled: [], style: null }; }
+var NOTE_LABEL_MAX = 24, NOTE_TEXT_MAX = 500;
+/**
+ * Returns the private notes kept in this browser without the entries of another shape.
+ * @param {Object} stored Notes by member name, untrusted.
+ */
+function storedNotes(stored) {
+  var out = {};
+  Object.keys(stored).forEach(function (n) {
+    var x = stored[n];
+    if (ACCOUNT_NAME.test(n) && kindOf(x) === 'object' && typeof x.label === 'string' && typeof x.note === 'string' && (x.label || x.note)) {
+      out[n] = { label: x.label.slice(0, NOTE_LABEL_MAX), note: x.note.slice(0, NOTE_TEXT_MAX) };
+    }
+  });
+  return out;
+}
+var SPACE_MEMBER = /^(group|dm):[a-z0-9_-]{1,20}$/;
+/**
+ * Returns the spaces kept in this browser without the entries of another shape.
+ * @param {Array} stored Spaces, untrusted.
+ */
+function storedSpaces(stored) {
+  return stored.filter(function (x) {
+    return kindOf(x) === 'object' && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim() && kindOf(x.members) === 'array';
+  }).slice(0, SPACE_MAX).map(function (x) {
+    return { id: x.id, name: x.name.trim().slice(0, SPACE_NAME_MAX), quiet: x.quiet === true, members: x.members.filter(function (m) { return typeof m === 'string' && SPACE_MEMBER.test(m); }) };
+  });
+}
+function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, spaces: [], space: '', readTs: {}, badges: {}, unstyled: [], style: null }; }
 /**
  * Returns the most recent read positions of a map of read positions.
  * @param {Object} reads Server time of the newest read message by group.
@@ -56,7 +83,7 @@ function newestReads(reads) {
   return out;
 }
 /**
- * Closed conversations, hidden and sending channels, read positions, roles of group members, members with a hidden style and own style, kept by account in this browser in live.
+ * Closed conversations, hidden and sending channels, group colors, private notes, spaces, read positions, roles of group members, members with a hidden style and own style, kept by account in this browser in live.
  * @param {Object} state Application state.
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
@@ -95,6 +122,9 @@ function useLocalStore(state) {
     if (!me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
+    o.notes = state.notes;
+    o.spaces = state.spaces;
+    o.space = state.space || '';
     // Local favorites, mutes and ignored members that BetterChatango has not accepted yet: kept for the next sign-in.
     o.fav = prev.fav;
     o.muted = prev.muted;
@@ -105,6 +135,8 @@ function useLocalStore(state) {
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
     Object.keys(prev.sendChannels).forEach(function (k) { if (!state.groups[k]) o.sendChannels[k] = prev.sendChannels[k]; });
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].sendChannel !== 'none') o.sendChannels[k] = state.groups[k].sendChannel; });
+    Object.keys(prev.accents).forEach(function (k) { if (!state.groups[k]) o.accents[k] = prev.accents[k]; });
+    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].accent) o.accents[k] = state.groups[k].accent; });
     Object.keys(prev.readTs).forEach(function (k) { if (!state.groups[k]) o.readTs[k] = prev.readTs[k]; });
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].lastReadTs != null) o.readTs[k] = state.groups[k].lastReadTs; });
     o.readTs = newestReads(o.readTs);
@@ -119,7 +151,7 @@ function useLocalStore(state) {
     if (pending.current) pending.current.o = o;
     else pending.current = { me: me, o: o, timer: setTimeout(flush, READ_SAVE_MS) };
     if (!readOnly) flush();
-  }, [me, state.ownStyle, state.dms, state.groups, state.users]);
+  }, [me, state.ownStyle, state.notes, state.spaces, state.space, state.dms, state.groups, state.users]);
   return { ref: localRef, restore: restore };
 }
 /** Key of a ban list entry: unid and IP, like removeblock. */
@@ -135,7 +167,7 @@ function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.
 function liveGroup(id, title) {
   var t = title || id;
   return {
-    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: null,
+    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: null,
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
     live: { flags: 0, mods: {}, badges: {}, knownBadges: {}, owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
@@ -152,7 +184,7 @@ function liveGroup(id, title) {
  */
 function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
 /**
- * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels, read position and member roles kept in this browser.
+ * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels, color, read position and member roles kept in this browser.
  * @param {Object} d State being modified.
  * @param {string} gid Target group.
  * @param {Object} local Account data kept in this browser.
@@ -165,6 +197,7 @@ function ensureLiveGroup(d, gid, local) {
     g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
     g.hiddenChannels = local.channels[gid] || [];
     g.sendChannel = local.sendChannels[gid] || 'none';
+    g.accent = hexToRgb(local.accents[gid]) ? local.accents[gid] : null;
     g.lastReadTs = local.readTs[gid] || null;
     g.live.knownBadges = local.badges[gid] || {};
     g.settings.staff = staffOf(g.live);

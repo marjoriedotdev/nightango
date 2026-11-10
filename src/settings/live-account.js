@@ -210,6 +210,7 @@ function PrivacyPageLive() {
         asLabel: false, title: 'Delete saved conversations', description: 'BetterChatango keeps a copy of your private messages in this browser. Chatango does not store them.',
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message BetterChatango saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
+    h(NotesSection, null),
     h(BrowserTabSection, null),
     startup ? h(StartupSection, { value: startup, onChange: setStartupSetting }) : null);
 }

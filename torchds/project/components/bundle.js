@@ -65,6 +65,7 @@
     copy: [['rect', { width: 14, height: 14, x: 8, y: 8, rx: 2, ry: 2 }], ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }]],
     upload: [['path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }], ['polyline', { points: '17 8 12 3 7 8' }], ['line', { x1: 12, x2: 12, y1: 3, y2: 15 }]],
     trash: [['path', { d: 'M3 6h18' }], ['path', { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6' }], ['path', { d: 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' }]],
+    mic: [['path', { d: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z' }], ['path', { d: 'M19 10v2a7 7 0 0 1-14 0v-2' }], ['path', { d: 'M12 19v3' }]],
     volume: [['polygon', { points: '11 5 6 9 2 9 2 15 6 15 11 19 11 5' }], ['path', { d: 'M15.54 8.46a5 5 0 0 1 0 7.07' }]],
     'volume-x': [['polygon', { points: '11 5 6 9 2 9 2 15 6 15 11 19 11 5' }], ['line', { x1: 22, x2: 16, y1: 9, y2: 15 }], ['line', { x1: 16, x2: 22, y1: 9, y2: 15 }]],
     globe: [['circle', { cx: 12, cy: 12, r: 10 }], ['path', { d: 'M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20' }], ['path', { d: 'M2 12h20' }]],
@@ -232,7 +233,7 @@
           : props.muted ? h(Icon, { name: 'volume-x', size: 14, label: 'Muted' }) : null;
     var cls = cx('tc-nav', !props.active && props.unread && 'tc-nav-unread', !props.active && props.muted && 'tc-nav-muted', props.className);
     var inner = [leading, h('span', { key: 'l', className: 'tc-nav-label' }, props.label), trailing];
-    var common = { className: cls, 'aria-current': props.active ? 'page' : undefined, onClick: props.onClick, title: props.title };
+    var common = { className: cls, 'aria-current': props.active ? 'page' : undefined, onClick: props.onClick, onContextMenu: props.onContextMenu, title: props.title };
     return props.href
       ? h.apply(null, ['a', Object.assign({ href: props.href }, common)].concat(inner))
       : h.apply(null, ['button', Object.assign({ type: 'button' }, common)].concat(inner));
@@ -447,7 +448,7 @@
       }),
       h('div', { className: 'tc-composer-bar' },
         props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', size: 30, iconSize: 16, onClick: props.onEmoji }) : null,
-        props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach }) : null,
+        props.attachMenu || (props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach }) : null),
         props.hint ? h('span', { id: hintId, className: cx('tc-composer-hint', props.hintTone === 'warning' && 'tc-composer-hint-warning') },
           props.hintTone === 'warning' ? h(Icon, { name: 'alert', size: 14 }) : null, props.hint) : h('span', { style: { flex: 1 } }),
         props.aside || null,

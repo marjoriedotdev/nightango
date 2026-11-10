@@ -71,11 +71,11 @@ var LayerCtx = React.createContext(null);
 function appMount() { return window.__TORCH_MOUNT__ || document.getElementById('app'); }
 /**
  * Gives the interface inside it its layer node and its stack of open dialogs.
- * @param {{children: *}} p Interface.
+ * @param {{mount: ?Element, children: *}} p Mount point of this interface when it is not the application's, such as a floating window, and interface.
  */
 function Layers(p) {
   var ref = useRef(null);
-  if (!ref.current) ref.current = { node: null, dialogs: [] };
+  if (!ref.current) ref.current = { node: null, dialogs: [], mount: p.mount || null };
   return h(LayerCtx.Provider, { value: ref.current }, p.children);
 }
 /**
@@ -84,10 +84,10 @@ function Layers(p) {
  */
 function layerRoot(layer) {
   if (layer.node && layer.node.isConnected) return layer.node;
-  var mountEl = appMount();
-  layer.node = document.createElement('div');
+  var mountEl = layer.mount || appMount(), doc = mountEl ? mountEl.ownerDocument : document;
+  layer.node = doc.createElement('div');
   layer.node.id = 'layer';
-  (mountEl && mountEl.parentNode ? mountEl.parentNode : document.body).appendChild(layer.node);
+  (mountEl && mountEl.parentNode ? mountEl.parentNode : doc.body).appendChild(layer.node);
   return layer.node;
 }
 function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot(useContext(LayerCtx))); }
@@ -100,10 +100,12 @@ function useOutside(ref, open, onClose, extraRef) {
       if (ref.current && path.indexOf(ref.current) < 0 && !(extraRef && extraRef.current && path.indexOf(extraRef.current) >= 0)) onClose(e);
     }
     function onKey(e) { if (e.key === 'Escape') onClose(e); }
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('touchstart', onDown);
-    document.addEventListener('keydown', onKey);
-    return function () { document.removeEventListener('mousedown', onDown); document.removeEventListener('touchstart', onDown); document.removeEventListener('keydown', onKey); };
+    // The document of the trigger: a floating window has its own.
+    var doc = ref.current ? ref.current.ownerDocument : document;
+    doc.addEventListener('mousedown', onDown);
+    doc.addEventListener('touchstart', onDown);
+    doc.addEventListener('keydown', onKey);
+    return function () { doc.removeEventListener('mousedown', onDown); doc.removeEventListener('touchstart', onDown); doc.removeEventListener('keydown', onKey); };
   }, [open]);
 }
 
@@ -183,7 +185,8 @@ function useFloating(anchorRef, floatRef, open, onClose, o) {
   useLayoutEffect(function () {
     if (!open) { setPlace(null); return; }
     if (!anchorRef.current) return;
-    var r = o.at ? { top: o.at.y, bottom: o.at.y, left: o.at.x, right: o.at.x } : anchorRef.current.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    var doc = anchorRef.current.ownerDocument;
+    var r = o.at ? { top: o.at.y, bottom: o.at.y, left: o.at.x, right: o.at.x } : anchorRef.current.getBoundingClientRect(), vw = doc.documentElement.clientWidth, vh = doc.defaultView.innerHeight;
     var mh = floatRef.current ? floatRef.current.offsetHeight : 0, up = o.up ? r.top - mh - 4 >= 8 || r.bottom + mh + 4 > vh : r.bottom + mh + 4 > vh - 8 && r.top - mh - 4 >= 8;
     var mw = floatRef.current ? floatRef.current.offsetWidth : 0;
     var st = { position: 'fixed' };
@@ -195,10 +198,11 @@ function useFloating(anchorRef, floatRef, open, onClose, o) {
   useEffect(function () {
     if (!open) return;
     // Only the scroll of a trigger container moves the layer, not the scroll of the message log receiving a message.
-    function onMove(e) { if (e.type === 'scroll' && e.target !== document && !e.target.contains(anchorRef.current)) return; onClose(e); }
-    window.addEventListener('resize', onMove);
-    document.addEventListener('scroll', onMove, true);
-    return function () { window.removeEventListener('resize', onMove); document.removeEventListener('scroll', onMove, true); };
+    var doc = anchorRef.current ? anchorRef.current.ownerDocument : document, win = doc.defaultView;
+    function onMove(e) { if (e.type === 'scroll' && e.target !== doc && !e.target.contains(anchorRef.current)) return; onClose(e); }
+    win.addEventListener('resize', onMove);
+    doc.addEventListener('scroll', onMove, true);
+    return function () { win.removeEventListener('resize', onMove); doc.removeEventListener('scroll', onMove, true); };
   }, [open]);
   // After placement: a layer still in visibility hidden refuses focus in a real browser.
   useEffect(function () {
@@ -210,18 +214,25 @@ function useFloating(anchorRef, floatRef, open, onClose, o) {
 // Only breakpoint of the right column: app.css does not repeat it, the column is only rendered above it.
 var NARROW_LAYOUT = '(max-width:1180px)';
 /**
+ * Tells whether the window is wide enough for a right column or two conversations side by side, and follows its changes.
+ */
+function useWideLayout() {
+  var a = useState(function () { return !window.matchMedia(NARROW_LAYOUT).matches; }), wide = a[0], setWide = a[1];
+  useEffect(function () {
+    var mq = window.matchMedia(NARROW_LAYOUT);
+    function onChange() { setWide(!mq.matches); }
+    mq.addEventListener('change', onChange);
+    return function () { mq.removeEventListener('change', onChange); };
+  }, []);
+  return wide;
+}
+/**
  * Toggles the right column when the window leaves room for it and otherwise opens its content full screen.
  * @param {Function} openFull Opens the same content full screen.
  */
 function useRightColumn(openFull) {
-  var a = useState(function () { return !window.matchMedia(NARROW_LAYOUT).matches; }), fits = a[0], setFits = a[1];
+  var fits = useWideLayout();
   var b = useState(true), shown = b[0], setShown = b[1];
-  useEffect(function () {
-    var mq = window.matchMedia(NARROW_LAYOUT);
-    function onChange() { setFits(!mq.matches); }
-    mq.addEventListener('change', onChange);
-    return function () { mq.removeEventListener('change', onChange); };
-  }, []);
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
 
@@ -350,6 +361,24 @@ function ColorField(p) {
 }
 
 /**
+ * Accent color swatches followed by a custom color.
+ * @param {{label: string, value: ?string, fallback: string, onChange: function(string)}} p Group label, chosen #rrggbb color or null for none, color of the custom field without a choice, and change callback.
+ */
+function AccentSwatches(p) {
+  var custom = p.value != null && !ACCENTS.some(function (a) { return a[1] === p.value; });
+  return h('div', { className: 'swatches', role: 'radiogroup', 'aria-label': p.label },
+    ACCENTS.map(function (a) {
+      var on = p.value === a[1];
+      return h('button', { key: a[1], type: 'button', role: 'radio', className: 'sw-dot', 'aria-checked': String(on), 'aria-label': a[0], title: a[0], style: { background: a[1] }, onClick: function () { p.onChange(a[1]); } },
+        on ? h(T.Icon, { name: 'check', size: 16, strokeWidth: 2.6, style: { color: onAccentOf(a[1]) } }) : null);
+    }),
+    h('span', { className: 'vsep', style: { margin: '0 4px' } }),
+    h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } },
+      h('input', { type: 'color', className: 'color-in', value: p.value || p.fallback, 'aria-label': 'Custom ' + p.label.toLowerCase(), onChange: function (e) { p.onChange(e.target.value); }, style: custom ? { boxShadow: '0 0 0 2px var(--bg), 0 0 0 4px var(--text)' } : null }),
+      'Custom'));
+}
+
+/**
  * Button that opens the JSON file picker.
  * @param {{onFile: function(File), icon: ?string, size: ?string, children: *}} p Callback for the chosen file, icon, size and button label.
  */
@@ -391,7 +420,7 @@ function SkeletonRows(p) {
 function syncInert(layer) {
   // Dialogs that close in the same render have already lost their node: they no longer keep the app inert.
   var layers = layer.dialogs.filter(function (r) { return r.current; }).map(function (r) { return r.current.closest('.overlay'); });
-  appMount().toggleAttribute('inert', layers.length > 0);
+  (layer.mount || appMount()).toggleAttribute('inert', layers.length > 0);
   layers.forEach(function (el, i) { el.toggleAttribute('inert', i < layers.length - 1); });
 }
 /**
@@ -431,13 +460,13 @@ function Dialog(p) {
     }
     // Dialog that cannot be closed: Escape is stopped in the capture phase, before the dialogs and menus open below that listen on document.
     function onEscape(e) { if (e.key === 'Escape') e.stopPropagation(); }
-    var blocking = !p.onClose;
-    document.addEventListener('keydown', onKey);
-    if (blocking) document.addEventListener('keydown', onEscape, true);
+    var blocking = !p.onClose, doc = ref.current ? ref.current.ownerDocument : document;
+    doc.addEventListener('keydown', onKey);
+    if (blocking) doc.addEventListener('keydown', onEscape, true);
     return function () {
       closeModal(layer, ref);
-      document.removeEventListener('keydown', onKey);
-      if (blocking) document.removeEventListener('keydown', onEscape, true);
+      doc.removeEventListener('keydown', onKey);
+      if (blocking) doc.removeEventListener('keydown', onEscape, true);
       if (prev && prev.focus) prev.focus();
     };
   }, []);

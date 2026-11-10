@@ -102,13 +102,13 @@ function useDisplayPrefs(prefs) {
     if (prefs.theme === 'dark' || prefs.theme === 'light') root.setAttribute('data-theme', prefs.theme);
     else if (VIEWER_THEME) root.setAttribute('data-theme', VIEWER_THEME);
     else root.removeAttribute('data-theme');
-    var acc = hexToRgb(prefs.accent) ? prefs.accent : '#f27a3f';
-    root.style.setProperty('--accent', acc);
-    root.style.setProperty('--on-accent', contrast(hexToRgb(acc), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff');
-    root.style.setProperty('--accent-text-d', ensureContrast(acc, SURFACE.dark.selected, 4.5));
-    root.style.setProperty('--accent-text-l', ensureContrast(acc, SURFACE.light.selected, 4.5));
-    root.style.setProperty('--accent-soft-d', rgba(acc, 0.12));
-    root.style.setProperty('--accent-soft-l', rgba(acc, 0.14));
+    var acc = accentTokens(prefs.accent);
+    root.style.setProperty('--accent', acc.accent);
+    root.style.setProperty('--on-accent', acc.onAccent);
+    root.style.setProperty('--accent-text-d', acc.text.dark);
+    root.style.setProperty('--accent-text-l', acc.text.light);
+    root.style.setProperty('--accent-soft-d', acc.soft.dark);
+    root.style.setProperty('--accent-soft-l', acc.soft.light);
     root.style.setProperty('--msg-size', prefs.textSize + 'px');
     root.classList.toggle('reduce-motion', !!prefs.a11y.reduceMotion);
     root.classList.toggle('underline-links', !!prefs.a11y.underlineLinks);
@@ -232,6 +232,8 @@ function Root(props) {
     state.auth.loggedIn && o.palette ? h(Palette, { onClose: function () { o.setPalette(false); } }) : null,
     state.auth.loggedIn && o.create ? h(CreateGroupDialog, { prefill: o.create.prefill, onClose: function () { o.setCreate(null); } }) : null,
     state.auth.loggedIn && o.newDm ? h(NewDmDialog, { onClose: function () { o.setNewDm(false); } }) : null,
+    state.auth.loggedIn && o.spacesFor ? h(ConversationSpacesDialog, { route: o.spacesFor, onClose: function () { o.setSpacesFor(null); } }) : null,
+    state.auth.loggedIn && o.spaceEditor ? h(SpaceEditorDialog, { id: o.spaceEditor.id, add: o.spaceEditor.add || null, onClose: function () { o.setSpaceEditor(null); } }) : null,
     o.confirmCfg ? h(ConfirmDialog, { confirm: o.confirmCfg, onClose: function () { o.setConfirm(null); } }) : null,
     state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
     h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast })))));

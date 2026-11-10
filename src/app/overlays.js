@@ -16,6 +16,8 @@ function useOverlays() {
   var u11 = useState(null), fullProfile = u11[0], setFullProfile = u11[1];
   var u12 = useState(null), profileLink = u12[0], setProfileLink = u12[1];
   var u14 = useState(null), who = u14[0], setWho = u14[1];
+  var u15 = useState(null), spacesFor = u15[0], setSpacesFor = u15[1];
+  var u16 = useState(null), spaceEditor = u16[0], setSpaceEditor = u16[1];
   var toast = useCallback(function (text, opts) {
     var t = Object.assign({ id: uid(), text: text }, opts || {});
     setToasts(function (list) { return list.concat([t]).slice(-4); });
@@ -28,6 +30,8 @@ function useOverlays() {
     openProfile: function (name, gid) { setFullProfile(null); setProfile({ name: name, gid: gid }); },
     openFullProfile: function (name) { setFullProfile(name); },
     openWho: setWho,
+    openSpaces: setSpacesFor,
+    openSpaceEditor: setSpaceEditor,
     openLink: setLinkUrl,
     openProfileLink: setProfileLink,
     openPalette: function () { setPalette(true); setNavOpen(false); },
@@ -42,6 +46,7 @@ function useOverlays() {
     navOpen: navOpen, setNavOpen: setNavOpen, palette: palette, setPalette: setPalette,
     confirmCfg: confirmCfg, setConfirm: setConfirm, profile: profile, setProfile: setProfile, fullProfile: fullProfile, setFullProfile: setFullProfile,
     who: who, setWho: setWho, linkUrl: linkUrl, setLinkUrl: setLinkUrl, profileLink: profileLink, setProfileLink: setProfileLink,
+    spacesFor: spacesFor, setSpacesFor: setSpacesFor, spaceEditor: spaceEditor, setSpaceEditor: setSpaceEditor,
     create: create, setCreate: setCreate, newDm: newDm, setNewDm: setNewDm, banCfg: banCfg, setBan: setBan
   };
 }

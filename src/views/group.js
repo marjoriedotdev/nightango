@@ -74,12 +74,17 @@ function GroupView(p) {
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
+  var a10 = useState(false), colorOpen = a10[0], setColorOpen = a10[1];
+  var a11 = useState(false), sharedOpen = a11[0], setSharedOpen = a11[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
+  // Side by side, the members open as a sheet: a right column would leave no room for the messages.
+  if (p.compact) column = { open: false, pressed: null, toggle: function () { setInfoOpen(true); } };
   var a9 = useDraft(groupDraftKey(p.gid)), draft = a9[0], setDraft = a9[1];
   var cm = useComposerMode(a9), mode = cm.mode, setMode = cm.setMode;
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid }, setDraft);
+  var voice = useVoiceRecorder(uploadKey({ kind: 'group', id: p.gid }), attach.onFiles);
   var log = useMessageLog();
   var count = g ? g.messages.length : 0;
   var q = search ? search.trim().toLowerCase() : '';
@@ -151,7 +156,7 @@ function GroupView(p) {
     log.jumpTo(o.id);
   }
 
-  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g), markerTs = s.route.markerTs;
+  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g), markerTs = p.markerTs;
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
@@ -195,7 +200,7 @@ function GroupView(p) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
     var left = GROUP_MESSAGE_MAX - measured;
-    composer = h(Frag, null, media.panel, mentions.panel, h(T.Composer, {
+    composer = h(Frag, null, media.panel, mentions.panel, voice.panel, h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: mentions.onChange, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left'
         : g.live ? h(ComposerLimit, { ban: g.live.tempBan, cooldown: g.live.cooldown, rate: g.live.rate, bypass: !!rights.bypass }) : null,
@@ -204,6 +209,7 @@ function GroupView(p) {
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
       // An edit changes only the text: the picked file waits for the next message.
       onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
+      attachMenu: kind === 'edit' ? null : attachMenu(attach, voice),
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
@@ -222,10 +228,11 @@ function GroupView(p) {
 
   var waitingCount = LIVE && !g.membersLoaded && !g.liveCount;
   return h(Frag, null,
-    h('main', { className: 'main' },
+    h('main', { className: 'main', style: g.accent ? accentScope(g.accent, app.theme) : undefined },
       h('header', { className: 'topbar' },
-        h(MobileNavButton, null),
-        h('h1', null, g.id),
+        // A pane beside or a floating window has no navigation of its own.
+        p.onClose ? null : h(MobileNavButton, null),
+        h(p.onClose ? 'h2' : 'h1', { className: 'pane-title' }, g.id),
         g.topic ? h(Frag, null, h('span', { className: 'vsep' }), h('p', { className: 'topic' }, g.topic)) : null,
         // The topic pushes the buttons to the right on desktop: without one, this spacer does it.
         h('span', { className: g.topic ? 'grow only-mobile' : 'grow' }),
@@ -238,24 +245,48 @@ function GroupView(p) {
           label: 'Group options', items: [
             staff ? { label: 'Group settings', icon: 'sliders', onSelect: function () { app.nav({ view: 'gsettings', id: g.id, page: myRole === 'owner' || rights.manageMods ? 'overview' : 'automod' }); } } : null,
             { label: g.favorite ? 'Remove from favorites' : 'Add to favorites', icon: 'star', onSelect: function () { app.actions.toggleFavorite(g.id); } },
+            { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } },
+            popOutItem(app, { view: 'group', id: g.id }),
+            spacesItem(app, { view: 'group', id: g.id }),
+            { label: 'Group color…', icon: 'palette', onSelect: function () { setColorOpen(true); } },
             { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com'); }); } },
             { divider: true },
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
           ]
-        })),
+        }),
+        p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
       prefs.announcements && ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
         h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } },
           // The text as key: a new announcement shows collapsed.
           h(AnnouncementText, { key: annText, text: annText }), LIVE && ann.embeds.length ? h(MessageEmbeds, { embeds: ann.embeds }) : null)) : null,
       search != null ? h('div', { className: 'searchbar' },
-        h('label', { htmlFor: 'gsearch', className: 'tc-sr' }, 'Search messages'),
-        h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
+        h('label', { htmlFor: 'gsearch-' + g.id, className: 'tc-sr' }, 'Search messages'),
+        h('input', { id: 'gsearch-' + g.id, className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
         h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
     column.open ? h(MembersPanel, { g: g }) : null,
-    infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null);
+    infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null,
+    colorOpen ? h(GroupColorDialog, { g: g, onClose: function () { setColorOpen(false); } }) : null,
+    sharedOpen ? h(SharedMediaDialog, {
+      where: '#' + g.id, messages: g.messages.filter(function (m) { return m.kind === 'msg' && shown(m) && !hiddenByChannel(m) && !(isHiddenAuthor(s, m.author) && !revealed[m.id]); }),
+      authorOf: groupAuthorOf, onJump: function (id) { var o = findMsg(g, id); if (o) jumpTo(o); }, onClose: function () { setSharedOpen(false); }
+    }) : null);
+}
+
+function groupAuthorOf(m) { return m.author; }
+
+function GroupColorDialog(p) {
+  var app = useApp(), g = p.g;
+  function set(hex) { app.actions.setGroupAccent(g.id, hex); }
+  return h(Dialog, {
+    title: 'Group color', description: 'Buttons, mentions and links in #' + g.id + ' use it, and the group shows it in the sidebar. Only you see it.', onClose: p.onClose,
+    footer: [
+      h(T.Button, { key: 'r', variant: 'ghost', disabled: !g.accent, onClick: function () { set(null); } }, 'Use the app accent'),
+      h(T.Button, { key: 'd', variant: 'primary', onClick: p.onClose }, 'Done')
+    ]
+  }, h('div', { className: 'dialog-body' }, h(AccentSwatches, { label: 'Group color', value: g.accent, fallback: app.state.prefs.accent, onChange: set })));
 }
 
 /**

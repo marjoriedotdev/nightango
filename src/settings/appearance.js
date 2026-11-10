@@ -6,7 +6,6 @@ function AppearancePage() {
     ['light', 'Light', ['#fdfcfa', '#f2f0f7', '#c6c2d1', '#d6d2df', '#ffffff']],
     ['system', 'Match system', null]
   ];
-  var accents = [['Ember', '#f27a3f'], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
   function thumb(c) {
     if (!c) return h('span', { className: 'thumb', 'aria-hidden': 'true', style: { border: '1px solid var(--border-strong)' } },
       h('span', { style: { flex: 1, background: '#f2f0f7' } }), h('span', { style: { flex: 1, background: '#0d1427' } }));
@@ -28,7 +27,6 @@ function AppearancePage() {
     }).catch(function () { app.ui.toast('This file is not a BetterChatango theme. Export one from the old theme editor and try again.'); });
   }
   var custom = prefs.customThemes || [];
-  var palette = accents.some(function (a) { return a[1] === prefs.accent; });
   return h(Page, { title: 'Appearance', lede: 'Saved on this device.' },
     h(T.SettingsSection, { title: 'Theme', padded: true },
       h('div', { className: 'grid3', role: 'radiogroup', 'aria-label': 'Theme' }, themes.map(function (t) {
@@ -36,16 +34,7 @@ function AppearancePage() {
           thumb(t[2]), h('span', { className: 'pick-title' }, t[1]));
       }))),
     h(T.SettingsSection, { title: 'Accent color', description: 'Buttons, mentions and unread markers. Text on it is adjusted for contrast.', padded: true },
-      h('div', { className: 'swatches', role: 'radiogroup', 'aria-label': 'Accent color' },
-        accents.map(function (a) {
-          var on = prefs.accent === a[1];
-          return h('button', { key: a[1], type: 'button', role: 'radio', className: 'sw-dot', 'aria-checked': String(on), 'aria-label': a[0], title: a[0], style: { background: a[1] }, onClick: function () { pr.set('accent', a[1]); } },
-            on ? h(T.Icon, { name: 'check', size: 16, strokeWidth: 2.6, style: { color: contrast(hexToRgb(a[1]), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff' } }) : null);
-        }),
-        h('span', { className: 'vsep', style: { margin: '0 4px' } }),
-        h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } },
-          h('input', { type: 'color', className: 'color-in', value: prefs.accent, 'aria-label': 'Custom accent color', onChange: function (e) { pr.set('accent', e.target.value); }, style: !palette ? { boxShadow: '0 0 0 2px var(--bg), 0 0 0 4px var(--text)' } : null }),
-          'Custom'))),
+      h(AccentSwatches, { label: 'Accent color', value: prefs.accent, fallback: prefs.accent, onChange: function (v) { pr.set('accent', v); } })),
     h(T.SettingsSection, { title: 'Sky', description: 'Computed on this device, without a network request.' },
       h(T.SettingRow, {
         title: 'Moon', description: "Next to the Nightango name. Day dividers show each night's moon.",

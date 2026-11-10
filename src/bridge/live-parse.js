@@ -18,7 +18,7 @@ var decoder = document.createElement('textarea');
 
 function decodeHtml(html) { decoder.innerHTML = html; return decoder.value; }
 function fileUrlPattern(extensions) { return new RegExp('^https:\\/\\/\\S+\\.(?:' + extensions + ')(?:[?#]\\S*)?$', 'i'); }
-var IMAGE_URL = fileUrlPattern('png|apng|jpe?g|gif|bmp|webp'), VIDEO_URL = fileUrlPattern('mp4|webm'), AUDIO_URL = fileUrlPattern('mp3|ogg|wav');
+var IMAGE_URL = fileUrlPattern('png|apng|jpe?g|gif|bmp|webp'), GIF_URL = fileUrlPattern('gif'), VIDEO_URL = fileUrlPattern('mp4|webm'), AUDIO_URL = fileUrlPattern('mp3|ogg|wav');
 // BetterChatango regex (inject.js:8256) applied to a single link: case-sensitive and open to http, only the id is kept.
 var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|\/\w+\/|\/)([\w-]{11})/;
 // TikTok post or short link: the embed player needs the post id, which only the redirect of a short link gives.
