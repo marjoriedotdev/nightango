@@ -220,7 +220,8 @@ const MSGBG = {
   trap: '<?xml version="1.0" ?><bgi bgc="red;background:url(https://evil.test/a.png)" bgalp="100" useimg="1" ialp="250" align="constructor" tile="1" url="https://evil.test/b.jpg" onload="alert(1)"/>',
   pale: '<?xml version="1.0" ?><bgi bgc="336699" bgalp="0" useimg="1" ialp="-20" align="tl" tile="0" hasrec="0" isvid="0"/>'
 };
-const RELEASES_LATEST = 'https://api.github.com/repos/marjoriedotdev/nightango/releases/latest';
+const RELEASES_GITHUB = 'https://api.github.com/repos/marjoriedotdev/nightango/releases/latest';
+const RELEASES_GITLAB = 'https://gitlab.com/api/v4/projects/marjoriedotdev%2Fnightango/releases?order_by=released_at&sort=desc&per_page=20';
 // vissle linked accounts: response body, null for a network failure, whoHold holds back the response.
 let whoBody = '{}', whoHold = null;
 w.fetch = (url, opts) => {
@@ -245,7 +246,9 @@ w.fetch = (url, opts) => {
   else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
-  else if (url === RELEASES_LATEST) { body = '{"tag_name":"v99.0.0"}'; type = 'application/json'; }
+  // GitHub is behind GitLab, whose newest release is a beta the update check must skip.
+  else if (url === RELEASES_GITHUB) { body = '{"tag_name":"v98.0.0"}'; type = 'application/json'; }
+  else if (url === RELEASES_GITLAB) { body = '[{"tag_name":"v100.0.0-beta.1"},{"tag_name":"v99.0.0"},{"tag_name":"v98.0.0"}]'; type = 'application/json'; }
   else if (/^https:\/\/api\.vissle\.me\/v1\/pmr\//.test(url)) { body = '{"pmr":true}'; type = 'application/json'; }
   else if (/^https:\/\/vissle\.me\/api\/v1\/who\//.test(url)) { if (whoBody === null) return Promise.reject(new w.TypeError('Failed to fetch')); body = whoBody; type = 'application/json'; }
   const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body), json: () => Promise.resolve(body).then(JSON.parse) };
@@ -351,8 +354,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
   CH.getBackground({ username: 'alice', node: d.createElement('div') });
   await until(() => !!byText('.toast', 'Nightango 99.0.0 is available.'));
-  const releaseAsks = fetches.filter(x => x.url === RELEASES_LATEST);
-  step('newer release announced once at sign-in, without credentials', !!byText('.toast', 'Nightango 99.0.0 is available.') && releaseAsks.length === 1 && !releaseAsks[0].credentials, releaseAsks);
+  const releaseAsks = fetches.filter(x => x.url === RELEASES_GITHUB || x.url === RELEASES_GITLAB);
+  step('newest stable release of GitHub and GitLab announced once at sign-in, past a newer beta, each host asked once without credentials',
+    !!byText('.toast', 'Nightango 99.0.0 is available.') && releaseAsks.length === 2 && releaseAsks[0].url !== releaseAsks[1].url && releaseAsks.every(x => !x.credentials), releaseAsks);
   step("BetterChatango's own oEmbed and message background requests muted", fetches.length === fetchesAtLogin, fetches.slice(fetchesAtLogin).map(x => x.url));
   // Like BetterChatango 6 s after sign-in, with PMs at startup on (inject.js:1365-1369).
   if (C.settings.privacy.private_messages.connect_start) d.querySelector('[data-sidebar="private"]').click();

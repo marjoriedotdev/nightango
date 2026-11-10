@@ -1,15 +1,49 @@
 /* ---------- Root ---------- */
 var IDLE_DELAY = 3 * MIN;
-var RELEASES_URL = REPO_URL + '/releases/';
-
 /**
- * Reads the version of the latest Nightango release published on GitHub.
+ * Returns the first stable version of a list of release tags.
+ * @param {Array} tags Tags newest first, untrusted.
+ * @returns {?string} Version without its v, null if no tag is vX.Y.Z.
+ */
+function firstStableVersion(tags) {
+  for (var i = 0; i < tags.length; i++) { var m = /^v(\d+\.\d+\.\d+)$/.exec(tags[i]); if (m) return m[1]; }
+  return null;
+}
+/**
+ * Reads the version of the latest stable Nightango release published on GitHub.
  * @returns {Promise<?string>} Version without its v, null if the reply does not give one.
  */
-function fetchLatestVersion() {
+function latestGithubVersion() {
   return fetch('https://api.github.com/repos/marjoriedotdev/nightango/releases/latest').then(function (r) {
     if (!r.ok) return null;
-    return r.json().then(function (data) { var m = /^v(\d+\.\d+\.\d+)$/.exec(data && data.tag_name); return m ? m[1] : null; });
+    return r.json().then(function (data) { return firstStableVersion([data && data.tag_name]); });
+  });
+}
+/**
+ * Reads the version of the latest stable Nightango release published on GitLab.
+ * @returns {Promise<?string>} Version without its v, null if the reply does not give one.
+ */
+function latestGitlabVersion() {
+  return fetch('https://gitlab.com/api/v4/projects/marjoriedotdev%2Fnightango/releases?order_by=released_at&sort=desc&per_page=20').then(function (r) {
+    if (!r.ok) return null;
+    // GitLab has no prerelease flag: a beta can be the newest release, the first stable tag is the latest version.
+    return r.json().then(function (list) { return firstStableVersion(Array.isArray(list) ? list.map(function (x) { return x && x.tag_name; }) : []); });
+  });
+}
+var RELEASE_PAGES = { github: REPO_URLS.github + '/releases/tag/v', gitlab: REPO_URLS.gitlab + '/-/releases/v' };
+/**
+ * Asks GitHub and GitLab for their latest stable release and keeps the newest one. A host that fails is noted in the diagnostic journal.
+ * @returns {Promise<?{version: string, url: string}>} Version and its release page, null if neither host gives one.
+ */
+function fetchLatestRelease() {
+  function from(host, read) {
+    return read().then(function (v) { return v ? { version: v, url: RELEASE_PAGES[host] + v } : null; }, function () {
+      if (JOURNAL) JOURNAL.add('app', 'Update check failed on ' + host);
+      return null;
+    });
+  }
+  return Promise.all([from('github', latestGithubVersion), from('gitlab', latestGitlabVersion)]).then(function (found) {
+    return found.reduce(function (best, x) { return x && (!best || isNewerVersion(x.version, best.version)) ? x : best; }, null);
   });
 }
 
@@ -184,9 +218,9 @@ function useUpdateCheck(loggedIn, toast) {
   useEffect(function () {
     if (!LIVE || !loggedIn || updateChecked.current) return;
     updateChecked.current = true;
-    fetchLatestVersion().then(function (v) {
-      if (v && isNewerVersion(v, APP_VERSION)) toast('Nightango ' + v + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(RELEASES_URL + 'tag/v' + v, '_blank', 'noopener'); } } });
-    }).catch(function () { if (JOURNAL) JOURNAL.add('app', 'Update check failed'); });
+    fetchLatestRelease().then(function (latest) {
+      if (latest && isNewerVersion(latest.version, APP_VERSION)) toast('Nightango ' + latest.version + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(latest.url, '_blank', 'noopener'); } } });
+    });
   }, [loggedIn]);
 }
 
