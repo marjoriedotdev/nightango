@@ -2,6 +2,25 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.34.0] - 2026-11-10
+
+### Added
+
+- Group color… in a group's menu gives the group its own color, in its view and next to its name in the sidebar. Only you see it.
+- Media and links, in a group's or a conversation's menu, lists the images, videos, posts and links shared in the loaded messages. A click goes to the message.
+- A GIF tab in the emoticon picker: paste a GIF link, pick from GIFs seen in your chats or from your media. GIFs play only while you hover them.
+- A private note and label on a member's profile. The label shows next to their name in the member list. Only you see them, and Privacy deletes them all.
+- Voice messages: the plus button of the message box records up to a minute, lets you listen, then attaches it like a file.
+- Open side by side, from a right click in the sidebar or a Chats row, shows a second conversation next to the first on a wide screen. Shift Enter in Search or jump to does the same.
+- Pop out, in a group's or a conversation's menu, opens it in a small window that stays on top of your other windows.
+- Spaces gather some groups and private messages under a name. The bar under Search or jump to switches between them and shows their unread conversations.
+
+### Changed
+
+- The paperclip of the message box is now a plus button with Attach a file and Record a voice message.
+- The update check looks for new versions on GitHub and on GitLab.
+- About Nightango links the source code on GitHub and on GitLab.
+
 ## [0.33.2] - 2026-11-05
 
 ### Fixed
