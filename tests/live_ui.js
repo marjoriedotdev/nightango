@@ -2341,6 +2341,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && !!denied && denied.text.includes('Your session expired') && !calls.some(c => c[0] === 'alert'),
     { kicked, hereAsked, afterHere, offline, onlineReconnects, lost, denied, alerts: calls.filter(c => c[0] === 'alert').length });
 
+  step('no bridge operation failed to apply during the scenario', opFailures.length === 0, opFailures);
   console.log(log.join('\n'));
   console.log('ERRORS: ' + (errors.length ? '\n' + errors.join('\n') : 'none'));
   process.exit(log.some(l => l.indexOf('FAIL') === 0) || errors.length ? 1 : 0);
