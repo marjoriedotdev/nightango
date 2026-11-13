@@ -268,7 +268,7 @@ function useLiveOps(k) {
       case 'session': update(function (d) {
         if (!d.session || SESSION_RANK[op.reason] >= SESSION_RANK[d.session.reason]) d.session = { reason: op.reason, attempts: 0 };
       }); break;
-      case 'visible': if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
+      case 'visible': k.inbox.readInView(); if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
       case 'online':
         reconnection.reconnectClosed();
         update(function (d) {

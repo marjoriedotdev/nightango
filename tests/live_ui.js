@@ -714,6 +714,18 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!byText('.toast', 'has a lot of users'));
   const offBridge = { register: !!byText('.toast', 'not a registered group'), crowded: !!byText('.toast', 'has a lot of users'), buttons: $$('.toast button').map(b => b.textContent).filter(x => x === 'Register' || x === 'Continue') };
   step('BetterChatango notices that register a group or reconnect outside the bridge give no button', !offBridge.register && offBridge.crowded && !offBridge.buttons.length, offBridge);
+  /* Hidden tab: a mention in the group in front counts in the title, and is read once the tab is back in front */
+  const tabCount = () => +((/^\((\d+)\) /.exec(d.title) || [])[1] || 0);
+  const tabBefore = tabCount();
+  Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
+  g('b', 'test', ['1700009200.1', 'Alice', '', 'u1', 'UNIDH', 'tmp92', '1.2.3.4', '0', '', '<n000/><f x11000="0">@marjorie while you were away']);
+  g('u', 'test', ['tmp92', 'H-I_D=']);
+  await wait(80);
+  const tabAway = tabCount();
+  delete d.visibilityState;
+  d.dispatchEvent(new w.Event('visibilitychange')); await wait(80);
+  step('a mention received in the group in front while the tab is hidden counts in the title, and is read when the tab comes back',
+    tabAway === tabBefore + 1 && tabCount() === tabBefore, { tabBefore, tabAway, back: tabCount(), title: d.title });
   const connBanner = () => { const el = $('.conn-banner'); return el ? { phase: el.dataset.phase, text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   C.groups.test.socket.readyState = 3; await wait(2300);
   const lostBanner = connBanner();
