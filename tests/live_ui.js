@@ -693,6 +693,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Warnings and connection */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
   step('BetterChatango notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
+  /* Journal: a notice that carries a linked accounts result or the arguments of a Chatango frame is noted without its text */
+  const noticesFrom = journal.length;
+  C.systemMessage({ content: '2 total records for <b>zoe</b>.\r\r<b>Definite</b>\rkim, ola', avatar: 'eye', unique: 'who' });
+  await wait(30);
+  C.systemMessage({ username: 'Chatango', content: 'maintenance:in:5' });
+  await wait(30);
+  const keptNotes = journal.slice(noticesFrom).map(e => e.m);
+  step('journal notes a linked accounts result and a Chatango broadcast without their text', keptNotes.length === 2 && !keptNotes.some(m => /zoe|kim|ola|maintenance/.test(m)), keptNotes);
   let reloads = 0;
   C.setNotice({ icon: 'warning', content: 'Relogin required.', button: 'Reload', action: () => { reloads++; } }); await until(() => !!byText('.toast', 'Relogin required.'));
   const t = byText('.toast', 'Relogin required.');

@@ -302,10 +302,11 @@ var liveBridge = (function () {
 
   /* BetterChatango warnings: server refusals, lost connection, limits */
   var lastAlert = { text: '', at: 0 };
-  function alertOnce(op) {
+  function alertOnce(op, unkept) {
     if (op.text === lastAlert.text && Date.now() - lastAlert.at < 2500) return;
     lastAlert = { text: op.text, at: Date.now() };
-    note('BetterChatango notice: ' + op.text);
+    // Neither a linked accounts result nor the arguments of a frame reach the journal (ADR-0010, ADR-0011).
+    note('BetterChatango notice: ' + (unkept ? '(text not kept)' : op.text));
     emit(op);
   }
   var QUIET = [/^Start a conversation/i, /^Private messages$/i, /^You have logged in to private messages elsewhere/i];
@@ -317,7 +318,7 @@ var liveBridge = (function () {
           var text = String(data && data.content || '').replace(/\r/g, ' ').trim();
           // Friend presence (unique status): BetterChatango meant it for the open PM, with no group. The friend list already shows it.
           var presence = data && data.unique === 'status';
-          if (text && !presence && !QUIET.some(function (re) { return re.test(text); })) alertOnce({ op: 'notice', gid: (data && data.group) || C.focus, text: text });
+          if (text && !presence && !QUIET.some(function (re) { return re.test(text); })) alertOnce({ op: 'notice', gid: (data && data.group) || C.focus, text: text }, !!(data.unique || data.username));
         } catch (e) { warn(e); }
         return sys.apply(this, arguments);
       };
