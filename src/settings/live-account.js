@@ -199,7 +199,8 @@ function PrivacyPageLive() {
   var checking = !!(pmr && pmr.pmrCheck);
   // Also runs when the setting is turned off: pmrStatus then returns null, which removes the status and the PM banner.
   useEffect(function () { app.actions.checkPmr(); }, [checking]);
-  return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
+  return h(Page, { title: 'Privacy', lede: PRIVACY_LEDE },
+    h(ChatangoPmSection, null),
     h(T.SettingsSection, { title: 'Private messages' },
       pmr ? h(T.SettingRow, {
         title: 'Check my private message status', description: checking ? PMR_STATUS[app.state.pmrStatus] : null,

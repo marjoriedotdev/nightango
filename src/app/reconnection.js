@@ -103,7 +103,7 @@ function useReconnection(stateRef, update) {
     // Only an open connection that closes starts the sequence: a failure at startup or a left group does not.
     var was = connOf(stateRef.current, op.gid);
     if (op.state === 'open') stopRetry(op.gid);
-    else if (op.state === 'closed' && (was === 'open' || was === 'connecting' && retries.current[op.gid])) scheduleRetry(op.gid, was === 'open');
+    else if (op.state === 'closed' && !op.never && (was === 'open' || was === 'connecting' && retries.current[op.gid])) scheduleRetry(op.gid, was === 'open');
   }
   return { reconnect: reconnect, startRetries: startRetries, reconnectClosed: reconnectClosed, follow: follow };
 }

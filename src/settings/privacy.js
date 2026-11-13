@@ -1,7 +1,8 @@
 function PrivacyPage() {
   if (LIVE) return h(PrivacyPageLive, null);
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
-  return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
+  return h(Page, { title: 'Privacy', lede: PRIVACY_LEDE },
+    h(ChatangoPmSection, null),
     h(T.SettingsSection, { title: 'Private messages' },
       h(PmHistoryRows, null),
       h(T.SettingRow, {
@@ -23,6 +24,31 @@ function NotesSection() {
       asLabel: false, title: 'Delete private notes', description: count ? plural(count, 'note', 'notes') + ' on members, kept in this browser. Nobody else sees them.' : 'No note yet. Add one from a member profile.',
       control: h(T.Button, { variant: 'danger', size: 'sm', disabled: !count, onClick: function () { app.ui.confirm({ title: 'Delete private notes?', body: 'Every label and note you wrote on members of this account is removed from this browser.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.clearNotes }); } }, 'Delete all')
     }));
+}
+
+var PRIVACY_LEDE = 'Who can reach you, and what Nightango keeps in this browser.';
+// Labels to confirm on a real account before release (#83): what disable_idle_time hides, and whether allow_anon covers guests.
+var CHATANGO_PM_ROWS = [
+  ['hideIdle', 'Hide my idle time', "People don't see how long you've been away."],
+  ['allowAnon', 'Allow anonymous messages', 'People without a Chatango account can message you.'],
+  ['emailOffline', 'Email me messages I get while offline', 'Chatango sends them to the email of your account.']
+];
+
+/**
+ * PM settings saved on the Chatango account, each switch showing only what Chatango confirmed.
+ */
+function ChatangoPmSection() {
+  var app = useApp(), values = app.state.pmSettings, save = app.state.pmSettingSave;
+  var pending = !!save && !save.failed;
+  return h(T.SettingsSection, { title: 'Chatango account', description: 'Saved on your Chatango account. They apply wherever you use Chatango.' },
+    values ? CHATANGO_PM_ROWS.map(function (r) {
+      var mine = !!save && save.key === r[0];
+      var desc = mine && pending ? 'Waiting for Chatango to confirm.' : mine ? h('span', { className: 'row-error' }, "Chatango didn't confirm this change. Try again.") : r[2];
+      return h(T.SettingRow, {
+        key: r[0], title: r[1], description: desc,
+        control: h(T.Switch, { checked: values[r[0]], disabled: pending, onChange: function (e) { app.actions.setPmSetting(r[0], e.target.checked); } })
+      });
+    }) : h('p', { className: 'pal-empty' }, 'Loads once private messages are connected.'));
 }
 
 function BrowserTabSection() {

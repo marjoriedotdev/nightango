@@ -14,7 +14,7 @@ function GSStaff(p) {
   function setPerms(n, perms) { p.edit(function (d) { d.modFlags[n] = permsToFlags(perms, d.modFlags[n]); d.staff[n] = roleOfFlags(d.modFlags[n]); }); }
   function addMod() {
     var n = add.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,20}$/.test(n)) { setErr('Enter a Chatango username.'); return; }
+    if (!ACCOUNT_NAME.test(n)) { setErr('Enter a Chatango username.'); return; }
     if (n === owner) { setErr(shownName(app.state, n) + ' owns the group.'); return; }
     if (draft.modFlags[n] != null) { setErr(shownName(app.state, n) + ' is already on staff.'); return; }
     p.edit(function (d) { d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); d.staff[n] = 'mod'; });

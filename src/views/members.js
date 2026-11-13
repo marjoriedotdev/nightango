@@ -176,7 +176,7 @@ function personActionGroups(actions) {
  * @param {?string} gid Group the profile is opened from.
  */
 function useProfileActions(name, gid) {
-  var app = useApp(), s = app.state, u = userOf(s, name), busy = !!s.friendAdds[name];
+  var app = useApp(), s = app.state, u = userOf(s, name), busy = !!ownOf(s.friendAdds, name);
   var g = gid ? s.groups[gid] : null;
   var inDm = isPaneOpen(s, 'dm', name);
   var friendLabel = busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend';

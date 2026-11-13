@@ -69,7 +69,7 @@ w.WebSocket.prototype.receive = function (frame) { if (this.readyState === 1) th
 // Held: client.connect opens a socket like socketEvent, whose ok registers the group and whose inited settles the attempt.
 let connectHeld = false;
 const groupHandlers = ['b', 'i', 'u', 'ok', 'mods', 'inited', 'groupflagsupdate', 'getannc', 'annc', 'bw', 'blocklist', 'unblocklist', 'blocked', 'unblocked', 'allunblocked', 'bansearchresult', 'badbansearchstring', 'modactions', 'nomore', 'delete', 'deleteall', 'clearall', 'g_participants', 'participant', 'n', 'denied', 'updgroupinfo', 'msglexceeded'];
-const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff', 'premium'];
+const privHandlers = ['OK', 'presence', 'msg', 'msgoff', 'wl', 'wladd', 'wldelete', 'wlonline', 'wloffline', 'idleupdate', 'block_list', 'unblocked', 'show_fw', 'kickingoff', 'settings', 'premium'];
 // Record of the BetterChatango history database (saveMessage): key ts, the frame timestamp.
 const pmRecord = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const pmRecords = [
@@ -693,12 +693,39 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Warnings and connection */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
   step('BetterChatango notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
+  /* Journal: a notice that carries a linked accounts result or the arguments of a Chatango frame is noted without its text */
+  const noticesFrom = journal.length;
+  C.systemMessage({ content: '2 total records for <b>zoe</b>.\r\r<b>Definite</b>\rkim, ola', avatar: 'eye', unique: 'who' });
+  await wait(30);
+  C.systemMessage({ username: 'Chatango', content: 'maintenance:in:5' });
+  await wait(30);
+  const keptNotes = journal.slice(noticesFrom).map(e => e.m);
+  step('journal notes a linked accounts result and a Chatango broadcast without their text', keptNotes.length === 2 && !keptNotes.some(m => /zoe|kim|ola|maintenance/.test(m)), keptNotes);
   let reloads = 0;
   C.setNotice({ icon: 'warning', content: 'Relogin required.', button: 'Reload', action: () => { reloads++; } }); await until(() => !!byText('.toast', 'Relogin required.'));
   const t = byText('.toast', 'Relogin required.');
   step('BetterChatango warning becomes a toast with its action', !!t && !!byText('.toast button', 'Reload'));
   click(byText('.toast button', 'Reload'));
   step('toast action calls BetterChatango', reloads === 1);
+  /* Notices whose button leaves the bridge: registration posts to vissle, Continue connects outside the bridge */
+  let outside = 0;
+  C.setNotice({ icon: 'warning', content: '#test is not a registered group.', button: 'Register', action: () => { outside++; } });
+  C.setNotice({ icon: 'warning', content: '#test has a lot of users', button: 'Continue', action: () => { outside++; } });
+  await until(() => !!byText('.toast', 'has a lot of users'));
+  const offBridge = { register: !!byText('.toast', 'not a registered group'), crowded: !!byText('.toast', 'has a lot of users'), buttons: $$('.toast button').map(b => b.textContent).filter(x => x === 'Register' || x === 'Continue') };
+  step('BetterChatango notices that register a group or reconnect outside the bridge give no button', !offBridge.register && offBridge.crowded && !offBridge.buttons.length, offBridge);
+  /* Hidden tab: a mention in the group in front counts in the title, and is read once the tab is back in front */
+  const tabCount = () => +((/^\((\d+)\) /.exec(d.title) || [])[1] || 0);
+  const tabBefore = tabCount();
+  Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
+  g('b', 'test', ['1700009200.1', 'Alice', '', 'u1', 'UNIDH', 'tmp92', '1.2.3.4', '0', '', '<n000/><f x11000="0">@marjorie while you were away']);
+  g('u', 'test', ['tmp92', 'H-I_D=']);
+  await wait(80);
+  const tabAway = tabCount();
+  delete d.visibilityState;
+  d.dispatchEvent(new w.Event('visibilitychange')); await wait(80);
+  step('a mention received in the group in front while the tab is hidden counts in the title, and is read when the tab comes back',
+    tabAway === tabBefore + 1 && tabCount() === tabBefore, { tabBefore, tabAway, back: tabCount(), title: d.title });
   const connBanner = () => { const el = $('.conn-banner'); return el ? { phase: el.dataset.phase, text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   C.groups.test.socket.readyState = 3; await wait(2300);
   const lostBanner = connBanner();
@@ -1038,14 +1065,21 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(50);
   C.groups.test.socket.readyState = 3;
   type(editBox(), 'Lost in test'); key(editBox(), 'Enter'); await wait(30);
-  const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test.") };
+  const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test."), draft: editBox().value };
+  type(editBox(), '');
+  /* Focus on a closed group: BetterChatango would start its own join there (inject.js:5988) */
+  const focusFrom = calls.length;
+  click(byText('.tc-nav', 'edits')); await wait(50);
+  click(byText('.tc-nav', 'test')); await wait(50);
+  const closedFocus = calls.slice(focusFrom).filter(c => c[0] === 'focus').map(c => c[1]);
+  step('showing a group whose connection is not open leaves the BetterChatango focus alone', closedFocus.indexOf('test') < 0 && closedFocus.indexOf('edits') >= 0, closedFocus);
   C.groups.test.socket.readyState = 1;
   step('pm, upload, block, status and group message on a connection that is not open send nothing, keep the text and the state, and say so',
     !sent.slice(closedFrom).length && JSON.stringify(fayStill) === JSON.stringify(fayShown)
       && lostUpload.toast && lostUpload.copy && lostUpload.draft === 'Caption https://vissle.me/abc/f.png' && !lostUpload.otherToast
       && lostPm.draft === 'Lost words' && lostPm.toast
       && lostBlock.toast && !lostBlock.done && lostBlock.composer
-      && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast,
+      && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast && lostGroup.draft === 'Lost in test',
     { sent: sent.slice(closedFrom), fayShown, fayStill, lostUpload, lostPm, lostBlock, statusBefore, lostStatus, lostGroup });
 
   /* Sent PM archived under its recipient: an upload lets the user switch to another PM or to a group before its link leaves */
@@ -1065,12 +1099,28 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.conv', 'fay')); await wait(50);
   const toOtherPm = await uploadThenShow('Late for fay', () => byText('.conv', 'dave'));
   click(byText('.conv', 'fay')); await wait(50);
+  /* No history database: BetterChatango's send would throw on its archive once the frame has left and announce a failure, so the PM leaves without its focus */
+  const historyDb = C.database.pm; C.database.pm = false;
+  type(pmBox(), 'No archive'); key(pmBox(), 'Enter'); await until(() => pmLeft('No archive'));
+  C.database.pm = historyDb;
+  const noArchive = { left: pmLeft('No archive'), under: archivedUnder('No archive'), focus: C.private.focus };
+  step('a pm sent without a history database leaves without the focus BetterChatango archives under, which comes back after the send',
+    noArchive.left && !noArchive.under.length && noArchive.focus === 'fay', noArchive);
   const toGroup = await uploadThenShow('Late again', () => byText('.tc-nav', 'test'));
   step('a pm that leaves after a switch to another pm or to a group is archived under its recipient, then BetterChatango gets back the shown conversation',
     JSON.stringify(toOtherPm) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: 'dave', focus: 'dave' })
       && JSON.stringify(toGroup) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: false, focus: false }),
     { toOtherPm, toGroup });
 
+  /* Own message from another device, in a group that is not shown: neither unread nor a mention */
+  const editsNav = () => { const el = byText('.tc-nav', 'edits'); return { count: (el.querySelector('.tc-count') || {}).textContent || '', unread: el.classList.contains('tc-nav-unread') }; };
+  const editsBefore = editsNav();
+  g('b', 'edits', ['1700009300.1', 'Marjorie', '', 'u0', 'UNIDO', 'tmp93', '9.9.9.9', '0', '', '<n000/><f x11000="0">@marjorie note from my phone']);
+  g('u', 'edits', ['tmp93', 'O-W_N=']);
+  await wait(80);
+  const ownElsewhere = { before: editsBefore, after: editsNav(), toast: !!byText('.toast', 'mentioned you in #edits') };
+  step('own message received from another device counts neither as unread nor as a mention',
+    JSON.stringify(ownElsewhere.after) === JSON.stringify(ownElsewhere.before) && !ownElsewhere.toast, ownElsewhere);
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000270.1', 'Eve', '', 'u7', 'UNID7', 'tmp13', '9.9.9.9', '0', '', '<n000/><f x11000="2">Look at this']);
   g('b', 'test', ['1700000271.1', 'Eve', '', 'u7', 'UNID7', 'tmp14', '9.9.9.9', '0', '', '<n000/><f x11000="0"><i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/>']);
@@ -1603,6 +1653,16 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await until(() => !!byText('.toast', 'Nothing was saved') || profileUpdates().length > 0);
   fullDown.toast = !!byText('.toast', 'could not be read. Nothing was saved'); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
   step('full profile server error: saving another field sends nothing', fullDown.failed && fullDown.toast && fullDown.sent.length === 0, fullDown);
+  /* Refused or rate-limited read: the same, a 4xx other than 404 is not a missing file */
+  ownMod2Status = 429;
+  const refusedFrom = profileUpdates().length;
+  click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
+  click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc'));
+  type($('#pf-loc'), 'Nantes'); await until(() => !!$('.tc-savebar'));
+  // The toast of the case above is still shown: only a post tells that this save went out.
+  click($('.tc-savebar .tc-btn-primary')); await until(() => profileUpdates().length > refusedFrom, 1500);
+  const fullRefused = { sent: profileUpdates().slice(refusedFrom).map(p => p.f.full_profile) };
+  step('full profile refused (429): saving another field sends nothing', fullRefused.sent.length === 0, fullRefused);
   betterChatangoFull.value = 'FULL PAGE'; ownMod2Status = 200;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
   click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc') && $('#pf-loc').value === 'Rouen');
@@ -1673,6 +1733,28 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { on: true, status: null, asked: [] }, { on: true, status: PMR_TEXT, asked: PMR_URL },
     { on: false, status: null, asked: PMR_URL, betterChatango: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
   ]), pmrSeen);
+
+  /* Chatango account PM settings: a switch follows the settings reply only, setsettings in chadango's format */
+  const ACCOUNT_ROWS = ['Hide my idle time', 'Allow anonymous messages', 'Email me messages I get while offline'];
+  const accountRow = title => $$('section[aria-label="Chatango account"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title);
+  const accountView = () => ACCOUNT_ROWS.map(t => {
+    const r = accountRow(t), sw = r && r.querySelector('[role=switch]');
+    return r ? (sw.checked ? 'on' : 'off') + (sw.disabled ? ' pending' : '') + ((r.querySelector('.tc-row-desc') || {}).textContent === "Chatango didn't confirm this change. Try again." ? ' failed' : '') : null;
+  });
+  const accountSeen = [accountView()];
+  pm('settings', ['disable_idle_time', 'off', 'allow_anon', 'on', 'email_offline_msg', 'off']); await wait(50);
+  accountSeen.push(accountView());
+  const sentBeforeAccount = sent.length;
+  if (accountRow(ACCOUNT_ROWS[0])) { click(accountRow(ACCOUNT_ROWS[0]).querySelector('[role=switch]')); await wait(50); }
+  const accountFrames = sent.slice(sentBeforeAccount).map(x => x[0] + ' ' + x[1]);
+  accountSeen.push(accountView());
+  pm('settings', ['disable_idle_time', 'on', 'allow_anon', 'on', 'email_offline_msg', 'off']); await wait(50);
+  accountSeen.push(accountView());
+  if (accountRow(ACCOUNT_ROWS[2])) { click(accountRow(ACCOUNT_ROWS[2]).querySelector('[role=switch]')); await wait(50); }
+  pm('settings', ['disable_idle_time', 'on', 'allow_anon', 'on', 'email_offline_msg', 'off']); await wait(50);
+  accountSeen.push(accountView());
+  step('Chatango PM settings change only once the settings reply confirms them', JSON.stringify(accountFrames) === JSON.stringify(['private_message setsettings:disable_idle_time:on', 'private_message settings'])
+    && JSON.stringify(accountSeen) === JSON.stringify([[null, null, null], ['off', 'on', 'off'], ['off pending', 'on pending', 'off pending'], ['on', 'on', 'off'], ['on', 'on', 'off failed']]), { accountFrames, accountSeen });
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   const pmrBanner = () => { const b = $('.convs .tc-banner'); return b && b.textContent; };
@@ -2313,6 +2395,39 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('leaving a group during a reconnect closes its socket, keeps its later frames out of the state and the BetterChatango focus off it',
     leftDuring.socket === 3 && !leftDuring.ghost && !leftDuring.focus && !leftDuring.listed, leftDuring);
 
+  /* A group BetterChatango never connects at startup: disconnected once the connection delay has passed, with Try again and no automatic attempt */
+  SB.renderGroup({ group: 'lagroom', header: 'Lagroom' });
+  await wait(12500);
+  click(byText('.tc-nav', 'lagroom')); await wait(50);
+  const neverUp = { banner: connBanner(), connects: calls.filter(c => c[0] === 'connect' && c[1] === 'lagroom').length };
+  step('a group whose startup connection never opens shows as disconnected with Try again, without an automatic attempt',
+    !!neverUp.banner && neverUp.banner.buttons.includes('Try again') && neverUp.connects === 0, neverUp);
+  click($('button[aria-label="Group options"]')); await wait(30);
+  click(menuItem('Leave group')); await wait(30);
+  click(byText('.dialog-foot button', 'Leave group')); await wait(50);
+  click(byText('.tc-nav', 'Mentions')); await wait(50);
+
+  /* Names that are also keys of every object: constructor and __proto__ as an author and as mentions */
+  C.groups.names = fakeGroup();
+  SB.renderGroup({ group: 'names', header: 'Names' });
+  g('ok', 'names', ['marjorie', '', '', '', '1700000000', '', '', '0']);
+  g('inited', 'names', []);
+  await wait(50);
+  click(byText('.tc-nav', 'names')); await wait(50);
+  const opsBefore = opFailures.length;
+  g('b', 'names', ['1700009100.1', 'constructor', '', 'u7', 'UNID7', 'tmp97', '7.7.7.7', '0', '', '<n000/><f x11000="0">hello @__proto__ and @constructor']);
+  g('u', 'names', ['tmp97', 'N-A_M=']);
+  await wait(80);
+  const reserved = { shown: !!$$('.log .tc-msg-text').find(x => x.textContent.includes('hello @__proto__')), ops: opFailures.slice(opsBefore) };
+  const mention = $$('.log button.tc-mention').find(x => x.textContent === '@constructor');
+  if (mention) { click(mention); await wait(80); }
+  reserved.dialog = !!$('.profile-dialog'); reserved.recovery = !!$('.recovery');
+  reserved.polluted = ['status', 'about', 'style', 'spelling', 'ignored'].filter(k => k in w.Object || k in w.Object.prototype);
+  if (reserved.dialog) { key(d, 'Escape'); await wait(50); }
+  step('a member named constructor and mentions of constructor and __proto__ write nothing on Object and open a profile, not the recovery screen',
+    reserved.shown && !reserved.ops.length && reserved.dialog && !reserved.recovery && !reserved.polluted.length, reserved);
+  click(byText('.tc-nav', 'Mentions')); await wait(50);
+
   /* Session loss: signed in elsewhere, offline, connection lost, session expired */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
@@ -2341,6 +2456,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && !!denied && denied.text.includes('Your session expired') && !calls.some(c => c[0] === 'alert'),
     { kicked, hereAsked, afterHere, offline, onlineReconnects, lost, denied, alerts: calls.filter(c => c[0] === 'alert').length });
 
+  step('no bridge operation failed to apply during the scenario', opFailures.length === 0, opFailures);
   console.log(log.join('\n'));
   console.log('ERRORS: ' + (errors.length ? '\n' + errors.join('\n') : 'none'));
   process.exit(log.some(l => l.indexOf('FAIL') === 0) || errors.length ? 1 : 0);

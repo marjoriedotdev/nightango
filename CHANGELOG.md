@@ -2,6 +2,33 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.36.0-beta.1] - 2026-11-13
+
+### Added
+
+- Privacy has a Chatango account section: hide your idle time, allow anonymous messages, email messages you get while offline. The wording is not final.
+
+### Fixed
+
+- A group message or an edit that could not be sent stays in the message box.
+- Saving your profile no longer risks emptying your full profile when Chatango refuses to give it.
+- Messages from a member named constructor show, and a mention of that name opens their profile.
+- Opening a group while it reconnects no longer risks a second connection, which showed its messages twice.
+- A group that failed to connect when you signed in says so and offers Try again.
+- BetterChatango's prompt to register a group no longer shows in Nightango.
+- Coming back to the tab marks the conversation you are looking at as read.
+- A message you post from another device no longer shows as unread, or as a mention of yourself.
+- The @name suggestions no longer break the page when a suggested member leaves while the list is open.
+- The floating window keeps receiving messages while Settings are open.
+- In a browser that cannot save private messages, sending one no longer says it failed.
+- An edited private message no longer shows twice after loading older messages.
+- A voice recording no longer starts after you left the conversation, or twice.
+
+### Security
+
+- A message made of unfinished image tags can no longer freeze the page.
+- The diagnostic journal no longer keeps the text of a linked accounts lookup made from BetterChatango's own screen.
+
 ## [0.35.0] - 2026-11-13
 
 ### Added
