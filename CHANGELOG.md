@@ -6,7 +6,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Fixed
 
-- Usernames show with the capitals their owner signed in with, in messages, member lists, private messages and profiles. A name stays in lowercase until a message or a presence in a group carries its capitals.
+- Usernames show with the capitals their owner signed in with, in messages, member lists, private messages, profiles, dialogs and notifications. A name stays in lowercase until a message or a presence in a group carries its capitals.
 - Mentioning or quoting a member writes their name with those capitals.
 
 ## [0.34.0] - 2026-11-10

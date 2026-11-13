@@ -61,7 +61,7 @@ function SharedMediaDialog(p) {
   var grid = active === 'images' && safety.embedImages;
   var held = safety.embedImages && list.some(function (it) { return it.kind === 'image' && !mediaThumbShown(safety, revealed, it.url); });
   function jump(it) { p.onClose(); p.onJump(it.msgId); }
-  function meta(it) { return it.author + ' · ' + ago(it.ts); }
+  function meta(it) { return shownName(app.state, it.author) + ' · ' + ago(it.ts); }
   return h(Dialog, {
     title: 'Media and links', description: 'Shared in ' + p.where + ', in the messages loaded on this page.', wide: true, onClose: p.onClose,
     footer: [h(T.Button, { key: 'd', variant: 'primary', onClick: p.onClose }, 'Done')]
@@ -74,7 +74,7 @@ function SharedMediaDialog(p) {
           return h('li', { key: it.key, className: 'media-item' },
             h('button', { type: 'button', className: 'media-pick', title: 'Go to the message from ' + meta(it), onClick: function () { jump(it); } },
               h(MediaThumb, { url: it.url, shown: mediaThumbShown(safety, revealed, it.url) }),
-              h('span', { className: 'media-name' }, it.author)));
+              h('span', { className: 'media-name' }, shownName(app.state, it.author))));
         }))
         : h('ul', { className: 'shared-list', 'aria-label': 'Media and links' }, list.map(function (it) {
           var thumb = it.kind === 'image' && mediaThumbShown(safety, revealed, it.url);

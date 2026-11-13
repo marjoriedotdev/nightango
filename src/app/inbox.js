@@ -130,9 +130,9 @@ function useInbox(stateRef, update, toast, setNavOpen) {
    */
   function notifyPm(from, preview) {
     if (quietOutsideSpace(stateRef.current, from)) return;
-    var show = stateRef.current.prefs.pmPreview;
+    var show = stateRef.current.prefs.pmPreview, who = shownName(stateRef.current, from);
     notify('pm', {
-      toast: show ? from + ': ' + preview : 'New message from ' + from, title: from, body: show ? preview : 'New message', tag: 'pm:' + from,
+      toast: show ? who + ': ' + preview : 'New message from ' + who, title: who, body: show ? preview : 'New message', tag: 'pm:' + from,
       icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } }
     });
   }
@@ -171,9 +171,10 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     if (mention && !quiet && !isPaneOpen(s0, 'group', gid)) {
       var g0 = s0.groups[gid];
       // A message the log hides keeps its text out of the system alert too.
+      var who = shownName(s0, msg.author);
       var hidden = isHiddenAuthor(s0, msg.author) || (!s0.prefs.safety.guestMessages && isGuest(msg.author)) || !!(g0 && g0.hiddenChannels.indexOf(msg.channel || 'none') >= 0);
       notify('mentions', {
-        toast: msg.author + ' mentioned you in #' + gid, title: msg.author + ' in #' + gid, body: hidden ? null : messagePreview(msg), tag: 'group:' + gid,
+        toast: who + ' mentioned you in #' + gid, title: who + ' in #' + gid, body: hidden ? null : messagePreview(msg), tag: 'group:' + gid,
         icon: 'at-sign', action: { label: 'Open', run: function () { var s = stateRef.current; nav(groupRouteAt(s, gid, mentionId(s, gid, msg))); } }
       });
     }

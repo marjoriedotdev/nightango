@@ -94,7 +94,8 @@ function useFriendRequest() {
  * @param {string} name Friend to remove.
  */
 function confirmRemoveFriend(app, name) {
-  app.ui.confirm({ title: 'Remove ' + name + ' from friends?', body: "You'll stop seeing when " + name + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
+  var who = shownName(app.state, name);
+  app.ui.confirm({ title: 'Remove ' + who + ' from friends?', body: "You'll stop seeing when " + who + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
 }
 
 /**
@@ -141,10 +142,10 @@ function ignoreItem(app, name, ignored) {
  * @param {Object} app Application context.
  * @param {string} name Member name.
  * @param {boolean} unstyled The member's style is hidden.
- * @param {boolean} [named] Label that names the member, for a message menu.
+ * @param {string} [shown] Member's name as they spell it, for a label that names them in a message menu.
  */
-function styleItem(app, name, unstyled, named) {
-  var label = (unstyled ? 'Show ' : 'Hide ') + (named ? name + "'s style" : 'style');
+function styleItem(app, name, unstyled, shown) {
+  var label = (unstyled ? 'Show ' : 'Hide ') + (shown ? shown + "'s style" : 'style');
   return { id: 'style', label: label, icon: 'type', onSelect: function () { app.actions.toggleUser(name, 'unstyled'); } };
 }
 
@@ -183,7 +184,7 @@ function useProfileActions(name, gid) {
     {
       id: 'block', label: u.blocked ? 'Unblock' : 'Block…', icon: 'user-x', danger: !u.blocked, onSelect: function () {
         if (u.blocked) app.actions.toggleUser(name, 'blocked');
-        else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } });
+        else app.ui.confirm({ title: 'Block ' + shownName(app.state, name) + '?', body: shownName(app.state, name) + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } });
       }
     },
     g && canBanMember(g, s.me, name) ? banItem(app, name, gid) : null
@@ -204,7 +205,7 @@ function ProfileDialog(p) {
   var buttons = actions.filter(function (it) { return it.id === 'message' || it.id === 'friend'; });
   var mini = miniStyleOf(s.prefs, u, app.theme);
   function go(route) { done(); app.nav(route); }
-  return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: cx('profile-dialog', mini && 'mini-skin'), style: mini ? miniSkin(mini) : null },
+  return h(Dialog, { label: 'Profile of ' + shownName(s, name), onClose: p.onClose, className: cx('profile-dialog', mini && 'mini-skin'), style: mini ? miniSkin(mini) : null },
     // Initial focus on the name: on the first button, placed under the bio, the dialog would open scrolled.
     h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', focusHeading: true, size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
@@ -240,9 +241,9 @@ function WhoDialog(p) {
     return ACCOUNT_NAME.test(n) ? personCard(s, n, app.theme, function () { setOpen(n); }, true) : h('p', { key: name, className: 'about who-text' }, name);
   }
   var lead = !res ? h('p', { className: 'startup' }, h(T.Spinner, null), 'Asking vissle')
-    : h('p', { className: 'about' }, res.error || (total ? total + (total > 1 ? ' linked accounts' : ' linked account') + ' for ' + p.name + '.' : 'vissle has no linked accounts for ' + p.name + '.'));
+    : h('p', { className: 'about' }, res.error || (total ? total + (total > 1 ? ' linked accounts' : ' linked account') + ' for ' + shownName(s, p.name) + '.' : 'vissle has no linked accounts for ' + shownName(s, p.name) + '.'));
   return h(Frag, null,
-    h(Dialog, { title: 'Who is ' + p.name, onClose: p.onClose, footer: h(T.Button, { variant: 'primary', onClick: p.onClose }, 'Close') },
+    h(Dialog, { title: 'Who is ' + shownName(s, p.name), onClose: p.onClose, footer: h(T.Button, { variant: 'primary', onClick: p.onClose }, 'Close') },
       h('div', { className: 'dialog-body' }, lead),
       levels.map(function (x) { return h('div', { key: x.level, className: 'kv who-level' }, h('h3', null, x.level.charAt(0).toUpperCase() + x.level.slice(1) + ' · ' + x.names.length), x.names.map(row)); }),
       total ? h('div', { className: 'dialog-body' }, h('p', { className: 'about muted' }, "This is vissle's estimate. It can be wrong.")) : null),
@@ -254,12 +255,12 @@ function BanDialog(p) {
   var dl = useState(false), wipe = dl[0], setWipe = dl[1];
   if (LIVE) {
     return h(Dialog, {
-      title: 'Ban ' + p.name + ' from #' + p.gid + '?', description: 'Chatango bans the account and the IP of their last message. They cannot rejoin until unbanned.', onClose: p.onClose,
+      title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: 'Chatango bans the account and the IP of their last message. They cannot rejoin until unbanned.', onClose: p.onClose,
       footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { if (app.actions.ban(p.gid, p.name, null, { deleteAll: wipe, msg: p.msg }) !== false) p.onClose(); } }, 'Ban')]
     }, h('div', { className: 'dialog-body' }, h(T.Checkbox, { label: 'Also delete their recent messages', checked: wipe, onChange: function (e) { setWipe(e.target.checked); } })));
   }
   return h(Dialog, {
-    title: 'Ban ' + p.name + ' from #' + p.gid + '?', description: 'They are removed from the group and cannot rejoin from this IP until unbanned.', onClose: p.onClose,
+    title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: 'They are removed from the group and cannot rejoin from this IP until unbanned.', onClose: p.onClose,
     footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { app.actions.ban(p.gid, p.name); p.onClose(); } }, 'Ban')]
   });
 }

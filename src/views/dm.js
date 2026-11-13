@@ -223,10 +223,10 @@ function DmThread(p) {
         label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id }), spacesItem(app, { view: 'dm', id: id })].concat(personActions, [{ divider: true }], convActions(app, id, convo))
       }),
       p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
-    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
+    h(MessageLog, { log: log, label: 'Messages with ' + shownName(s, id), rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom)),
-    sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + id, messages: convo.messages, authorOf: dmAuthorOf, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
+    sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + shownName(s, id), messages: convo.messages, authorOf: dmAuthorOf, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
 }
 
 function dmAuthorOf(m) { return m.from; }
@@ -268,7 +268,7 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
     copyTextItem(app, m), m.from !== me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
     canRemove ? { divider: true } : null,
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(p.peer, LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
+      app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(shownName(app.state, p.peer), LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
     } } : null];
   var o = p.original;
   var reply = o ? { author: h(Person, { name: o.from, size: 16 }), text: messagePreview(o), onJump: function () { p.onJump(o); } }
@@ -400,7 +400,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
 
 /**
  * Tells who keeps the PMs removed from this browser.
- * @param {string} name Correspondent.
+ * @param {string} name Correspondent as they spell their name.
  * @param {boolean} betterChatango True to say first that only BetterChatango's copy goes away.
  */
 function keptCopyText(name, betterChatango) {
@@ -419,7 +419,7 @@ function convActions(app, name, c) {
     received && !c.unread ? { label: 'Mark as unread', short: 'Unread', icon: 'message', onSelect: function () { app.actions.markDmUnread(name); } } : null,
     { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },
     { label: 'Delete conversation…', short: 'Delete', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Delete this conversation?', body: keptCopyText(name, LIVE), confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
+      app.ui.confirm({ title: 'Delete this conversation?', body: keptCopyText(shownName(app.state, name), LIVE), confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
     } }
   ].filter(Boolean);
 }
@@ -443,6 +443,7 @@ var SWIPE_REVEAL = 144;
  */
 function SwipeRow(p) {
   var app = useAppApi(), n = p.name, actions = p.actions;
+  var shown = useStatePart(function (s) { return shownName(s, n); });
   var m = useState(null), menu = m[0], setMenu = m[1];
   var w = useState(null), swipe = w[0], setSwipe = w[1];
   var rowRef = useRef(null), drag = useRef(null), swallow = useRef(false);
@@ -498,7 +499,7 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + n, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null), whoItem(app, n), p.extra || null].concat(actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + shown, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null), whoItem(app, n), p.extra || null].concat(actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
@@ -536,7 +537,7 @@ function FriendsList(p) {
     var n = name.trim().toLowerCase();
     if (!/^[a-z0-9_-]{1,20}$/.test(n)) { setErr('Enter a Chatango username.'); return; }
     if (n === s.me) { setErr("You can't add yourself."); return; }
-    if (s.users[n] && s.users[n].friend) { setErr(n + ' is already a friend.'); return; }
+    if (s.users[n] && s.users[n].friend) { setErr(shownName(s, n) + ' is already a friend.'); return; }
     setErr(''); setName('');
     request.add(n);
   }

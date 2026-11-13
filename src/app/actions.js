@@ -10,7 +10,7 @@ function seedState(d, world) {
 }
 /**
  * Announces the toggle of a member mark in the prototype as in live.
- * @param {string} name Target member.
+ * @param {string} name Target member as they spell their name.
  * @param {string} key Toggled mark (friend, ignored, blocked or unstyled).
  * @param {boolean} was Mark before the toggle.
  */
@@ -183,7 +183,7 @@ function useActions(k) {
       // Back to the Chats list first, without closeDm: the conversation left open would read its PMs again.
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
       unreadPm(pmArchive.current, update, name).then(function (flagged) {
-        if (!flagged) toast('No message from ' + name + ' is saved in this browser.');
+        if (!flagged) toast('No message from ' + shownName(stateRef.current, name) + ' is saved in this browser.');
       }, function (e) { toast(e.message); });
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
@@ -275,7 +275,7 @@ function useActions(k) {
       var was = !!userOf(stateRef.current, name)[key];
       update(function (d) { if (!d.users[name]) d.users[name] = { status: 'offline', about: '', style: {} }; d.users[name][key] = !was; });
       if (key === 'friend' && !was) return;
-      toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
+      toast(toggleUserText(shownName(stateRef.current, name), key, was), { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
     },
     toggleMute: function (gid) { update(function (d) { d.groups[gid].muted = !d.groups[gid].muted; }); },
     toggleHiddenChannel: function (gid, k) {
@@ -344,14 +344,14 @@ function useActions(k) {
         g.members = g.members.filter(function (n) { return n !== name; });
         if (g.settings.staff[name]) delete g.settings.staff[name];
         g.messages.push({ id: uid(), kind: 'ban', user: name, ts: now });
-        g.audit.push({ id: uid(), at: now, actor: me, text: 'Banned ' + name });
+        g.audit.push({ id: uid(), at: now, actor: me, text: 'Banned ' + shownName(d, name) });
       });
-      toast(name + ' was banned from #' + gid + '.', { action: { label: 'Undo', run: function () { actions.unban(gid, name, true); } } });
+      toast(shownName(stateRef.current, name) + ' was banned from #' + gid + '.', { action: { label: 'Undo', run: function () { actions.unban(gid, name, true); } } });
     },
     unban: function (gid, name, quiet) {
       var me = stateRef.current.me;
-      update(function (d) { var g = d.groups[gid]; g.bans = g.bans.filter(function (b) { return b.name !== name; }); g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Unbanned ' + name }); });
-      if (!quiet) toast(name + ' can join #' + gid + ' again.');
+      update(function (d) { var g = d.groups[gid]; g.bans = g.bans.filter(function (b) { return b.name !== name; }); g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Unbanned ' + shownName(d, name) }); });
+      if (!quiet) toast(shownName(stateRef.current, name) + ' can join #' + gid + ' again.');
     },
     unbanAll: function (gid) {
       var me = stateRef.current.me, n = stateRef.current.groups[gid].bans.length;
@@ -373,9 +373,9 @@ function useActions(k) {
         var g = d.groups[gid];
         Object.keys(labels).forEach(function (k) { if (JSON.stringify(old[k]) !== JSON.stringify(draft[k])) g.audit.push({ id: uid(), at: now, actor: me, text: labels[k] }); });
         Object.keys(Object.assign({}, old.staff, draft.staff)).forEach(function (n) {
-          if (old.staff[n] !== draft.staff[n]) g.audit.push({ id: uid(), at: now, actor: me, text: draft.staff[n] ? 'Made ' + n + ' ' + ROLE_LONG[draft.staff[n]].toLowerCase() : 'Removed ' + n + ' from staff' });
+          if (old.staff[n] !== draft.staff[n]) g.audit.push({ id: uid(), at: now, actor: me, text: draft.staff[n] ? 'Made ' + shownName(d, n) + ' ' + ROLE_LONG[draft.staff[n]].toLowerCase() : 'Removed ' + shownName(d, n) + ' from staff' });
           // Like the Chatango log (emod): permissions changed without a role change.
-          else if (draft.staff[n] && old.modFlags[n] !== draft.modFlags[n]) g.audit.push({ id: uid(), at: now, actor: me, text: "Changed " + n + "'s permissions" });
+          else if (draft.staff[n] && old.modFlags[n] !== draft.modFlags[n]) g.audit.push({ id: uid(), at: now, actor: me, text: "Changed " + shownName(d, n) + "'s permissions" });
         });
         if (old.announcement.text !== draft.announcement.text || (!old.announcement.enabled && draft.announcement.enabled)) g.dismissedAnnouncement = false;
         g.settings = JSON.parse(JSON.stringify(draft));
@@ -652,7 +652,7 @@ function useActions(k) {
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
       if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('BetterChatango could not save its ignore list. Reload the page and try again.'); return; }
       update(function (d) { ensureLiveUser(d, name, localRef.current)[key] = !was; });
-      toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
+      toast(toggleUserText(shownName(stateRef.current, name), key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
     actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
     actions.removeDmMessage = function (name, m) {
@@ -683,7 +683,7 @@ function useActions(k) {
     };
     actions.deleteAllFrom = function (gid, name, msg) {
       var g = stateRef.current.groups[gid], m = msg && msg.unid ? msg : g && lastMessageOf(g, name);
-      if (!m) { toast('No recent message from ' + name + ' in #' + gid + '.'); return; }
+      if (!m) { toast('No recent message from ' + shownName(stateRef.current, name) + ' in #' + gid + '.'); return; }
       liveBridge.deleteAllFrom(gid, m);
     };
     actions.ban = function (gid, name, reason, opts) {
@@ -691,14 +691,14 @@ function useActions(k) {
       // Guests and anons can share a name: they are only banned from the chosen message.
       if (!m && /^[!#]/.test(name)) { toast('Ban guests from one of their messages.'); return false; }
       m = m || (g && lastMessageOf(g, name));
-      if (!m) { toast('No recent message from ' + name + ' in #' + gid + '. Chatango bans someone from one of their messages.'); return false; }
+      if (!m) { toast('No recent message from ' + shownName(stateRef.current, name) + ' in #' + gid + '. Chatango bans someone from one of their messages.'); return false; }
       if (!liveBridge.ban(gid, m)) return false;
       if (opts && opts.deleteAll) liveBridge.deleteAllFrom(gid, m);
       return true;
     };
     actions.unban = function (gid, name) {
       var g = stateRef.current.groups[gid], b = g && g.bans.filter(function (x) { return x.name === name; })[0];
-      if (!b) { toast(name + ' is not in the ban list.'); return; }
+      if (!b) { toast(shownName(stateRef.current, name) + ' is not in the ban list.'); return; }
       liveBridge.unban(gid, b);
     };
     actions.unbanEntry = function (gid, b) { liveBridge.unban(gid, b); };

@@ -47,16 +47,17 @@ var BAN_SEARCH_ERRORS = { 1: 'That search is too long.', 2: "That's not a valid 
 /**
  * Shows a ban: member and author and date plus other names and the IP depending on the permission.
  * @param {Object} g Group.
+ * @param {Object} s Application state.
  * @param {Object} x Ban read by the bridge.
  * @param {boolean} showIp The user can see IPs.
  * @param {*} action Button of the row.
  */
-function banRow(g, x, showIp, action) {
+function banRow(g, s, x, showIp, action) {
   return h('div', { key: banKey(x), className: 'lrow' },
     h('span', { className: 'grow' },
       h(Person, { name: x.name, gid: g.id, size: 28, inert: !ACCOUNT_NAME.test(x.name) }),
-      h('span', { className: 'lrow-sub person-sub' }, [x.by && 'by ' + x.by, x.at && ago(x.at)].filter(Boolean).join(' · ')),
-      x.includes && x.includes.length ? h('span', { className: 'lrow-sub person-sub' }, 'Includes ' + x.includes.join(', ') + '.') : null),
+      h('span', { className: 'lrow-sub person-sub' }, [x.by && 'by ' + shownName(s, x.by), x.at && ago(x.at)].filter(Boolean).join(' · ')),
+      x.includes && x.includes.length ? h('span', { className: 'lrow-sub person-sub' }, 'Includes ' + x.includes.map(function (n) { return shownName(s, n); }).join(', ') + '.') : null),
     showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
     action);
 }
@@ -78,7 +79,7 @@ function BanPages(p) {
   if (!page.loaded) return h(SkeletonRows, { count: 3, avatar: 28, twoLines: true, label: text.loading });
   if (!rows.length && !page.more) return h('p', { className: 'pal-empty' }, list.rows.length ? text.guests : text.empty);
   return h(Frag, null,
-    rows.map(function (x) { return banRow(p.g, x, p.showIp, p.action ? p.action(x) : null); }),
+    rows.map(function (x) { return banRow(p.g, app.state, x, p.showIp, p.action ? p.action(x) : null); }),
     page.more ? h('div', { ref: sentinelRef, className: 'list-more' }, page.loading ? h(T.Spinner, { label: text.more }) : null) : null);
 }
 
@@ -125,7 +126,7 @@ function GSBansLive(p) {
       })) : null,
       searching ? h(Frag, null,
         search.status === 'pending' ? h(SkeletonRows, { count: 1, avatar: 28, twoLines: true, label: 'Searching the ban list' })
-          : search.ban ? banRow(g, search.ban, showIp, unbanButton(search.ban))
+          : search.ban ? banRow(g, app.state, search.ban, showIp, unbanButton(search.ban))
             : h('p', { className: 'pal-empty' }, 'No ban found for ' + search.query + '.'),
         h('div', { className: 'tc-section-pad' }, h(T.Button, { size: 'sm', onClick: function () { setQuery(''); app.actions.clearBanSearch(g.id); } }, 'Clear search')))
         : h(Frag, null,

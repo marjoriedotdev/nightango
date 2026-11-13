@@ -15,8 +15,8 @@ function GSStaff(p) {
   function addMod() {
     var n = add.trim().toLowerCase();
     if (!/^[a-z0-9_-]{1,20}$/.test(n)) { setErr('Enter a Chatango username.'); return; }
-    if (n === owner) { setErr(n + ' owns the group.'); return; }
-    if (draft.modFlags[n] != null) { setErr(n + ' is already on staff.'); return; }
+    if (n === owner) { setErr(shownName(app.state, n) + ' owns the group.'); return; }
+    if (draft.modFlags[n] != null) { setErr(shownName(app.state, n) + ' is already on staff.'); return; }
     p.edit(function (d) { d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); d.staff[n] = 'mod'; });
     setAdd(''); setErr(''); setSel(n);
   }
@@ -75,11 +75,11 @@ function GSMembers(p) {
         h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, shownName(s, n)), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(status))),
         youBadge(isMe),
         isMe || r === 'owner' ? null : h(MenuButton, {
-          label: 'Actions for ' + n, items: [
+          label: 'Actions for ' + shownName(s, n), items: [
             viewProfileItem(app, n, g.id),
             whoItem(app, n),
-            canMods && !r ? { label: 'Make moderator', icon: 'shield', onSelect: function () { p.edit(function (d) { d.staff[n] = 'mod'; d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); }); app.ui.toast(n + ' will be a moderator once you save.'); } } : null,
-            canMods && (r === 'mod' || r === 'admin') ? { label: 'Remove from staff', icon: 'user-minus', onSelect: function () { p.edit(function (d) { delete d.staff[n]; delete d.modFlags[n]; }); app.ui.toast(n + ' leaves staff once you save.'); } } : null,
+            canMods && !r ? { label: 'Make moderator', icon: 'shield', onSelect: function () { p.edit(function (d) { d.staff[n] = 'mod'; d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); }); app.ui.toast(shownName(s, n) + ' will be a moderator once you save.'); } } : null,
+            canMods && (r === 'mod' || r === 'admin') ? { label: 'Remove from staff', icon: 'user-minus', onSelect: function () { p.edit(function (d) { delete d.staff[n]; delete d.modFlags[n]; }); app.ui.toast(shownName(s, n) + ' leaves staff once you save.'); } } : null,
             { divider: true },
             banItem(app, n, g.id)
           ]

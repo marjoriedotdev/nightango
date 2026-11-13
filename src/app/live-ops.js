@@ -226,7 +226,7 @@ function useLiveOps(k) {
           if (!g.bans.some(function (b) { return b.unid === op.ban.unid && b.ip === op.ban.ip; })) g.bans.unshift(op.ban);
           g.messages.push({ id: uid(), kind: 'ban', user: op.ban.name, ts: Date.now() });
         });
-        if (mine) toast(op.ban.name + ' was banned from #' + op.gid + '.', { action: { label: 'Undo', run: function () { liveBridge.unban(op.gid, op.ban); } } });
+        if (mine) toast(shownName(stateRef.current, op.ban.name) + ' was banned from #' + op.gid + '.', { action: { label: 'Undo', run: function () { liveBridge.unban(op.gid, op.ban); } } });
         break;
       }
       case 'unbanned': groupUpdate(update, op.gid, function (g) {
@@ -336,7 +336,7 @@ function useLiveOps(k) {
       case 'friendTimeout':
         if (!stateRef.current.friendAdds[op.name]) break;
         update(function (d) { delete d.friendAdds[op.name]; });
-        toast("Chatango didn't confirm adding " + op.name + ' to friends.');
+        toast("Chatango didn't confirm adding " + shownName(stateRef.current, op.name) + ' to friends.');
         break;
       case 'friendRefused':
         update(function (d) { delete d.friendAdds[op.name]; });
@@ -358,11 +358,11 @@ function useLiveOps(k) {
           if (status === 'offline' && !op.lastOn && before && before.status !== 'offline') u.lastOn = Date.now();
         });
         if (before && before.friend && before.status !== status) {
-          var openDm = { label: 'Message', run: function () { actions.openDm(op.name); } };
+          var who = shownName(stateRef.current, op.name), openDm = { label: 'Message', run: function () { actions.openDm(op.name); } };
           if (status === 'online' && before.status === 'offline') {
-            if (isNotifyingOnline(stateRef.current, op.name)) toast(op.name + ' is online.', { icon: 'users', action: openDm });
-            else notify('friendOn', { toast: op.name + ' is online.', title: op.name, tag: 'friend:' + op.name, icon: 'users', action: openDm });
-          } else if (status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', title: op.name, tag: 'friend:' + op.name, icon: 'users' });
+            if (isNotifyingOnline(stateRef.current, op.name)) toast(who + ' is online.', { icon: 'users', action: openDm });
+            else notify('friendOn', { toast: who + ' is online.', title: who, tag: 'friend:' + op.name, icon: 'users', action: openDm });
+          } else if (status === 'offline') notify('friendOff', { toast: who + ' went offline.', title: who, tag: 'friend:' + op.name, icon: 'users' });
         }
         break;
       }

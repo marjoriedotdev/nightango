@@ -76,7 +76,7 @@ var MessageRow = React.memo(function MessageRow(p) {
     showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed.'); }); } } : null,
     m.author !== me ? viewProfileItem(app, m.author, gid) : null,
     whoItem(app, m.author),
-    m.author !== me ? styleItem(app, m.author, p.unstyled, true) : null,
+    m.author !== me ? styleItem(app, m.author, p.unstyled, p.shown) : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,
     canDelete ? { label: LIVE ? 'Delete message…' : 'Delete message', icon: 'trash', danger: true, onSelect: function () { if (LIVE) app.ui.confirm({ title: 'Delete this message?', body: 'Chatango removes it from #' + gid + " for everyone. You can't undo this.", confirmLabel: 'Delete', danger: true, onConfirm: deleteMessage }); else deleteMessage(); } } : null,
     LIVE && canBan ? { label: 'Delete all from ' + p.shown + '…', icon: 'message-square-x', danger: true, onSelect: function () { app.ui.confirm({ title: 'Delete every message from ' + p.shown + '?', body: 'Chatango removes their recent messages in #' + gid + ' for everyone.', confirmLabel: 'Delete all', danger: true, onConfirm: function () { app.actions.deleteAllFrom(gid, m.author, m); } }); } } : null,

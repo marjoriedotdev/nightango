@@ -8,7 +8,7 @@ function Palette(p) {
     var g = s.groups[k];
     if (g.joined) entries.push({ group: 'Groups', label: '#' + k, hint: g.mentions ? '@' + g.mentions.toLocaleString('en-US') : g.unread ? g.unread.toLocaleString('en-US') + ' new' : '', icon: 'hash', beside: { view: 'group', id: k }, run: function () { app.nav({ view: 'group', id: k }); } });
   });
-  listedDms(s).forEach(function (n) { entries.push({ group: 'People', label: n, hint: statusLabel(userOf(s, n).status), icon: 'message', beside: { view: 'dm', id: n }, run: function () { app.actions.openDm(n); } }); });
+  listedDms(s).forEach(function (n) { entries.push({ group: 'People', label: shownName(s, n), hint: statusLabel(userOf(s, n).status), icon: 'message', beside: { view: 'dm', id: n }, run: function () { app.actions.openDm(n); } }); });
   SETTINGS_NAV.forEach(function (sec) {
     sec.items.forEach(function (it) { entries.push({ group: 'Settings', label: it[1], hint: 'Settings', icon: 'sliders', run: function () { app.nav({ view: 'settings', page: it[0] }); } }); });
   });
