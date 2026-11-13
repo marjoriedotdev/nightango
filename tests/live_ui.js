@@ -1099,6 +1099,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.conv', 'fay')); await wait(50);
   const toOtherPm = await uploadThenShow('Late for fay', () => byText('.conv', 'dave'));
   click(byText('.conv', 'fay')); await wait(50);
+  /* No history database: BetterChatango's send would throw on its archive once the frame has left and announce a failure, so the PM leaves without its focus */
+  const historyDb = C.database.pm; C.database.pm = false;
+  type(pmBox(), 'No archive'); key(pmBox(), 'Enter'); await until(() => pmLeft('No archive'));
+  C.database.pm = historyDb;
+  const noArchive = { left: pmLeft('No archive'), under: archivedUnder('No archive'), focus: C.private.focus };
+  step('a pm sent without a history database leaves without the focus BetterChatango archives under, which comes back after the send',
+    noArchive.left && !noArchive.under.length && noArchive.focus === 'fay', noArchive);
   const toGroup = await uploadThenShow('Late again', () => byText('.tc-nav', 'test'));
   step('a pm that leaves after a switch to another pm or to a group is archived under its recipient, then BetterChatango gets back the shown conversation',
     JSON.stringify(toOtherPm) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: 'dave', focus: 'dave' })

@@ -988,7 +988,8 @@ var liveBridge = (function () {
         if (opts.quote) body = withQuote(body, at + ref.length, opts.quote, true);
         var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
         // BetterChatango archives a sent PM under client.private.focus, not its recipient: an upload can leave after a switch.
-        C.private.focus = user;
+        // Without its history database that archive throws once the frame has left, and BetterChatango announces a failure (inject.js:4633-4667).
+        C.private.focus = C.database && C.database.pm ? user : false;
         try { if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
         // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
