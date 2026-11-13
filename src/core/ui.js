@@ -501,38 +501,72 @@ function ConfirmDialog(p) {
   });
 }
 
-var TOAST_MS = 4500, TOAST_ACTION_MS = 7000;
+var TOAST_MS = 4500, TOAST_BASE_MS = 2500, TOAST_CHAR_MS = 55, TOAST_ERROR_MS = 8000, TOAST_ACTION_MS = 2500, TOAST_MAX_MS = 10000, TOAST_LEAVE_MS = 200;
+var TOAST_ICON = { success: 'check', info: 'info', error: 'alert' };
+/**
+ * Returns how long a notification stays: longer for a long text, for a failure and for an action to reach.
+ * @param {{text: string, tone: string=, action: Object=}} t Notification.
+ * @returns {number} Delay in milliseconds.
+ */
+function toastDelay(t) {
+  var ms = Math.max(TOAST_MS, TOAST_BASE_MS + String(t.text).length * TOAST_CHAR_MS);
+  if (t.tone === 'error') ms = Math.max(ms, TOAST_ERROR_MS);
+  return Math.min(TOAST_MAX_MS, ms + (t.action ? TOAST_ACTION_MS : 0));
+}
+/**
+ * Stack of notifications.
+ * @param {{toasts: Array, dismiss: function(string)}} p Notifications and their closing by id.
+ */
 function Toasts(p) {
   return h(Portal, null, h('div', { className: 'toasts', role: 'status', 'aria-live': 'polite' },
     p.toasts.map(function (t) { return h(Toast, { key: t.id, toast: t, dismiss: p.dismiss }); })));
 }
 /**
- * Notification that closes once its delay has run.
- * The delay of a toast with an action waits while the toast is hovered or holds the focus, so that its action stays within reach.
+ * Notification that folds away once its delay has run.
+ * The delay waits while the toast is hovered or holds the focus, and while the page is hidden. A toast shown again (rev) starts it over.
  * @param {{toast: Object, dismiss: function(string)}} p Notification and its closing by id.
  */
 function Toast(p) {
-  var t = p.toast;
+  var t = p.toast, tone = t.tone || 'info', ref = useRef(null);
   var a = useState(false), hovered = a[0], setHovered = a[1];
   var b = useState(false), focused = b[0], setFocused = b[1];
-  var left = useRef(t.action ? TOAST_ACTION_MS : TOAST_MS);
-  var held = !!t.action && (hovered || focused);
+  var c = useState(document.visibilityState !== 'visible'), hidden = c[0], setHidden = c[1];
+  var e = useState(false), leaving = e[0], setLeaving = e[1];
+  var left = useRef(0);
+  var held = hovered || focused || hidden;
   useEffect(function () {
-    if (held) return;
-    var start = Date.now(), timer = setTimeout(function () { p.dismiss(t.id); }, left.current);
+    function onVisibility() { setHidden(document.visibilityState !== 'visible'); }
+    document.addEventListener('visibilitychange', onVisibility);
+    return function () { document.removeEventListener('visibilitychange', onVisibility); };
+  }, []);
+  // Declared before the timer: on a new rev, the timer stops on what was left, then starts on the full delay set here.
+  useEffect(function () { left.current = toastDelay(t); setLeaving(false); }, [t.rev]);
+  useEffect(function () {
+    if (held || leaving) return;
+    var start = Date.now(), timer = setTimeout(function () { setLeaving(true); }, left.current);
     return function () { clearTimeout(timer); left.current -= Date.now() - start; };
-  }, [held]);
+  }, [held, leaving, t.rev]);
+  useLayoutEffect(function () {
+    if (!leaving) return;
+    var el = ref.current;
+    // Height set in pixels and read back before it goes to zero: a transition has no start on an automatic height.
+    el.style.height = el.offsetHeight + 'px';
+    el.getBoundingClientRect();
+    el.style.height = '0';
+    var timer = setTimeout(function () { p.dismiss(t.id); }, TOAST_LEAVE_MS);
+    return function () { clearTimeout(timer); el.style.height = ''; };
+  }, [leaving]);
   return h('div', {
-    className: 'toast',
+    ref: ref, className: cx('toast', leaving && 'toast-leaving'), 'data-tone': tone,
     onMouseEnter: function () { setHovered(true); }, onMouseLeave: function () { setHovered(false); },
     onFocus: function () { setFocused(true); },
     // The focus moving from one of its buttons to the other keeps the toast held.
-    onBlur: function (e) { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); }
+    onBlur: function (ev) { if (!ev.currentTarget.contains(ev.relatedTarget)) setFocused(false); }
   },
-    t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
+    h('span', { key: t.rev || 0, className: 'toast-icon' }, h(T.Icon, { name: t.icon || TOAST_ICON[tone], size: 15 })),
     h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
-    t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
-    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
+    t.action ? h(T.Button, { size: 'sm', variant: 'ghost', className: 'toast-action', onClick: function () { setLeaving(true); t.action.run(); } }, t.action.label) : null,
+    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, className: 'toast-close', onClick: function () { setLeaving(true); } }));
 }
 
 var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;

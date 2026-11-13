@@ -14,8 +14,8 @@ function NotificationsPage() {
   if (LIVE) cols = cols.filter(function (c) { return c[0] !== 'sound'; });
   function ask() {
     try {
-      window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.'); }, function () { app.ui.toast('The browser refused the request.'); });
-    } catch (e) { app.ui.toast('This browser view cannot show desktop alerts.'); }
+      window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.', { tone: r === 'granted' ? 'success' : 'error' }); }, function () { app.ui.toast('The browser refused the request.', { tone: 'error' }); });
+    } catch (e) { app.ui.toast('This browser view cannot show desktop alerts.', { tone: 'error' }); }
   }
   return h(Page, { title: 'Notifications' },
     permission !== 'granted' ? h(T.Banner, { tone: 'warning', action: permission === 'unsupported' ? null : h(T.Button, { size: 'sm', onClick: ask }, 'Allow in browser') },
@@ -59,7 +59,7 @@ function BetterChatangoSoundsSection() {
   var app = useApp();
   var st = useBetterChatangoSettings(liveBridge.betterChatangoSounds, liveBridge.setBetterChatangoSound), sounds = st[0], set = st[1];
   function play(kind) {
-    liveBridge.playBetterChatangoSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.'); });
+    liveBridge.playBetterChatangoSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.', { tone: 'error' }); });
   }
   return h(T.SettingsSection, { title: 'Sounds', description: 'Played by BetterChatango. Nightango plays none of its own.' },
     sounds ? BETTER_CHATANGO_SOUND_ROWS.map(function (r) {

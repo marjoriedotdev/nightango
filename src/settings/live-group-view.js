@@ -35,7 +35,7 @@ function GroupSettingsViewLive(p) {
       saving.current = false;
       base.current = synced.current;
       setDraft(JSON.parse(synced.current));
-      app.ui.toast("Chatango didn't confirm every change. The page shows the group's current settings.");
+      app.ui.toast("Chatango didn't confirm every change. The page shows the group's current settings.", { tone: 'error' });
     }, CONFIRM_TIMEOUT);
     return function () { clearTimeout(t); };
   }, [pending]);

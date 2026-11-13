@@ -18,9 +18,19 @@ function useOverlays() {
   var u14 = useState(null), who = u14[0], setWho = u14[1];
   var u15 = useState(null), spacesFor = u15[0], setSpacesFor = u15[1];
   var u16 = useState(null), spaceEditor = u16[0], setSpaceEditor = u16[1];
+  /**
+   * Shows a notification. A text already shown starts its delay over instead of stacking.
+   * @param {string} text Text of the notification.
+   * @param {{tone: string=, icon: string=, action: {label: string, run: Function}=, clamp: boolean=}=} opts Tone (success, info by default, error),
+   *   icon in place of the one of the tone, action button and text cut after three lines.
+   */
   var toast = useCallback(function (text, opts) {
     var t = Object.assign({ id: uid(), text: text }, opts || {});
-    setToasts(function (list) { return list.concat([t]).slice(-4); });
+    setToasts(function (list) {
+      var same = list.filter(function (x) { return x.text === text; })[0];
+      if (!same) return list.concat([t]).slice(-4);
+      return list.map(function (x) { return x === same ? Object.assign({}, t, { id: same.id, rev: (same.rev || 0) + 1 }) : x; });
+    });
   }, []);
   function dismissToast(id) { setToasts(function (list) { return list.filter(function (x) { return x.id !== id; }); }); }
   var ui = useMemo(function () { return {

@@ -141,7 +141,7 @@ var liveBridge = (function () {
       }
       case 'delete': emit({ op: 'del', gid: room, ids: withTempIds([data[0]]) }); break;
       case 'deleteall': emit({ op: 'del', gid: room, ids: withTempIds(data.slice()) }); break;
-      case 'clearall': if (data[0] === 'ok') emit({ op: 'cleared', gid: room }); else emit({ op: 'notice', gid: room, text: 'Chatango refused to clear the messages.' }); break;
+      case 'clearall': if (data[0] === 'ok') emit({ op: 'cleared', gid: room }); else emit({ op: 'notice', gid: room, text: 'Chatango refused to clear the messages.', tone: 'error' }); break;
       case 'g_participants': participants(room, data.join(':').split(';')); break;
       case 'gparticipants': participants(room, data.slice(1).join(':').split(';')); break;
       case 'participant': participant(room, data); break;
@@ -199,11 +199,11 @@ var liveBridge = (function () {
       case 'denied':
         // Neither inited nor participants will arrive: the message log and the members stop waiting.
         emit({ op: 'denied', gid: room });
-        emit({ op: 'notice', gid: room, text: 'Chatango refused the connection to #' + room + '.' });
+        emit({ op: 'notice', gid: room, text: 'Chatango refused the connection to #' + room + '.', tone: 'error' });
         break;
-      case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator.' }); break;
-      case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions." }); break;
-      case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.' }); break;
+      case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator.', tone: 'error' }); break;
+      case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions.", tone: 'error' }); break;
+      case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.', tone: 'error' }); break;
       // Unit unconfirmed: chadango reads minutes, its own show_nlp_tb:3:900 sample suggests seconds.
       case 'show_tb': case 'tb': case 'nlptb': emit({ op: 'tempBan', gid: room, length: parseInt(data[0], 10) || 0 }); break;
       case 'show_nlp_tb': emit({ op: 'tempBan', gid: room, length: parseInt(data[1], 10) || 0 }); break;
@@ -279,9 +279,9 @@ var liveBridge = (function () {
         break;
       case 'kickingoff': emit({ op: 'session', reason: 'kicked' }); break;
       case 'DENIED': emit({ op: 'session', reason: 'denied' }); break;
-      case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: 'Flood warning: slow down or Chatango may disconnect your private messages.' }); break;
-      case 'toofast': emit({ op: 'notice', gid: 'private_message', text: 'You are sending private messages too fast.' }); break;
-      case 'show_offline_limit': emit({ op: 'notice', gid: 'private_message', text: 'This person has too many offline messages. Try again later.' }); break;
+      case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: 'Flood warning: slow down or Chatango may disconnect your private messages.', tone: 'error' }); break;
+      case 'toofast': emit({ op: 'notice', gid: 'private_message', text: 'You are sending private messages too fast.', tone: 'error' }); break;
+      case 'show_offline_limit': emit({ op: 'notice', gid: 'private_message', text: 'This person has too many offline messages. Try again later.', tone: 'error' }); break;
       default: break;
     }
   }
@@ -479,7 +479,7 @@ var liveBridge = (function () {
     // BetterChatango's socket catches every error and only shows a line: on a connection that is not open, the frame would read as sent.
     var hint = closedHint(gid);
     if (hint) {
-      if (failure) alertOnce({ op: 'notice', gid: gid, text: failure + ' ' + hint });
+      if (failure) alertOnce({ op: 'notice', gid: gid, text: failure + ' ' + hint, tone: 'error' });
       return false;
     }
     try { C.socket(gid, frame, failure); return true; } catch (e) { warn(e); return false; }

@@ -94,7 +94,8 @@ function pressBlank(el) {
  * @param {boolean} enter The pointer enters.
  */
 function hover(el, enter) { el.dispatchEvent(new w.MouseEvent(enter ? 'mouseover' : 'mouseout', { bubbles: true, composed: true, relatedTarget: enter ? null : d.body })); }
-const toast = txt => $$('.toast').find(t => t.textContent.includes(txt));
+// A toast that folds away is closed for the user: its node stays for the time of the transition.
+const toast = txt => $$('.toast:not(.toast-leaving)').find(t => t.textContent.includes(txt));
 const isInert = el => !!el && el.hasAttribute('inert');
 const overlayOf = title => { const dl = $$('.dialog').find(x => x.getAttribute('aria-label') === title); return dl && dl.closest('.overlay'); };
 async function openMenu() { click(trigger()); await flush(); }
@@ -144,7 +145,7 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   api.setOuter(false); api.setInner(false); await flush();
   step('dialogs closed together free the app and focus what had the focus before them', !isInert(mount) && !$('.overlay') && focused() === trigger(), { app: isInert(mount), focused: label(focused()) });
 
-  /* A toast with an action waits while it is hovered or focused */
+  /* A toast waits while it is hovered or focused */
   api.setToasts([{ id: 'a', text: 'alice was banned from #test.', action: { label: 'Undo', run() {} } }, { id: 'p', text: 'Message deleted.' }]);
   await flush();
   await advance(3000);
@@ -155,8 +156,10 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   await advance(3900);
   const leftEarly = !!toast('alice');
   await advance(200);
-  step('a toast with an action stays while hovered, then closes once the rest of its delay has run',
-    hovered.action && !hovered.plain && leftEarly && !toast('alice'), { hovered, leftEarly, after: !!toast('alice') });
+  const folding = $$('.toast').length;
+  await advance(300);
+  step('a toast stays while hovered, then folds away once the rest of its delay has run and leaves the layer',
+    hovered.action && !hovered.plain && leftEarly && !toast('alice') && folding === 1 && !$$('.toast').length, { hovered, leftEarly, after: !!toast('alice'), folding, nodes: $$('.toast').length });
   api.setToasts([{ id: 'b', text: 'bob was banned from #test.', action: { label: 'Undo', run() {} } }]);
   await flush();
   await advance(1000);
@@ -169,7 +172,7 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   await advance(5900);
   const blurredEarly = !!toast('bob');
   await advance(200);
-  step('a toast with an action stays while it holds the focus, then closes once the rest of its delay has run',
+  step('a toast stays while it holds the focus, then closes once the rest of its delay has run',
     held && blurredEarly && !toast('bob'), { held, blurredEarly, after: !!toast('bob') });
 
   console.log(log.join('\n'));

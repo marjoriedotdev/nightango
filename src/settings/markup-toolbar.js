@@ -65,7 +65,7 @@ function fontMarkup(value, start, end, name, val) {
  */
 function applyMarkupEdit(el, edit, toast) {
   var over = el.maxLength > 0 ? el.value.length - (edit.to - edit.from) + edit.text.length - el.maxLength : 0;
-  if (over > 0) { toast('Remove ' + plural(over, 'character', 'characters') + ' to make room for this format.'); return; }
+  if (over > 0) { toast('Remove ' + plural(over, 'character', 'characters') + ' to make room for this format.', { tone: 'error' }); return; }
   el.focus();
   el.setSelectionRange(edit.from, edit.to);
   // insertText keeps Ctrl+Z. execCommand is deprecated: as a fallback, setRangeText inserts without undo history.

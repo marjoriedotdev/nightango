@@ -91,7 +91,7 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       if (route.view === 'dm') readPm(pmArchive.current, update, route.id);
     }, function (e) {
       warn(e);
-      toast('The floating window could not open. Try again.');
+      toast('The floating window could not open. Try again.', { tone: 'error' });
     });
   }, []);
   // BetterChatango's PM sound follows one open PM: the main one first, the one beside otherwise.

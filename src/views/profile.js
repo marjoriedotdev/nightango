@@ -179,7 +179,7 @@ function MemberNote(p) {
   function save() {
     app.actions.setNote(p.name, next);
     setLabel(next.label); setNote(next.note);
-    app.ui.toast(next.label || next.note ? 'Note saved.' : 'Note deleted.', { icon: 'check' });
+    app.ui.toast(next.label || next.note ? 'Note saved.' : 'Note deleted.', { tone: 'success' });
   }
   return h('div', { className: 'kv member-note' },
     h('h3', null, 'Private note'),

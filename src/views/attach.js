@@ -57,7 +57,7 @@ function useAttachMedia(to, setDraft) {
   function take(files) {
     var picked = files[0];
     if (isUploadType(picked)) setStaged({ key: key, file: picked });
-    else app.ui.toast("Can't attach " + picked.name + '. Pick an image, a sound or a video.');
+    else app.ui.toast("Can't attach " + picked.name + '. Pick an image, a sound or a video.', { tone: 'error' });
   }
   function restore(text) { if (text) setDraft(function (v) { return v ? text + ' ' + v : text; }); }
   return {

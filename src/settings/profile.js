@@ -28,9 +28,9 @@ function ProfilePage() {
     dirty ? h(T.SaveBar, {
       onDiscard: function () { setDraft(snapshot()); },
       onSave: function () {
-        if (ageErr) { app.ui.toast('Fix the age before saving.'); return; }
+        if (ageErr) { app.ui.toast('Fix the age before saving.', { tone: 'error' }); return; }
         app.update(function (d) { var u = d.users[d.me]; u.age = draft.age === '' ? '' : +draft.age; u.gender = draft.gender; u.location = draft.location; u.about = draft.about; u.aboutHtml = draft.about; d.profile.visibility.meet = draft.meet; });
-        app.ui.toast('Profile saved.', { icon: 'check' });
+        app.ui.toast('Profile saved.', { tone: 'success' });
       }, saveLabel: 'Save profile'
     }, 'Unsaved changes to your Chatango profile') : null);
 }
@@ -105,7 +105,7 @@ function VisitorsSection(p) {
     if (drafted) { p.onDraft(p.draft.replace(VISSLE_TRACKER_LINE, '')); return; }
     // BetterChatango rule: the bio, tag included, stays strictly under 2000 characters.
     var over = p.draft.length - (2000 - VISSLE_TRACKER_ADD.length) + 1;
-    if (over > 0) { app.ui.toast('Remove ' + over + (over === 1 ? ' character' : ' characters') + ' from your bio to make room for the tracker.'); return; }
+    if (over > 0) { app.ui.toast('Remove ' + over + (over === 1 ? ' character' : ' characters') + ' from your bio to make room for the tracker.', { tone: 'error' }); return; }
     p.onDraft(p.draft + VISSLE_TRACKER_ADD);
   }
   useEffect(function () { app.actions.loadVisitors(get, false); }, []);

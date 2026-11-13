@@ -23,12 +23,12 @@ function runCommand(app, text, gid) {
   var s = app.state, toast = app.ui.toast;
   if (cmd === '/join') {
     var id = parseGroupName(arg), unknown = id && unknownGroupError(s, id);
-    if (!id) toast(commandHelp(cmd), { icon: 'info' });
+    if (!id) toast(commandHelp(cmd));
     else if (unknown) toast(unknown);
     else app.actions.joinGroup(id);
   } else if (cmd === '/leave') {
     var target = arg ? parseGroupName(arg) : gid;
-    if (!target) toast(commandHelp(cmd), { icon: 'info' });
+    if (!target) toast(commandHelp(cmd));
     else if (!(s.groups[target] && s.groups[target].joined)) toast("You haven't joined #" + target + '.');
     else confirmLeave(app, target);
   } else if (cmd === '/chat') {
@@ -38,8 +38,8 @@ function runCommand(app, text, gid) {
     else app.nav({ view: 'dm', id: null });
   } else {
     var asked = arg && '/' + arg.replace(/^\//, '');
-    if (!asked) toast(commandList(), { icon: 'info' });
-    else if (COMMANDS[asked]) toast(commandHelp(asked), { icon: 'info' });
+    if (!asked) toast(commandList());
+    else if (COMMANDS[asked]) toast(commandHelp(asked));
     else toast('No command named ' + asked + '. ' + commandList());
   }
   return true;

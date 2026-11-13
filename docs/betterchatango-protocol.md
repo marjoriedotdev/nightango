@@ -74,7 +74,7 @@ Read in BetterChatango's code, not observed on a live frame.
 
 ## BetterChatango warnings
 
-`client.systemMessage(...)` and `client.setNotice(...)` are intercepted by the bridge, then shown as a notification (toast), never in the message log: BetterChatango addresses them to the group it believes is open (`client.focus`), not necessarily the group concerned.
+`client.systemMessage(...)` and `client.setNotice(...)` are intercepted by the bridge, then shown as a notification (toast), never in the message log, a `setNotice` warning and a refusal by Chatango in the failure tone: BetterChatango addresses them to the group it believes is open (`client.focus`), not necessarily the group concerned.
 
 - Friend presence: BetterChatango emits "X is now online.", "…offline." or "…idle…" with `unique: "status"` and without `group`, for the PM it believes is open (`status` and `idleupdate` handlers, `inject.js:4187` and `inject.js:4294`). The bridge silences them: the friend list already shows presence.
 

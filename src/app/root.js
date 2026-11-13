@@ -218,7 +218,7 @@ function useUpdateCheck(loggedIn, toast) {
     if (!LIVE || !loggedIn || updateChecked.current) return;
     updateChecked.current = true;
     fetchLatestRelease().then(function (latest) {
-      if (latest && isNewerVersion(latest.version, APP_VERSION)) toast('Nightango ' + latest.version + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(latest.url, '_blank', 'noopener'); } } });
+      if (latest && isNewerVersion(latest.version, APP_VERSION)) toast('Nightango ' + latest.version + ' is available.', { action: { label: 'Download', run: function () { window.open(latest.url, '_blank', 'noopener'); } } });
     });
   }, [loggedIn]);
 }

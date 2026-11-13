@@ -333,8 +333,15 @@ h1,h2,h3{text-wrap:balance}
 .who-text{padding:6px 10px;overflow-wrap:anywhere}
 .btnrow{display:flex;flex-wrap:wrap;gap:8px}
 .toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));top:calc(max(0px,env(safe-area-inset-top,0px)) + 64px);z-index:60;display:flex;flex-direction:column-reverse;gap:8px;width:min(380px,calc(100% - 32px))}
-.toast{display:flex;align-items:center;gap:10px;padding:10px 8px 10px 14px;border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);font-size:13.5px;color:var(--text-body);animation:toastIn var(--duration-base) var(--ease-out)}
+.toast{display:flex;align-items:center;gap:10px;padding:9px 8px 9px 9px;border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);font-size:13.5px;color:var(--text-body);animation:toastIn var(--duration-base) var(--ease-out);transition:opacity var(--duration-base) var(--ease-out),transform var(--duration-base) var(--ease-out),height var(--duration-surface) var(--ease-out),margin var(--duration-surface) var(--ease-out),padding var(--duration-surface) var(--ease-out)}
+.toast-leaving{overflow:hidden;margin-bottom:-8px;padding-top:0;padding-bottom:0;border-top-width:0;border-bottom-width:0;opacity:0;transform:translateX(10px);pointer-events:none}
 .toast .grow{min-width:0}
+.toast-icon{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-full);background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--text-2);animation:tc-fade-in var(--duration-base) var(--ease-out)}
+.toast[data-tone="success"] .toast-icon{color:var(--text)}
+.toast[data-tone="info"] .toast-icon{background:var(--accent-soft);color:var(--accent-text)}
+.toast[data-tone="error"] .toast-icon{background:color-mix(in srgb,var(--warning) 16%,transparent);color:var(--warning)}
+.toast .toast-action{height:26px;padding:0 9px;color:var(--text);font-weight:600}
+@media (hover:hover){.toast-close{opacity:0;transition:opacity var(--duration-base) var(--ease-out),background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}.toast:hover .toast-close,.toast:focus-within .toast-close{opacity:1}}
 .toast-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 @keyframes toastIn{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
 

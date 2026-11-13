@@ -97,7 +97,7 @@ function AvatarCropDialog(p) {
     setSaving(true);
     liveBridge.saveAvatarCrop(box).then(p.onSaved, function (e) {
       setSaving(false);
-      app.ui.toast(e.message);
+      app.ui.toast(e.message, { tone: 'error' });
     });
   }
   var pct = natural && box ? { left: box.x0 / natural.w * 100 + '%', top: box.y0 / natural.h * 100 + '%', width: box.ts / natural.w * 100 + '%', height: box.ts / natural.h * 100 + '%' } : null;
