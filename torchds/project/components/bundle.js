@@ -180,8 +180,9 @@
   function Badge(props) {
     // Without children, the label names the icon for screen readers and on hover.
     var iconOnly = props.children == null && props.label;
-    return h('span', iconOnly ? { className: cx('tc-badge', 'tc-badge-icon', props.tone === 'accent' && 'tc-badge-accent', props.className), role: 'img', 'aria-label': props.label, title: props.label }
-      : { className: cx('tc-badge', props.tone === 'accent' && 'tc-badge-accent', props.className) },
+    var tone = props.tone && props.tone !== 'neutral' ? 'tc-badge-' + props.tone : null;
+    return h('span', iconOnly ? { className: cx('tc-badge', 'tc-badge-icon', tone, props.className), role: 'img', 'aria-label': props.label, title: props.label }
+      : { className: cx('tc-badge', tone, props.className) },
       props.icon ? h(Icon, { name: props.icon, size: 11, strokeWidth: 2.4 }) : null, iconOnly ? null : props.children);
   }
 

@@ -105,10 +105,10 @@ const COMPONENTS = [
   return h(T.SegmentedControl, { label: 'Messages from ignored users', options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }], value: s[0], onChange: s[1] });`],
   ['Badge', 'Status', 56,
     'A short label for roles and qualifiers next to a name or title.',
-    `Children are one or two words. Default tone (\`selected\` fill, \`text-2\`) for roles like Mod or Owner, with the matching icon. \`accent\` tone for qualifiers that need attention, such as Sensitive on a permission. Mark the viewer's own row with a default-tone You badge.
+    `Children are one or two words. Default tone (\`selected\` fill, \`text-2\`) for a plain label such as Friend. \`moon\` tone (\`moon-soft\` fill, \`moon-text\`) for the Owner role, with its crown. \`moon-quiet\` tone for the other staff roles, with their shield: the default fill, only the icon in \`moon-text\`. \`accent\` tone for qualifiers that need attention, such as Sensitive on a permission. Mark the viewer's own row with a default-tone You badge.
 
-- Without children, pass \`icon\` and \`label\`: the badge shows the icon alone, and the label names it for screen readers and on hover. Use it for traits of a person in lists and messages (Nightango developer, Premium), and spell them out with children where the profile is open.`,
-    `  return h('div', { className: 'row' }, h(T.Badge, { icon: 'shield' }, 'Mod'), h(T.Badge, { icon: 'crown' }, 'Owner'), h(T.Badge, { tone: 'accent' }, 'Sensitive'), h(T.Badge, null, 'Friend'), h(T.Badge, { tone: 'accent', icon: 'code', label: 'Nightango developer' }), h(T.Badge, { tone: 'accent', icon: 'gem', label: 'Premium' }));`],
+- Without children, pass \`icon\` and \`label\`: the badge shows the icon alone, and the label names it for screen readers and on hover. Use it in the \`moon\` tone for traits of a person in lists and messages (Nightango developer, Premium), and spell them out with children where the profile is open.`,
+    `  return h('div', { className: 'row' }, h(T.Badge, { tone: 'moon-quiet', icon: 'shield' }, 'Mod'), h(T.Badge, { tone: 'moon', icon: 'crown' }, 'Owner'), h(T.Badge, { tone: 'accent' }, 'Sensitive'), h(T.Badge, null, 'Friend'), h(T.Badge, { tone: 'moon', icon: 'code', label: 'Nightango developer' }), h(T.Badge, { tone: 'moon', icon: 'gem', label: 'Premium' }));`],
   ['CountBadge', 'Status', 56,
     'An accent pill with an unread or mention count.',
     `Pass \`count\`; it renders nothing at zero and caps at 99+. Pass \`mention\` to prefix @ for mentions, which outrank plain unread counts: @99+ at most. The accessible name keeps the exact count. A plain unread state with no count uses the 6px \`tc-dot\` instead.`,

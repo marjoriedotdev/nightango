@@ -10,13 +10,13 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input".
 - No emoji in the interface, no exclamation marks, no filler ("Oops", "Awesome").
 - Be honest about trade-offs where they affect trust. The login screen states that credentials are stored encrypted on BetterChatango servers.
-- Roles: next to a name, the short role is a `Badge` with its icon (Mod with a shield, Owner with a crown). The long role (Moderator) belongs in a sentence or a title. The viewer's own row carries a `You` badge, never "(you)" in text.
-- Traits of a person (Nightango developer, Premium) are an icon-only `Badge` next to the name in lists and messages, and a badge with its full text in the open profile.
+- Roles: next to a name, the short role is a `Badge` with its icon: Owner with a crown in the `moon` tone, Mod and Admin with a shield in the `moon-quiet` tone. The long role (Moderator) belongs in a sentence or a title. The viewer's own row carries a `You` badge, never "(you)" in text.
+- Traits of a person (Nightango developer, Premium) are an icon-only `Badge` in the `moon` tone next to the name in lists and messages, and a badge with its full text in the open profile.
 
 ## Color
 
 - Dark (night) is the default theme, light (dawn) is the alternative; both use the same token names. The sky (`sky-top` to `sky-bottom`, `star`, `cloud`) sits behind everything. In front of it, put surfaces in this order from back to front: `sidebar`, `bg`, `panel`, `subtle`, `raised`.
-- Two lights, two meanings. Moonlight (`moon`, `moon-ink`, `moon-lit-top` to `moon-lit-bottom`) for structure, presence and the mark. At night the drawn moon shows the seas and bright craters of its near side (`moon-maria`, `moon-crater`) with a darker edge (`moon-limb`). At dawn it takes the colors of a sunrise, gold to coral, without its seas. Ember (`accent`) only for what asks for attention.
+- Two lights, two meanings. Moonlight (`moon`, `moon-ink`, `moon-lit-top` to `moon-lit-bottom`) for structure, presence and the mark. At night the drawn moon shows the seas and bright craters of its near side (`moon-maria`, `moon-crater`) with a darker edge (`moon-limb`). At dawn it takes the colors of a sunrise, gold to coral, without its seas. Moonlight also marks the standing of a person: `moon-text` on a `moon-soft` fill for the Owner badge and for traits, `moon-text` on the icon alone for the other staff badges. Ember (`accent`) only for what asks for attention.
 - Text: `text` for names, headings and labels, `text-body` for message bodies, `text-2` for secondary text and icons, `text-3` for timestamps and hints. All four hold 4.5:1 on every surface in both themes.
 - `accent` (ember) is a fill: primary buttons, unread counts, the send button, the on state of switches. Primary buttons, counts and the send button carry `shadow-glow`, the light of the torch. Text and icons on it use `on-accent`, never white.
 - An unread count is a `CountBadge` on the navigation item that leads to the list. A filter inside the list does not repeat it.
