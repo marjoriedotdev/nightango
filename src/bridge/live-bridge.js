@@ -328,8 +328,14 @@ var liveBridge = (function () {
       C.setNotice = function (data) {
         try {
           // The connection banner already shows it, and this BetterChatango Reconnect bypasses the bridge: the automatic retry would open a second socket.
-          var lost = /^You have disconnected from #/.test(String(data && data.content));
-          if (data && data.icon === 'warning' && data.content && !lost) alertOnce({ op: 'alert', text: String(data.content), button: data.button || null, action: typeof data.action === 'function' ? data.action : null });
+          var text = String(data && data.content);
+          var lost = /^You have disconnected from #/.test(text);
+          // Its Register posts to vissle /chatango/room, a call outside the closed list (ADR-0001).
+          var register = / is not a registered group\.$/.test(text);
+          // Its Continue calls client.connect outside the bridge, like the Reconnect of the lost connection notice.
+          var crowded = / has a lot of users$/.test(text);
+          var action = data && typeof data.action === 'function' && !crowded ? data.action : null;
+          if (data && data.icon === 'warning' && data.content && !lost && !register) alertOnce({ op: 'alert', text: text, button: action ? data.button || null : null, action: action });
         } catch (e) { warn(e); }
         return notice.apply(this, arguments);
       };

@@ -699,6 +699,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('BetterChatango warning becomes a toast with its action', !!t && !!byText('.toast button', 'Reload'));
   click(byText('.toast button', 'Reload'));
   step('toast action calls BetterChatango', reloads === 1);
+  /* Notices whose button leaves the bridge: registration posts to vissle, Continue connects outside the bridge */
+  let outside = 0;
+  C.setNotice({ icon: 'warning', content: '#test is not a registered group.', button: 'Register', action: () => { outside++; } });
+  C.setNotice({ icon: 'warning', content: '#test has a lot of users', button: 'Continue', action: () => { outside++; } });
+  await until(() => !!byText('.toast', 'has a lot of users'));
+  const offBridge = { register: !!byText('.toast', 'not a registered group'), crowded: !!byText('.toast', 'has a lot of users'), buttons: $$('.toast button').map(b => b.textContent).filter(x => x === 'Register' || x === 'Continue') };
+  step('BetterChatango notices that register a group or reconnect outside the bridge give no button', !offBridge.register && offBridge.crowded && !offBridge.buttons.length, offBridge);
   const connBanner = () => { const el = $('.conn-banner'); return el ? { phase: el.dataset.phase, text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   C.groups.test.socket.readyState = 3; await wait(2300);
   const lostBanner = connBanner();
