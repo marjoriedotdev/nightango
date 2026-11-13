@@ -107,8 +107,12 @@ function parseContent(raw, keepMedia, premium) {
   var w = /<u([a-z0-9]{1,20})\/>/i.exec(s);
   var body = s
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<i\s(?:[^>]*?\s)?s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src) {
-      var m = embedOf(decodeHtml(src)), sm = /^sm:\/\/(.*)/i.exec(src);
+    // Two steps, the tag then its s attribute: a single pattern for both backtracks for seconds on a body of unclosed tags.
+    .replace(/<i\s[^>]*>/gi, function (tag) {
+      // An s attribute further in the tag wins over the one right after <i, as the single pattern did.
+      var rest = tag.slice(3), at = /\ss=["']?([^"'\s>]+)/i.exec(rest) || /^s=["']?([^"'\s>]+)/i.exec(rest);
+      if (!at) return tag;
+      var src = at[1], m = embedOf(decodeHtml(src)), sm = /^sm:\/\/(.*)/i.exec(src);
       if (m) embeds.push(m);
       if (keepMedia) return ' ' + src + ' ';
       return sm ? emoticonText(sm[1], premium) : m ? ' ' : ' ' + src + ' ';
