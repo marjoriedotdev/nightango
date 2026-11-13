@@ -218,6 +218,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `allowed_calls`: every `fetch`, `client.post` and `GM_xmlhttpRequest` call site, the `@grant` and `@connect` of the userscript and the `credential` option, against the closed list of `docs/betterchatango-protocol.md` (Allowed HTTP calls), on the sources of `src/`.
 - `new_year`: the countdown and fireworks minutes around local midnight on January 1, at their boundaries, and the delay until what is shown changes, on `src/core/util.js`.
 - `voice`: the WAV file of a voice message (header, sizes, 16-bit samples clipped), the downmix of a stereo recording and its cut at the length limit, on `src/views/voice.js`.
+- `release`: what `scripts/release.mjs` publishes from a `@version` and a branch (stable from `main`, betas from `beta`, a beta refused on `main`), the release notes of a version, and the `CHANGELOG.md` formats that `scripts/changelog.mjs` refuses. No network: the script only publishes when run as the entry point.
 
 Test policy: [ADR-0009](adr/0009-test-only-complex-behaviour.md) and `docs/coding-conventions.md`.
 
