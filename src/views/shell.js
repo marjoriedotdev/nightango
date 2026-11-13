@@ -1,7 +1,7 @@
 /* ---------- Application shell ---------- */
 function MobileNavButton() {
   var app = useApp();
-  return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', onClick: app.ui.openNav });
+  return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', count: unreadTotal(app.state), onClick: app.ui.openNav });
 }
 
 /**

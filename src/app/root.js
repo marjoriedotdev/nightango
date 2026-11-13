@@ -187,8 +187,7 @@ function useIdleStatus(users, update) {
 function useTabTitle(state) {
   useEffect(function () {
     if (!state.auth.loggedIn) { document.title = 'Nightango'; return; }
-    var n = unreadDmCount(state);
-    Object.keys(state.groups).forEach(function (k) { n += state.groups[k].mentions || 0; });
+    var n = unreadTotal(state);
     document.title = (state.prefs.tabTitle && n ? '(' + n + ') ' : '') + (state.prefs.privacy.usernameInTitle ? shownName(state, state.me) + ' | ' : '') + 'Nightango';
   });
 }
