@@ -5,7 +5,7 @@ export type Presence = 'online' | 'idle' | 'offline';
 
 export interface IconProps { name: IconName; size?: number; strokeWidth?: number; label?: string; className?: string }
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; size?: 'sm' | 'md' | 'lg'; block?: boolean; icon?: IconName; iconRight?: IconName; children?: ReactNode }
-export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { icon: IconName; label: string; size?: number; iconSize?: number; pressed?: boolean }
+export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { icon: IconName; label: string; size?: number; iconSize?: number; pressed?: boolean; /** Number waiting behind the button, shown on its corner and added to the accessible name. */ count?: number }
 export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> { label?: string; hint?: string; error?: string; multiline?: boolean; rows?: number; labelAside?: ReactNode; action?: ReactNode; /** Formatting bar between the label and the field. */ toolbar?: ReactNode; /** Receives the input element. */ inputRef?: { current: HTMLInputElement | HTMLTextAreaElement | null } }
 export interface ToolbarProps { label: string; /** Id of the field the bar edits. */ controls?: string; className?: string; children: ReactNode }
 export interface SwitchProps extends InputHTMLAttributes<HTMLInputElement> { label?: string }
