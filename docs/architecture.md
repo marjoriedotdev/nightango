@@ -102,7 +102,7 @@ The build opens the IIFE with two names: `APP_VERSION`, the `@version` of `src/l
 
 Code between `/*PROTOTYPE*/` and `/*END PROTOTYPE*/` belongs to the hosted prototype only: its hook `window.claude.hot`, through which the hosted page starts the interface, can hand it a saved state and reads its state back (`app/start.js`, `app/root.js`). The build leaves these blocks out of the userscripts, since any script on st.chatango.com could define this hook. `dist/app.js` keeps them, like `dist/nightango.html`.
 
-The build rejects app code or a bundle that contains `</script`, a userscript stylesheet that still targets `:root` or `html,body{`, and a sign-in screen stylesheet that contains `url(` or `@import`.
+The build rejects application sources that declare the same top-level name twice, app code or a bundle that contains `</script`, a userscript stylesheet that still targets `:root` or `html,body{`, and a sign-in screen stylesheet that contains `url(` or `@import`.
 
 ## Userscript in two contexts
 
