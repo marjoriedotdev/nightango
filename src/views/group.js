@@ -262,7 +262,7 @@ function GroupView(p) {
       search != null ? h('div', { className: 'searchbar' },
         h('label', { htmlFor: 'gsearch-' + g.id, className: 'tc-sr' }, 'Search messages'),
         h('input', { id: 'gsearch-' + g.id, className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
-        h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
+        h(T.Button, { variant: 'ghost', onClick: function () { setSearch(null); } }, 'Close')) : null,
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),

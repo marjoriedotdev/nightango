@@ -344,7 +344,7 @@ function MenuButton(p) {
   }
   var trigger = p.renderTrigger
     ? p.renderTrigger({ onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' })
-    : h(T.IconButton, { icon: p.icon || 'more', label: p.label, size: p.size || 32, iconSize: p.iconSize, onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' });
+    : h(T.IconButton, { icon: p.icon || 'more', label: p.label, size: p.size, iconSize: p.iconSize, onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' });
   return h('div', { className: 'menu-anchor', ref: ref },
     trigger,
     open ? h(Portal, null, h('div', { className: 'menu floating', role: 'menu', ref: menuRef, onKeyDown: onKey, style: place },
@@ -532,7 +532,7 @@ function Toast(p) {
     t.icon ? h(T.Icon, { name: t.icon, size: 16, style: { color: 'var(--text-2)' } }) : null,
     h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
     t.action ? h(T.Button, { size: 'sm', onClick: function () { p.dismiss(t.id); t.action.run(); } }, t.action.label) : null,
-    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
+    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 28, iconSize: 13, onClick: function () { p.dismiss(t.id); } }));
 }
 
 var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;

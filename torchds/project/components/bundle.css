@@ -24,11 +24,11 @@
 
 .tc-field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .tc-label{font-size:var(--font-size-body-sm);font-weight:500;color:var(--text)}
-.tc-input{width:100%;height:var(--size-control-md);padding:0 12px;border-radius:var(--radius-lg);background:var(--raised);border:1px solid var(--border-strong);color:var(--text);font:400 var(--font-size-body) var(--font-sans);outline:none}
+.tc-input{width:100%;height:var(--size-control-md);padding:0 12px;border-radius:var(--radius-lg);background:var(--raised);border:1px solid var(--border-strong);color:var(--text);font:400 var(--font-size-control) var(--font-sans);outline:none}
 .tc-input:focus{border-color:var(--focus-ring);box-shadow:0 0 0 3px var(--accent-soft)}
 .tc-input[aria-invalid="true"]{border-color:var(--danger)}
 textarea.tc-input{height:auto;padding:10px 12px;line-height:1.5;resize:vertical}
-select.tc-input{padding:0 10px}
+select.tc-input{appearance:none;-webkit-appearance:none;padding:0 28px 0 10px;background-image:linear-gradient(45deg,transparent calc(50% - .8px),var(--text-2) calc(50% - .8px),var(--text-2) calc(50% + .8px),transparent calc(50% + .8px)),linear-gradient(-45deg,transparent calc(50% - .8px),var(--text-2) calc(50% - .8px),var(--text-2) calc(50% + .8px),transparent calc(50% + .8px));background-size:5px 5px;background-position:right 15px center,right 10px center;background-repeat:no-repeat}
 .tc-input::placeholder,.tc-composer textarea::placeholder{color:var(--text-3)}
 .tc-field-row{display:flex;align-items:center;gap:var(--space-2)}
 .tc-field-row .tc-input{flex:1;min-width:0}
@@ -51,7 +51,7 @@ select.tc-input{padding:0 10px}
 .tc-seg{display:inline-flex;gap:2px;padding:3px;border-radius:calc(var(--radius-md) + 3px);background:var(--track);border:1px solid var(--border)}
 .tc-seg-block{display:flex}
 .tc-seg-block button{flex:1}
-.tc-seg button{height:30px;padding:0 14px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-3);font:500 var(--font-size-body-sm) var(--font-sans);cursor:pointer;white-space:nowrap;transition:background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
+.tc-seg button{height:30px;padding:0 14px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-3);font:500 var(--font-size-control) var(--font-sans);cursor:pointer;white-space:nowrap;transition:background-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
 .tc-seg button:hover{color:var(--text)}
 .tc-seg button[aria-pressed="true"]{background:var(--thumb);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 

@@ -5,7 +5,7 @@ var MESSAGE_STYLE_SIZES = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22
 function MessageStyleButton() {
   var st = useState(false), open = st[0], setOpen = st[1];
   return h(Frag, null,
-    h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16, onClick: function () { setOpen(true); } }),
+    h(T.IconButton, { icon: 'type', label: 'Message style', onClick: function () { setOpen(true); } }),
     open ? h(MessageStyleDialog, { onClose: function () { setOpen(false); } }) : null);
 }
 

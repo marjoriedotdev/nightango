@@ -43,7 +43,7 @@ function AutoModFilters(p) {
     h(T.SettingRow, {
       asLabel: false, title: 'Nonsense detection', description: 'Hides keyboard mashing and random characters. Advanced is stricter.',
       control: h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
-        h('select', { className: 'tc-input', style: { width: 'auto', height: 32 }, 'aria-label': 'Nonsense detection sensitivity', disabled: p.disabled || !f.nonsense, value: f.nonsenseMode, onChange: function (e) { p.onChange('nonsenseMode', e.target.value); } }, h('option', null, 'Basic'), h('option', null, 'Advanced')),
+        h('select', { className: 'tc-input', style: { width: 'auto' }, 'aria-label': 'Nonsense detection sensitivity', disabled: p.disabled || !f.nonsense, value: f.nonsenseMode, onChange: function (e) { p.onChange('nonsenseMode', e.target.value); } }, h('option', null, 'Basic'), h('option', null, 'Advanced')),
         h(T.Switch, { label: 'Nonsense detection', checked: !!f.nonsense, disabled: p.disabled, onChange: function (e) { p.onChange('nonsense', e.target.checked); } }))
     }),
     h(T.SettingRow, { title: 'Repeated messages', description: 'Blocks the same message sent several times in a row.', control: h(T.Switch, { checked: !!f.repeat, disabled: p.disabled, onChange: function (e) { p.onChange('repeat', e.target.checked); } }) }));

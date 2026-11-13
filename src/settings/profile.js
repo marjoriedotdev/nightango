@@ -111,7 +111,7 @@ function VisitorsSection(p) {
   useEffect(function () { app.actions.loadVisitors(get, false); }, []);
   return h(T.SettingsSection, {
     title: 'Visitors', description: 'Activity on your profile recorded by vissle.me.',
-    headerAside: h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', size: 34, iconSize: 15, disabled: loading, onClick: function () { app.actions.loadVisitors(get, false); } })
+    headerAside: h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', iconSize: 15, disabled: loading, onClick: function () { app.actions.loadVisitors(get, false); } })
   },
     h(T.SettingRow, { asLabel: false, title: 'Profile tracker', description: tracked ? 'The vissle tracker is in your bio.' : inviteInList ? null : invite, control: h(T.Button, { size: 'sm', disabled: p.disabled, onClick: toggleTracker }, drafted ? 'Remove tracker' : 'Add tracker') }),
     h('div', { className: 'tc-section-pad seg-scroll' }, h(T.SegmentedControl, { label: 'Activity type', value: get, options: VISIT_FILTERS, onChange: function (g) { app.actions.loadVisitors(g, false); } })),

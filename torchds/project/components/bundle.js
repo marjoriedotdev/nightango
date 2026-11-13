@@ -109,7 +109,7 @@
   }
 
   function IconButton(props) {
-    var size = props.size || 32;
+    var size = props.size || 34;
     var rest = omit(props, ['icon', 'label', 'size', 'iconSize', 'pressed', 'count', 'className', 'style']);
     return h('button', Object.assign({
       type: 'button', className: cx('tc-ib', props.count && 'tc-ib-counted', props.className),
@@ -345,7 +345,7 @@
         props.title ? h('span', { className: 'tc-banner-title' }, props.title) : null,
         h('span', { className: 'tc-banner-text' }, props.children)),
       props.action || null,
-      props.onDismiss ? h(IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14, onClick: props.onDismiss }) : null);
+      props.onDismiss ? h(IconButton, { icon: 'x', label: 'Dismiss', size: 28, iconSize: 14, onClick: props.onDismiss }) : null);
   }
 
   function SettingsSection(props) {
@@ -450,8 +450,8 @@
         }
       }),
       h('div', { className: 'tc-composer-bar' },
-        props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', size: 30, iconSize: 16, onClick: props.onEmoji }) : null,
-        props.attachMenu || (props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach }) : null),
+        props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', onClick: props.onEmoji }) : null,
+        props.attachMenu || (props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', onClick: props.onAttach }) : null),
         props.hint ? h('span', { id: hintId, className: cx('tc-composer-hint', props.hintTone === 'warning' && 'tc-composer-hint-warning') },
           props.hintTone === 'warning' ? h(Icon, { name: 'alert', size: 14 }) : null, props.hint) : h('span', { style: { flex: 1 } }),
         props.aside || null,

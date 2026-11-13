@@ -500,7 +500,7 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + shown, size: 26, iconSize: 16, items: menuGroups([[viewProfileItem(app, n, null), whoItem(app, n)].concat(p.extra || []), actions]), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + shown, size: 28, iconSize: 16, items: menuGroups([[viewProfileItem(app, n, null), whoItem(app, n)].concat(p.extra || []), actions]), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
