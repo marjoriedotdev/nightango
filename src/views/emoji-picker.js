@@ -59,7 +59,7 @@ function useEmojiPicker(inputRef, setValue) {
 
 /**
  * Composer picker.
- * It shows BetterChatango's emoticons by their emoji, the account's recent ones first then Classic and Premium as in its picker, GIFs, and BetterChatango's media library.
+ * It shows BetterChatango's emoticons, the account's recent ones first then Classic and Premium as in its picker, GIFs, and BetterChatango's media library.
  * @param {{anchorRef: Object, premium: boolean, tab: string, onTab: function(string), onPick: function(string), onClose: function(Event)}} p Emoji button, Premium section shown, open tab and its change, choice of a shortcut or an address, and closing.
  */
 function EmojiPicker(p) {
@@ -67,9 +67,9 @@ function EmojiPicker(p) {
   var place = useFloating(p.anchorRef, ref, true, p.onClose, { up: true, align: 'left' });
   var me = useStatePart(function (s) { return s.me; });
   var recent = useState(function () { return recentEmoji(me); })[0];
-  function allowed(e) { return e && e.emoji && (p.premium || !e.premium); }
+  function allowed(e) { return e && (p.premium || !e.premium); }
   var sections = EMOJI_SECTIONS.filter(function (s) { return p.premium || !s.premium; }).map(function (s) {
-    return { title: s.title, list: EMOTICONS.filter(function (e) { return e.emoji && e.premium === s.premium; }) };
+    return { title: s.title, list: EMOTICONS.filter(function (e) { return e.premium === s.premium; }) };
   });
   var recentList = recent.map(function (n) { return EMOTICON_BY_NAME[n]; }).filter(allowed);
   if (recentList.length) sections.unshift({ title: 'Recent', list: recentList });
@@ -79,7 +79,7 @@ function EmojiPicker(p) {
       return h(Frag, { key: s.title },
         h('h3', { className: 'mlabel' }, s.title),
         h('div', { className: 'emoji-grid' }, s.list.map(function (e) {
-          return h(T.Button, { key: e.name, variant: 'ghost', className: 'emoji-btn', 'aria-label': e.name, title: e.keys[0], onClick: function () { keepRecentEmoji(me, e.name); p.onPick(e.keys[0]); } }, e.emoji);
+          return h(T.Button, { key: e.name, variant: 'ghost', className: 'emoji-btn', 'aria-label': e.name, title: e.keys[0], onClick: function () { keepRecentEmoji(me, e.name); p.onPick(e.keys[0]); } }, h(EmoticonArt, { name: e.name, token: e.keys[0] }));
         })));
     })));
 }

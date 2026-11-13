@@ -75,21 +75,19 @@ function mediaLinks(m) {
 }
 /**
  * Renders an sm:// emoticon as text.
- * @param {string} name Name read in the tag. Gives its emoji, its first shortcut if it is Premium without the flag, or the bare name if the table does not know it and it is made of [a-z0-9_-].
- * @param {boolean} premium The message carries the Premium flag.
+ * @param {string} name Name read in the tag. Gives its first shortcut, which the message text shows as the emoticon, or the bare name if the table does not know it and it is made of [a-z0-9_-].
  */
-function emoticonText(name, premium) {
+function emoticonText(name) {
   var e = EMOTICON_BY_NAME[name];
   if (!e) return /^[a-z0-9_-]{1,32}$/.test(name) ? name : '';
-  return e.emoji && (premium || !e.premium) ? e.emoji : e.keys[0].split('?')[0];
+  return e.keys[0].split('?')[0];
 }
 /**
  * Reads raw Chatango content.
  * @param {string} raw Message body: style tags, replies, edits, media, emoticons, entities.
  * @param {boolean} [keepMedia] Keeps the source of media and emoticons in the text.
- * @param {boolean} [premium] The message carries the Premium flag.
  */
-function parseContent(raw, keepMedia, premium) {
+function parseContent(raw, keepMedia) {
   var style = {}, embeds = [], s = String(raw);
   var n = /<n([a-f0-9]{3}|[a-f0-9]{6})\/>/i.exec(s);
   if (n) style.nameColor = '#' + n[1];
@@ -107,11 +105,13 @@ function parseContent(raw, keepMedia, premium) {
   var w = /<u([a-z0-9]{1,20})\/>/i.exec(s);
   var body = s
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<i\s(?:[^>]*?\s)?s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src) {
+    .replace(/<i\s(?:[^>]*?\s)?s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src, at, all) {
       var m = embedOf(decodeHtml(src)), sm = /^sm:\/\/(.*)/i.exec(src);
       if (m) embeds.push(m);
       if (keepMedia) return ' ' + src + ' ';
-      return sm ? emoticonText(sm[1], premium) : m ? ' ' : ' ' + src + ' ';
+      if (!sm) return m ? ' ' : ' ' + src + ' ';
+      // The text shows a shortcut as its emoticon only when it stands as a word: a tag stuck to a word gets its space.
+      return (/[^\s>]/.test(all.charAt(at - 1)) ? ' ' : '') + emoticonText(sm[1]) + (/[^\s<]/.test(all.charAt(at + tag.length)) ? ' ' : '');
     })
     .replace(STRIKE_PAIR, '<s>$1</s>');
   var text = decodeHtml(body.replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
@@ -125,7 +125,7 @@ function parseContent(raw, keepMedia, premium) {
  * Reads the body of a received or archived PM with its Premium flag.
  * @param {Array} data Fields of the msg or msgoff frame, flags at 4 and body from 5.
  */
-function parsePm(data) { return parseContent(data.slice(5).join(':'), false, !!(parseInt(data[4], 10) & MSG_FLAG.PREMIUM)); }
+function parsePm(data) { return Object.assign(parseContent(data.slice(5).join(':')), { premium: !!(parseInt(data[4], 10) & MSG_FLAG.PREMIUM) }); }
 /**
  * Reads a record of the BetterChatango private history.
  * @param {{ts: number, data: string, unread: number}} v Record (saveMessage), data being the full msg frame.
@@ -135,7 +135,7 @@ function pmRecordEntry(v) {
   var parts = String(v.data || '').split(':').slice(1);
   if (parts.length <= 5) return null;
   var body = parsePm(parts), from = lower(parts[0]);
-  return { from: from, spelling: spellingOf(from, body.written), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
+  return { from: from, spelling: spellingOf(from, body.written), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, premium: body.premium, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
 }
 var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
 /**

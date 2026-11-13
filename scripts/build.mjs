@@ -18,6 +18,7 @@ export const APP_SOURCES = [
   'core/sample-data.js',
   'core/prefs.js',
   'core/ui.js',
+  'core/emoticons.js',
   'core/rich-text.js',
   'core/selectors.js',
   'bridge/live-model.js',

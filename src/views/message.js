@@ -92,7 +92,7 @@ var MessageRow = React.memo(function MessageRow(p) {
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanRow) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
   var original = p.original;
-  var reply = original ? { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
+  var reply = original ? { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: previewNodes(original), onJump: function () { p.onJump(original); } }
     : m.replyTo ? { text: 'Original message not loaded' } : null;
   var authorBtn = handle
     ? h('button', { type: 'button', className: 'tc-msg-author namebtn namebtn-mention', title: 'Mention ' + p.shown, style: nameStyle, onClick: function () { p.onMention(handle); } }, p.shown)
@@ -171,7 +171,7 @@ function authorName(name, style) {
 
 function MessageContent(p) {
   var m = p.m, parts = shownParts(m);
-  return h(Frag, null, parts.length ? h(MessageText, { text: m.text, parts: parts, style: p.style, plain: p.plain, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
+  return h(Frag, null, parts.length ? h(MessageText, { text: m.text, parts: parts, premium: m.premium, style: p.style, plain: p.plain, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
 }
 
 var FILE_MEDIA = { video: { icon: 'play', label: 'Play video', className: 'embed-frame' }, audio: { icon: 'volume', label: 'Play audio', className: 'embed-audio' } };

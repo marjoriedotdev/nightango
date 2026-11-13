@@ -14,6 +14,8 @@ a{color:var(--accent-text)}
 .msg-quote{padding:0 var(--space-1);border:1px solid var(--border);border-radius:var(--radius-md);background:var(--subtle)}
 .msg-quote-text{color:var(--text-2)}
 .tc-msg-text{font-size:var(--msg-size,14px)}
+.emoticon{display:inline-block;width:1.4em;height:1.4em;margin:-.2em 0;vertical-align:-.3em}
+.emoticon-art{display:block;width:100%;height:100%;overflow:visible}
 .tc-banner-text{white-space:pre-line}
 .tc-msg.menu-open .tc-msg-actions,.cmsg.menu-open .tc-msg-actions{display:flex}
 .tc-msg-actions{z-index:4}
@@ -238,7 +240,8 @@ h1,h2,h3{text-wrap:balance}
 .menu .menu-presence{position:static;flex:none;width:13px;height:13px;--dot:13px;--presence-ring:transparent;background-clip:padding-box}
 .emoji-picker{z-index:70;width:min(340px,calc(100vw - 16px));max-height:min(360px,50vh);overflow-y:auto;padding:0 var(--space-2) var(--space-2);border-radius:var(--radius-xl);background:var(--raised);border:1px solid var(--border-strong);box-shadow:var(--shadow-floating);animation:tc-fade-in var(--duration-base) var(--ease-out)}
 .emoji-grid{display:flex;flex-wrap:wrap;gap:2px}
-.emoji-btn{min-width:var(--size-control-md);padding:0 var(--space-1);font-size:20px}
+.emoji-btn{min-width:var(--size-control-md);padding:0 var(--space-1)}
+.emoji-btn .emoticon-art{width:24px;height:24px}
 .picker-tabs{position:sticky;top:0;z-index:1;padding:var(--space-2) 0;background:var(--raised)}
 .media-panel,.media-tools{display:flex;flex-direction:column;gap:var(--space-2)}
 .media-actions{display:flex;align-items:center;gap:var(--space-2)}

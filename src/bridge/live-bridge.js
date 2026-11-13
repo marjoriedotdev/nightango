@@ -55,9 +55,9 @@ var liveBridge = (function () {
     var flags = parseInt(data[7], 10) || 0, name = author(data);
     // Like BetterChatango, messages from the group owner count as Premium.
     var premium = !!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner);
-    var parsed = parseContent(data.slice(9).join(':'), false, premium);
+    var parsed = parseContent(data.slice(9).join(':'));
     return {
-      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: name, spelling: spellingOf(name, data[1] || '#' + data[2]), text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
+      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: name, spelling: spellingOf(name, data[1] || '#' + data[2]), text: parsed.text, parts: parsed.parts, premium: premium, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
       style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags),
       badge: badgeRoleOf(flags), bg: !!(flags & MSG_FLAG.BG_ON) && premium
     };
@@ -161,14 +161,13 @@ var liveBridge = (function () {
       case 'getannc':
         if (data[0] === 'none' || data.length < 4) emit({ op: 'annc', gid: room, mode: 0, enabled: false, interval: 0, text: '', displayText: '', embeds: [] });
         else {
-          // Like BetterChatango, an announcement always has the Premium flag.
-          var raw = data.slice(4).join(':'), shown = parseContent(raw, false, true);
+          var raw = data.slice(4).join(':'), shown = parseContent(raw);
           // The original style (colors, font, emphasis set by BetterChatango after <f>) is kept for the next save, and media stay in the text sent back.
           emit({ op: 'annc', gid: room, mode: parseInt(data[0], 10) || 0, enabled: data[0] !== '0', interval: parseInt(data[3], 10) || 0, text: parseContent(raw, true).text, displayText: shown.text, embeds: shown.embeds, prefix: (/^(<n[^>]*\/>)?(<f [^>]*>(<b>)?(<i>)?(<u>)?)?/.exec(raw) || [''])[0] });
         }
         break;
       case 'annc': {
-        var posted = parseContent(data.slice(2).join(':'), false, true);
+        var posted = parseContent(data.slice(2).join(':'));
         emit({ op: 'anncPost', gid: room, text: posted.text, embeds: posted.embeds });
         break;
       }
@@ -214,7 +213,7 @@ var liveBridge = (function () {
     switch (name) {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
-        emit({ op: 'pm', from: lower(data[0]), spelling: spellingOf(lower(data[0]), p2.written), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, replyId: p2.replyId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
+        emit({ op: 'pm', from: lower(data[0]), spelling: spellingOf(lower(data[0]), p2.written), text: p2.text, parts: p2.parts, premium: p2.premium, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, replyId: p2.replyId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
         // BetterChatango plays the sound itself for the PM of client.private.focus, reset to false on each private connection: the bridge plays it for the others, like BetterChatango, except for edits and ignored members.
         var from = lower(data[0]);
         if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
@@ -977,9 +976,9 @@ var liveBridge = (function () {
         // BetterChatango archives a sent PM under client.private.focus, not its recipient: an upload can leave after a switch.
         C.private.focus = user;
         try { if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
-        // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
-        var parsed = parseContent(body, false, true);
-        return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId, editId: parsed.editId };
+        var parsed = parseContent(body);
+        // Like BetterChatango for a PM it just sent (inject.js:4638), the Premium flag is the one of the account.
+        return { style: parsed.style, text: parsed.text, parts: parsed.parts, premium: [200, 210].indexOf(C.private.premium.status) >= 0, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId, editId: parsed.editId };
       } catch (e) { warn(e); return null; }
     },
     /**

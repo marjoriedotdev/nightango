@@ -1266,25 +1266,30 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
   step('pm image embed and settings', prevImage === 'Image' && prevPhoto === 'Photo' && imgsBefore === 0 && JSON.stringify(imgs) === JSON.stringify([['https://x.test/a.png', 'no-referrer'], ['https://chatango.com/pmmessageimg?i=abc123', 'no-referrer']]) && linksOnly, { prevImage, prevPhoto, imgsBefore, imgs, linksOnly });
 
-  /* Received emoticons: emoji from the table, shortcut of a Premium one without the flag, bare name of an unknown one, typed shortcut kept as text */
-  const EMO = 'Emo <i s="sm://smile" w="16" h="16"/> <i w="16" h="16" s="sm://cat"/> <i s="sm://stripes" w="16" h="16"/> <i s="sm://inconnu" w="16" h="16"/> :)';
-  const EMO_PLAIN = 'Emo \u{1F642} *cat* *stripes* inconnu :)', EMO_PREMIUM = 'Emo \u{1F642} \u{1F431} *stripes* inconnu :)';
-  const emoShown = scope => { const p = $$(scope + ' .tc-msg-text').find(x => x.textContent.indexOf('Emo ') === 0); return p ? p.textContent : null; };
+  /* Emoticons: a tag and a typed shortcut are drawn, a Premium one only with the flag, an unknown tag keeps its bare name, a tag stuck to a word gets its space */
+  const EMO = 'Emo <i s="sm://smile" w="16" h="16"/> <i w="16" h="16" s="sm://cat"/> <i s="sm://stripes" w="16" h="16"/> <i s="sm://inconnu" w="16" h="16"/> :) *dog* constructor x<i s="sm://wink" w="16" h="16"/>';
+  const EMO_TEXT = 'Emo :) *cat* *stripes* inconnu :) *dog* constructor x ;)';
+  const EMO_PLAIN = 'smile smile wink', EMO_PREMIUM = 'smile cat stripes smile dog wink';
+  const emoRead = el => el ? { text: el.textContent, drawn: [...el.querySelectorAll('.emoticon')].map(x => x.getAttribute('aria-label')).join(' ') } : null;
+  const emoShown = (scope, start) => emoRead($$(scope + ' .tc-msg-text').find(x => x.textContent.indexOf(start || 'Emo ') === 0));
+  const convPrevEl = n => { const c = $$('.conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n); return c ? c.querySelector('.conv-prev') : null; };
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000273.1', 'Eve', '', 'u7', 'UNID7', 'tmp16', '9.9.9.9', '0', '', '<n000/><f x11000="0">' + EMO]);
   g('u', 'test', ['tmp16', 'EMO1=']);
-  g('b', 'test', ['1700000274.1', 'Alice', '', 'u1', 'UNID1', 'tmp17', '1.2.3.4', '0', '', '<n000/><f x11000="0"><rEMO1/>So cute']); await wait(60);
-  const emoQuote = $$('.log .tc-msg-reply-text').find(x => x.textContent.indexOf('Emo ') === 0);
-  const groupEmo = { shown: emoShown('.log'), text: emoQuote ? emoQuote.textContent : null };
+  g('b', 'test', ['1700000274.1', 'Alice', '', 'u1', 'UNID1', 'tmp17', '1.2.3.4', '0', '', '<n000/><f x11000="0"><rEMO1/>So cute']);
+  g('b', 'test', ['1700000275.1', 'Eve', '', 'u7', 'UNID7', 'tmp18', '9.9.9.9', '4', '', '<n000/><f x11000="0">Pre' + EMO]); await wait(60);
+  const groupEmo = { shown: emoShown('.log'), preview: emoRead($$('.log .tc-msg-reply-text').find(x => x.textContent.indexOf('Emo ') === 0)) };
+  const groupPremium = emoShown('.log', 'PreEmo ');
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   pm('msg', ['quinn', 'marjorie', 'unknown', '1700000402.5', '0', '<n000/><m v="1"><g x12s000="0">' + EMO + '</g></m>']); await wait(50);
   pm('msg', ['pia', 'marjorie', 'unknown', '1700000403.5', '4', '<n000/><m v="1"><g x12s000="0">' + EMO + '</g></m>']); await wait(50);
   click(byText('.conv', 'quinn')); await wait(50);
-  const pmEmo = { shown: emoShown('.thread'), text: convPrev('quinn') };
+  const pmEmo = { shown: emoShown('.thread'), preview: emoRead(convPrevEl('quinn')) };
   click(byText('.conv', 'pia')); await wait(50);
-  const premiumEmo = { shown: emoShown('.thread'), text: convPrev('pia') };
-  const emoOk = (r, want) => r.shown === want && r.text === want;
-  step('received emoticons become emojis, never sm://', emoOk(groupEmo, EMO_PLAIN) && emoOk(pmEmo, EMO_PLAIN) && emoOk(premiumEmo, EMO_PREMIUM), { groupEmo, pmEmo, premiumEmo });
+  const premiumEmo = { shown: emoShown('.thread'), preview: emoRead(convPrevEl('pia')) };
+  const emoIs = (r, drawn) => !!r && r.text === EMO_TEXT && r.drawn === drawn;
+  const emoOk = (r, drawn) => emoIs(r.shown, drawn) && emoIs(r.preview, drawn);
+  step('emoticons are drawn from tags and typed shortcuts, Premium ones only with the flag', emoOk(groupEmo, EMO_PLAIN) && !!groupPremium && groupPremium.drawn === EMO_PREMIUM && emoOk(pmEmo, EMO_PLAIN) && emoOk(premiumEmo, EMO_PREMIUM), { groupEmo, groupPremium, pmEmo, premiumEmo });
 
   /* Close or delete a conversation */
   const listed = n => $$('.convs .conv-name').some(x => x.textContent === n);

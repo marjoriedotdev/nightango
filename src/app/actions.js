@@ -125,7 +125,7 @@ function useActions(k) {
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
       text = (opts.quote || '') + text;
-      update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = readThrough(d.groups[gid]); });
+      update(function (d) { d.groups[gid].messages.push({ id: uid(), kind: 'msg', author: me, text: text, premium: true, ts: Date.now(), replyTo: opts.replyTo || null, channel: opts.channel || 'none' }); d.groups[gid].lastReadTs = readThrough(d.groups[gid]); });
       var g = stateRef.current.groups[gid];
       if (gid === 'bots' && text.charAt(0) === '!') {
         var cmd = text.slice(1).split(/\s+/)[0].toLowerCase();
@@ -142,7 +142,7 @@ function useActions(k) {
     sendDm: function (name, text, opts) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
-      update(function (d) { addSentPm(d, name, { from: me, key: uid(), replyId: replyKey, editId: opts.editKey, text: (opts.quote || '') + text, ts: Date.now() }); });
+      update(function (d) { addSentPm(d, name, { from: me, key: uid(), replyId: replyKey, editId: opts.editKey, text: (opts.quote || '') + text, premium: true, ts: Date.now() }); });
       var u = userOf(stateRef.current, name);
       if (!opts.editKey && u.status !== 'offline' && !u.blocked) setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
       return true;
@@ -503,7 +503,7 @@ function useActions(k) {
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, { replyId: replyKey, editId: opts.editKey, quote: opts.quote });
       if (!sent) { if (!opts.quiet) messageFailed('private_message', opts.editKey ? 'Message not edited.' : 'Private message not sent.'); return false; }
-      update(function (d) { addSentPm(d, name, { from: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
+      update(function (d) { addSentPm(d, name, { from: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, premium: sent.premium, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
       return true;
     };

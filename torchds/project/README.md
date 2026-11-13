@@ -78,6 +78,7 @@ Chatango lets members choose name colors, fonts, text colors and message backgro
 
 - Stroke icons on a 24px grid at 2px, round caps and joins, drawn at 14 to 18px through `Torch.Icon`. The set follows Lucide's geometry (ISC license).
 - Icons inherit the text color of their parent. Icon-only buttons always have a label (`IconButton`).
+- Chatango emoticons in a message are drawn by Nightango: a round face with the tall oval eyes of Chatango, flat fills with one shade on the lower rim, night-blue ink, moonlight gloves and teeth. They take the `emoticon-*` tokens only, sit in a 36 unit box and show at 1.4em in a line of text, 24px in the picker. They belong to what members write: the interface itself still uses no emoji and no emoticon.
 - No emoji as icons. Group icons and avatars are initials on the eight avatar tones, 45° apart in hue at one lightness, so two neighbors in a list rarely look alike and none competes with the accent; real images replace them when the member has one.
 
 ## Logo

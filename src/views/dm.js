@@ -272,7 +272,7 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
       app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(shownName(app.state, p.peer), LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
     } } : null];
   var o = p.original;
-  var reply = o ? { author: h(Person, { name: o.from, size: 16 }), text: messagePreview(o), onJump: function () { p.onJump(o); } }
+  var reply = o ? { author: h(Person, { name: o.from, size: 16 }), text: previewNodes(o), onJump: function () { p.onJump(o); } }
     : m.replyTo ? { text: 'Original message not loaded' } : null;
   var actions = h(Frag, null,
     p.onReply && m.key ? h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: function () { p.onReply(m); } }) : null,
@@ -395,7 +395,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
       h('span', { className: 'conv-name' }, u.spelling || n, u.favorite ? h(T.Icon, { name: 'star', size: 12, label: 'Favorite', className: 'conv-fav' }) : null), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(n, u),
-      c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
+      c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last), null, !!last.premium)) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
 }
 

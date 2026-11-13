@@ -81,12 +81,12 @@ function pmConversation(d, name, extra) {
  */
 function pmMessage(x) {
   // Edit without a loaded original: it takes the key of the original, which the archive and later edits target.
-  var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
+  var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, premium: x.premium, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
   if (x.editId) { m.edited = true; m.editKeys = x.key ? [x.key] : []; }
   if (x.replyId) m.replyTo = { key: x.replyId };
   return m;
 }
-function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
+function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.premium = m.premium; o.embeds = m.embeds; o.edited = true; }
 /**
  * Applies a PM edit to its original and counts it once.
  * @param {Object} o Original message.

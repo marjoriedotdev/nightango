@@ -28,6 +28,11 @@ function messagePreview(m) {
   return text || (e ? EMBED_LABEL[e.kind] : '');
 }
 /**
+ * Preview of a message on one line, with its emoticons drawn.
+ * @param {{text: string, parts: ?Array, embeds: ?Array, premium: ?boolean}} m Message read by parseContent.
+ */
+function previewNodes(m) { return emoticonNodes(messagePreview(m), m.premium); }
+/**
  * Returns the host of an https URL as the browser will reach it.
  * @param {string} url URL read.
  * @returns {?string} Lowercase host, null for an unreadable URL or one that is not https.
@@ -103,8 +108,9 @@ var NAME_OR_LINK = /(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/;
  * In a dir="auto" container they do not set the direction either, nor does a quote, which takes its own.
  * @param {string} text Shown text.
  * @param {Array<number>} [hit] Start and end of a highlighted search term.
+ * @param {boolean} [premium] Premium flag of the message the text comes from. Without it the text draws no emoticon.
  */
-function bidiText(text, hit) {
+function bidiText(text, hit, premium) {
   var end = 0;
   function run(text) {
     return text.split(NAME_OR_LINK).map(function (s, i) {
@@ -113,7 +119,7 @@ function bidiText(text, hit) {
       if (s && hit && hit[0] < end && hit[1] > start) {
         var a = Math.max(hit[0] - start, 0), b = Math.min(hit[1] - start, s.length);
         s = h(Frag, null, s.slice(0, a), h('mark', null, s.slice(a, b)), s.slice(b));
-      }
+      } else if (premium != null && !(i % 2)) s = emoticonNodes(s, premium);
       return i % 2 ? h('span', { key: i, dir: 'ltr' }, s) : h(Frag, { key: i }, s);
     });
   }
@@ -122,7 +128,7 @@ function bidiText(text, hit) {
   });
 }
 
-/* Message text: emphasis (parseContent segments, absent without emphasis), quotes, mentions and links */
+/* Message text: emphasis (parseContent segments, absent without emphasis), quotes, mentions, links and emoticons */
 function MessageText(p) {
   var app = useAppApi();
   // Hidden style (plain): like BetterChatango, bold, italic and underline drop but strikethrough stays.
@@ -139,7 +145,7 @@ function MessageText(p) {
       if (!s) return null;
       if (s.charAt(0) === '@' && s.length > 1) return mention(s, i);
       if (/^https?:\/\//.test(s)) return memberLink(app, s, p.gid || null, i);
-      return s;
+      return h(Frag, { key: i }, emoticonNodes(s, p.premium));
     });
   }
   return h('p', { className: 'tc-msg-text', dir: 'auto', style: p.style }, (p.parts || [{ text: p.text }]).map(function (part, k) {

@@ -65,11 +65,11 @@ function seedWorld(me) {
     ],
     messages: [
       msg('ember', 'BetterChatango 0.1.0-b is out. Changelog: https://github.com/Vissle-Drissle/Torch-Client', 60 * 24 + 40),
-      msg('quill', 'The new sidebar is so much calmer.', 60 * 24 + 35),
+      msg('quill', 'The new sidebar is so much calmer. :)', 60 * 24 + 35),
       msg('kestrel', 'Anyone else getting dropped from #trade every few minutes since this morning?', 19),
       known,
       msg('sable', "I've put a note in the group announcement until it's fixed.", 18),
-      msg('quill', 'Confirmed, the second reconnect held. Thanks.', 16, { replyTo: { id: known.id } }),
+      msg('quill', 'Confirmed, the second reconnect held. Thanks. ~d', 16, { replyTo: { id: known.id }, premium: true }),
       msg('marrow', "Here's what the reconnect loop looks like on my side:", 14, { embeds: [{ kind: 'image', url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect width="320" height="180" fill="#0d0e10"/><g font-family="monospace" font-size="11" fill="#8a8e96"><text x="14" y="26">[ws] connecting s12.chatango.com:8081</text><text x="14" y="46" fill="#f08a8a">[ws] closed (1006) after 41s</text><text x="14" y="66">[ws] reconnect 1/3</text><text x="14" y="86" fill="#f08a8a">[ws] closed (1006) after 2s</text><text x="14" y="106">[ws] reconnect 2/3</text><text x="14" y="126" fill="#3fb27f">[ws] connected, joined #community</text></g></svg>') }] }),
       msg('kestrel', SAMPLE_TIKTOK_LINK + '\nkitties', 13, { embeds: [{ kind: 'tiktok', id: '6718335390845095173', url: SAMPLE_TIKTOK_LINK }] }),
       msg('halcyon', 'Grand Teton tonight ' + SAMPLE_X_POST.card.link, 12, { embeds: [{ kind: 'x', id: SAMPLE_X_POST.id, url: SAMPLE_X_POST.card.link }] }),
@@ -85,7 +85,7 @@ function seedWorld(me) {
       msg('ember', 'Weekly triage starts in ten minutes.', 60 * 3),
       msg('ember', 'Pushed the theme importer fix to main.', 25),
       msg('vantage', '@' + me + ' can you check the import on Firefox?', 22),
-      msg('quill', 'Firefox works here.', 20),
+      msg('quill', 'Firefox works here. 8)', 20),
       msg('nightowl', '@' + me + ' Safari drops the backdrop color on import.', 8)
     ]
   });
@@ -134,7 +134,7 @@ function seedWorld(me) {
     sable: { messages: [dm('sable', 'Hey, saw your theme export change. Clean work.', 7), backdrop, dm(me, 'Both. The backdrop is stored with the palette in the same JSON file.', 6, { replyTo: { key: backdrop.key } }), dm('sable', "Perfect. I'll check the s12 logs tonight and tell you whether it's the client or Chatango.", 5)], unread: 1, lastReadTs: t(6) },
     kestrel: { messages: [dm('kestrel', 'Did you get my trade offer?', 65)], unread: 1, lastReadTs: t(120) },
     quill: { messages: [dm('quill', 'Can you send the invite link for #retrogaming?', 60 * 3), dm(me, 'Here: retrogaming.chatango.com', 60 * 3 - 2), dm(me, 'Thanks for the invite link', 60 * 2)], unread: 0, lastReadTs: now },
-    halcyon: { messages: [dm('halcyon', 'See you Friday for game night.', 60 * 26)], unread: 0, lastReadTs: now },
+    halcyon: { messages: [dm('halcyon', 'See you Friday for game night. :D', 60 * 26)], unread: 0, lastReadTs: now },
     pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60) }
   };
   return {
