@@ -269,5 +269,5 @@ function Root(props) {
     state.auth.loggedIn && o.spaceEditor ? h(SpaceEditorDialog, { id: o.spaceEditor.id, add: o.spaceEditor.add || null, onClose: function () { o.setSpaceEditor(null); } }) : null,
     o.confirmCfg ? h(ConfirmDialog, { confirm: o.confirmCfg, onClose: function () { o.setConfirm(null); } }) : null,
     state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
-    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast })))));
+    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast, under: !!(state.auth.loggedIn && state.session) })))));
 }

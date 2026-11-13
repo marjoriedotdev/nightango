@@ -427,7 +427,7 @@ function SkeletonRows(p) {
 
 /**
  * Makes the interface behind the top dialog inert so that Tab and screen readers stay in it.
- * The app and the dialogs under the top one become inert. Menus and toasts, above the dialogs, stay reachable.
+ * The app and the dialogs under the top one become inert. Menus and toasts, above the dialogs, stay reachable, except the toasts during a session loss (Toasts, under).
  * @param {{dialogs: Array}} layer Layer given by Layers.
  */
 function syncInert(layer) {
@@ -483,7 +483,7 @@ function Dialog(p) {
       if (prev && prev.focus) prev.focus();
     };
   }, []);
-  return h(Portal, null, h('div', { className: cx('overlay', p.sheet && 'sheet'), onMouseDown: function (e) { if (e.target === e.currentTarget && p.onClose) p.onClose(); } },
+  return h(Portal, null, h('div', { className: cx('overlay', p.sheet && 'sheet', p.center && 'center'), onMouseDown: function (e) { if (e.target === e.currentTarget && p.onClose) p.onClose(); } },
     h('div', { className: cx('dialog', p.wide && 'wide', p.sheet && 'sheet', p.className), role: p.role || 'dialog', 'aria-modal': 'true', 'aria-label': p.label || p.title, style: p.style, ref: ref },
       p.title ? h('div', { className: 'dialog-head' }, h('h2', p.focusTitle ? { tabIndex: -1, 'data-autofocus': true } : null, p.title), p.description ? h('p', null, p.description) : null) : null,
       p.children,
@@ -515,10 +515,10 @@ function toastDelay(t) {
 }
 /**
  * Stack of notifications.
- * @param {{toasts: Array, dismiss: function(string)}} p Notifications and their closing by id.
+ * @param {{toasts: Array, dismiss: function(string), under: boolean=}} p Notifications, their closing by id, and true to put them under the dialogs.
  */
 function Toasts(p) {
-  return h(Portal, null, h('div', { className: 'toasts', role: 'status', 'aria-live': 'polite' },
+  return h(Portal, null, h('div', { className: cx('toasts', p.under && 'toasts-under'), role: 'status', 'aria-live': 'polite' },
     p.toasts.map(function (t) { return h(Toast, { key: t.id, toast: t, dismiss: p.dismiss }); })));
 }
 /**
