@@ -219,7 +219,9 @@ function ensureLiveGroup(d, gid, local) {
  * @param {Object} local Account data kept in this browser.
  */
 function ensureLiveUser(d, name, local) {
-  var u = d.users[name];
+  // Assigning __proto__ would replace the prototype of the map: this name gets a member that is never kept.
+  if (name === '__proto__') return { status: 'offline', about: '', style: {} };
+  var u = ownOf(d.users, name);
   if (!u) {
     u = d.users[name] = { status: 'online', about: '', style: {} };
     if ((liveBridge.ignoredUsers() || []).indexOf(name) >= 0) u.ignored = true;

@@ -171,7 +171,7 @@ function ProfileSummary(p) {
  * @param {{name: string}} p Member name.
  */
 function MemberNote(p) {
-  var app = useApp(), saved = app.state.notes[p.name] || { label: '', note: '' };
+  var app = useApp(), saved = ownOf(app.state.notes, p.name) || { label: '', note: '' };
   var a = useState(saved.label), label = a[0], setLabel = a[1];
   var b = useState(saved.note), note = b[0], setNote = b[1];
   var next = { label: label.trim(), note: note.trim() };

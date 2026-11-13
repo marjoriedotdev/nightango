@@ -2324,6 +2324,27 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('leaving a group during a reconnect closes its socket, keeps its later frames out of the state and the BetterChatango focus off it',
     leftDuring.socket === 3 && !leftDuring.ghost && !leftDuring.focus && !leftDuring.listed, leftDuring);
 
+  /* Names that are also keys of every object: constructor and __proto__ as an author and as mentions */
+  C.groups.names = fakeGroup();
+  SB.renderGroup({ group: 'names', header: 'Names' });
+  g('ok', 'names', ['marjorie', '', '', '', '1700000000', '', '', '0']);
+  g('inited', 'names', []);
+  await wait(50);
+  click(byText('.tc-nav', 'names')); await wait(50);
+  const opsBefore = opFailures.length;
+  g('b', 'names', ['1700009100.1', 'constructor', '', 'u7', 'UNID7', 'tmp97', '7.7.7.7', '0', '', '<n000/><f x11000="0">hello @__proto__ and @constructor']);
+  g('u', 'names', ['tmp97', 'N-A_M=']);
+  await wait(80);
+  const reserved = { shown: !!$$('.log .tc-msg-text').find(x => x.textContent.includes('hello @__proto__')), ops: opFailures.slice(opsBefore) };
+  const mention = $$('.log button.tc-mention').find(x => x.textContent === '@constructor');
+  if (mention) { click(mention); await wait(80); }
+  reserved.dialog = !!$('.profile-dialog'); reserved.recovery = !!$('.recovery');
+  reserved.polluted = ['status', 'about', 'style', 'spelling', 'ignored'].filter(k => k in w.Object || k in w.Object.prototype);
+  if (reserved.dialog) { key(d, 'Escape'); await wait(50); }
+  step('a member named constructor and mentions of constructor and __proto__ write nothing on Object and open a profile, not the recovery screen',
+    reserved.shown && !reserved.ops.length && reserved.dialog && !reserved.recovery && !reserved.polluted.length, reserved);
+  click(byText('.tc-nav', 'Mentions')); await wait(50);
+
   /* Session loss: signed in elsewhere, offline, connection lost, session expired */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
