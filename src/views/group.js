@@ -90,7 +90,7 @@ function GroupView(p) {
   var q = search ? search.trim().toLowerCase() : '';
   // Jump asked by the route: jumpTo, declared below, refuses a message the log hides.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
-  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m.author, mode.m.text) : null;
+  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(shownName(s, mode.m.author), mode.m.text) : null;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
   var measured = useMemo(function () {
     return LIVE ? liveBridge.measure(p.gid, typed, { replyId: replyId, editId: editId, quote: quoted, style: s.ownStyle }) : typed.length;
@@ -163,19 +163,19 @@ function GroupView(p) {
     if (dk !== lastDay) { items.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
     var isNew = !q && prefs.markNew && markerTs && m.ts > markerTs && m.author !== me && m.kind === 'msg';
     if (isNew && !marker) { items.push(h('div', { key: 'n' + m.id, className: 'newmark', role: 'separator' }, 'New messages')); marker = true; prev = null; }
-    if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), m.user + ' was banned')); prev = null; continue; }
+    if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), shownName(s, m.user) + ' was banned')); prev = null; continue; }
     if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null)); prev = null; continue; }
     if (isHiddenAuthor(s, m.author)) {
       if (prefs.safety.ignoreMode === 'hide') continue;
       if (!revealed[m.id]) {
-        items.push(h('div', { key: m.id, className: 'ignored-row' }, h(T.Icon, { name: 'eye-off', size: 14 }), 'Message from ' + m.author + ' hidden.',
+        items.push(h('div', { key: m.id, className: 'ignored-row' }, h(T.Icon, { name: 'eye-off', size: 14 }), 'Message from ' + shownName(s, m.author) + ' hidden.',
           h('button', { type: 'button', className: 'linkbtn', onClick: (function (id) { return function () { setRevealed(function (x) { var o = Object.assign({}, x); o[id] = true; return o; }); }; })(m.id) }, 'Show')));
         prev = null; continue;
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted), a = userOf(s, m.author);
     items.push(h(MessageRow, {
-      key: m.id, m: m, gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg, avatarV: a.avatarV,
+      key: m.id, m: m, shown: shownName(s, m.author), gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg, avatarV: a.avatarV,
       role: roleOf(g, m.author), staff: staff, canBan: canBanMember(g, me, m.author), seeIps: !!rights.seeIps,
       original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, highlight: log.targetId === m.id,
       onReply: calls.reply, onQuote: calls.quote, onEdit: calls.edit, onMention: calls.mention, onJump: calls.jump
@@ -205,7 +205,7 @@ function GroupView(p) {
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left'
         : g.live ? h(ComposerLimit, { ban: g.live.tempBan, cooldown: g.live.cooldown, rate: g.live.rate, bypass: !!rights.bypass }) : null,
       hintTone: left < 0 ? 'warning' : null,
-      context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
+      context: mode ? Object.assign({ author: shownName(s, mode.m.author), text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
       // An edit changes only the text: the picked file waits for the next message.
       onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
@@ -292,17 +292,17 @@ function GroupColorDialog(p) {
 /**
  * Lists the members that complete a mention, as many as the list shows.
  * Names that start with the input come before names that contain it, each part by most recent message in the group then by name.
+ * @param {Object} s Application state, whose signed-in user is never offered.
  * @param {Object} g Open group.
- * @param {string} me Signed-in user, never offered.
  * @param {string} typed Input after @, empty right after the @.
- * @returns {Array<{name: string, handle: string}>} Member name and the name written after @.
+ * @returns {Array<{name: string, handle: string}>} Member name and the name written after @, as the member spells it.
  */
-function mentionCandidates(g, me, typed) {
+function mentionCandidates(s, g, typed) {
   var q = typed.toLowerCase(), seen = Object.create(null), starts = [], contains = [];
   var authors = g.messages.filter(function (m) { return m.kind === 'msg'; }).map(function (m) { return m.author; }).reverse();
-  seen[me.toLowerCase()] = true;
+  seen[s.me] = true;
   authors.concat(g.members).forEach(function (n, i) {
-    var handle = mentionHandle(n), key = handle && handle.toLowerCase();
+    var handle = mentionHandle(shownName(s, n)), key = handle && handle.toLowerCase();
     if (!handle || seen[key]) return;
     seen[key] = true;
     var at = key.indexOf(q), c = { name: n, handle: handle, rank: Math.min(i, authors.length) };
@@ -330,7 +330,7 @@ function useMentionCompletion(g, inputRef, value, setValue) {
   // Caret kept with the text it was read in: a text the view writes itself (edit, send, emoji) opens nothing.
   var before = caretAt && caretAt.value === value ? value.slice(0, caretAt.caret) : '';
   var m = MENTION_TOKEN.exec(before), start = m ? before.length - m[1].length - 1 : -1, key = m ? start + ' ' + m[1] : '';
-  var list = g && m && start !== closedAt ? mentionCandidates(g, s.me, m[1]) : [];
+  var list = g && m && start !== closedAt ? mentionCandidates(s, g, m[1]) : [];
   var open = list.length > 0, index = sel.key === key ? sel.index : 0;
 
   function readCaret() {

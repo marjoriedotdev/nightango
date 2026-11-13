@@ -152,7 +152,7 @@ function ProfileSummary(p) {
     h('div', { className: 'profile-card' },
       // Key on the name: the panel keeps its instance from one conversation to the next.
       h(ProfilePhoto, { key: name, name: name, size: p.size, status: name === s.me ? s.meStatus : u.status, ring: p.ring }),
-      h(p.heading, p.focusHeading ? { className: 'profile-name', tabIndex: -1, 'data-autofocus': true } : { className: 'profile-name' }, name),
+      h(p.heading, p.focusHeading ? { className: 'profile-name', tabIndex: -1, 'data-autofocus': true } : { className: 'profile-name' }, shownName(s, name)),
       profileBadges(name, u),
       h('span', { className: 'muted profile-line' }, personStatus(s, name, p.gid)),
       profileMeta(s, name),
@@ -228,7 +228,7 @@ function FullProfileDialog(p) {
   var sample = '<h2>' + String(p.name).replace(/[<>&"]/g, '') + '</h2><p>' + String(u.about || 'No full profile yet.').replace(/[<>&"]/g, '') + '</p>';
   var content = LIVE ? html : sample;
   return h(Dialog, {
-    title: p.name + "'s profile", focusTitle: true, wide: true, onClose: p.onClose,
+    title: shownName(s, p.name) + "'s profile", focusTitle: true, wide: true, onClose: p.onClose,
     footer: [
       content ? media.button : null,
       h('a', { key: 'o', className: 'tc-btn', href: 'https://' + p.name + '.chatango.com', target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, 'Open on chatango.com', h(T.Icon, { name: 'external', size: 14 })),

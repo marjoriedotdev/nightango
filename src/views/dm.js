@@ -196,7 +196,7 @@ function DmThread(p) {
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
     var original = m.replyTo ? byKey[m.replyTo.key] || null : null;
     rows.push(h(DmMessageRow, {
-      key: m.id, m: m, peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, avatarV: a.avatarV,
+      key: m.id, m: m, shown: shownName(s, m.from), peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, avatarV: a.avatarV,
       continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
       original: original, onJump: calls.jump, onReply: u.blocked ? null : calls.reply, onQuote: u.blocked ? null : calls.quote, onEdit: u.blocked ? null : calls.edit
     }));
@@ -210,7 +210,7 @@ function DmThread(p) {
       retry: convo.olderFailed ? function () { app.update(function (d) { d.dms[id].olderFailed = false; }); } : null
     };
   var bottom;
-  if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
+  if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + shownName(s, id) + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
   else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close, onEditLast: editLast });
   return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
@@ -251,8 +251,8 @@ function canEditPm(m, me) { return m.from === me && !!m.key; }
 /**
  * Private message row with its Reply button and its action menu, rendered again only when its props change.
  * A message without a PM key, sent by the official Chatango client, has neither Reply nor Edit: they could not point to it.
- * @param {{m: Object, peer: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, avatarV: (number|undefined), continued: boolean, highlight: boolean, original: ?Object,
- *   onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message, conversation correspondent, signed-in user, preferences, resolved theme,
+ * @param {{m: Object, shown: string, peer: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, avatarV: (number|undefined), continued: boolean, highlight: boolean, original: ?Object,
+ *   onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message, author's name as they spell it, conversation correspondent, signed-in user, preferences, resolved theme,
  *   author's style, hidden style and picture version, follow-up of the previous message from the same author, highlight, loaded original of a reply, jump to it,
  *   and reply to, quote and edit the message (null when sending is not possible).
  */
@@ -278,7 +278,7 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
     moreActionsButton(items, setMenuOpen));
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, prefs.h24),
-    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row, reply: reply,
+    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(p.shown, ms.name), style: ms.row, reply: reply,
     actions: actions, msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open')
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
 });
@@ -300,14 +300,14 @@ function DmComposer(p) {
     if (editsLastOnUp(e, draft, mode) && p.onEditLast()) e.preventDefault();
   }
   return h(Frag, null, media.panel, voice.panel, h(T.Composer, {
-    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
+    placeholder: 'Message ' + shownName(app.state, id), value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
     // An edit changes only the text: the picked file waits for the next message.
     onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
-    context: mode ? Object.assign({ author: mode.m.from, text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
+    context: mode ? Object.assign({ author: shownName(app.state, mode.m.from), text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
     onSend: function (text) {
       if (kind === 'edit') { if (text !== mode.m.text) app.actions.sendDm(id, text, { editKey: mode.m.key }); p.onCancelMode(); return; }
       if (runCommand(app, text, null)) return;
-      var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(mode.m.from, mode.m.text) : null };
+      var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(shownName(app.state, mode.m.from), mode.m.text) : null };
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
       if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
       p.onCancelMode();
@@ -391,7 +391,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': active ? 'page' : undefined, onClick: onClick },
     h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
-      h('span', { className: 'conv-name' }, n), presenceSr(u.status),
+      h('span', { className: 'conv-name' }, u.spelling || n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(n, u),
       c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,

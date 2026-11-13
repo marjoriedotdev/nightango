@@ -30,11 +30,11 @@ function GSStaff(p) {
         h('div', { className: 'roles' },
           owner ? h('div', { className: 'role-btn', style: { cursor: 'default' } },
             h('span', { className: 'role-ico' }, h(T.Icon, { name: 'crown', size: 15 })),
-            h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, owner), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, 'Owner'))) : null,
+            h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, owner)), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, 'Owner'))) : null,
           names.map(function (n) {
             return h('button', { key: n, type: 'button', className: 'role-btn', 'aria-current': String(sel === n), onClick: function () { setSel(n); } },
               h('span', { className: 'role-ico' }, h(T.Icon, { name: 'shield', size: 15 })),
-              h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, n), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, ROLE_LONG[roleOfFlags(draft.modFlags[n])])),
+              h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, n)), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, ROLE_LONG[roleOfFlags(draft.modFlags[n])])),
               h(T.Icon, { name: 'chevron-right', size: 14, style: { color: 'var(--text-3)' } }));
           })),
         canEdit ? h('div', { style: { padding: '12px 14px 14px', borderTop: '1px solid var(--divider)' } },
@@ -72,7 +72,7 @@ function GSMembers(p) {
       var r = p.draft.staff[n], isMe = n === s.me, status = isMe ? s.meStatus : userOf(s, n).status;
       return h('div', { key: n, className: 'lrow', style: i ? null : { borderTop: 0 } },
         h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, n), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(status))),
+        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, shownName(s, n)), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(status))),
         youBadge(isMe),
         isMe || r === 'owner' ? null : h(MenuButton, {
           label: 'Actions for ' + n, items: [

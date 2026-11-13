@@ -43,6 +43,17 @@ Received frames only: nothing is sent.
 - The bridge (`live-bridge.js`) keeps, per group, a table from session timestamp to `{ account }`, `{ guest: '#name' }` or `{ anon: true }`, filled by `g_participants` and kept up to date by `participant`. On each change, it emits `guests`: guest names without duplicates, sorted, and the anon count. The guest name is lowercase, like the author of their messages, so that the member card and the ban find them.
 - An account is in the member list as long as at least one session in the table carries it. The bridge emits `member` (action 1) when an account gains its first session and `member` (action 0) when it loses its last one, for actions 0, 1 and 2. A session unknown to the table (frame received before `g_participants`) enters it through actions 1 and 2. Action 0 on an unknown session removes the account `data[3]` if it has no other session in the table. The signed-in user always stays in the list (`app/live-ops.js`).
 
+### Name spelling
+
+Read in BetterChatango's code, not observed on a live frame.
+
+- An account name has one identity, in lowercase, and a spelling: the capitals its owner typed at sign-in. BetterChatango keeps both, `client.user.name` in lowercase and `client.user.full` as typed (`inject.js:1249-1250`), and sends the typed name in `bauth` (`inject.js:4734`, `inject.js:5618`).
+- Group frames carry the spelling. BetterChatango shows as received the author `data[1]` of `b` and `i` (`inject.js:3328`) and the account `data[3]` of `g_participants` and `participant` (`parseParticipant`, `inject.js:10380-10401`).
+- PM frames carry the name without it: `tlogin` signs in with a token and no name. BetterChatango writes the typed name in the body of each PM it sends, as a `<uName/>` tag, when it differs from the lowercase name and holds only letters and digits (`inject.js:5176-5178`). On display it replaces the frame name with the tag when the tag, lowercased, is the author (`inject.js:7987-7991`). A PM sent from Nightango carries this tag as `client.sendMessage` built it.
+- Every name stays in lowercase in Nightango: it is the key of members, conversations, bans and storage. The bridge reads the spelling apart (`spellingOf`, `src/bridge/live-parse.js`) from the author of a group message, from the account or guest of a session, from the `<uName/>` tag of a received or archived PM, and from `client.user.full` at sign-in. A spelling counts only if it has capitals and is the member's name once lowercased: a `<uName/>` tag that names someone else is dropped.
+- The state keeps one spelling per member (`u.spelling`), the most recent one a message or a session carried (`mergeSpelling`, `src/app/live-state.js`). A name without capitals changes nothing: the PM of another client carries no tag, so it does not tell. The interface shows the spelling where it names a member and falls back to the lowercase name (`shownName`, `src/core/selectors.js`). Toasts, confirmations and the "by" lines of the ban lists keep the lowercase name.
+- The spelling is kept in memory only. A mention or a quote written with it is plain text of the message: BetterChatango (`renderMention`, `inject.js:7697-7699`) and Nightango (`mentionsMe`) match a mention without case.
+
 ## Sending
 
 - A frame goes out through `client.socket(gid, frame, errorText)`.

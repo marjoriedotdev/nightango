@@ -32,10 +32,11 @@ function useBridgeOps(handle, loggedIn) {
  * @returns {boolean} True if the message joined the message log, false for a message already there or an edit applied to its original.
  */
 function addHistory(d, op, local) {
-  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style; delete hm.badge;
+  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style; delete hm.badge; delete hm.spelling;
   var g = ensureLiveGroup(d, op.gid, local), u = ensureLiveUser(d, hm.author, local);
   noteBadge(g, hm.author, op.msg.badge);
   mergeStyle(u, hs, hm.ts);
+  mergeSpelling(u, op.msg.spelling, hm.ts);
   if (plainOf(g.messages).some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return false;
   var o = editTarget(g, hm);
   // History received from newest to oldest: like BetterChatango, an original already edited keeps its text.
@@ -91,6 +92,7 @@ function useLiveOps(k) {
         if (liveBridge.setting('tabTitleAlerts')) liveBridge.setSetting('tabTitleAlerts', false);
         update(function (d) {
           Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = storedNotes(localRef.current.notes); d.spaces = storedSpaces(localRef.current.spaces); d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
+          mergeSpelling(d.users[op.me], op.spelling, Date.now());
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
           Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
           d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
@@ -116,13 +118,14 @@ function useLiveOps(k) {
         break;
       }
       case 'msg': {
-        var m = Object.assign({}, op.msg), style = m.style; delete m.style; delete m.badge;
+        var m = Object.assign({}, op.msg), style = m.style; delete m.style; delete m.badge; delete m.spelling;
         if (m.editId) {
           // Edit: applied to the original if it is loaded, otherwise shown as an edited message that keeps its reference.
           update(function (d) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, m.author, localRef.current), o = editTarget(g, m);
             mergeStyle(u, style, m.ts);
+            mergeSpelling(u, op.msg.spelling, m.ts);
             noteBadge(g, m.author, op.msg.badge);
             if (o) { applyGroupEdit(o, m); return; }
             m.edited = true;
@@ -137,7 +140,9 @@ function useLiveOps(k) {
           // The duration unit of a temporary ban is unconfirmed: a message of the user that gets through ends it.
           if (m.author === d.me && mg.live.tempBan) mg.live.tempBan = null;
           noteBadge(mg, m.author, op.msg.badge);
-          mergeStyle(ensureLiveUser(d, m.author, localRef.current), style, m.ts);
+          var mu = ensureLiveUser(d, m.author, localRef.current);
+          mergeStyle(mu, style, m.ts);
+          mergeSpelling(mu, op.msg.spelling, m.ts);
         });
         receiveGroup(op.gid, m);
         break;
@@ -176,6 +181,9 @@ function useLiveOps(k) {
       case 'member': groupUpdate(update, op.gid, function (g, d) {
         if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensurePresentUser(d, op.name, localRef.current); }
         if (op.action === 0 && op.name !== d.me) g.members = g.members.filter(function (n) { return n !== op.name; });
+      }); break;
+      case 'spellings': update(function (d) {
+        if (d.auth.loggedIn) Object.keys(op.names).forEach(function (n) { mergeSpelling(ensureLiveUser(d, n, localRef.current), op.names[n], Date.now()); });
       }); break;
       case 'count': groupUpdate(update, op.gid, function (g) { g.liveCount = op.n; }); break;
       case 'room': update(function (d) {
@@ -280,7 +288,9 @@ function useLiveOps(k) {
         var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          mergeStyle(ensureLiveUser(d, op.from, localRef.current), op.style, op.ts);
+          var pu = ensureLiveUser(d, op.from, localRef.current);
+          mergeStyle(pu, op.style, op.ts);
+          mergeSpelling(pu, op.spelling, op.ts);
           receivePm(d, op);
         });
         pmArchive.current.record(op.from, op, true);

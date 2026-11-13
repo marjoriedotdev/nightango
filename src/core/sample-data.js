@@ -26,7 +26,7 @@ function seedWorld(me) {
     vantage: { status: 'idle', idleSince: t(40), age: 29, location: 'Oslo, Norway', about: 'Moderator. Quiet most of the time.', style: { nameColor: '#00bcd4' } },
     kestrel: { status: 'online', age: 22, location: 'Leeds, UK', about: 'Trading usernames since 2014.', style: { nameColor: '#2ecc71', font: 'Typewriter' } },
     marrow: { status: 'online', age: 35, location: '', about: 'Breaks networks for a living.', style: { nameColor: '#a0522d', bg: '#3b2414' } },
-    nightowl: { status: 'online', age: 26, location: 'Montréal, Canada', about: 'Themes, fonts and too much coffee.', style: { nameColor: '#9b59b6', font: 'Comic', textColor: '#e0b0ff', bg: '#24133f' } },
+    nightowl: { status: 'online', spelling: 'NightOwl', age: 26, location: 'Montréal, Canada', about: 'Themes, fonts and too much coffee.', style: { nameColor: '#9b59b6', font: 'Comic', textColor: '#e0b0ff', bg: '#24133f' } },
     quill: { status: 'idle', idleSince: t(14), age: 23, location: 'Dublin, Ireland', about: 'Mostly in #retrogaming.', friend: true, style: { nameColor: '#e91e63' } },
     drift: { status: 'online', age: 20, location: '', about: '', style: {} },
     halcyon: { status: 'offline', lastOn: t(190), age: 28, location: 'Porto, Portugal', about: 'Runs game night.', friend: true, style: { nameColor: '#ffeb3b' } },
