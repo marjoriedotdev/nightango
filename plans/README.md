@@ -11,28 +11,28 @@ The owner asked for a plan for every verified finding of the audit: 22 plans.
 
 | Plan | Title | Category | Priority | Effort | Depends on | Status |
 |------|-------|----------|----------|--------|------------|--------|
-| [001](001-fail-live-ui-on-a-bridge-operation-that-throws.md) | The live_ui suite fails when a bridge operation throws | tests | P1 | S | none | TODO |
-| [002](002-keep-typed-text-when-a-group-send-fails.md) | A group message or an edit that is not sent stays in the composer | bug | P1 | S | none | TODO |
-| [003](003-read-failure-of-own-full-profile-on-refused-requests.md) | A refused read of the own full profile is a read failure | bug | P3 | S | none, owner confirmation | TODO |
-| [004](004-suite-for-the-copy-on-write-draft-engine.md) | The copy-on-write draft engine has its own suite | tests | P2 | S | none | TODO |
-| [005](005-member-names-that-are-keys-of-every-object.md) | A member named `constructor` or `__proto__` is handled like any other | security | P1 | S | 004 recommended | TODO |
-| [006](006-no-betterchatango-focus-on-a-closed-group.md) | Showing a closed group never starts BetterChatango's own join | bug | P1 | S | 001 recommended | TODO |
-| [007](007-notice-actions-that-leave-the-bridge.md) | A BetterChatango notice never gives a button that leaves the bridge | security | P1 | S | 001 recommended | TODO |
-| [008](008-journal-without-who-results-or-frame-arguments.md) | The journal keeps neither a who result nor frame arguments | security | P1 | S | none | TODO |
-| [009](009-read-the-conversation-in-front-when-the-tab-comes-back.md) | Coming back to the tab marks the conversation in front as read | bug | P2 | S | 001 recommended | TODO |
-| [010](010-clamp-the-mention-suggestion-index.md) | The selected @name suggestion stays inside the list | bug | P2 | S | none | TODO |
-| [011](011-keep-the-floating-window-live-while-settings-are-open.md) | The floating window keeps updating while Settings are open | bug | P2 | S | none | TODO |
-| [012](012-groups-shown-without-the-betterchatango-focus.md) | Groups shown without BetterChatango's focus: observe, then fix | bug | P2 | S then M | 006, a real session | TODO |
-| [013](013-read-message-tags-in-linear-time.md) | A body of unclosed tags is read in milliseconds | security | P2 | S | none | TODO |
-| [014](014-no-false-failure-for-a-pm-sent-without-a-history-database.md) | A PM sent without a history database is not announced as failed | bug | P2 | S | none | TODO |
-| [015](015-release-the-microphone-of-an-abandoned-recording-request.md) | A voice recording never starts for a composer that is gone | bug | P2 | S | none | TODO |
-| [016](016-own-group-messages-are-never-unread.md) | Your own group messages never count as unread | bug | P2 | S | none | TODO |
-| [017](017-show-a-group-that-never-connected-as-disconnected.md) | A group that never connected at startup shows as disconnected | bug | P2 | S | 001 recommended | TODO |
-| [018](018-make-the-release-decision-testable.md) | The rules that decide what gets published are a tested function | tests | P2 | S | none | TODO |
-| [019](019-refresh-the-docs-that-drifted.md) | The agent docs say what is true today | docs | P2 | S | none | TODO |
-| [020](020-build-refuses-a-top-level-name-declared-twice.md) | The build refuses a top-level name declared in two sources | dx | P2 | S | none | TODO |
-| [021](021-fold-a-pm-edit-into-its-original-across-history-pages.md) | An edited PM shows once across history pages | bug | P3 | S | none | TODO |
-| [022](022-one-account-name-pattern.md) | The account name pattern is written once | tech-debt | P3 | S | 003 | TODO |
+| [001](001-fail-live-ui-on-a-bridge-operation-that-throws.md) | The live_ui suite fails when a bridge operation throws | tests | P1 | S | none | DONE |
+| [002](002-keep-typed-text-when-a-group-send-fails.md) | A group message or an edit that is not sent stays in the composer | bug | P1 | S | none | DONE |
+| [003](003-read-failure-of-own-full-profile-on-refused-requests.md) | A refused read of the own full profile is a read failure | bug | P3 | S | none, owner confirmation | DONE |
+| [004](004-suite-for-the-copy-on-write-draft-engine.md) | The copy-on-write draft engine has its own suite | tests | P2 | S | none | DONE |
+| [005](005-member-names-that-are-keys-of-every-object.md) | A member named `constructor` or `__proto__` is handled like any other | security | P1 | S | 004 recommended | DONE |
+| [006](006-no-betterchatango-focus-on-a-closed-group.md) | Showing a closed group never starts BetterChatango's own join | bug | P1 | S | 001 recommended | DONE |
+| [007](007-notice-actions-that-leave-the-bridge.md) | A BetterChatango notice never gives a button that leaves the bridge | security | P1 | S | 001 recommended | DONE |
+| [008](008-journal-without-who-results-or-frame-arguments.md) | The journal keeps neither a who result nor frame arguments | security | P1 | S | none | DONE |
+| [009](009-read-the-conversation-in-front-when-the-tab-comes-back.md) | Coming back to the tab marks the conversation in front as read | bug | P2 | S | 001 recommended | DONE |
+| [010](010-clamp-the-mention-suggestion-index.md) | The selected @name suggestion stays inside the list | bug | P2 | S | none | DONE |
+| [011](011-keep-the-floating-window-live-while-settings-are-open.md) | The floating window keeps updating while Settings are open | bug | P2 | S | none | DONE |
+| [012](012-groups-shown-without-the-betterchatango-focus.md) | Groups shown without BetterChatango's focus: observe, then fix | bug | P2 | S then M | 006, a real session | BLOCKED: needs an observation on a real Chatango session |
+| [013](013-read-message-tags-in-linear-time.md) | A body of unclosed tags is read in milliseconds | security | P2 | S | none | DONE |
+| [014](014-no-false-failure-for-a-pm-sent-without-a-history-database.md) | A PM sent without a history database is not announced as failed | bug | P2 | S | none | DONE |
+| [015](015-release-the-microphone-of-an-abandoned-recording-request.md) | A voice recording never starts for a composer that is gone | bug | P2 | S | none | DONE |
+| [016](016-own-group-messages-are-never-unread.md) | Your own group messages never count as unread | bug | P2 | S | none | DONE |
+| [017](017-show-a-group-that-never-connected-as-disconnected.md) | A group that never connected at startup shows as disconnected | bug | P2 | S | 001 recommended | DONE |
+| [018](018-make-the-release-decision-testable.md) | The rules that decide what gets published are a tested function | tests | P2 | S | none | DONE |
+| [019](019-refresh-the-docs-that-drifted.md) | The agent docs say what is true today | docs | P2 | S | none | DONE |
+| [020](020-build-refuses-a-top-level-name-declared-twice.md) | The build refuses a top-level name declared in two sources | dx | P2 | S | none | DONE |
+| [021](021-fold-a-pm-edit-into-its-original-across-history-pages.md) | An edited PM shows once across history pages | bug | P3 | S | none | DONE |
+| [022](022-one-account-name-pattern.md) | The account name pattern is written once | tech-debt | P3 | S | 003 | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale: finding fixed independently or approach abandoned)
 
