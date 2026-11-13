@@ -82,7 +82,7 @@ function pmConversation(d, name, extra) {
 function pmMessage(x) {
   // Edit without a loaded original: it takes the key of the original, which the archive and later edits target.
   var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
-  if (x.editId) { m.edited = true; m.editKeys = x.key ? [x.key] : []; }
+  if (x.editId) { m.edited = true; m.editKeys = x.key ? [x.key] : []; m.editTs = x.ts; m.editOnly = true; }
   if (x.replyId) m.replyTo = { key: x.replyId };
   return m;
 }
@@ -95,6 +95,9 @@ function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embe
 function applyPmEdit(o, x) {
   // The history replays on each OK the edits already applied live: their key keeps them from counting twice.
   if (x.key && (o.editKeys || []).indexOf(x.key) < 0) o.editKeys = (o.editKeys || []).concat([x.key]);
+  // History pages are read newest first: an edit older than the one applied must not bring its text back.
+  if (x.ts < (o.editTs || 0)) return;
+  o.editTs = x.ts;
   applyEdit(o, x);
 }
 /**
@@ -140,6 +143,9 @@ function mergePmHistory(c, list, onEntry) {
     if (o) { applyPmEdit(o, x); return; }
     var m = pmMessage(x), i = pmShownIndex(shown, m);
     if (i >= 0) { shown[i].archiveTs = m.archiveTs; shown.splice(i, 1); return; }
+    // An edit read on a newer page stands for its original until an older page brings it: the original takes its place and keeps the edited text.
+    var e = x.editId ? null : c.messages.find(function (y) { return y.editOnly && y.key === m.key && y.from === m.from; });
+    if (e) { delete e.editOnly; e.ts = m.ts; e.archiveTs = m.archiveTs; if (m.replyTo) e.replyTo = m.replyTo; return; }
     c.messages.push(m);
   });
   c.messages.sort(function (a, b) { return a.ts - b.ts; });
