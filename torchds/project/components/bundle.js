@@ -192,7 +192,7 @@
     return h('span', { className: 'tc-count', 'aria-label': label }, text);
   }
 
-  var AVATAR_COLORS = ['#3e5a6b', '#2f5d50', '#5d3e3e', '#6b4a2f', '#5a3e5d', '#3b4a6b', '#4a4f5a', '#2f4b5d'];
+  var AVATAR_COLORS = ['#7d4743', '#754f27', '#5b5c26', '#2d6549', '#0d646c', '#365b80', '#5b4f7e', '#744765'];
   function avatarColor(name) {
     var s = String(name || '');
     var n = 0;
