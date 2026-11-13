@@ -346,6 +346,8 @@ var liveBridge = (function () {
 
   /* Connection state: BetterChatango publishes no event, so we watch its sockets. */
   var connState = {}, pmState = null, left = {}, attempts = {};
+  // Groups BetterChatango showed in its list and when: one it never registers has failed to connect at startup, which it only logs.
+  var expected = {};
   function watchConnections() {
     setInterval(function () {
       try {
@@ -359,6 +361,14 @@ var liveBridge = (function () {
         });
         Object.keys(connState).forEach(function (gid) {
           if (!seen[gid] && connState[gid] !== 'closed') { connState[gid] = 'closed'; if (!left[gid]) { note(connName(gid) + ' was removed by BetterChatango'); emit({ op: 'conn', gid: gid, state: 'closed' }); } }
+        });
+        Object.keys(expected).forEach(function (gid) {
+          if (seen[gid] || connState[gid] || left[gid]) { delete expected[gid]; return; }
+          if (attempts[gid] || Date.now() - expected[gid] < CONNECT_TIMEOUT) return;
+          delete expected[gid];
+          connState[gid] = 'closed';
+          note(connName(gid) + ' did not connect at startup');
+          emit({ op: 'conn', gid: gid, state: 'closed', never: true });
         });
         var pm = C.private && C.private.socket;
         var pst = pm ? stateOf(pm) : 'closed';
@@ -916,6 +926,7 @@ var liveBridge = (function () {
   if (SB && typeof SB.renderGroup === 'function') {
     var renderGroup = SB.renderGroup.bind(SB);
     SB.renderGroup = function (data) {
+      try { if (data && data.group && data.group !== ENV && !data.hidden) expected[lower(data.group)] = Date.now(); } catch (e) { warn(e); }
       try { if (data && data.group && data.group !== ENV) emit({ op: 'group', id: lower(data.group), title: data.header ? String(data.header) : '', hidden: !!data.hidden, owned: data.recent === false }); } catch (e) { warn(e); }
       return renderGroup(data);
     };

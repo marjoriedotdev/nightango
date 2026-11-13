@@ -2373,6 +2373,18 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('leaving a group during a reconnect closes its socket, keeps its later frames out of the state and the BetterChatango focus off it',
     leftDuring.socket === 3 && !leftDuring.ghost && !leftDuring.focus && !leftDuring.listed, leftDuring);
 
+  /* A group BetterChatango never connects at startup: disconnected once the connection delay has passed, with Try again and no automatic attempt */
+  SB.renderGroup({ group: 'lagroom', header: 'Lagroom' });
+  await wait(12500);
+  click(byText('.tc-nav', 'lagroom')); await wait(50);
+  const neverUp = { banner: connBanner(), connects: calls.filter(c => c[0] === 'connect' && c[1] === 'lagroom').length };
+  step('a group whose startup connection never opens shows as disconnected with Try again, without an automatic attempt',
+    !!neverUp.banner && neverUp.banner.buttons.includes('Try again') && neverUp.connects === 0, neverUp);
+  click($('button[aria-label="Group options"]')); await wait(30);
+  click(menuItem('Leave group')); await wait(30);
+  click(byText('.dialog-foot button', 'Leave group')); await wait(50);
+  click(byText('.tc-nav', 'Mentions')); await wait(50);
+
   /* Names that are also keys of every object: constructor and __proto__ as an author and as mentions */
   C.groups.names = fakeGroup();
   SB.renderGroup({ group: 'names', header: 'Names' });
