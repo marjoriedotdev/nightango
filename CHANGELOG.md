@@ -8,6 +8,14 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 - Privacy has a Chatango account section: hide your idle time, allow anonymous messages, email messages you get while offline. The wording is not final.
 
+### Changed
+
+- A button and the field next to it share one text size and one height, everywhere: joining a group, searching, banning, inviting.
+- Lists to pick from show a Nightango arrow in place of the browser's, at the height of the other fields.
+- The buttons of the message box and of the bio toolbar are a little larger, all at one size.
+- Small text comes in fewer sizes: badges, unread counts, times and keyboard hints are slightly larger.
+- The name at the top of a conversation is a touch smaller and the sign-in title a touch larger.
+
 ### Fixed
 
 - A group message or an edit that could not be sent stays in the message box.
