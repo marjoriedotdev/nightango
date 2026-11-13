@@ -142,6 +142,13 @@ function listedDms(state) {
     .sort(function (a, b) { return lastTs(state.dms[b]) - lastTs(state.dms[a]); });
 }
 /**
+ * Lists the favorite people by name.
+ * @param {Object} state Application state.
+ */
+function favoritePeople(state) {
+  return Object.keys(state.users).filter(function (n) { return state.users[n].favorite; }).sort();
+}
+/**
  * Counts the unread conversations without closed conversations.
  * @param {Object} state Application state.
  */

@@ -94,6 +94,7 @@ function useLiveOps(k) {
           Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = storedNotes(localRef.current.notes); d.spaces = storedSpaces(localRef.current.spaces); d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
           mergeSpelling(d.users[op.me], op.spelling, Date.now());
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
+          storedFavoritePeople(localRef.current.favoritePeople).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); d.users[n].favorite = true; });
           Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
           d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
         });

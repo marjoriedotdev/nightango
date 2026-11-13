@@ -81,6 +81,10 @@ _Avoid_: theme (the dark or light theme, chosen by the reader)
 Public Chatango chat room, identified by its name.
 _Avoid_: room, chat room
 
+**Favorite**:
+Group or person the user keeps in the Favorites section of the sidebar. A favorite group is one of BetterChatango's favorites, a favorite person is kept in this browser and need not be a friend.
+_Avoid_: pinned, starred, bookmark
+
 **Channel**:
 Marking on a group message: red, blue, or Staff (reserved for moderators who have the right).
 
@@ -139,7 +143,7 @@ Refusal of an account's PMs, on the private message side.
 
 **Media library**:
 Favorite images that BetterChatango keeps in this browser, shared by all its accounts, inserted into a message by their address. The interface says "Media".
-_Avoid_: favorites (reserved for groups), gallery
+_Avoid_: favorites (reserved for groups and people), gallery
 
 **Trusted host**:
 Exact host chosen by the user, whose links open without a warning and whose images, videos and audio load without a click. In live, the list is BetterChatango's (`safety.whitelist.domain`). The interface says "Trusted sites".

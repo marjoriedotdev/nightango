@@ -161,6 +161,15 @@ function banItem(app, name, gid, msg) {
 }
 
 /**
+ * Splits the actions on a person into the groups of a menu: the relation with them, then what restricts them.
+ * @param {Array} actions Actions of useProfileActions.
+ */
+function personActionGroups(actions) {
+  function pick(ids) { return actions.filter(function (it) { return ids.indexOf(it.id) >= 0; }); }
+  return [pick(['message', 'friend', 'notify', 'favorite', 'who']), pick(['style', 'ignore', 'block', 'ban'])];
+}
+
+/**
  * Lists the actions on a person shared by the profile dialog, the panel and a PM menu.
  * An entry marked closes closes the profile dialog that shows it, and buttonLabel is its label as a button.
  * @param {string} name Member name.
@@ -178,6 +187,7 @@ function useProfileActions(name, gid) {
       onSelect: function () { if (u.friend) confirmRemoveFriend(app, name); else app.actions.toggleUser(name, 'friend'); }
     },
     u.friend ? notifyOnlineItem(app, name) : null,
+    favoriteItem(app, { view: 'dm', id: name }, u.favorite),
     whoItem(app, name),
     styleItem(app, name, u.unstyled),
     ignoreItem(app, name, u.ignored),
@@ -212,7 +222,7 @@ function ProfileDialog(p) {
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
       : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
         buttons.map(function (it) { return h(T.Button, { key: it.id, variant: it.id === 'message' ? 'primary' : undefined, icon: it.icon, disabled: it.disabled, onClick: it.onSelect }, it.buttonLabel || it.label); }),
-        h(MenuButton, { label: 'More profile actions', items: actions.filter(function (it) { return buttons.indexOf(it) < 0; }) }))));
+        h(MenuButton, { label: 'More profile actions', items: menuGroups(personActionGroups(actions.filter(function (it) { return buttons.indexOf(it) < 0; }))) }))));
 }
 
 /**
