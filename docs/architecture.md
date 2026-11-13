@@ -40,6 +40,9 @@ src/
     emoji-picker (emoticon and media picker of the composers), attach (file upload of the composers),
     media (BetterChatango media library: Media tab, star on message images, :name completion),
     commands (/join, /leave, /chat and /help of the composers),
+    season (decorations of a season, New Year countdown and fireworks), pip (conversation popped out into a floating window),
+    spaces (spaces, their bar under Search or jump to, their editor), voice (voice message recording of the composers and its WAV file),
+    gif (GIF tab of the emoji and media picker), shared-media (media and links of a group or a PM),
     discover, palette (Ctrl K), live-joined (joined, owned and recent groups), session (session loss dialog)
   settings/   settings
     shell, profile (Visitors and vissle tracker included), appearance, notifications, privacy (and Safety),
@@ -48,7 +51,7 @@ src/
     group-staff                                                         Staff and roles, Members and Invites pages, shared by live and prototype
     markup-toolbar                                                      formatting toolbar of the bio and the full profile
     avatar-crop                                                         cropping of one's own profile picture (live)
-    live-group-view, live-group-pages, live-group-staff, live-account   live variants (live-account: Password and email and Chatango Premium pages shared with the prototype)
+    live-group-view, live-group-pages, live-group-staff (audit log), live-account   live variants (live-account: Password and email and Chatango Premium pages shared with the prototype)
   app/        root
     sound.js
     state.js         persisted preferences
@@ -211,7 +214,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 - `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
 - `live_login`: sign-in detection, a listener that throws and the diagnostic journal kept per account, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal. Then the operations after sign-in, held until the first render and handed to the latest handler (`useBridgeOps`), with React, `core/globals.js` and `app/live-ops.js`.
-- `avatar`: avatars, on the design system bundle and the sources of `src/bridge/`.
+- `avatar`: avatars, on the design system bundle, the sources of `src/bridge/` and the `T` wrapper at the top of `src/core/globals.js`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle, then the season dates at their boundaries in both hemispheres, on `src/core/util.js`.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.
 - `perf`: cost of the live operations on a busy state (four groups, three at their message cap, hundreds of members, thousands of known users), started in live mode through the prototype hook that `dist/app.js` keeps, with a fake BetterChatango client and the animation frames run by the test. It counts what an operation shares with the previous state, the renders of a burst of operations within one animation frame, the sorts of a history page, the rows rendered again, the members dropped and those kept while a dialog shows them, and the minute timers, with a time budget per operation. The counts carry the checks: the budget leaves a wide margin for slow machines.

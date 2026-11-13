@@ -72,7 +72,7 @@ The minified userscript the user installs in Tampermonkey, with the same file na
 Nightango's tokens, components and guidelines (torchds, namespace `window.Torch`), from which the interface is built.
 
 **Season**:
-A few days a year when the night of the interface changes, computed on the device: Halloween, from October 24 to November 2. Its palette, its decorations and the costumes on avatars are seen only by the reader and can be turned off in Appearance.
+A few days a year when the night of the interface changes, computed on the device: Halloween from October 24 to November 2, winter from December 1 to January 6 (June 1 to July 6 for a sky seen from the southern hemisphere), Valentine's Day from February 10 to 14. Its palette, its decorations and the costumes on avatars are seen only by the reader and can be turned off in Appearance.
 _Avoid_: theme (the dark or light theme, chosen by the reader)
 
 ## Groups
@@ -138,6 +138,10 @@ _Avoid_: contact, watch list
 
 **Block**:
 Refusal of an account's PMs, on the private message side.
+
+**Space**:
+Named set of groups and PMs the user gathers, kept in this browser for the account. The sidebar and Chats show only the conversations of the chosen space, and a space can silence the alerts of PMs from outside it.
+_Avoid_: folder, workspace
 
 ## Media
 

@@ -1,7 +1,7 @@
 /* ---------- Utilities ---------- */
 var MIN = 60000;
 var CONFIRM_TIMEOUT = 8000;
-// The same code lives in both repositories, pushed by hand: GitHub first, GitLab while GitHub is down.
+// The same code lives in both repositories, pushed by hand: GitHub first, GitLab kept in step.
 var REPO_URLS = { github: 'https://github.com/marjoriedotdev/nightango', gitlab: 'https://gitlab.com/marjoriedotdev/nightango' };
 var CHATANGO_URL = 'https://chatango.com';
 function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }

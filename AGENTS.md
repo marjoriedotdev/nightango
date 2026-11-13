@@ -64,7 +64,7 @@ The runner `tests/run.mjs` judges each suite on its exit code and on its output 
    - send the file directly to the user
    - merge into `main`: once the tests are green, each CI creates the `vX.Y.Z` tag from `@version` and its release with both userscripts and `SHA256SUMS` attached, a GitHub release from `.github/workflows/ci.yml`, a GitLab release from `.gitlab-ci.yml` (`scripts/release.mjs`). A `@version` that already has its release publishes nothing: no increment, no release. Do not push a tag by hand.
 
-The code lives in two repositories, `github.com/marjoriedotdev/nightango` and `gitlab.com/marjoriedotdev/nightango`, pushed by hand with no automatic mirroring: GitHub first, GitLab while GitHub is down (the GitHub account has been suspended since 2026-11-09). Each has the same CI, `.github/workflows/ci.yml` and `.gitlab-ci.yml`: `pnpm test` on every push and pull or merge request to `main` and `beta`, then the release on a push to either branch. Keep both pipelines in step.
+The code lives in two repositories, `github.com/marjoriedotdev/nightango` and `gitlab.com/marjoriedotdev/nightango`, pushed by hand with no automatic mirroring: GitHub first, GitLab kept in step as the second host (the GitHub account was suspended for a few days from 2026-11-09, and GitLab carried the releases meanwhile). Each has the same CI, `.github/workflows/ci.yml` and `.gitlab-ci.yml`: `pnpm test` on every push and pull or merge request to `main` and `beta`, then the release on a push to either branch. Keep both pipelines in step.
 
 ### Shipping a beta
 
@@ -91,7 +91,7 @@ The skills of the `mattpocock-skills` plugin (MIT, `.claude/skills/LICENSE`) are
 
 ### Issue tracker
 
-Issues on GitHub, public repository `marjoriedotdev/nightango`, through the `gh` CLI. See `docs/agents/issue-tracker.md`. While the GitHub account is suspended, issues #1 to #121 are out of reach and new ones go to the GitLab project.
+Issues on GitHub, public repository `marjoriedotdev/nightango`, through the `gh` CLI. See `docs/agents/issue-tracker.md`. Issues opened on the GitLab project while the GitHub account was suspended in November 2026 stay there.
 
 ### Triage labels
 
