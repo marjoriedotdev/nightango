@@ -10,6 +10,9 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ### Changed
 
+- Chatango emoticons are drawn by Nightango, in its own style, in place of your system's emoji: in messages, in the quote of a reply, in Chats and in the emoticon picker. Copying a message gives the shortcut back.
+- A shortcut typed in a group, :) or ;) for example, shows as its emoticon when it stands alone between two spaces. A Premium emoticon shows only on a message sent with Premium, as in BetterChatango.
+- The striped emoticon shows with its colors, in messages and in the picker.
 - A button and the field next to it share one text size and one height, everywhere: joining a group, searching, banning, inviting.
 - Lists to pick from show a Nightango arrow in place of the browser's, at the height of the other fields.
 - The buttons of the message box and of the bio toolbar are a little larger, all at one size.
