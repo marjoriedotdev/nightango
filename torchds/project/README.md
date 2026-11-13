@@ -84,4 +84,4 @@ Chatango lets members choose name colors, fonts, text colors and message backgro
 
 ## Logo
 
-The mark is tonight's moon: a 30px `Moon` with its phase name as accessible label, in its moonlight colors whatever the accent. The word Nightango follows in `font-display` at 28px. The mark changes with the moon; do not freeze it into a fixed full moon.
+The mark is tonight's moon: a 30px `Moon` with its phase name as accessible label, in its moonlight colors whatever the accent. The word Nightango follows in `font-display` at `wordmark` (28px). The mark changes with the moon; do not freeze it into a fixed full moon.

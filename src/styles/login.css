@@ -20,7 +20,7 @@
 .login .login-fail:empty{display:none}
 .login .login-member{min-width:0;margin:0;padding:0;border:0}
 /* A legend keeps its own box in a fieldset: floated, it spans the width like a heading. */
-.login .login-title{float:left;width:100%;margin:0 0 var(--space-5);padding:0;text-align:left;color:var(--text);font-size:22px;line-height:28px;font-weight:600;letter-spacing:-.01em}
+.login .login-title{float:left;width:100%;margin:0 0 var(--space-5);padding:0;text-align:left;color:var(--text);font-size:var(--font-size-title-lg);line-height:32px;font-weight:600;letter-spacing:-.01em}
 .login .login-member form{clear:both;align-items:stretch;gap:var(--space-3)}
 
 .login .field-display{flex-wrap:nowrap;align-items:center;height:var(--size-control-md);padding-left:var(--space-3);box-sizing:border-box;border:1px solid var(--border-strong);border-radius:var(--radius-lg);background:var(--raised);transition:border-color var(--duration-fast) var(--ease-out),box-shadow var(--duration-fast) var(--ease-out)}

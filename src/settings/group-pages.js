@@ -6,7 +6,7 @@ function GSOverview(p) {
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
         h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 } },
           h(T.Avatar, { name: g.id, square: true, size: 56 }),
-          h('span', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { style: { fontWeight: 600 } }, o.title || g.id), h('span', { className: 'muted', style: { fontSize: 13 } }, g.id + '.chatango.com'))),
+          h('span', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { style: { fontWeight: 600 } }, o.title || g.id), h('span', { className: 'muted', style: { fontSize: 'var(--font-size-body-sm)' } }, g.id + '.chatango.com'))),
         o.description ? h('p', { style: { margin: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } }, o.description) : h('p', { className: 'muted', style: { margin: 0 } }, 'No description.'),
         h('p', { className: 'tc-hint', style: { margin: 0 } }, 'Edit the title, description and icon on chatango.com.'))),
     LIVE && owner ? h(T.SettingsSection, { title: 'Messages' },
@@ -100,7 +100,7 @@ function GSBans(p) {
       g.bans.length ? g.bans.map(function (x) {
         return h('div', { key: x.name, className: 'lrow' },
           h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28 }), h('span', { className: 'lrow-sub person-sub' }, 'by ' + shownName(app.state, x.by) + ' · ' + ago(x.at))),
-          showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
+          showIp ? h('span', { className: 'muted', style: { fontSize: 'var(--font-size-caption)' } }, x.ip) : null,
           h(T.Button, { size: 'sm', onClick: function () { app.actions.unban(g.id, x.name); } }, 'Unban'));
       }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
 }
@@ -112,7 +112,7 @@ function GSAudit(p) {
   var rows = g.audit.slice().reverse().filter(function (x) { return actor === 'all' || x.actor === actor; });
   return h(Page, {
     title: 'Audit log', lede: 'Every moderation and settings change in #' + g.id + ', newest first.',
-    aside: h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } }, 'Staff member',
+    aside: h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 'var(--font-size-body-sm)', color: 'var(--text-2)' } }, 'Staff member',
       h('select', { className: 'tc-input', style: { width: 'auto' }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, shownName(s, n)); })))
   },
     h(T.SettingsSection, null, rows.length ? rows.map(function (x, i) {

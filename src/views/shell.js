@@ -171,7 +171,7 @@ function Sidebar(p) {
         renderTrigger: function (tp) {
           return h('button', Object.assign({ type: 'button', className: 'me-btn', 'aria-label': 'Your status: ' + statusLabel(s.meStatus) }, tp),
             h(T.Avatar, { name: s.me, size: 32, status: s.meStatus, ring: 'var(--sidebar)' }),
-            h('span', { className: 'me-text' }, h('span', { style: { fontWeight: 600, fontSize: 13 } }, shownName(s, s.me)), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, statusLabel(s.meStatus))));
+            h('span', { className: 'me-text' }, h('span', { style: { fontWeight: 600, fontSize: 'var(--font-size-body-sm)' } }, shownName(s, s.me)), h('span', { style: { fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, statusLabel(s.meStatus))));
         }
       }),
       h(T.IconButton, { icon: 'sliders', label: 'Settings', onClick: function () { app.nav({ view: 'settings', page: 'appearance' }); } })),
