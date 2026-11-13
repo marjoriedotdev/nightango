@@ -51,7 +51,7 @@ function CreateGroupDialog(p) {
   var f = useState(false), busy = f[0], setBusy = f[1];
   function create() {
     var n = name.trim().toLowerCase(), x = {};
-    if (LIVE ? !/^[a-z0-9_-]{1,20}$/.test(n) : !/^[a-z0-9-]{3,20}$/.test(n)) x.name = LIVE ? 'Use up to 20 letters, numbers, - or _.' : 'Use 3 to 20 lowercase letters, numbers or dashes.';
+    if (LIVE ? !ACCOUNT_NAME.test(n) : !/^[a-z0-9-]{3,20}$/.test(n)) x.name = LIVE ? 'Use up to 20 letters, numbers, - or _.' : 'Use 3 to 20 lowercase letters, numbers or dashes.';
     else if (s.groups[n] || s.users[n]) x.name = 'This name is taken. Try another one.';
     if (title.length > 60) x.title = 'Keep the title under 60 characters.';
     setErr(x);

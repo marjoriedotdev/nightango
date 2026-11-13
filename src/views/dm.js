@@ -536,7 +536,7 @@ function FriendsList(p) {
   function add(e) {
     e.preventDefault();
     var n = name.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,20}$/.test(n)) { setErr('Enter a Chatango username.'); return; }
+    if (!ACCOUNT_NAME.test(n)) { setErr('Enter a Chatango username.'); return; }
     if (n === s.me) { setErr("You can't add yourself."); return; }
     if (s.users[n] && s.users[n].friend) { setErr(shownName(s, n) + ' is already a friend.'); return; }
     setErr(''); setName('');

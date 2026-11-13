@@ -80,7 +80,7 @@ var liveBridge = (function () {
    */
   function profileChanged(name) {
     var n = lower(name), now = Date.now();
-    if (!/^[a-z0-9_-]{1,20}$/.test(n) || now - (refreshedAt[n] || 0) < REFRESH_MS) return;
+    if (!ACCOUNT_NAME.test(n) || now - (refreshedAt[n] || 0) < REFRESH_MS) return;
     refreshedAt[n] = AVATAR_VERSION[n] = now;
     // Own caches hold the version just saved: mod1.xml and mod2.xml can come back older from the HTTP cache, and the next save would send it back.
     if (n !== lower(C.user && C.user.name)) { delete profileCache[n]; delete fullProfileCache[n]; }
@@ -1295,7 +1295,7 @@ var liveBridge = (function () {
      */
     fetchProfile: function (name) {
       var n = lower(name);
-      if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.reject(new Error('Guests have no profile.'));
+      if (!ACCOUNT_NAME.test(n)) return Promise.reject(new Error('Guests have no profile.'));
       return cached(profileCache, n, function () {
         return fetch(CH.subdomain.mod1(n)).then(function (r) {
           // Server error rejected: read as a missing profile, it would stay cached for the cache delay instead of being read again.
@@ -1653,7 +1653,7 @@ var liveBridge = (function () {
    */
   function fetchFullProfile(name) {
       var n = lower(name);
-      if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.resolve('');
+      if (!ACCOUNT_NAME.test(n)) return Promise.resolve('');
       var hit = fresh(fullProfileCache, n);
       if (hit) return Promise.resolve(hit.data);
       return fetch(CH.subdomain.mod2(n)).then(function (r) {
