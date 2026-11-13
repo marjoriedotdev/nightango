@@ -23,14 +23,14 @@ function sessionAfterConn(d, op) {
 function liveWorld(me) {
   var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
   return {
-    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
-    route: { view: 'discover' }, lastChat: { view: 'discover' },
+    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
+    route: { view: 'discover' }, split: null, pip: null, lastChat: { view: 'discover' },
     sections: { favorites: true, groups: true, dms: true },
     groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, pmSettings: null, pmSettingSave: null, premium: null, retrying: {}
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', readTs: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', favoritePeople: 'array', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
 // The read position of the group in view moves with each message: its writes wait and go out together.
 var READ_SAVE_MS = 2000;
 var READ_POSITIONS_MAX = 100;
@@ -44,7 +44,41 @@ function storedLocal(stored) {
   Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
   return out;
 }
-function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, readTs: {}, unstyled: [], style: null }; }
+var NOTE_LABEL_MAX = 24, NOTE_TEXT_MAX = 500;
+/**
+ * Returns the private notes kept in this browser without the entries of another shape.
+ * @param {Object} stored Notes by member name, untrusted.
+ */
+function storedNotes(stored) {
+  var out = {};
+  Object.keys(stored).forEach(function (n) {
+    var x = stored[n];
+    if (ACCOUNT_NAME.test(n) && kindOf(x) === 'object' && typeof x.label === 'string' && typeof x.note === 'string' && (x.label || x.note)) {
+      out[n] = { label: x.label.slice(0, NOTE_LABEL_MAX), note: x.note.slice(0, NOTE_TEXT_MAX) };
+    }
+  });
+  return out;
+}
+/**
+ * Returns the favorite people kept in this browser without the entries that are not an account name.
+ * @param {Array} stored Member names, untrusted.
+ */
+function storedFavoritePeople(stored) {
+  return stored.filter(function (n) { return typeof n === 'string' && ACCOUNT_NAME.test(n); });
+}
+var SPACE_MEMBER = /^(group|dm):[a-z0-9_-]{1,20}$/;
+/**
+ * Returns the spaces kept in this browser without the entries of another shape.
+ * @param {Array} stored Spaces, untrusted.
+ */
+function storedSpaces(stored) {
+  return stored.filter(function (x) {
+    return kindOf(x) === 'object' && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim() && kindOf(x.members) === 'array';
+  }).slice(0, SPACE_MAX).map(function (x) {
+    return { id: x.id, name: x.name.trim().slice(0, SPACE_NAME_MAX), quiet: x.quiet === true, members: x.members.filter(function (m) { return typeof m === 'string' && SPACE_MEMBER.test(m); }) };
+  });
+}
+function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, favoritePeople: [], spaces: [], space: '', readTs: {}, badges: {}, unstyled: [], style: null }; }
 /**
  * Returns the most recent read positions of a map of read positions.
  * @param {Object} reads Server time of the newest read message by group.
@@ -56,7 +90,7 @@ function newestReads(reads) {
   return out;
 }
 /**
- * Closed conversations, hidden and sending channels, read positions, members with a hidden style and own style, kept by account in this browser in live.
+ * Closed conversations, hidden and sending channels, group colors, private notes, favorite people, spaces, read positions, roles of group members, members with a hidden style and own style, kept by account in this browser in live.
  * @param {Object} state Application state.
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
@@ -95,6 +129,10 @@ function useLocalStore(state) {
     if (!me) return;
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
+    o.notes = state.notes;
+    o.favoritePeople = favoritePeople(state);
+    o.spaces = state.spaces;
+    o.space = state.space || '';
     // Local favorites, mutes and ignored members that BetterChatango has not accepted yet: kept for the next sign-in.
     o.fav = prev.fav;
     o.muted = prev.muted;
@@ -105,9 +143,13 @@ function useLocalStore(state) {
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].hiddenChannels.length) o.channels[k] = state.groups[k].hiddenChannels; });
     Object.keys(prev.sendChannels).forEach(function (k) { if (!state.groups[k]) o.sendChannels[k] = prev.sendChannels[k]; });
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].sendChannel !== 'none') o.sendChannels[k] = state.groups[k].sendChannel; });
+    Object.keys(prev.accents).forEach(function (k) { if (!state.groups[k]) o.accents[k] = prev.accents[k]; });
+    Object.keys(state.groups).forEach(function (k) { if (state.groups[k].accent) o.accents[k] = state.groups[k].accent; });
     Object.keys(prev.readTs).forEach(function (k) { if (!state.groups[k]) o.readTs[k] = prev.readTs[k]; });
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].lastReadTs != null) o.readTs[k] = state.groups[k].lastReadTs; });
     o.readTs = newestReads(o.readTs);
+    Object.keys(prev.badges).forEach(function (k) { if (!state.groups[k]) o.badges[k] = prev.badges[k]; });
+    Object.keys(state.groups).forEach(function (k) { var r = groupRoles(state.groups[k]); if (Object.keys(r).length) o.badges[k] = r; });
     prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
     Object.keys(state.users).forEach(function (n) { if (state.users[n].unstyled) o.unstyled.push(n); });
     if (JSON.stringify(o) === JSON.stringify(prev)) return;
@@ -117,7 +159,7 @@ function useLocalStore(state) {
     if (pending.current) pending.current.o = o;
     else pending.current = { me: me, o: o, timer: setTimeout(flush, READ_SAVE_MS) };
     if (!readOnly) flush();
-  }, [me, state.ownStyle, state.dms, state.groups, state.users]);
+  }, [me, state.ownStyle, state.notes, state.spaces, state.space, state.dms, state.groups, state.users]);
   return { ref: localRef, restore: restore };
 }
 /** Key of a ban list entry: unid and IP, like removeblock. */
@@ -133,10 +175,10 @@ function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.
 function liveGroup(id, title) {
   var t = title || id;
   return {
-    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: null,
+    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: null,
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
-    live: { flags: 0, mods: {}, badges: {}, owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
+    live: { flags: 0, mods: {}, badges: {}, knownBadges: {}, owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
     settings: mkSettings({ overview: { title: t, description: '' }, staff: {} })
   };
 }
@@ -150,7 +192,7 @@ function liveGroup(id, title) {
  */
 function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
 /**
- * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels and read position kept in this browser.
+ * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels, color, read position and member roles kept in this browser.
  * @param {Object} d State being modified.
  * @param {string} gid Target group.
  * @param {Object} local Account data kept in this browser.
@@ -163,7 +205,10 @@ function ensureLiveGroup(d, gid, local) {
     g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
     g.hiddenChannels = local.channels[gid] || [];
     g.sendChannel = local.sendChannels[gid] || 'none';
+    g.accent = hexToRgb(local.accents[gid]) ? local.accents[gid] : null;
     g.lastReadTs = local.readTs[gid] || null;
+    g.live.knownBadges = local.badges[gid] || {};
+    g.settings.staff = staffOf(g.live);
   }
   return g;
 }
@@ -174,7 +219,9 @@ function ensureLiveGroup(d, gid, local) {
  * @param {Object} local Account data kept in this browser.
  */
 function ensureLiveUser(d, name, local) {
-  var u = d.users[name];
+  // Assigning __proto__ would replace the prototype of the map: this name gets a member that is never kept.
+  if (name === '__proto__') return { status: 'offline', about: '', style: {} };
+  var u = ownOf(d.users, name);
   if (!u) {
     u = d.users[name] = { status: 'online', about: '', style: {} };
     if ((liveBridge.ignoredUsers() || []).indexOf(name) >= 0) u.ignored = true;
@@ -225,7 +272,7 @@ function referencedUsers(s, shown) {
 }
 /**
  * Drops from the live state, on PRUNE_EVERY, the members nothing refers to any more: former members, authors of trimmed messages, search results.
- * Friends and the members the user ignores, blocks or shows without style stay, since their lists are read from the state.
+ * Friends, favorite people and the members the user ignores, blocks or shows without style stay, since their lists are read from the state.
  * The members a view shows while nothing in the state refers to them stay too: the linked accounts of Who is this, a profile opened from them.
  * @param {{stateRef: Object, update: Function}} store Ref to the application state and its update.
  * @param {boolean} loggedIn Signed in.
@@ -239,7 +286,7 @@ function usePrunedUsers(store, loggedIn) {
     if (!LIVE || !loggedIn) return;
     var timer = setInterval(function () {
       var s = store.stateRef.current, kept = referencedUsers(s, Object.keys(shown.current));
-      var gone = Object.keys(s.users).filter(function (n) { var u = s.users[n]; return !kept[n] && !u.friend && !u.ignored && !u.blocked && !u.unstyled; });
+      var gone = Object.keys(s.users).filter(function (n) { var u = s.users[n]; return !kept[n] && !u.friend && !u.favorite && !u.ignored && !u.blocked && !u.unstyled; });
       if (gone.length) store.update(function (d) { gone.forEach(function (n) { delete d.users[n]; }); });
     }, PRUNE_EVERY);
     return function () { clearInterval(timer); };
@@ -275,11 +322,25 @@ function mergeStyle(u, style, ts) {
   u.styleTs = ts;
 }
 /**
- * Keeps the author's style of each merged private history entry.
+ * Keeps the spelling of a member's name carried by their most recent message that has one.
+ * @param {Object} u Member in the state being modified.
+ * @param {?string} spelling Name with its capitals, null for a message that carries none.
+ * @param {number} ts Message timestamp.
+ */
+function mergeSpelling(u, spelling, ts) {
+  // Like the style, the time moves with the spelling only: a message that keeps it leaves the member as they are.
+  if (!spelling || ts <= u.spellingTs || spelling === u.spelling) return;
+  u.spelling = spelling;
+  u.spellingTs = ts;
+}
+/**
+ * Keeps the author's style and spelling of each merged private history entry.
  * @param {Object} d State being modified.
  * @param {Object} local Account data kept in this browser.
  */
-function pmAuthor(d, local) { return function (x) { mergeStyle(ensureLiveUser(d, x.from, local), x.style, x.ts); }; }
+function pmAuthor(d, local) {
+  return function (x) { var u = ensureLiveUser(d, x.from, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
+}
 /**
  * Records the role shown by the badge of a group message, the highest seen during the session.
  * @param {Object} g Group being modified.
@@ -292,14 +353,31 @@ function noteBadge(g, name, badge) {
   g.live.badges[name] = badge;
   deriveLive(g);
 }
-/** Translates the Chatango state of a group (flags, moderators, announcement) into the interface model. */
-function deriveLive(g) {
-  var L = g.live, F = GROUP_FLAG, f = L.flags, s = g.settings, staff = {};
+/**
+ * Returns the role of each staff member of a live group.
+ * @param {Object} L Chatango state of the group.
+ */
+function staffOf(L) {
+  var staff = {}, badges = Object.assign({}, L.knownBadges, L.badges);
   if (L.owner) staff[L.owner] = 'owner';
   Object.keys(L.mods).forEach(function (n) { if (n !== L.owner) staff[n] = roleOfFlags(L.mods[n]); });
-  // Chatango sends the moderator list to staff only: other members learn roles from the badges on messages.
-  if (!Object.keys(L.mods).length) Object.keys(L.badges).forEach(function (n) { if (n !== L.owner) staff[n] = L.badges[n]; });
-  s.staff = staff;
+  // Chatango sends the moderator list to staff only: other members learn roles from the badges on messages, those of earlier sessions included.
+  if (!Object.keys(L.mods).length) Object.keys(badges).forEach(function (n) { if (n !== L.owner) staff[n] = badges[n]; });
+  return staff;
+}
+/**
+ * Returns the roles of a group kept in this browser, the owner left out since the ok frame names them on each join.
+ * @param {Object} g Live group.
+ */
+function groupRoles(g) {
+  var r = Object.assign({}, g.settings.staff);
+  delete r[g.live.owner];
+  return r;
+}
+/** Translates the Chatango state of a group (flags, moderators, announcement) into the interface model. */
+function deriveLive(g) {
+  var L = g.live, F = GROUP_FLAG, f = L.flags, s = g.settings;
+  s.staff = staffOf(L);
   s.modFlags = Object.assign({}, L.mods);
   if (L.owner) delete s.modFlags[L.owner];
   s.media = { links: !(f & F.NOLINKS), images: !(f & F.NOIMAGES), videos: !(f & F.NOVIDEOS) };

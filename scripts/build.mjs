@@ -1,7 +1,9 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { Script } from 'node:vm';
 import { transform } from 'esbuild';
+import { parseChangelog } from './changelog.mjs';
 
 // -- Sources ------------------------------------------------------------------
 
@@ -30,6 +32,8 @@ export const APP_SOURCES = [
   'views/message-log.js',
   'views/members.js',
   'views/dm.js',
+  'views/pip.js',
+  'views/spaces.js',
   'views/meet.js',
   'views/mentions.js',
   'views/profile.js',
@@ -37,7 +41,10 @@ export const APP_SOURCES = [
   'views/message-style.js',
   'views/emoji-picker.js',
   'views/attach.js',
+  'views/voice.js',
   'views/media.js',
+  'views/gif.js',
+  'views/shared-media.js',
   'views/commands.js',
   'views/discover.js',
   'views/palette.js',
@@ -89,40 +96,17 @@ export function concatSources(root, files) {
   return files.map((file) => readFileSync(join(root, 'src', file), 'utf8')).join('\n');
 }
 
-// -- Release notes ------------------------------------------------------------
-
-const CHANGE_TYPES = new Set(['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security']);
+// -- Shared scope -------------------------------------------------------------
 
 /**
- * Reads the release notes of CHANGELOG.md newest first.
- * @param {string} text Content of CHANGELOG.md.
+ * Returns the compile error of the sources once their top-level declarations are let.
+ * Two files that declare the same name share one scope where the second silently replaces the first: declared with let they do not compile.
+ * @param {string} code Concatenated application sources.
+ * @returns {?string} Message that names the identifier declared twice or null.
  */
-function parseChangelog(text) {
-  const releases = [];
-  let release = null, group = null;
-  text.split(/\r?\n/).forEach((line, i) => {
-    const fail = (why) => { throw new Error(`CHANGELOG.md:${i + 1}: ${why}`); };
-    let m;
-    if ((m = /^## \[(\d+\.\d+\.\d+(?:-beta\.\d+)?)\] - (\d{4}-\d{2}-\d{2})$/.exec(line))) {
-      release = { version: m[1], date: m[2], groups: [] };
-      group = null;
-      releases.push(release);
-    } else if ((m = /^### (\w+)$/.exec(line))) {
-      if (!release) fail('change type outside a release.');
-      if (!CHANGE_TYPES.has(m[1])) fail(`unknown change type ${m[1]}.`);
-      group = { title: m[1], items: [] };
-      release.groups.push(group);
-    } else if ((m = /^- (\S.*)$/.exec(line))) {
-      if (group) group.items.push(m[1]);
-      else if (release) fail('item outside a change type.');
-    } else if (release && line.trim()) {
-      fail('expected a "## [x.y.z] - YYYY-MM-DD" or "## [x.y.z-beta.n] - YYYY-MM-DD" heading, a "### Type" heading or a "- " item.');
-    }
-  });
-  for (const r of releases) {
-    if (!r.groups.length || r.groups.some((g) => !g.items.length)) throw new Error(`CHANGELOG.md: release ${r.version} has an empty section.`);
-  }
-  return releases;
+function redeclared(code) {
+  const strict = code.replace(/^var /gm, 'let ').replace(/^function\s+([A-Za-z_$][\w$]*)/gm, 'let $1 = function $1');
+  try { new Script('(function () {\n"use strict";\n' + strict + '\n})'); return null; } catch (e) { return e.message; }
 }
 
 // -- Design system tokens -----------------------------------------------------
@@ -315,9 +299,12 @@ async function build() {
   const version = /@version\s+(\S+)/.exec(loader)[1];
   const releaseNotes = parseChangelog(read('CHANGELOG.md'));
   if (releaseNotes[0]?.version !== version) throw new Error(`CHANGELOG.md must start with the notes of @version ${version}.`);
+  const sources = concatSources(ROOT, APP_SOURCES);
+  const twice = redeclared(sources);
+  if (twice) throw new Error(`The files of src/ share one scope and a top-level name is declared twice: ${twice}.`);
   const appJs = "(function () {\n'use strict';\n" +
     `var APP_VERSION = ${JSON.stringify(version)}, RELEASE_NOTES = ${JSON.stringify(releaseNotes)};\n` +
-    concatSources(ROOT, APP_SOURCES) + '\n})();\n';
+    sources + '\n})();\n';
   for (const [name, src] of [['bundle', bundleJs], ['app', appJs]]) {
     if (src.toLowerCase().includes('</script')) throw new Error(`${name} contains </script`);
   }

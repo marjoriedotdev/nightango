@@ -72,7 +72,7 @@ The minified userscript the user installs in Tampermonkey, with the same file na
 Nightango's tokens, components and guidelines (torchds, namespace `window.Torch`), from which the interface is built.
 
 **Season**:
-A few days a year when the night of the interface changes, computed on the device: Halloween, from October 24 to November 2. Its palette, its decorations and the costumes on avatars are seen only by the reader and can be turned off in Appearance.
+A few days a year when the night of the interface changes, computed on the device: Halloween from October 24 to November 2, winter from December 1 to January 6 (June 1 to July 6 for a sky seen from the southern hemisphere), Valentine's Day from February 10 to 14. Its palette, its decorations and the costumes on avatars are seen only by the reader and can be turned off in Appearance.
 _Avoid_: theme (the dark or light theme, chosen by the reader)
 
 ## Groups
@@ -80,6 +80,10 @@ _Avoid_: theme (the dark or light theme, chosen by the reader)
 **Group**:
 Public Chatango chat room, identified by its name.
 _Avoid_: room, chat room
+
+**Favorite**:
+Group or person the user keeps in the Favorites section of the sidebar. A favorite group is one of BetterChatango's favorites, a favorite person is kept in this browser and need not be a friend.
+_Avoid_: pinned, starred, bookmark
 
 **Channel**:
 Marking on a group message: red, blue, or Staff (reserved for moderators who have the right).
@@ -135,11 +139,15 @@ _Avoid_: contact, watch list
 **Block**:
 Refusal of an account's PMs, on the private message side.
 
+**Space**:
+Named set of groups and PMs the user gathers, kept in this browser for the account. The sidebar and Chats show only the conversations of the chosen space, and a space can silence the alerts of PMs from outside it.
+_Avoid_: folder, workspace
+
 ## Media
 
 **Media library**:
 Favorite images that BetterChatango keeps in this browser, shared by all its accounts, inserted into a message by their address. The interface says "Media".
-_Avoid_: favorites (reserved for groups), gallery
+_Avoid_: favorites (reserved for groups and people), gallery
 
 **Trusted host**:
 Exact host chosen by the user, whose links open without a warning and whose images, videos and audio load without a click. In live, the list is BetterChatango's (`safety.whitelist.domain`). The interface says "Trusted sites".
@@ -160,6 +168,10 @@ Moment an offline account was last seen online, shown as "Last online".
 _Avoid_: last seen
 
 ## Profiles
+
+**Spelling**:
+Capitals of a member's name as they typed it at sign-in. Nightango shows it once a message or a session of the member carries it. The lowercase name stays the member's identity.
+_Avoid_: display name, nickname, casing
 
 **Mini profile**:
 Short public card of a member: age, gender, location, bio and Premium end date.

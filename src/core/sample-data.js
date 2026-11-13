@@ -26,10 +26,10 @@ function seedWorld(me) {
     vantage: { status: 'idle', idleSince: t(40), age: 29, location: 'Oslo, Norway', about: 'Moderator. Quiet most of the time.', style: { nameColor: '#00bcd4' } },
     kestrel: { status: 'online', age: 22, location: 'Leeds, UK', about: 'Trading usernames since 2014.', style: { nameColor: '#2ecc71', font: 'Typewriter' } },
     marrow: { status: 'online', age: 35, location: '', about: 'Breaks networks for a living.', style: { nameColor: '#a0522d', bg: '#3b2414' } },
-    nightowl: { status: 'online', age: 26, location: 'Montréal, Canada', about: 'Themes, fonts and too much coffee.', style: { nameColor: '#9b59b6', font: 'Comic', textColor: '#e0b0ff', bg: '#24133f' } },
+    nightowl: { status: 'online', spelling: 'NightOwl', age: 26, location: 'Montréal, Canada', about: 'Themes, fonts and too much coffee.', style: { nameColor: '#9b59b6', font: 'Comic', textColor: '#e0b0ff', bg: '#24133f' } },
     quill: { status: 'idle', idleSince: t(14), age: 23, location: 'Dublin, Ireland', about: 'Mostly in #retrogaming.', friend: true, style: { nameColor: '#e91e63' } },
     drift: { status: 'online', age: 20, location: '', about: '', style: {} },
-    halcyon: { status: 'offline', lastOn: t(190), age: 28, location: 'Porto, Portugal', about: 'Runs game night.', friend: true, style: { nameColor: '#ffeb3b' } },
+    halcyon: { status: 'offline', lastOn: t(190), age: 28, location: 'Porto, Portugal', about: 'Runs game night.', friend: true, favorite: true, style: { nameColor: '#ffeb3b' } },
     petrichor: { status: 'offline', age: 33, location: '', about: '', style: {} },
     pixelmint: { status: 'online', age: 21, location: 'Gent, Belgium', about: 'Pixel artist.', style: { nameColor: '#00e5a0' } },
     rook: { status: 'online', age: 27, location: '', about: '', style: {} },
@@ -39,7 +39,7 @@ function seedWorld(me) {
 
   function group(id, o) {
     return Object.assign({
-      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: now,
+      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: now,
       members: [], guests: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false
     }, o);
   }
@@ -138,12 +138,12 @@ function seedWorld(me) {
     pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60) }
   };
   return {
-    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], mediaRev: 0,
+    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0,
     meStatus: 'online',
     pmSettings: { hideIdle: false, allowAnon: true, emailOffline: false }, pmSettingSave: null,
     premium: { status: 200, until: now + 2 * 1440 * MIN + 5 * 60 * MIN },
     profile: { visibility: { meet: false } },
-    route: { view: 'group', id: 'community', markerTs: now },
+    route: { view: 'group', id: 'community', markerTs: now }, split: null, pip: null,
     sections: { favorites: true, groups: true, dms: true }
   };
 }

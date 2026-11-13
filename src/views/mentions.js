@@ -12,12 +12,12 @@ function entryTime(ts, h24) { return (dayKey(ts) === dayKey(Date.now()) ? '' : d
  * @param {{name: string, ts: number, meta: ?string, text: *, onClick: Function}} p Shown member, timestamp, optional context line, text and opening.
  */
 function MessageEntry(p) {
-  var h24 = useApp().state.prefs.h24;
+  var s = useApp().state, h24 = s.prefs.h24;
   return h('button', { type: 'button', className: 'conv person', onClick: p.onClick },
     h(T.Avatar, { name: p.name, size: 28 }),
     h('span', { className: 'conv-main' },
       h('span', { className: 'conv-top' },
-        h('span', { className: 'conv-name' }, p.name),
+        h('span', { className: 'conv-name' }, shownName(s, p.name)),
         h('time', { className: 'tc-msg-time', dateTime: new Date(p.ts).toISOString(), title: new Date(p.ts).toLocaleString('en-GB') }, entryTime(p.ts, h24))),
       p.meta ? h('span', { className: 'conv-meta' }, p.meta) : null,
       h('span', { className: 'conv-about', dir: 'auto' }, p.text)));

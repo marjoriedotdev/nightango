@@ -20,7 +20,13 @@ function groupRights(group, name) {
 function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) && name !== me && roleOf(group, name) !== 'owner'; }
 // One object for every unknown member: the rows that take its style as a prop keep the same props.
 var UNKNOWN_USER = { status: 'offline', about: '', style: {} };
-function userOf(state, name) { return state.users[name] || UNKNOWN_USER; }
+function userOf(state, name) { return ownOf(state.users, name) || UNKNOWN_USER; }
+/**
+ * Returns a member's name as they spell it, in lowercase until a message of theirs carries its capitals.
+ * @param {Object} state Application state.
+ * @param {string} name Member name in lowercase.
+ */
+function shownName(state, name) { return userOf(state, name).spelling || name; }
 var PREMIUM_REMINDER_MS = 3 * 86400000;
 /**
  * Tells whether the account has Premium according to the premium frame: status 200 (bought) or 210 (gifted) like BetterChatango, before its end.
@@ -136,22 +142,45 @@ function listedDms(state) {
     .sort(function (a, b) { return lastTs(state.dms[b]) - lastTs(state.dms[a]); });
 }
 /**
+ * Lists the favorite people by name.
+ * @param {Object} state Application state.
+ */
+function favoritePeople(state) {
+  return Object.keys(state.users).filter(function (n) { return state.users[n].favorite; }).sort();
+}
+/**
  * Counts the unread conversations without closed conversations.
  * @param {Object} state Application state.
  */
 function unreadDmCount(state) { return listedDms(state).filter(function (n) { return state.dms[n].unread; }).length; }
 /**
- * Tells whether a conversation is open in front of the user.
+ * Counts what waits for the user: the unread conversations and the mentions of every group.
  * @param {Object} state Application state.
- * @param {string} name Conversation member.
  */
-function isDmInView(state, name) { return state.route.view === 'dm' && state.route.id === name && document.visibilityState === 'visible'; }
+function unreadTotal(state) {
+  return Object.keys(state.groups).reduce(function (n, k) { return n + (state.groups[k].mentions || 0); }, unreadDmCount(state));
+}
 /**
- * Tells whether a group is open in front of the user.
+ * Tells whether a conversation is shown, in the main pane, side by side or in the floating window.
  * @param {Object} state Application state.
- * @param {string} gid Group.
+ * @param {string} view group or dm.
+ * @param {string} id Group or conversation member.
  */
-function isGroupInView(state, gid) { return state.route.view === 'group' && state.route.id === gid && document.visibilityState === 'visible'; }
+function isPaneOpen(state, view, id) {
+  return isTarget(state.route, view, id) || isTarget(state.split, view, id) || isTarget(state.pip, view, id);
+}
+function isTarget(r, view, id) { return !!r && r.view === view && r.id === id; }
+/**
+ * Tells whether a conversation is in front of the user: shown in this tab while it is visible, or in the floating window, which stays on top.
+ * @param {Object} state Application state.
+ * @param {string} view group or dm.
+ * @param {string} id Group or conversation member.
+ */
+function isInView(state, view, id) {
+  return isTarget(state.pip, view, id) || ((isTarget(state.route, view, id) || isTarget(state.split, view, id)) && document.visibilityState === 'visible');
+}
+function isDmInView(state, name) { return isInView(state, 'dm', name); }
+function isGroupInView(state, gid) { return isInView(state, 'group', gid); }
 // Words and media as a sorted set: BetterChatango archives an image URL typed in the text as an <i s> tag.
 function pmContentKey(m) {
   var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });

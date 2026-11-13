@@ -10,13 +10,14 @@ function seedState(d, world) {
 }
 /**
  * Announces the toggle of a member mark in the prototype as in live.
- * @param {string} name Target member.
- * @param {string} key Toggled mark (friend, ignored, blocked or unstyled).
+ * @param {string} name Target member as they spell their name.
+ * @param {string} key Toggled mark (friend, favorite, ignored, blocked or unstyled).
  * @param {boolean} was Mark before the toggle.
  */
 function toggleUserText(name, key, was) {
   return {
     friend: name + ' removed from friends.',
+    favorite: was ? name + ' removed from favorites.' : name + ' added to favorites.',
     ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + '.',
     blocked: was ? name + ' unblocked.' : name + ' blocked.',
     unstyled: was ? name + "'s style shown again." : name + "'s style hidden."
@@ -53,7 +54,7 @@ function wordList(v) { return String(v || '').split(/[,\n]/).map(function (x) { 
  */
 function useActions(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast, setNavOpen = k.setNavOpen;
-  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, receiveGroup = k.inbox.receiveGroup, receiveDm = k.inbox.receiveDm;
+  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, openSplit = k.inbox.openSplit, closeSplit = k.inbox.closeSplit, openPip = k.inbox.openPip, receiveGroup = k.inbox.receiveGroup, receiveDm = k.inbox.receiveDm;
   var drafts = k.drafts, localRef = k.localRef, reconnection = k.reconnection, pms = k.pms;
   var up = useState({}), uploads = up[0], setUploads = up[1];
   /**
@@ -86,6 +87,10 @@ function useActions(k) {
   function mediaChanged() { update(function (d) { d.mediaRev++; }); }
 
   var actions = {
+    openSplit: openSplit,
+    closeSplit: closeSplit,
+    openPip: openPip,
+    closePip: closePipWindow,
     login: function (name) { var world = sampleWorld(name); drafts.clear(); update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
     resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },
@@ -96,6 +101,31 @@ function useActions(k) {
       setTimeout(function () { update(function (d) { d.pmSettings[key] = value; d.pmSettingSave = null; }); }, 700);
     },
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
+    /**
+     * Keeps a private note on a member, or deletes it when both fields are empty.
+     * @param {string} name Member name.
+     * @param {{label: string, note: string}} n Label and note text, trimmed.
+     */
+    setNote: function (name, n) { update(function (d) { if (n.label || n.note) d.notes[name] = n; else delete d.notes[name]; }); },
+    clearNotes: function () { update(function (d) { d.notes = {}; }); },
+    setSpace: function (id) { update(function (d) { d.space = id; }); },
+    /**
+     * Creates a space and opens it.
+     * @param {string} name Space name, trimmed.
+     * @param {boolean} quiet Mutes private messages from outside it while it is open.
+     * @param {?string} first Conversation it starts with, as spaceKey names it.
+     */
+    createSpace: function (name, quiet, first) {
+      var id = uid();
+      update(function (d) { d.spaces.push({ id: id, name: name, quiet: quiet, members: first ? [first] : [] }); d.space = id; });
+    },
+    updateSpace: function (id, patch) { update(function (d) { d.spaces.forEach(function (x) { if (x.id === id) Object.assign(x, patch); }); }); },
+    deleteSpace: function (id) { update(function (d) { d.spaces = d.spaces.filter(function (x) { return x.id !== id; }); if (d.space === id) d.space = null; }); },
+    toggleInSpace: function (id, key) {
+      update(function (d) {
+        d.spaces.forEach(function (x) { if (x.id !== id) return; var i = x.members.indexOf(key); if (i >= 0) x.members.splice(i, 1); else x.members.push(key); });
+      });
+    },
     sendGroup: function (gid, text, opts) {
       var me = stateRef.current.me;
       text = (opts.quote || '') + text;
@@ -105,13 +135,14 @@ function useActions(k) {
         var cmd = text.slice(1).split(/\s+/)[0].toLowerCase();
         var reply = cmd === 'roll' ? 'Rolled a ' + (1 + Math.floor(Math.random() * (parseInt(text.split(/\s+/)[1], 10) || 20))) + '.' : cmd === 'help' ? 'Commands: !weather, !define, !roll' : cmd === 'weather' ? 'Rennes: 14°C, light rain.' : 'Unknown command. Try !help.';
         setTimeout(function () { receiveGroup(gid, { id: uid(), kind: 'msg', author: 'rook', text: '@' + me + ' ' + reply, ts: Date.now() }); }, 900);
-        return;
+        return true;
       }
       var m = /@([a-z0-9_-]+)/i.exec(text);
       if (m && g && g.members.indexOf(m[1].toLowerCase()) >= 0 && m[1].toLowerCase() !== me && userOf(stateRef.current, m[1].toLowerCase()).status !== 'offline') {
         var who = m[1].toLowerCase();
         setTimeout(function () { receiveGroup(gid, { id: uid(), kind: 'msg', author: who, text: '@' + me + ' ' + pick(['On it.', 'Sure, give me a minute.', 'Thanks, checking now.', 'Good point.']), ts: Date.now() }); }, 3400);
       }
+      return true;
     },
     sendDm: function (name, text, opts) {
       opts = opts || {};
@@ -158,7 +189,7 @@ function useActions(k) {
       // Back to the Chats list first, without closeDm: the conversation left open would read its PMs again.
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
       unreadPm(pmArchive.current, update, name).then(function (flagged) {
-        if (!flagged) toast('No message from ' + name + ' is saved in this browser.');
+        if (!flagged) toast('No message from ' + shownName(stateRef.current, name) + ' is saved in this browser.');
       }, function (e) { toast(e.message); });
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
@@ -239,18 +270,25 @@ function useActions(k) {
       }, function (e) { toast(e.message); });
     },
     exportMedia: function () { return mediaLib.exportMedia(); },
+    /** GIFs of the media library that a message would show, by name. */
+    gifMedia: function () {
+      return mediaLib.exportMedia().then(function (list) {
+        return list.filter(function (e) { return mediaEntryOk(e) && GIF_URL.test(e.url); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+      });
+    },
     importMedia: function (entries) { return mediaLib.importMedia(entries).then(function (r) { mediaChanged(); return r; }); },
     toggleUser: function (name, key) {
       var was = !!userOf(stateRef.current, name)[key];
       update(function (d) { if (!d.users[name]) d.users[name] = { status: 'offline', about: '', style: {} }; d.users[name][key] = !was; });
       if (key === 'friend' && !was) return;
-      toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
+      toast(toggleUserText(shownName(stateRef.current, name), key, was), { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
     },
     toggleMute: function (gid) { update(function (d) { d.groups[gid].muted = !d.groups[gid].muted; }); },
     toggleHiddenChannel: function (gid, k) {
       update(function (d) { var l = d.groups[gid].hiddenChannels, i = l.indexOf(k); if (i >= 0) l.splice(i, 1); else l.push(k); });
     },
     setSendChannel: function (gid, k) { update(function (d) { d.groups[gid].sendChannel = k; }); },
+    setGroupAccent: function (gid, hex) { update(function (d) { d.groups[gid].accent = hex; }); },
     toggleFavorite: function (gid) { update(function (d) { d.groups[gid].favorite = !d.groups[gid].favorite; }); },
     /**
      * Adds a trusted host without duplicates or removes it.
@@ -281,7 +319,7 @@ function useActions(k) {
       update(function (d) {
         var staff = {}; staff[me] = 'owner';
         d.groups[name] = {
-          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', unread: 0, mentions: 0, lastReadTs: now,
+          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: now,
           members: [me], guests: 0, closed: false, dismissedAnnouncement: false, bans: [],
           settings: mkSettings({ overview: { title: title, description: desc }, staff: staff }),
           audit: [{ id: uid(), at: now, actor: me, text: 'Created the group' }],
@@ -293,6 +331,7 @@ function useActions(k) {
     },
     editMessage: function (gid, m, text) {
       update(function (d) { var g = d.groups[gid]; g.messages.forEach(function (o) { if (o.id === m.id) applyGroupEdit(o, { id: uid(), text: text, embeds: o.embeds }); }); });
+      return true;
     },
     deleteMessage: function (gid, mid) {
       var me = stateRef.current.me, author = null;
@@ -312,14 +351,14 @@ function useActions(k) {
         g.members = g.members.filter(function (n) { return n !== name; });
         if (g.settings.staff[name]) delete g.settings.staff[name];
         g.messages.push({ id: uid(), kind: 'ban', user: name, ts: now });
-        g.audit.push({ id: uid(), at: now, actor: me, text: 'Banned ' + name });
+        g.audit.push({ id: uid(), at: now, actor: me, text: 'Banned ' + shownName(d, name) });
       });
-      toast(name + ' was banned from #' + gid + '.', { action: { label: 'Undo', run: function () { actions.unban(gid, name, true); } } });
+      toast(shownName(stateRef.current, name) + ' was banned from #' + gid + '.', { action: { label: 'Undo', run: function () { actions.unban(gid, name, true); } } });
     },
     unban: function (gid, name, quiet) {
       var me = stateRef.current.me;
-      update(function (d) { var g = d.groups[gid]; g.bans = g.bans.filter(function (b) { return b.name !== name; }); g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Unbanned ' + name }); });
-      if (!quiet) toast(name + ' can join #' + gid + ' again.');
+      update(function (d) { var g = d.groups[gid]; g.bans = g.bans.filter(function (b) { return b.name !== name; }); g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Unbanned ' + shownName(d, name) }); });
+      if (!quiet) toast(shownName(stateRef.current, name) + ' can join #' + gid + ' again.');
     },
     unbanAll: function (gid) {
       var me = stateRef.current.me, n = stateRef.current.groups[gid].bans.length;
@@ -341,9 +380,9 @@ function useActions(k) {
         var g = d.groups[gid];
         Object.keys(labels).forEach(function (k) { if (JSON.stringify(old[k]) !== JSON.stringify(draft[k])) g.audit.push({ id: uid(), at: now, actor: me, text: labels[k] }); });
         Object.keys(Object.assign({}, old.staff, draft.staff)).forEach(function (n) {
-          if (old.staff[n] !== draft.staff[n]) g.audit.push({ id: uid(), at: now, actor: me, text: draft.staff[n] ? 'Made ' + n + ' ' + ROLE_LONG[draft.staff[n]].toLowerCase() : 'Removed ' + n + ' from staff' });
+          if (old.staff[n] !== draft.staff[n]) g.audit.push({ id: uid(), at: now, actor: me, text: draft.staff[n] ? 'Made ' + shownName(d, n) + ' ' + ROLE_LONG[draft.staff[n]].toLowerCase() : 'Removed ' + shownName(d, n) + ' from staff' });
           // Like the Chatango log (emod): permissions changed without a role change.
-          else if (draft.staff[n] && old.modFlags[n] !== draft.modFlags[n]) g.audit.push({ id: uid(), at: now, actor: me, text: "Changed " + n + "'s permissions" });
+          else if (draft.staff[n] && old.modFlags[n] !== draft.modFlags[n]) g.audit.push({ id: uid(), at: now, actor: me, text: "Changed " + shownName(d, n) + "'s permissions" });
         });
         if (old.announcement.text !== draft.announcement.text || (!old.announcement.enabled && draft.announcement.enabled)) g.dismissedAnnouncement = false;
         g.settings = JSON.parse(JSON.stringify(draft));
@@ -465,7 +504,7 @@ function useActions(k) {
       return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent.');
     };
     // Editing an edit shown on its own targets its original, the only message visible to other members.
-    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited.'); };
+    actions.editMessage = function (gid, m, text) { return sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited.'); };
     actions.sendDm = function (name, text, opts) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
@@ -621,7 +660,7 @@ function useActions(k) {
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
       if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('BetterChatango could not save its ignore list. Reload the page and try again.'); return; }
       update(function (d) { ensureLiveUser(d, name, localRef.current)[key] = !was; });
-      toast(toggleUserText(name, key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
+      toast(toggleUserText(shownName(stateRef.current, name), key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
     actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
     actions.removeDmMessage = function (name, m) {
@@ -652,7 +691,7 @@ function useActions(k) {
     };
     actions.deleteAllFrom = function (gid, name, msg) {
       var g = stateRef.current.groups[gid], m = msg && msg.unid ? msg : g && lastMessageOf(g, name);
-      if (!m) { toast('No recent message from ' + name + ' in #' + gid + '.'); return; }
+      if (!m) { toast('No recent message from ' + shownName(stateRef.current, name) + ' in #' + gid + '.'); return; }
       liveBridge.deleteAllFrom(gid, m);
     };
     actions.ban = function (gid, name, reason, opts) {
@@ -660,14 +699,14 @@ function useActions(k) {
       // Guests and anons can share a name: they are only banned from the chosen message.
       if (!m && /^[!#]/.test(name)) { toast('Ban guests from one of their messages.'); return false; }
       m = m || (g && lastMessageOf(g, name));
-      if (!m) { toast('No recent message from ' + name + ' in #' + gid + '. Chatango bans someone from one of their messages.'); return false; }
+      if (!m) { toast('No recent message from ' + shownName(stateRef.current, name) + ' in #' + gid + '. Chatango bans someone from one of their messages.'); return false; }
       if (!liveBridge.ban(gid, m)) return false;
       if (opts && opts.deleteAll) liveBridge.deleteAllFrom(gid, m);
       return true;
     };
     actions.unban = function (gid, name) {
       var g = stateRef.current.groups[gid], b = g && g.bans.filter(function (x) { return x.name === name; })[0];
-      if (!b) { toast(name + ' is not in the ban list.'); return; }
+      if (!b) { toast(shownName(stateRef.current, name) + ' is not in the ban list.'); return; }
       liveBridge.unban(gid, b);
     };
     actions.unbanEntry = function (gid, b) { liveBridge.unban(gid, b); };

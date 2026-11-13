@@ -32,10 +32,11 @@ function useBridgeOps(handle, loggedIn) {
  * @returns {boolean} True if the message joined the message log, false for a message already there or an edit applied to its original.
  */
 function addHistory(d, op, local) {
-  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style; delete hm.badge;
+  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style; delete hm.badge; delete hm.spelling;
   var g = ensureLiveGroup(d, op.gid, local), u = ensureLiveUser(d, hm.author, local);
   noteBadge(g, hm.author, op.msg.badge);
   mergeStyle(u, hs, hm.ts);
+  mergeSpelling(u, op.msg.spelling, hm.ts);
   if (plainOf(g.messages).some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return false;
   var o = editTarget(g, hm);
   // History received from newest to oldest: like BetterChatango, an original already edited keeps its text.
@@ -90,8 +91,10 @@ function useLiveOps(k) {
         // BetterChatango's "Mentioned in #g" title would come back 5 s later without the Nightango counter.
         if (liveBridge.setting('tabTitleAlerts')) liveBridge.setSetting('tabTitleAlerts', false);
         update(function (d) {
-          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.auth = { loggedIn: true };
+          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = storedNotes(localRef.current.notes); d.spaces = storedSpaces(localRef.current.spaces); d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
+          mergeSpelling(d.users[op.me], op.spelling, Date.now());
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
+          storedFavoritePeople(localRef.current.favoritePeople).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); d.users[n].favorite = true; });
           Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
           d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
         });
@@ -116,13 +119,14 @@ function useLiveOps(k) {
         break;
       }
       case 'msg': {
-        var m = Object.assign({}, op.msg), style = m.style; delete m.style; delete m.badge;
+        var m = Object.assign({}, op.msg), style = m.style; delete m.style; delete m.badge; delete m.spelling;
         if (m.editId) {
           // Edit: applied to the original if it is loaded, otherwise shown as an edited message that keeps its reference.
           update(function (d) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, m.author, localRef.current), o = editTarget(g, m);
             mergeStyle(u, style, m.ts);
+            mergeSpelling(u, op.msg.spelling, m.ts);
             noteBadge(g, m.author, op.msg.badge);
             if (o) { applyGroupEdit(o, m); return; }
             m.edited = true;
@@ -137,7 +141,9 @@ function useLiveOps(k) {
           // The duration unit of a temporary ban is unconfirmed: a message of the user that gets through ends it.
           if (m.author === d.me && mg.live.tempBan) mg.live.tempBan = null;
           noteBadge(mg, m.author, op.msg.badge);
-          mergeStyle(ensureLiveUser(d, m.author, localRef.current), style, m.ts);
+          var mu = ensureLiveUser(d, m.author, localRef.current);
+          mergeStyle(mu, style, m.ts);
+          mergeSpelling(mu, op.msg.spelling, m.ts);
         });
         receiveGroup(op.gid, m);
         break;
@@ -176,6 +182,9 @@ function useLiveOps(k) {
       case 'member': groupUpdate(update, op.gid, function (g, d) {
         if (op.action === 1 && g.members.indexOf(op.name) < 0) { g.members.push(op.name); ensurePresentUser(d, op.name, localRef.current); }
         if (op.action === 0 && op.name !== d.me) g.members = g.members.filter(function (n) { return n !== op.name; });
+      }); break;
+      case 'spellings': update(function (d) {
+        if (d.auth.loggedIn) Object.keys(op.names).forEach(function (n) { mergeSpelling(ensureLiveUser(d, n, localRef.current), op.names[n], Date.now()); });
       }); break;
       case 'count': groupUpdate(update, op.gid, function (g) { g.liveCount = op.n; }); break;
       case 'room': update(function (d) {
@@ -218,7 +227,7 @@ function useLiveOps(k) {
           if (!g.bans.some(function (b) { return b.unid === op.ban.unid && b.ip === op.ban.ip; })) g.bans.unshift(op.ban);
           g.messages.push({ id: uid(), kind: 'ban', user: op.ban.name, ts: Date.now() });
         });
-        if (mine) toast(op.ban.name + ' was banned from #' + op.gid + '.', { action: { label: 'Undo', run: function () { liveBridge.unban(op.gid, op.ban); } } });
+        if (mine) toast(shownName(stateRef.current, op.ban.name) + ' was banned from #' + op.gid + '.', { action: { label: 'Undo', run: function () { liveBridge.unban(op.gid, op.ban); } } });
         break;
       }
       case 'unbanned': groupUpdate(update, op.gid, function (g) {
@@ -259,7 +268,7 @@ function useLiveOps(k) {
       case 'session': update(function (d) {
         if (!d.session || SESSION_RANK[op.reason] >= SESSION_RANK[d.session.reason]) d.session = { reason: op.reason, attempts: 0 };
       }); break;
-      case 'visible': if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
+      case 'visible': k.inbox.readInView(); if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
       case 'online':
         reconnection.reconnectClosed();
         update(function (d) {
@@ -280,7 +289,9 @@ function useLiveOps(k) {
         var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          mergeStyle(ensureLiveUser(d, op.from, localRef.current), op.style, op.ts);
+          var pu = ensureLiveUser(d, op.from, localRef.current);
+          mergeStyle(pu, op.style, op.ts);
+          mergeSpelling(pu, op.spelling, op.ts);
           receivePm(d, op);
         });
         pmArchive.current.record(op.from, op, true);
@@ -339,7 +350,7 @@ function useLiveOps(k) {
       case 'friendTimeout':
         if (!stateRef.current.friendAdds[op.name]) break;
         update(function (d) { delete d.friendAdds[op.name]; });
-        toast("Chatango didn't confirm adding " + op.name + ' to friends.');
+        toast("Chatango didn't confirm adding " + shownName(stateRef.current, op.name) + ' to friends.');
         break;
       case 'friendRefused':
         update(function (d) { delete d.friendAdds[op.name]; });
@@ -361,11 +372,11 @@ function useLiveOps(k) {
           if (status === 'offline' && !op.lastOn && before && before.status !== 'offline') u.lastOn = Date.now();
         });
         if (before && before.friend && before.status !== status) {
-          var openDm = { label: 'Message', run: function () { actions.openDm(op.name); } };
+          var who = shownName(stateRef.current, op.name), openDm = { label: 'Message', run: function () { actions.openDm(op.name); } };
           if (status === 'online' && before.status === 'offline') {
-            if (isNotifyingOnline(stateRef.current, op.name)) toast(op.name + ' is online.', { icon: 'users', action: openDm });
-            else notify('friendOn', { toast: op.name + ' is online.', title: op.name, tag: 'friend:' + op.name, icon: 'users', action: openDm });
-          } else if (status === 'offline') notify('friendOff', { toast: op.name + ' went offline.', title: op.name, tag: 'friend:' + op.name, icon: 'users' });
+            if (isNotifyingOnline(stateRef.current, op.name)) toast(who + ' is online.', { icon: 'users', action: openDm });
+            else notify('friendOn', { toast: who + ' is online.', title: who, tag: 'friend:' + op.name, icon: 'users', action: openDm });
+          } else if (status === 'offline') notify('friendOff', { toast: who + ' went offline.', title: who, tag: 'friend:' + op.name, icon: 'users' });
         }
         break;
       }

@@ -20,7 +20,7 @@ Our code never reads, stores, logs or transmits the password. Sign-in happens on
 - the public GETs `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml` (message background, whose `msgbg.jpg` image is a resource loaded as a CSS background, always on `ust.chatango.com`)
 - `chatango.com/search` with `credentials: 'include'`, like BetterChatango
 - `POST https://vissle.me/track1/activity` through `GM_xmlhttpRequest`, `anonymous: true`
-- `GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` through `fetch`, without cookie or credential, once per page at sign-in ([ADR-0013](0013-update-check-at-sign-in.md)).
+- `GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` and `GET https://gitlab.com/api/v4/projects/marjoriedotdev%2Fnightango/releases?order_by=released_at&sort=desc&per_page=20` through `fetch`, without cookie or credential, once per page at sign-in ([ADR-0013](0013-update-check-at-sign-in.md)).
 
 ## Consequences
 

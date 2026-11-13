@@ -48,7 +48,7 @@ function step(name, ok) { log.push((ok ? 'ok   ' : 'FAIL ') + name); }
   key(d, 'Escape'); await wait(20);
   const shownBefore = $$('.tc-msg').length;
   click($('button[aria-label="Search in this group"]')); await wait(50);
-  type($('#gsearch'), 'reconnect'); await wait(50);
+  type($('#gsearch-community'), 'reconnect'); await wait(50);
   const hits = $$('.tc-msg .tc-msg-text').map(x => x.textContent.toLowerCase());
   step('search filters', hits.length >= 1 && hits.length < shownBefore && hits.every(t => t.includes('reconnect')));
   click($('button[aria-label="Search in this group"]'));

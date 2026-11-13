@@ -69,60 +69,28 @@ function editsLastOnUp(e, draft, mode) {
   return e.key === 'ArrowUp' && !draft && !mode && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey;
 }
 
-/**
- * Bar that leads to the New messages line while it is above the view.
- * @param {{logRef: Object, count: number, beyond: boolean, since: number, h24: boolean, older: ?Object}} p Ref of the group's message log, new messages loaded,
- *   read position older than the loaded history, read position, 24-hour clock, and log head of MessageLog whose load pages back.
- */
-function NewSinceBar(p) {
-  var a = useState(false), above = a[0], setAbove = a[1];
-  var b = useState(false), seeking = b[0], setSeeking = b[1];
-  function mark() { return p.logRef.current && p.logRef.current.querySelector('.newmark'); }
-  useEffect(function () {
-    var el = p.logRef.current;
-    if (!el) return;
-    function check() { var m = mark(); setAbove(!!m && m.getBoundingClientRect().bottom < el.getBoundingClientRect().top); }
-    // Messages added below and a log that gets shorter move the line up without a scroll event.
-    var ro = new ResizeObserver(check);
-    ro.observe(el);
-    ro.observe(el.firstChild);
-    check();
-    el.addEventListener('scroll', check, { passive: true });
-    return function () { ro.disconnect(); el.removeEventListener('scroll', check); };
-  }, []);
-  // Jump past the loaded history: one page at a time until the read position is loaded or the history ends.
-  var ready = !!p.older && p.older.status === 'more' && p.older.ready;
-  useEffect(function () {
-    if (!seeking) return;
-    if (p.beyond) { if (ready) p.older.load(); return; }
-    setSeeking(false);
-    var m = mark();
-    if (m) m.scrollIntoView({ block: 'start' });
-  }, [seeking, p.beyond, ready]);
-  if (!p.count || !(p.beyond || above)) return null;
-  var label = p.count.toLocaleString('en-US') + (p.beyond ? '+' : '') + (p.count === 1 && !p.beyond ? ' new message' : ' new messages') + ' since ' + fmtTime(p.since, p.h24);
-  return h('div', { className: 'new-since' },
-    h('span', { className: 'grow' }, label),
-    h(T.Button, { variant: 'ghost', size: 'sm', disabled: seeking, onClick: function () { setSeeking(true); } }, seeking ? 'Loading' : 'Jump'));
-}
-
 function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
+  var a10 = useState(false), colorOpen = a10[0], setColorOpen = a10[1];
+  var a11 = useState(false), sharedOpen = a11[0], setSharedOpen = a11[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
+  // Side by side, the members open as a sheet: a right column would leave no room for the messages.
+  if (p.compact) column = { open: false, pressed: null, toggle: function () { setInfoOpen(true); } };
   var a9 = useDraft(groupDraftKey(p.gid)), draft = a9[0], setDraft = a9[1];
   var cm = useComposerMode(a9), mode = cm.mode, setMode = cm.setMode;
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
   var attach = useAttachMedia({ kind: 'group', id: p.gid }, setDraft);
+  var voice = useVoiceRecorder(uploadKey({ kind: 'group', id: p.gid }), attach.onFiles);
   var log = useMessageLog();
   var count = g ? g.messages.length : 0;
   var q = search ? search.trim().toLowerCase() : '';
   // Jump asked by the route: jumpTo, declared below, refuses a message the log hides.
   useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
-  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(mode.m.author, mode.m.text) : null;
+  var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(shownName(s, mode.m.author), mode.m.text) : null;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
   var measured = useMemo(function () {
     return LIVE ? liveBridge.measure(p.gid, typed, { replyId: replyId, editId: editId, quote: quoted, style: s.ownStyle }) : typed.length;
@@ -168,12 +136,16 @@ function GroupView(p) {
   var closeMode = cm.close;
   function edit(m) { cm.edit(m, m.editCount || 0); }
   function send(text) {
-    if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
+    if (kind === 'edit') {
+      if (text !== mode.m.text && !app.actions.editMessage(g.id, mode.m, text)) { setDraft(text); return; }
+      closeMode();
+      return;
+    }
     if (runCommand(app, text, g.id)) return;
     log.follow();
     var opts = { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel }, sentMode = mode;
     if (attach.file) { attach.send(text, opts, function () { setMode(function (cur) { return cur === sentMode ? null : cur; }); }); return; }
-    app.actions.sendGroup(g.id, text, opts);
+    if (!app.actions.sendGroup(g.id, text, opts)) { setDraft(text); return; }
     setMode(null);
   }
   // As in BetterChatango, a hidden message still counts in unreads and mentions.
@@ -188,27 +160,26 @@ function GroupView(p) {
     log.jumpTo(o.id);
   }
 
-  var items = [], prev = null, lastDay = null, marker = false, newCount = 0, findOriginal = msgFinder(g), markerTs = s.route.markerTs;
+  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g), markerTs = p.markerTs;
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
     if (dk !== lastDay) { items.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
     var isNew = !q && prefs.markNew && markerTs && m.ts > markerTs && m.author !== me && m.kind === 'msg';
     if (isNew && !marker) { items.push(h('div', { key: 'n' + m.id, className: 'newmark', role: 'separator' }, 'New messages')); marker = true; prev = null; }
-    if (isNew && !isHiddenAuthor(s, m.author)) newCount++;
-    if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), m.user + ' was banned')); prev = null; continue; }
+    if (m.kind === 'ban') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'ban', size: 14 }), shownName(s, m.user) + ' was banned')); prev = null; continue; }
     if (m.kind === 'system') { items.push(h('div', { key: m.id, className: 'ev' }, h(T.Icon, { name: 'info', size: 14 }), m.text, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null)); prev = null; continue; }
     if (isHiddenAuthor(s, m.author)) {
       if (prefs.safety.ignoreMode === 'hide') continue;
       if (!revealed[m.id]) {
-        items.push(h('div', { key: m.id, className: 'ignored-row' }, h(T.Icon, { name: 'eye-off', size: 14 }), 'Message from ' + m.author + ' hidden.',
+        items.push(h('div', { key: m.id, className: 'ignored-row' }, h(T.Icon, { name: 'eye-off', size: 14 }), 'Message from ' + shownName(s, m.author) + ' hidden.',
           h('button', { type: 'button', className: 'linkbtn', onClick: (function (id) { return function () { setRevealed(function (x) { var o = Object.assign({}, x); o[id] = true; return o; }); }; })(m.id) }, 'Show')));
         prev = null; continue;
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted), a = userOf(s, m.author);
     items.push(h(MessageRow, {
-      key: m.id, m: m, gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg, avatarV: a.avatarV,
+      key: m.id, m: m, shown: shownName(s, m.author), gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg, avatarV: a.avatarV,
       role: roleOf(g, m.author), staff: staff, canBan: canBanMember(g, me, m.author), seeIps: !!rights.seeIps,
       original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, highlight: log.targetId === m.id,
       onReply: calls.reply, onQuote: calls.quote, onEdit: calls.edit, onMention: calls.mention, onJump: calls.jump
@@ -233,15 +204,16 @@ function GroupView(p) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
     var left = GROUP_MESSAGE_MAX - measured;
-    composer = h(Frag, null, media.panel, mentions.panel, h(T.Composer, {
+    composer = h(Frag, null, media.panel, mentions.panel, voice.panel, h(T.Composer, {
       placeholder: 'Message #' + g.id, value: draft, onChange: mentions.onChange, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left'
         : g.live ? h(ComposerLimit, { ban: g.live.tempBan, cooldown: g.live.cooldown, rate: g.live.rate, bypass: !!rights.bypass }) : null,
       hintTone: left < 0 ? 'warning' : null,
-      context: mode ? Object.assign({ author: mode.m.author, text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
+      context: mode ? Object.assign({ author: shownName(s, mode.m.author), text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
       onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
       // An edit changes only the text: the picked file waits for the next message.
       onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
+      attachMenu: kind === 'edit' ? null : attachMenu(attach, voice),
       beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
@@ -260,10 +232,11 @@ function GroupView(p) {
 
   var waitingCount = LIVE && !g.membersLoaded && !g.liveCount;
   return h(Frag, null,
-    h('main', { className: 'main' },
+    h('main', { className: 'main', style: g.accent ? accentScope(g.accent, app.theme) : undefined },
       h('header', { className: 'topbar' },
-        h(MobileNavButton, null),
-        h('h1', null, g.id),
+        // A pane beside or a floating window has no navigation of its own.
+        p.onClose ? null : h(MobileNavButton, null),
+        h(p.onClose ? 'h2' : 'h1', { className: 'pane-title' }, g.id),
         g.topic ? h(Frag, null, h('span', { className: 'vsep' }), h('p', { className: 'topic' }, g.topic)) : null,
         // The topic pushes the buttons to the right on desktop: without one, this spacer does it.
         h('span', { className: g.topic ? 'grow only-mobile' : 'grow' }),
@@ -275,42 +248,65 @@ function GroupView(p) {
         h(MenuButton, {
           label: 'Group options', items: [
             staff ? { label: 'Group settings', icon: 'sliders', onSelect: function () { app.nav({ view: 'gsettings', id: g.id, page: myRole === 'owner' || rights.manageMods ? 'overview' : 'automod' }); } } : null,
-            { label: g.favorite ? 'Remove from favorites' : 'Add to favorites', icon: 'star', onSelect: function () { app.actions.toggleFavorite(g.id); } },
+            favoriteItem(app, { view: 'group', id: g.id }, g.favorite),
+            { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } },
+            popOutItem(app, { view: 'group', id: g.id }),
+            spacesItem(app, { view: 'group', id: g.id }),
+            { label: 'Group color…', icon: 'palette', onSelect: function () { setColorOpen(true); } },
             { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com'); }); } },
             { divider: true },
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
           ]
-        })),
+        }),
+        p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
       prefs.announcements && ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
         h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } },
           // The text as key: a new announcement shows collapsed.
           h(AnnouncementText, { key: annText, text: annText }), LIVE && ann.embeds.length ? h(MessageEmbeds, { embeds: ann.embeds }) : null)) : null,
       search != null ? h('div', { className: 'searchbar' },
-        h('label', { htmlFor: 'gsearch', className: 'tc-sr' }, 'Search messages'),
-        h('input', { id: 'gsearch', className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
+        h('label', { htmlFor: 'gsearch-' + g.id, className: 'tc-sr' }, 'Search messages'),
+        h('input', { id: 'gsearch-' + g.id, className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
         h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
-      h(NewSinceBar, { logRef: log.view.ref, count: newCount, beyond: !!newCount && !!older && older.status === 'more' && markerTs < g.messages[0].ts, since: markerTs, h24: prefs.h24, older: older }),
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
     column.open ? h(MembersPanel, { g: g }) : null,
-    infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null);
+    infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null,
+    colorOpen ? h(GroupColorDialog, { g: g, onClose: function () { setColorOpen(false); } }) : null,
+    sharedOpen ? h(SharedMediaDialog, {
+      where: '#' + g.id, messages: g.messages.filter(function (m) { return m.kind === 'msg' && shown(m) && !hiddenByChannel(m) && !(isHiddenAuthor(s, m.author) && !revealed[m.id]); }),
+      authorOf: groupAuthorOf, onJump: function (id) { var o = findMsg(g, id); if (o) jumpTo(o); }, onClose: function () { setSharedOpen(false); }
+    }) : null);
+}
+
+function groupAuthorOf(m) { return m.author; }
+
+function GroupColorDialog(p) {
+  var app = useApp(), g = p.g;
+  function set(hex) { app.actions.setGroupAccent(g.id, hex); }
+  return h(Dialog, {
+    title: 'Group color', description: 'Buttons, mentions and links in #' + g.id + ' use it, and the group shows it in the sidebar. Only you see it.', onClose: p.onClose,
+    footer: [
+      h(T.Button, { key: 'r', variant: 'ghost', disabled: !g.accent, onClick: function () { set(null); } }, 'Use the app accent'),
+      h(T.Button, { key: 'd', variant: 'primary', onClick: p.onClose }, 'Done')
+    ]
+  }, h('div', { className: 'dialog-body' }, h(AccentSwatches, { label: 'Group color', value: g.accent, fallback: app.state.prefs.accent, onChange: set })));
 }
 
 /**
  * Lists the members that complete a mention, as many as the list shows.
  * Names that start with the input come before names that contain it, each part by most recent message in the group then by name.
+ * @param {Object} s Application state, whose signed-in user is never offered.
  * @param {Object} g Open group.
- * @param {string} me Signed-in user, never offered.
  * @param {string} typed Input after @, empty right after the @.
- * @returns {Array<{name: string, handle: string}>} Member name and the name written after @.
+ * @returns {Array<{name: string, handle: string}>} Member name and the name written after @, as the member spells it.
  */
-function mentionCandidates(g, me, typed) {
+function mentionCandidates(s, g, typed) {
   var q = typed.toLowerCase(), seen = Object.create(null), starts = [], contains = [];
   var authors = g.messages.filter(function (m) { return m.kind === 'msg'; }).map(function (m) { return m.author; }).reverse();
-  seen[me.toLowerCase()] = true;
+  seen[s.me] = true;
   authors.concat(g.members).forEach(function (n, i) {
-    var handle = mentionHandle(n), key = handle && handle.toLowerCase();
+    var handle = mentionHandle(shownName(s, n)), key = handle && handle.toLowerCase();
     if (!handle || seen[key]) return;
     seen[key] = true;
     var at = key.indexOf(q), c = { name: n, handle: handle, rank: Math.min(i, authors.length) };
@@ -338,8 +334,9 @@ function useMentionCompletion(g, inputRef, value, setValue) {
   // Caret kept with the text it was read in: a text the view writes itself (edit, send, emoji) opens nothing.
   var before = caretAt && caretAt.value === value ? value.slice(0, caretAt.caret) : '';
   var m = MENTION_TOKEN.exec(before), start = m ? before.length - m[1].length - 1 : -1, key = m ? start + ' ' + m[1] : '';
-  var list = g && m && start !== closedAt ? mentionCandidates(g, s.me, m[1]) : [];
-  var open = list.length > 0, index = sel.key === key ? sel.index : 0;
+  var list = g && m && start !== closedAt ? mentionCandidates(s, g, m[1]) : [];
+  // The list changes under the same typed text when a member leaves: the kept position stays inside it.
+  var open = list.length > 0, index = Math.min(sel.key === key ? sel.index : 0, Math.max(list.length - 1, 0));
 
   function readCaret() {
     var el = inputRef.current, text = el.value, caret = el.selectionStart === el.selectionEnd ? el.selectionEnd : -1;

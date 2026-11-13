@@ -82,7 +82,7 @@ function pmConversation(d, name, extra) {
 function pmMessage(x) {
   // Edit without a loaded original: it takes the key of the original, which the archive and later edits target.
   var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
-  if (x.editId) { m.edited = true; m.editKeys = x.key ? [x.key] : []; }
+  if (x.editId) { m.edited = true; m.editKeys = x.key ? [x.key] : []; m.editTs = x.ts; m.editOnly = true; }
   if (x.replyId) m.replyTo = { key: x.replyId };
   return m;
 }
@@ -95,6 +95,9 @@ function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embe
 function applyPmEdit(o, x) {
   // The history replays on each OK the edits already applied live: their key keeps them from counting twice.
   if (x.key && (o.editKeys || []).indexOf(x.key) < 0) o.editKeys = (o.editKeys || []).concat([x.key]);
+  // History pages are read newest first: an edit older than the one applied must not bring its text back.
+  if (x.ts < (o.editTs || 0)) return;
+  o.editTs = x.ts;
   applyEdit(o, x);
 }
 /**
@@ -140,6 +143,9 @@ function mergePmHistory(c, list, onEntry) {
     if (o) { applyPmEdit(o, x); return; }
     var m = pmMessage(x), i = pmShownIndex(shown, m);
     if (i >= 0) { shown[i].archiveTs = m.archiveTs; shown.splice(i, 1); return; }
+    // An edit read on a newer page stands for its original until an older page brings it: the original takes its place and keeps the edited text.
+    var e = x.editId ? null : c.messages.find(function (y) { return y.editOnly && y.key === m.key && y.from === m.from; });
+    if (e) { delete e.editOnly; e.ts = m.ts; e.archiveTs = m.archiveTs; if (m.replyTo) e.replyTo = m.replyTo; return; }
     c.messages.push(m);
   });
   c.messages.sort(function (a, b) { return a.ts - b.ts; });
@@ -186,7 +192,7 @@ function useLivePms(store, localRef, pmArchive) {
     });
   }
   /**
-   * Asks again for the presence of the listed correspondents who are not friends.
+   * Asks again for the presence of the favorite people and listed correspondents who are not friends.
    * @param {boolean} ifStale Only when the last request is older than PRESENCE_REFRESH.
    */
   function refreshPmPresence(ifStale) {
@@ -194,8 +200,8 @@ function useLivePms(store, localRef, pmArchive) {
     // Before the friend list, a friend would get the approximate last online time of presence instead of the exact one of wl.
     if (!s0.pmLoaded || !s0.friendsLoaded || (ifStale && Date.now() - presenceAt.current < PRESENCE_REFRESH)) return;
     // The shown conversation follows its presence through connect, whose last online time is exact.
-    var shown = s0.route.view === 'dm' ? s0.route.id : null;
-    var names = listedDms(s0).filter(function (n) { return n !== s0.me && n !== shown && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
+    var names = favoritePeople(s0).concat(listedDms(s0).filter(function (n) { return !userOf(s0, n).favorite; }))
+      .filter(function (n) { return n !== s0.me && !isPaneOpen(s0, 'dm', n) && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
     if (names.length && liveBridge.refreshPresence(names)) presenceAt.current = Date.now();
   }
   useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);

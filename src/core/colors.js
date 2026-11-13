@@ -55,6 +55,36 @@ function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToH
 
 // Copy of the bg, text-body and selected tokens from tokens.json: selected is the surface where the accent as text has the lowest contrast.
 var SURFACE = { dark: { bg: '#0d1427', body: '#d0d7e6', selected: '#1b2846' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
+var DEFAULT_ACCENT = '#f27a3f';
+var ACCENTS = [['Ember', DEFAULT_ACCENT], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
+/**
+ * Returns the text color that holds 4.5:1 on an accent fill.
+ * @param {string} hex Accent color.
+ */
+function onAccentOf(hex) { return contrast(hexToRgb(hex), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff'; }
+/**
+ * Returns the accent tokens of a color, with the accent as text corrected for contrast in each theme.
+ * @param {string} hex Accent color, the default accent if it is not a hex color.
+ * @returns {{accent: string, onAccent: string, text: {dark: string, light: string}, soft: {dark: string, light: string}}} Fill, text on the fill, accent as text and soft fill by theme.
+ */
+function accentTokens(hex) {
+  var acc = hexToRgb(hex) ? hex : DEFAULT_ACCENT;
+  return {
+    accent: acc, onAccent: onAccentOf(acc),
+    text: { dark: ensureContrast(acc, SURFACE.dark.selected, 4.5), light: ensureContrast(acc, SURFACE.light.selected, 4.5) },
+    soft: { dark: rgba(acc, 0.12), light: rgba(acc, 0.14) }
+  };
+}
+/**
+ * Returns the inline style that gives an element and its content an accent of its own.
+ * @param {string} hex Accent color.
+ * @param {string} theme Resolved theme, dark or light.
+ */
+function accentScope(hex, theme) {
+  // The root declares --accent-text as var(--accent-text-d|l), resolved there: a scope sets the final tokens.
+  var t = accentTokens(hex);
+  return { '--accent': t.accent, '--on-accent': t.onAccent, '--accent-text': t.text[theme], '--accent-soft': t.soft[theme], '--focus-ring': t.text[theme] };
+}
 var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Comic': '"Comic Sans MS", "Comic Sans", "Chalkboard SE", sans-serif', 'Georgia': 'Georgia, serif', 'Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Impact': 'Impact, sans-serif', 'Palatino': 'Palatino, serif', 'Papyrus': 'Papyrus, cursive', 'Times': 'Times, serif', 'Typewriter': 'Typewriter, "Courier New", monospace' };
 /**
  * Converts a Chatango font size to a percentage.

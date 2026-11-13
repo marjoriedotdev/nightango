@@ -220,7 +220,8 @@ const MSGBG = {
   trap: '<?xml version="1.0" ?><bgi bgc="red;background:url(https://evil.test/a.png)" bgalp="100" useimg="1" ialp="250" align="constructor" tile="1" url="https://evil.test/b.jpg" onload="alert(1)"/>',
   pale: '<?xml version="1.0" ?><bgi bgc="336699" bgalp="0" useimg="1" ialp="-20" align="tl" tile="0" hasrec="0" isvid="0"/>'
 };
-const RELEASES_LATEST = 'https://api.github.com/repos/marjoriedotdev/nightango/releases/latest';
+const RELEASES_GITHUB = 'https://api.github.com/repos/marjoriedotdev/nightango/releases/latest';
+const RELEASES_GITLAB = 'https://gitlab.com/api/v4/projects/marjoriedotdev%2Fnightango/releases?order_by=released_at&sort=desc&per_page=20';
 // vissle linked accounts: response body, null for a network failure, whoHold holds back the response.
 let whoBody = '{}', whoHold = null;
 w.fetch = (url, opts) => {
@@ -245,7 +246,9 @@ w.fetch = (url, opts) => {
   else if (/sith\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'image/jpeg'; }
   else if (/lost\/custom_profile\.css/.test(url)) { body = 'body { background-color: #123456; }'; type = 'text/css'; status = 404; }
   else if (/\/msgbg\.xml$/.test(url)) { const n = url.split('/').slice(-2)[0]; body = MSGBG[n] || 'JFIF'; type = MSGBG[n] ? 'text/xml' : 'image/jpeg'; }
-  else if (url === RELEASES_LATEST) { body = '{"tag_name":"v99.0.0"}'; type = 'application/json'; }
+  // GitHub is behind GitLab, whose newest release is a beta the update check must skip.
+  else if (url === RELEASES_GITHUB) { body = '{"tag_name":"v98.0.0"}'; type = 'application/json'; }
+  else if (url === RELEASES_GITLAB) { body = '[{"tag_name":"v100.0.0-beta.1"},{"tag_name":"v99.0.0"},{"tag_name":"v98.0.0"}]'; type = 'application/json'; }
   else if (/^https:\/\/api\.vissle\.me\/v1\/pmr\//.test(url)) { body = '{"pmr":true}'; type = 'application/json'; }
   else if (/^https:\/\/vissle\.me\/api\/v1\/who\//.test(url)) { if (whoBody === null) return Promise.reject(new w.TypeError('Failed to fetch')); body = whoBody; type = 'application/json'; }
   const res = { ok: status === 200, status, headers: { get: k => k.toLowerCase() === 'content-type' ? type : null }, text: () => Promise.resolve(body), json: () => Promise.resolve(body).then(JSON.parse) };
@@ -289,8 +292,8 @@ d.addEventListener('torch-skin:x-request', e => {
 
 // Stored by an older or broken version: values of another type than the default, next to a phase index that replaces "auto".
 w.localStorage.setItem('torch-prototype-prefs', JSON.stringify({ notify: null, a11y: 'on', volume: '70', customThemes: { night: 1 }, sky: { calm: 'no', moon: 3 } }));
-// The read position of #reads is a valid value of the previous session, the others are of another type.
-w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold', readTs: { reads: 1700000400000 } }));
+// The read position of #reads and the roles of #badges are valid values of the previous session, the others are of another type.
+w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true }, muted: 'test', ignored: null, hidden: null, channels: ['general'], unstyled: {}, style: 'bold', readTs: { reads: 1700000400000 }, badges: { badges: { ola: 'admin', kim: 'mod' } } }));
 
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
@@ -351,8 +354,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
   CH.getBackground({ username: 'alice', node: d.createElement('div') });
   await until(() => !!byText('.toast', 'Nightango 99.0.0 is available.'));
-  const releaseAsks = fetches.filter(x => x.url === RELEASES_LATEST);
-  step('newer release announced once at sign-in, without credentials', !!byText('.toast', 'Nightango 99.0.0 is available.') && releaseAsks.length === 1 && !releaseAsks[0].credentials, releaseAsks);
+  const releaseAsks = fetches.filter(x => x.url === RELEASES_GITHUB || x.url === RELEASES_GITLAB);
+  step('newest stable release of GitHub and GitLab announced once at sign-in, past a newer beta, each host asked once without credentials',
+    !!byText('.toast', 'Nightango 99.0.0 is available.') && releaseAsks.length === 2 && releaseAsks[0].url !== releaseAsks[1].url && releaseAsks.every(x => !x.credentials), releaseAsks);
   step("BetterChatango's own oEmbed and message background requests muted", fetches.length === fetchesAtLogin, fetches.slice(fetchesAtLogin).map(x => x.url));
   // Like BetterChatango 6 s after sign-in, with PMs at startup on (inject.js:1365-1369).
   if (C.settings.privacy.private_messages.connect_start) d.querySelector('[data-sidebar="private"]').click();
@@ -373,12 +377,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('stored values of another type load with their defaults, the others are kept, and sign-in completes',
     !!storedPrefs.notify && storedPrefs.notify.pm.app === true && storedPrefs.a11y.reduceMotion === false && storedPrefs.volume === 70
       && Array.isArray(storedPrefs.customThemes) && storedPrefs.sky.calm === false && storedPrefs.sky.moon === 3
-      && Object.keys(storedAccount).every(k => k === 'pmReadMigrated' || k === 'readTs') && storedAccount.readTs.reads === 1700000400000 && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
+      && !['fav', 'muted', 'ignored'].some(k => k in storedAccount) && [storedAccount.hidden, storedAccount.unstyled].every(x => x === undefined || Array.isArray(x))
+      && !Array.isArray(storedAccount.channels) && storedAccount.style !== 'bold' && storedAccount.readTs.reads === 1700000400000 && !C.settings.privacy.groups.favorite.length && !C.settings.notifications.muted.groups.length,
     { storedPrefs, storedAccount });
   step('stored preferences without a version read as the current schema and saved with its version', storedPrefs.version === 1 && storedPrefs.sky.moon === 3, storedPrefs.version);
   step('announcement requested after init', frame('getannouncement').length >= 1);
-  step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
-  step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('bob') && x.textContent.includes('Admin')));
+  step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('Marjorie') && x.textContent.includes('Owner')));
+  step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('Bob') && x.textContent.includes('Admin')));
 
   /* Guests: named by their name, anons counted, tracked by session timestamp */
   const guestView = () => ({
@@ -393,9 +398,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('participant', 'test', ['0', 'S4', 'U4', 'None', 'Dana', '', '1701']); await wait(80);
   const guests3 = guestView();
   step('named guests listed by name, anonymous guests counted',
-    guests1.label === 'Guests · 2' && JSON.stringify(guests1.rows) === '["#dana"]' && guests1.anon === '1 anonymous'
-      && JSON.stringify(guests2.rows) === '["#carl","#dana"]' && !guests2.anon
-      && JSON.stringify(guests3.rows) === '["#carl"]' && !guests3.anon,
+    guests1.label === 'Guests · 2' && JSON.stringify(guests1.rows) === '["#Dana"]' && guests1.anon === '1 anonymous'
+      && JSON.stringify(guests2.rows) === '["#Carl","#Dana"]' && !guests2.anon
+      && JSON.stringify(guests3.rows) === '["#Carl"]' && !guests3.anon,
     { guests1, guests2, guests3 });
 
   /* Sign-in, sign-out and account switch without leaving the group (participant, action 2), several sessions of one account */
@@ -409,11 +414,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   ]) { g('participant', 'test', data); await wait(80); switches.push(sessionView()); }
   const has = (i, n) => switches[i].members.indexOf(n) >= 0;
   step('account sign in, sign out and switch keep the member list',
-    has(0, 'dan') && !has(0, 'eve') && switches[0].anon === '1 anonymous'
-      && has(1, 'eve') && !switches[1].anon
-      && !has(2, 'eve') && switches[2].anon === '1 anonymous'
-      && has(3, 'finn') && !has(4, 'finn') && has(4, 'gus')
-      && has(5, 'dan') && !has(6, 'dan') && has(6, 'marjorie'),
+    has(0, 'Dan') && !has(0, 'Eve') && switches[0].anon === '1 anonymous'
+      && has(1, 'Eve') && !switches[1].anon
+      && !has(2, 'Eve') && switches[2].anon === '1 anonymous'
+      && has(3, 'Finn') && !has(4, 'Finn') && has(4, 'Gus')
+      && has(5, 'Dan') && !has(6, 'Dan') && has(6, 'Marjorie'),
     switches);
   g('g_participants', 'test', ['S1:1700:U1:Alice:None;S2:1700:U2:Bob:None;S3:1700:U3:None:None']); await wait(80);
 
@@ -423,7 +428,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('b', 'test', ['1700000210.1', 'Bob', '', 'u2', 'UNID2', 'tmp2', '5.6.7.8', '2048', '', '<n000/><f x11000="0"><rAhypheNBunderSC/>Welcome back']);
   g('u', 'test', ['tmp2', 'BOB1=']);
   await until(() => d.body.textContent.includes('Welcome back'));
-  step('reply resolves original', !!$$('.tc-msg-reply').find(x => x.textContent.includes('alice') && x.textContent.includes('Hi all')));
+  step('reply resolves original', !!$$('.tc-msg-reply').find(x => x.textContent.includes('Alice') && x.textContent.includes('Hi all')));
   g('b', 'test', ['1700000220.1', 'Alice', '', 'u1', 'UNID1', 'tmp3', '1.2.3.4', '0', '', '<n000/><f x11000="0"><eAhypheNBunderSC/>Hi everyone']);
   await until(() => d.body.textContent.includes('Hi everyone'));
   step('edit replaces original text', d.body.textContent.includes('Hi everyone') && !d.body.textContent.includes('Hi all') && d.body.textContent.includes('(edited)'));
@@ -464,7 +469,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(menuItem('Quote message')); await wait(30);
   type($('.tc-composer textarea'), 'yes'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
   const quote = frame('bm:').pop() || '';
-  step('quote frame puts the BetterChatango quote before the text', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">@alice: `Hi everyone` yes$/.test(quote), quote);
+  step('quote frame puts the BetterChatango quote before the text', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">@Alice: `Hi everyone` yes$/.test(quote), quote);
 
   /* Moderation from a message */
   click(aliceMsg.querySelector('button[aria-label="More actions"]')); await wait(30);
@@ -481,8 +486,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.dialog-foot button', 'Ban')); await wait(30);
   step('ban frame', frame('block:').pop() === 'block:UNID1:1.2.3.4:alice', frame('block:'));
   step('delete-all frame with ban', frame('delallmsg:').pop() === 'delallmsg:UNID1:1.2.3.4:alice', frame('delallmsg:'));
-  g('blocked', 'test', ['UNID1', '1.2.3.4', 'alice', 'marjorie']); await until(() => d.body.textContent.includes('alice was banned'));
-  step('ban event shown', d.body.textContent.includes('alice was banned'));
+  g('blocked', 'test', ['UNID1', '1.2.3.4', 'alice', 'marjorie']); await until(() => d.body.textContent.includes('Alice was banned'));
+  step('ban event shown', d.body.textContent.includes('Alice was banned'));
   g('delete', 'test', ['BOB1=']); await until(() => d.body.textContent.includes('Message deleted by staff'));
   step('server delete marks message', d.body.textContent.includes('Message deleted by staff'));
 
@@ -554,18 +559,18 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     !guestOffers && accountOffers && whoAsked().length === 1 && firstCall.url === 'https://vissle.me/api/v1/who/alice' && (!firstCall.credentials || firstCall.credentials === 'omit'),
     { guestOffers, accountOffers, calls: whoAsked() });
   step('who is this shows the five levels as text and keeps nothing',
-    pendingWho.title === 'Who is alice' && pendingWho.spinner && !!whoShown && JSON.stringify(whoShown.levels) === '["Definite · 2","Strong · 1","Weak · 1"]'
-      && whoShown.text.includes('4 linked accounts for alice.') && JSON.stringify(whoShown.cards) === '["alice2","zoe","dave"]'
+    pendingWho.title === 'Who is Alice' && pendingWho.spinner && !!whoShown && JSON.stringify(whoShown.levels) === '["Definite · 2","Strong · 1","Weak · 1"]'
+      && whoShown.text.includes('4 linked accounts for Alice.') && JSON.stringify(whoShown.cards) === '["alice2","zoe","dave"]'
       && JSON.stringify(whoShown.texts) === '["<img src=\\"x\\" onerror=\\"alert(5)\\">"]' && !whoShown.injected
       && !/42|evil|object|carl|zed/.test(whoShown.text) && /vissle's estimate/.test(whoShown.text)
       && !whoDialog() && !/alice2|dave/.test(stored),
     { pendingWho, whoShown, open: !!whoDialog() });
   step("who is this shows each account's mini profile and opens its profile over the list",
-    !!whoShown && whoShown.zoe === ZOE_ASL && onTop[onTop.length - 1] === 'Profile of zoe' && backToList[backToList.length - 1] === 'Who is alice' && whoAsked().length === 1,
+    !!whoShown && whoShown.zoe === ZOE_ASL && onTop[onTop.length - 1] === 'Profile of zoe' && backToList[backToList.length - 1] === 'Who is Alice' && whoAsked().length === 1,
     { zoe: whoShown && whoShown.zoe, onTop, backToList, calls: whoAsked().length });
   const whoReplies = [await whoAnswer(JSON.stringify({ target: 'alice', definite: [], weak: [7] })), await whoAnswer('{"definite":["x"]}'), await whoAnswer('<html>'), await whoAnswer(null)];
   step('who is this says when vissle has nothing, an unreadable answer or no answer',
-    /vissle has no linked accounts for alice\./.test(whoReplies[0]) && /vissle sent an answer Nightango can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])
+    /vissle has no linked accounts for Alice\./.test(whoReplies[0]) && /vissle sent an answer Nightango can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])
       && /vissle could not be reached\. Try again later\./.test(whoReplies[3]) && whoAsked().length === 5,
     { whoReplies, calls: whoAsked().length });
 
@@ -688,12 +693,39 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Warnings and connection */
   C.systemMessage({ content: 'Your message exceeded the character limit.', group: 'test' }); await until(() => !!byText('.toast', 'exceeded the character limit'));
   step('BetterChatango notice shown as a toast, not in the thread', !!byText('.toast', 'exceeded the character limit') && !$$('.log .ev').some(x => x.textContent.includes('exceeded the character limit')));
+  /* Journal: a notice that carries a linked accounts result or the arguments of a Chatango frame is noted without its text */
+  const noticesFrom = journal.length;
+  C.systemMessage({ content: '2 total records for <b>zoe</b>.\r\r<b>Definite</b>\rkim, ola', avatar: 'eye', unique: 'who' });
+  await wait(30);
+  C.systemMessage({ username: 'Chatango', content: 'maintenance:in:5' });
+  await wait(30);
+  const keptNotes = journal.slice(noticesFrom).map(e => e.m);
+  step('journal notes a linked accounts result and a Chatango broadcast without their text', keptNotes.length === 2 && !keptNotes.some(m => /zoe|kim|ola|maintenance/.test(m)), keptNotes);
   let reloads = 0;
   C.setNotice({ icon: 'warning', content: 'Relogin required.', button: 'Reload', action: () => { reloads++; } }); await until(() => !!byText('.toast', 'Relogin required.'));
   const t = byText('.toast', 'Relogin required.');
   step('BetterChatango warning becomes a toast with its action', !!t && !!byText('.toast button', 'Reload'));
   click(byText('.toast button', 'Reload'));
   step('toast action calls BetterChatango', reloads === 1);
+  /* Notices whose button leaves the bridge: registration posts to vissle, Continue connects outside the bridge */
+  let outside = 0;
+  C.setNotice({ icon: 'warning', content: '#test is not a registered group.', button: 'Register', action: () => { outside++; } });
+  C.setNotice({ icon: 'warning', content: '#test has a lot of users', button: 'Continue', action: () => { outside++; } });
+  await until(() => !!byText('.toast', 'has a lot of users'));
+  const offBridge = { register: !!byText('.toast', 'not a registered group'), crowded: !!byText('.toast', 'has a lot of users'), buttons: $$('.toast button').map(b => b.textContent).filter(x => x === 'Register' || x === 'Continue') };
+  step('BetterChatango notices that register a group or reconnect outside the bridge give no button', !offBridge.register && offBridge.crowded && !offBridge.buttons.length, offBridge);
+  /* Hidden tab: a mention in the group in front counts in the title, and is read once the tab is back in front */
+  const tabCount = () => +((/^\((\d+)\) /.exec(d.title) || [])[1] || 0);
+  const tabBefore = tabCount();
+  Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
+  g('b', 'test', ['1700009200.1', 'Alice', '', 'u1', 'UNIDH', 'tmp92', '1.2.3.4', '0', '', '<n000/><f x11000="0">@marjorie while you were away']);
+  g('u', 'test', ['tmp92', 'H-I_D=']);
+  await wait(80);
+  const tabAway = tabCount();
+  delete d.visibilityState;
+  d.dispatchEvent(new w.Event('visibilitychange')); await wait(80);
+  step('a mention received in the group in front while the tab is hidden counts in the title, and is read when the tab comes back',
+    tabAway === tabBefore + 1 && tabCount() === tabBefore, { tabBefore, tabAway, back: tabCount(), title: d.title });
   const connBanner = () => { const el = $('.conn-banner'); return el ? { phase: el.dataset.phase, text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   C.groups.test.socket.readyState = 3; await wait(2300);
   const lostBanner = connBanner();
@@ -740,8 +772,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const next = { top: $('.log').scrollTop, button: !!$('.jump') };
   if ($('.jump')) { click($('.jump')); await wait(30); }
   step('older history keeps a scrolled-up reader in place without New messages, the next message shows it',
-    olderPage.top === -2000 && !olderPage.button && olderPage.last === 'alice was banned'
-      && oldestPage.top === -2000 && !oldestPage.button && oldestPage.last === 'alice was banned'
+    olderPage.top === -2000 && !olderPage.button && olderPage.last === 'Alice was banned'
+      && oldestPage.top === -2000 && !oldestPage.button && oldestPage.last === 'Alice was banned'
       && next.top === -2000 && next.button && $('.log').scrollTop === 0 && !$('.jump'),
     { olderPage, oldestPage, next, after: $('.log').scrollTop });
   g('nomore', 'test', []); await until(() => d.body.textContent.includes('beginning of the history'));
@@ -788,11 +820,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('getannc', 'test', ['3', 'test', '5', '1800', '<nF00/><f x12F00="1"><b><i>Be kind</i></b>']); await wait(80);
 
   click(byText('.tc-nav', 'Staff and roles')); await wait(50);
-  step('staff list from mods frame', !!byText('.role-btn', 'alice') && !!byText('.role-btn', 'bob'));
-  click(byText('.role-btn', 'alice')); await wait(30);
+  step('staff list from mods frame', !!byText('.role-btn', 'Alice') && !!byText('.role-btn', 'Bob'));
+  click(byText('.role-btn', 'Alice')); await wait(30);
   click(row('See IP addresses')); await wait(20);
   type($('#add-mod'), 'Carol'); click(byText('button', 'Add')); await wait(30);
-  click(byText('.role-btn', 'bob')); await wait(30);
+  click(byText('.role-btn', 'Bob')); await wait(30);
   click(byText('.btnrow button', 'Remove')); await wait(30);
   click($('.tc-savebar .tc-btn-primary')); await wait(30);
   step('permission change frame keeps other bits', frame('addmod:alice:').pop() === 'addmod:alice:' + (MOD & ~16384), frame('addmod:'));
@@ -821,8 +853,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('blocklist', 'test', ['UNID1:1.2.3.4:alice:1700000300:marjorie;UNID9:9.9.9.9::1700000000:bob']);
   await until(() => banTitle() === 'Banned · 2');
   step('unrequested ban list replaces the loaded pages', banTitle() === 'Banned · 2' && !byText('.lrow', 'user0'), banTitle());
-  step('ban list shown', !!byText('.lrow', 'alice') && !!byText('.lrow', '!anon'));
-  click(byText('.lrow', 'alice').querySelector('.tc-btn')); await wait(20);
+  step('ban list shown', !!byText('.lrow', 'Alice') && !!byText('.lrow', '!anon'));
+  click(byText('.lrow', 'Alice').querySelector('.tc-btn')); await wait(20);
   step('unban frame', frame('removeblock:').pop() === 'removeblock:UNID1:1.2.3.4');
   /* Ban search like BetterChatango: searchban, then bansearchresult (date in Pacific time, with its colons) or badbansearchstring */
   type($('#ban-search'), ' spamking '); key($('#ban-search'), 'Enter'); await wait(30);
@@ -846,7 +878,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => ($('#ban-search-hint') || {}).textContent === "That's not a valid username.");
   banSearch.error = ($('#ban-search-hint') || {}).textContent || null;
   step('ban search frame, result, unban and refusals',
-    banSearch.frame === 'searchban:spamking' && /spamking/.test(banSearch.found) && /by marjorie/.test(banSearch.found) && /Includes alt1, alt2\./.test(banSearch.found) && !banSearch.list
+    banSearch.frame === 'searchban:spamking' && /spamking/.test(banSearch.found) && /by Marjorie/.test(banSearch.found) && /Includes alt1, alt2\./.test(banSearch.found) && !banSearch.list
       && banSearch.unban === 'removeblock:UNID7:1.2.3.4' && banSearch.none && banSearch.cleared && banSearch.error === "That's not a valid username.",
     banSearch);
   /* Unbans: Unbanned tab loaded in pages like BetterChatango, kept up to date by unblocked (author in the second-to-last field) */
@@ -862,14 +894,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   unbanTab.rows = $$('.spage .lrow').map(x => x.textContent);
   unbanTab.buttons = $$('.spage .lrow .tc-btn').length;
   click(byText('.spage .tc-seg button', 'Banned')); await wait(30);
-  unbanTab.aliceBanned = !!byText('.spage .lrow', 'alice');
+  unbanTab.aliceBanned = !!byText('.spage .lrow', 'Alice');
   step('unbanned tab loads from BetterChatango and follows unblocked',
-    unbanTab.frame === 'blocklist:unblock:0:next:50:anons:1' && /by marjorie/.test(unbanTab.carl) && unbanTab.rows.length === 2 && /alice/.test(unbanTab.rows[0]) && /by marjorie/.test(unbanTab.rows[0])
+    unbanTab.frame === 'blocklist:unblock:0:next:50:anons:1' && /by Marjorie/.test(unbanTab.carl) && unbanTab.rows.length === 2 && /Alice/.test(unbanTab.rows[0]) && /by Marjorie/.test(unbanTab.rows[0])
       && /carl/.test(unbanTab.rows[1]) && unbanTab.buttons === 0 && !unbanTab.aliceBanned,
     unbanTab);
 
   click(byText('.tc-nav', 'Audit log')); await wait(50);
-  step('audit entries', !!byText('.lrow', 'made bob a moderator') && !!byText('.lrow', 'changed banned words'));
+  step('audit entries', !!byText('.lrow', 'made Bob a moderator') && !!byText('.lrow', 'changed banned words'));
   // Chadango GetModActions: the offset of the prev direction is the id of the oldest loaded action minus 1.
   const auditTail = () => $$('.spage .lrow').slice(-1)[0].textContent;
   const loadOlder = () => byText('.spage .tc-btn', 'Load older');
@@ -1033,14 +1065,21 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(50);
   C.groups.test.socket.readyState = 3;
   type(editBox(), 'Lost in test'); key(editBox(), 'Enter'); await wait(30);
-  const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test.") };
+  const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test."), draft: editBox().value };
+  type(editBox(), '');
+  /* Focus on a closed group: BetterChatango would start its own join there (inject.js:5988) */
+  const focusFrom = calls.length;
+  click(byText('.tc-nav', 'edits')); await wait(50);
+  click(byText('.tc-nav', 'test')); await wait(50);
+  const closedFocus = calls.slice(focusFrom).filter(c => c[0] === 'focus').map(c => c[1]);
+  step('showing a group whose connection is not open leaves the BetterChatango focus alone', closedFocus.indexOf('test') < 0 && closedFocus.indexOf('edits') >= 0, closedFocus);
   C.groups.test.socket.readyState = 1;
   step('pm, upload, block, status and group message on a connection that is not open send nothing, keep the text and the state, and say so',
     !sent.slice(closedFrom).length && JSON.stringify(fayStill) === JSON.stringify(fayShown)
       && lostUpload.toast && lostUpload.copy && lostUpload.draft === 'Caption https://vissle.me/abc/f.png' && !lostUpload.otherToast
       && lostPm.draft === 'Lost words' && lostPm.toast
       && lostBlock.toast && !lostBlock.done && lostBlock.composer
-      && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast,
+      && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast && lostGroup.draft === 'Lost in test',
     { sent: sent.slice(closedFrom), fayShown, fayStill, lostUpload, lostPm, lostBlock, statusBefore, lostStatus, lostGroup });
 
   /* Sent PM archived under its recipient: an upload lets the user switch to another PM or to a group before its link leaves */
@@ -1060,12 +1099,28 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.conv', 'fay')); await wait(50);
   const toOtherPm = await uploadThenShow('Late for fay', () => byText('.conv', 'dave'));
   click(byText('.conv', 'fay')); await wait(50);
+  /* No history database: BetterChatango's send would throw on its archive once the frame has left and announce a failure, so the PM leaves without its focus */
+  const historyDb = C.database.pm; C.database.pm = false;
+  type(pmBox(), 'No archive'); key(pmBox(), 'Enter'); await until(() => pmLeft('No archive'));
+  C.database.pm = historyDb;
+  const noArchive = { left: pmLeft('No archive'), under: archivedUnder('No archive'), focus: C.private.focus };
+  step('a pm sent without a history database leaves without the focus BetterChatango archives under, which comes back after the send',
+    noArchive.left && !noArchive.under.length && noArchive.focus === 'fay', noArchive);
   const toGroup = await uploadThenShow('Late again', () => byText('.tc-nav', 'test'));
   step('a pm that leaves after a switch to another pm or to a group is archived under its recipient, then BetterChatango gets back the shown conversation',
     JSON.stringify(toOtherPm) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: 'dave', focus: 'dave' })
       && JSON.stringify(toGroup) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: false, focus: false }),
     { toOtherPm, toGroup });
 
+  /* Own message from another device, in a group that is not shown: neither unread nor a mention */
+  const editsNav = () => { const el = byText('.tc-nav', 'edits'); return { count: (el.querySelector('.tc-count') || {}).textContent || '', unread: el.classList.contains('tc-nav-unread') }; };
+  const editsBefore = editsNav();
+  g('b', 'edits', ['1700009300.1', 'Marjorie', '', 'u0', 'UNIDO', 'tmp93', '9.9.9.9', '0', '', '<n000/><f x11000="0">@marjorie note from my phone']);
+  g('u', 'edits', ['tmp93', 'O-W_N=']);
+  await wait(80);
+  const ownElsewhere = { before: editsBefore, after: editsNav(), toast: !!byText('.toast', 'mentioned you in #edits') };
+  step('own message received from another device counts neither as unread nor as a mention',
+    JSON.stringify(ownElsewhere.after) === JSON.stringify(ownElsewhere.before) && !ownElsewhere.toast, ownElsewhere);
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000270.1', 'Eve', '', 'u7', 'UNID7', 'tmp13', '9.9.9.9', '0', '', '<n000/><f x11000="2">Look at this']);
   g('b', 'test', ['1700000271.1', 'Eve', '', 'u7', 'UNID7', 'tmp14', '9.9.9.9', '0', '', '<n000/><f x11000="0"><i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/>']);
@@ -1242,11 +1297,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   const convPrev = n => { const c = $$('.conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n); return c ? c.querySelector('.conv-prev').textContent : null; };
-  pm('msg', ['gus', 'marjorie', 'unknown', '1700000400.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="https://x.test/a.png"/></g></m>']); await until(() => convPrev('gus') !== null);
-  const prevImage = convPrev('gus');
-  pm('msg', ['gus', 'marjorie', 'unknown', '1700000401.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="img://cam:abc123"/></g></m>']); await until(() => convPrev('gus') !== prevImage);
-  const prevPhoto = convPrev('gus');
-  click(byText('.conv', 'gus')); await wait(50);
+  pm('msg', ['gus', 'marjorie', 'unknown', '1700000400.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="https://x.test/a.png"/></g></m>']); await until(() => convPrev('Gus') !== null);
+  const prevImage = convPrev('Gus');
+  pm('msg', ['gus', 'marjorie', 'unknown', '1700000401.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="img://cam:abc123"/></g></m>']); await until(() => convPrev('Gus') !== prevImage);
+  const prevPhoto = convPrev('Gus');
+  click(byText('.conv', 'Gus')); await wait(50);
   const imgsBefore = $$('.thread .embeds img').length;
   $$('.thread .embeds button').filter(x => x.textContent.includes('Show image')).forEach(click); await wait(30);
   const imgs = $$('.thread .embeds img').map(x => [x.getAttribute('src'), x.getAttribute('referrerpolicy')]);
@@ -1353,7 +1408,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const asked = !!$('.dialog') && !calls.some(c => c[0] === 'clearHistory' && c[1] === 'hank');
   if (asked) { click(byText('.dialog-foot button', 'Delete')); await wait(50); }
   const hankDeleted = calls.some(c => c[0] === 'clearHistory' && c[1] === 'hank') && !listed('hank');
-  const gusRow = convRow('gus');
+  const gusRow = convRow('Gus');
   const pointer = (type, x) => {
     const e = new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: 100 });
     Object.defineProperties(e, { pointerId: { value: 1 }, pointerType: { value: 'touch' } });
@@ -1362,7 +1417,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pointer('pointerdown', 250); pointer('pointermove', 240); pointer('pointermove', 120); pointer('pointerup', 120);
   click(gusRow.querySelector('.conv')); await wait(30);
   const swipeButtons = [...gusRow.querySelectorAll('button')].filter(b => !b.closest('.conv')).map(b => b.textContent);
-  const gusOpened = !!$('.thread .topbar h2 .namebtn') && $('.thread .topbar h2 .namebtn').textContent === 'gus';
+  const gusOpened = !!$('.thread .topbar h2 .namebtn') && $('.thread .topbar h2 .namebtn').textContent === 'Gus';
   step('chat row actions', hasRowItems(ctxItems) && hasRowItems(moreItems) && asked && hankDeleted && swipeButtons.includes('Close') && swipeButtons.includes('Delete') && !gusOpened, { ctxItems, moreItems, asked, hankDeleted, swipeButtons, gusOpened });
 
   /* Friends and Meet people */
@@ -1390,7 +1445,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   w.setTimeout = (fn, ms, ...args) => setTimeout0.call(w, fn, ms >= 20 ? ms - 20 : ms, ...args);
   pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.99']); pm('idleupdate', ['zoe', '0']); await until(() => !!convRow('kim'));
   const presenceRow = n => { const r = $$('.convs .conv').find(x => x.querySelector('.conv-name').textContent === n); return r ? [(r.querySelector('.tc-presence') || {}).className || '', (r.querySelector('.conv-time') || {}).textContent || ''] : []; };
-  const before3 = { ivy: presenceRow('ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
+  const before3 = { ivy: presenceRow('Ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
   await until(() => /tc-presence-idle/.test(presenceRow('kim')[0]));
   w.setTimeout = setTimeout0;
   const after3 = presenceRow('kim');
@@ -1598,6 +1653,16 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await until(() => !!byText('.toast', 'Nothing was saved') || profileUpdates().length > 0);
   fullDown.toast = !!byText('.toast', 'could not be read. Nothing was saved'); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
   step('full profile server error: saving another field sends nothing', fullDown.failed && fullDown.toast && fullDown.sent.length === 0, fullDown);
+  /* Refused or rate-limited read: the same, a 4xx other than 404 is not a missing file */
+  ownMod2Status = 429;
+  const refusedFrom = profileUpdates().length;
+  click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
+  click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc'));
+  type($('#pf-loc'), 'Nantes'); await until(() => !!$('.tc-savebar'));
+  // The toast of the case above is still shown: only a post tells that this save went out.
+  click($('.tc-savebar .tc-btn-primary')); await until(() => profileUpdates().length > refusedFrom, 1500);
+  const fullRefused = { sent: profileUpdates().slice(refusedFrom).map(p => p.f.full_profile) };
+  step('full profile refused (429): saving another field sends nothing', fullRefused.sent.length === 0, fullRefused);
   betterChatangoFull.value = 'FULL PAGE'; ownMod2Status = 200;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
   click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc') && $('#pf-loc').value === 'Rouen');
@@ -1949,12 +2014,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const gusUnreadRecords = () => pmRecords.filter(r => r.target === 'gus' && r.unread).length;
   const unreadOf = n => { const r = convRow(n), b = r && r.querySelector('.tc-count'); return r ? (b ? +b.textContent : 0) : null; };
   // One migration write without a stored flag: a single one for the whole page, despite Nightango writes to the same storage.
-  const kept = gusUnreadRecords(), resumed = unreadOf('gus'), migrations = calls.filter(c => c[0] === 'written' && !c[1]).length;
+  const kept = gusUnreadRecords(), resumed = unreadOf('Gus'), migrations = calls.filter(c => c[0] === 'written' && !c[1]).length;
   pm('OK', []); await wait(150);
-  const again = unreadOf('gus');
+  const again = unreadOf('Gus');
   step('unread migration not redone once flagged', kept === 3 && migrations === 1, { kept, migrations });
   step('history unread resumed once, not doubled by a second OK', resumed === 3 && again === 3, { resumed, again });
-  click(byText('.conv', 'gus')); await until(() => $$('.thread .tc-msg-text').some(x => x.textContent === 'ok') && !gusUnreadRecords());
+  click(byText('.conv', 'Gus')); await until(() => $$('.thread .tc-msg-text').some(x => x.textContent === 'ok') && !gusUnreadRecords());
   step('opening a conversation marks its history read', gusUnreadRecords() === 0, pmRecords.filter(r => r.target === 'gus'));
   const oks = $$('.thread .tc-msg-text').filter(x => x.textContent === 'ok').length;
   step('offline messages archived', !!pmConnect && pmConnect[2] === true && archived.length === 1 && archived[0][1] === true && oks === 2, { pmConnect, archived, oks });
@@ -2020,19 +2085,25 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('i', 'badges', ['1700040002.1', 'Kim', '', 'u9', 'UNID9', 'K2=', '9.9.9.9', '128', '', '<n000/><f x11000="0">Newer']);
   g('i', 'badges', ['1700040001.1', 'Kim', '', 'u9', 'UNID9', 'K1=', '9.9.9.9', '64', '', '<n000/><f x11000="0">Older']);
   g('inited', 'badges', []);
-  g('g_participants', 'badges', ['S1:1700:U1:Kim:None;S2:1700:U2:Lee:None;S3:1700:U3:Dana:None']);
+  g('g_participants', 'badges', ['S1:1700:U1:Kim:None;S2:1700:U2:Lee:None;S3:1700:U3:Dana:None;S4:1700:U4:Ola:None']);
   await until(() => !!byText('.tc-nav', 'badges'));
   click(byText('.tc-nav', 'badges'));
   g('b', 'badges', ['1700040003.1', 'Lee', '', 'u10', 'UNID10', 'tmp600', '8.8.8.8', '64', '', '<n000/><f x11000="0">Hello']);
   const roleRow = n => ($$('.members .mrow').find(x => x.textContent.includes(n)) || {}).textContent || '';
-  await until(() => roleRow('lee').includes('Mod'));
-  const fromBadges = { kim: roleRow('kim'), lee: roleRow('lee'), dana: roleRow('dana') };
+  await until(() => roleRow('Lee').includes('Mod'));
+  const fromBadges = { kim: roleRow('Kim'), lee: roleRow('Lee'), dana: roleRow('Dana'), ola: roleRow('Ola') };
+  const storedRoles = () => (JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').badges || {}).badges;
+  const rolesKept = storedRoles();
   g('mods', 'badges', ['lee,' + MOD]);
-  await until(() => !roleRow('kim').includes('Admin'));
-  const fromList = { kim: roleRow('kim'), lee: roleRow('lee') };
+  await until(() => !roleRow('Kim').includes('Admin'));
+  const fromList = { kim: roleRow('Kim'), lee: roleRow('Lee'), ola: roleRow('Ola') };
   step("roles come from message badges without a moderator list, the highest one stays, and Chatango's list replaces them",
     fromBadges.kim.includes('Admin') && fromBadges.lee.includes('Mod') && fromBadges.dana.includes('Owner') && !/Admin|Mod/.test(fromList.kim) && fromList.lee.includes('Mod'),
     { fromBadges, fromList });
+  step('roles seen in an earlier session show before the member speaks, a badge of this session replaces them, and both are kept in this browser',
+    fromBadges.ola.includes('Admin') && JSON.stringify(rolesKept) === JSON.stringify({ ola: 'admin', kim: 'admin', lee: 'mod' })
+      && !/Admin|Mod/.test(fromList.ola) && JSON.stringify(storedRoles()) === JSON.stringify({ lee: 'mod' }),
+    { ola: fromBadges.ola, rolesKept, afterList: storedRoles() });
 
   /* Posting limits: slow mode read on join, a message refused as too fast, a temporary ban, the bypass right */
   C.groups.slow = fakeGroup();
@@ -2324,6 +2395,39 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('leaving a group during a reconnect closes its socket, keeps its later frames out of the state and the BetterChatango focus off it',
     leftDuring.socket === 3 && !leftDuring.ghost && !leftDuring.focus && !leftDuring.listed, leftDuring);
 
+  /* A group BetterChatango never connects at startup: disconnected once the connection delay has passed, with Try again and no automatic attempt */
+  SB.renderGroup({ group: 'lagroom', header: 'Lagroom' });
+  await wait(12500);
+  click(byText('.tc-nav', 'lagroom')); await wait(50);
+  const neverUp = { banner: connBanner(), connects: calls.filter(c => c[0] === 'connect' && c[1] === 'lagroom').length };
+  step('a group whose startup connection never opens shows as disconnected with Try again, without an automatic attempt',
+    !!neverUp.banner && neverUp.banner.buttons.includes('Try again') && neverUp.connects === 0, neverUp);
+  click($('button[aria-label="Group options"]')); await wait(30);
+  click(menuItem('Leave group')); await wait(30);
+  click(byText('.dialog-foot button', 'Leave group')); await wait(50);
+  click(byText('.tc-nav', 'Mentions')); await wait(50);
+
+  /* Names that are also keys of every object: constructor and __proto__ as an author and as mentions */
+  C.groups.names = fakeGroup();
+  SB.renderGroup({ group: 'names', header: 'Names' });
+  g('ok', 'names', ['marjorie', '', '', '', '1700000000', '', '', '0']);
+  g('inited', 'names', []);
+  await wait(50);
+  click(byText('.tc-nav', 'names')); await wait(50);
+  const opsBefore = opFailures.length;
+  g('b', 'names', ['1700009100.1', 'constructor', '', 'u7', 'UNID7', 'tmp97', '7.7.7.7', '0', '', '<n000/><f x11000="0">hello @__proto__ and @constructor']);
+  g('u', 'names', ['tmp97', 'N-A_M=']);
+  await wait(80);
+  const reserved = { shown: !!$$('.log .tc-msg-text').find(x => x.textContent.includes('hello @__proto__')), ops: opFailures.slice(opsBefore) };
+  const mention = $$('.log button.tc-mention').find(x => x.textContent === '@constructor');
+  if (mention) { click(mention); await wait(80); }
+  reserved.dialog = !!$('.profile-dialog'); reserved.recovery = !!$('.recovery');
+  reserved.polluted = ['status', 'about', 'style', 'spelling', 'ignored'].filter(k => k in w.Object || k in w.Object.prototype);
+  if (reserved.dialog) { key(d, 'Escape'); await wait(50); }
+  step('a member named constructor and mentions of constructor and __proto__ write nothing on Object and open a profile, not the recovery screen',
+    reserved.shown && !reserved.ops.length && reserved.dialog && !reserved.recovery && !reserved.polluted.length, reserved);
+  click(byText('.tc-nav', 'Mentions')); await wait(50);
+
   /* Session loss: signed in elsewhere, offline, connection lost, session expired */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
@@ -2352,6 +2456,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && !!denied && denied.text.includes('Your session expired') && !calls.some(c => c[0] === 'alert'),
     { kicked, hereAsked, afterHere, offline, onlineReconnects, lost, denied, alerts: calls.filter(c => c[0] === 'alert').length });
 
+  step('no bridge operation failed to apply during the scenario', opFailures.length === 0, opFailures);
   console.log(log.join('\n'));
   console.log('ERRORS: ' + (errors.length ? '\n' + errors.join('\n') : 'none'));
   process.exit(log.some(l => l.indexOf('FAIL') === 0) || errors.length ? 1 : 0);

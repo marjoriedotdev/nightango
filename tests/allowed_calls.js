@@ -25,6 +25,7 @@ const CLOSE = { '(': ')', '[': ']', '{': '}' };
 // Each call site of src/ as signature() writes it, with the text of the allowed list it falls under.
 const ALLOWED = [
   { call: "fetch('https://api.github.com/repos/marjoriedotdev/nightango/releases/latest')", doc: '`GET https://api.github.com/repos/marjoriedotdev/nightango/releases/latest` through `fetch`, without cookie or credential' },
+  { call: "fetch('https://gitlab.com/api/v4/projects/marjoriedotdev%2Fnightango/releases?order_by=released_at&sort=desc&per_page=20')", doc: '`GET https://gitlab.com/api/v4/projects/marjoriedotdev%2Fnightango/releases?order_by=released_at&sort=desc&per_page=20` through `fetch`, without cookie or credential' },
   { call: "fetch('https://api.vissle.me/v1/pmr/' + C.user.name)", doc: '`GET https://api.vissle.me/v1/pmr/{name}` through `fetch`, without cookie or credential' },
   { call: "fetch('https://vissle.me/api/v1/who/' + n)", doc: '`GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential' },
   { call: "fetch(CH.path('search'), { method: 'POST', body: form, credentials: 'include' })", doc: "The search `chatango.com/search` with `credentials: 'include'`" },

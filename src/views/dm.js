@@ -3,10 +3,12 @@ function DMView(p) {
   var app = useApp(), s = app.state, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
   var a2 = useState(''), q = a2[0], setQ = a2[1];
-  var column = useRightColumn(function () { app.ui.openProfile(id, null); });
+  var column = useRightColumn(function () { app.ui.openProfile(id, null); }), wide = useWideLayout();
+  if (p.compact) column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(id, null); } };
   var convo = id ? s.dms[id] : null;
 
-  var names = listedDms(s);
+  var listed = listedDms(s).filter(function (n) { return inCurrentSpace(s, 'dm', n); });
+  var names = listed.filter(function (n) { return userOf(s, n).favorite; }).concat(listed.filter(function (n) { return !userOf(s, n).favorite; }));
   useProfiles(names);
   var shown = names.filter(function (n) {
     var c = s.dms[n];
@@ -40,7 +42,7 @@ function DMView(p) {
         }))),
     h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
       loading ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
-        shown.length ? shown.slice(0, batch.limit).map(function (n) { return h(ChatRow, { key: n, name: n, user: userOf(s, n), convo: s.dms[n], me: s.me, active: n === id }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
+        shown.length ? shown.slice(0, batch.limit).map(function (n) { return h(ChatRow, { key: n, name: n, user: userOf(s, n), convo: s.dms[n], me: s.me, active: n === id, beside: wide && !!id && n !== id && !isPaneOpen(s, 'dm', n) }); }) : h('p', { className: 'pal-empty' }, q ? 'No conversation matches.' : 'No conversations yet.'),
         batch.sentinel,
         term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
@@ -49,6 +51,8 @@ function DMView(p) {
       h(T.Icon, { name: 'message', size: 28, strokeWidth: 1.6 }), h('h2', null, 'Select a conversation'),
       h('p', { style: { margin: 0 } }, 'Or start a new one with a friend or someone from a group.'),
       h(T.Button, { variant: 'primary', icon: 'edit', onClick: app.ui.openNewDm }, 'New message')));
+  // Side by side, an open conversation shows alone: the list and the profile would leave no room for it.
+  if (p.compact && convo) return h('div', { className: 'main', style: { flexDirection: 'row' } }, thread);
   return h('div', { className: 'main', style: { flexDirection: 'row' } },
     h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
     convo && column.open ? h(ProfilePanel, { name: id }) : null);
@@ -162,6 +166,7 @@ function DmThread(p) {
   var log = useMessageLog();
   var draft = useDraft(dmDraftKey(id)), cm = useComposerMode(draft);
   var personActions = useProfileActions(id, null);
+  var sh = useState(false), sharedOpen = sh[0], setSharedOpen = sh[1];
   // Search result: older pages load one by one until it is reached.
   useEffect(function () {
     var seek = p.seek, failed = asked.current && convo.olderFailed;
@@ -192,7 +197,7 @@ function DmThread(p) {
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
     var original = m.replyTo ? byKey[m.replyTo.key] || null : null;
     rows.push(h(DmMessageRow, {
-      key: m.id, m: m, peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, avatarV: a.avatarV,
+      key: m.id, m: m, shown: shownName(s, m.from), peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, avatarV: a.avatarV,
       continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
       original: original, onJump: calls.jump, onReply: u.blocked ? null : calls.reply, onQuote: u.blocked ? null : calls.quote, onEdit: u.blocked ? null : calls.edit
     }));
@@ -206,21 +211,35 @@ function DmThread(p) {
       retry: convo.olderFailed ? function () { app.update(function (d) { d.dms[id].olderFailed = false; }); } : null
     };
   var bottom;
-  if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + id + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
+  if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + shownName(s, id) + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
   else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close, onEditLast: editLast });
-  return h('main', { className: 'thread' },
+  return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
-      h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
+      p.onClose ? null : h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', count: unreadTotal(s), onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
       h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
       h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
-        label: 'Conversation options', items: [viewProfileItem(app, id, null)].concat(personActions, [{ divider: true }], convActions(app, id, convo))
-      })),
-    h(MessageLog, { log: log, label: 'Messages with ' + id, rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
+        label: 'Conversation options', items: menuGroups([[{ label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id }), spacesItem(app, { view: 'dm', id: id })]].concat(personActionGroups(personActions), [convActions(app, id, convo)]))
+      }),
+      p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
+    h(MessageLog, { log: log, label: 'Messages with ' + shownName(s, id), rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
     pmConnBanner(app),
-    h('div', { className: 'composer-wrap' }, bottom));
+    h('div', { className: 'composer-wrap' }, bottom)),
+    sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + shownName(s, id), messages: convo.messages, authorOf: dmAuthorOf, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
+}
+
+function dmAuthorOf(m) { return m.from; }
+
+/**
+ * Private conversation in the pane beside the main one.
+ * @param {{id: string}} p Conversation member.
+ */
+function SplitDm(p) {
+  var app = useApp();
+  var column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(p.id, null); } };
+  return h('div', { className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: p.id, column: column, onClose: app.actions.closeSplit, closeLabel: 'Close the conversation with ' + p.id + ' side by side' }));
 }
 
 /**
@@ -233,8 +252,8 @@ function canEditPm(m, me) { return m.from === me && !!m.key; }
 /**
  * Private message row with its Reply button and its action menu, rendered again only when its props change.
  * A message without a PM key, sent by the official Chatango client, has neither Reply nor Edit: they could not point to it.
- * @param {{m: Object, peer: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, avatarV: (number|undefined), continued: boolean, highlight: boolean, original: ?Object,
- *   onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message, conversation correspondent, signed-in user, preferences, resolved theme,
+ * @param {{m: Object, shown: string, peer: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, avatarV: (number|undefined), continued: boolean, highlight: boolean, original: ?Object,
+ *   onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message, author's name as they spell it, conversation correspondent, signed-in user, preferences, resolved theme,
  *   author's style, hidden style and picture version, follow-up of the previous message from the same author, highlight, loaded original of a reply, jump to it,
  *   and reply to, quote and edit the message (null when sending is not possible).
  */
@@ -250,7 +269,7 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
     copyTextItem(app, m), m.from !== me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
     canRemove ? { divider: true } : null,
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(p.peer, LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
+      app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(shownName(app.state, p.peer), LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
     } } : null];
   var o = p.original;
   var reply = o ? { author: h(Person, { name: o.from, size: 16 }), text: messagePreview(o), onJump: function () { p.onJump(o); } }
@@ -260,7 +279,7 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
     moreActionsButton(items, setMenuOpen));
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, prefs.h24),
-    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(m.from, ms.name), style: ms.row, reply: reply,
+    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(p.shown, ms.name), style: ms.row, reply: reply,
     actions: actions, msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open')
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
 });
@@ -276,23 +295,24 @@ function DmComposer(p) {
   var inputRef = useRef(null);
   var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
   var attach = useAttachMedia({ kind: 'dm', id: id }, setDraft);
+  var voice = useVoiceRecorder(uploadKey({ kind: 'dm', id: id }), attach.onFiles);
   function onKeyDown(e) {
     media.onKeyDown(e);
     if (editsLastOnUp(e, draft, mode) && p.onEditLast()) e.preventDefault();
   }
-  return h(Frag, null, media.panel, h(T.Composer, {
-    placeholder: 'Message ' + id, value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
+  return h(Frag, null, media.panel, voice.panel, h(T.Composer, {
+    placeholder: 'Message ' + shownName(app.state, id), value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
     // An edit changes only the text: the picked file waits for the next message.
     onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
-    context: mode ? Object.assign({ author: mode.m.from, text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
+    context: mode ? Object.assign({ author: shownName(app.state, mode.m.from), text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
     onSend: function (text) {
-      if (kind === 'edit') { if (text !== mode.m.text) app.actions.sendDm(id, text, { editKey: mode.m.key }); p.onCancelMode(); return; }
+      if (kind === 'edit') { if (text !== mode.m.text && !app.actions.sendDm(id, text, { editKey: mode.m.key })) { setDraft(text); return; } p.onCancelMode(); return; }
       if (runCommand(app, text, null)) return;
-      var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(mode.m.from, mode.m.text) : null };
+      var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(shownName(app.state, mode.m.from), mode.m.text) : null };
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
       if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
       p.onCancelMode();
-    }, beforeSend: h(MessageStyleButton, null)
+    }, attachMenu: kind === 'edit' ? null : attachMenu(attach, voice), beforeSend: h(MessageStyleButton, null)
   }), emoji.picker, attach.input);
 }
 
@@ -372,7 +392,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': active ? 'page' : undefined, onClick: onClick },
     h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
-      h('span', { className: 'conv-name' }, n), presenceSr(u.status),
+      h('span', { className: 'conv-name' }, u.spelling || n, u.favorite ? h(T.Icon, { name: 'star', size: 12, label: 'Favorite', className: 'conv-fav' }) : null), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(n, u),
       c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
@@ -381,7 +401,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
 
 /**
  * Tells who keeps the PMs removed from this browser.
- * @param {string} name Correspondent.
+ * @param {string} name Correspondent as they spell their name.
  * @param {boolean} betterChatango True to say first that only BetterChatango's copy goes away.
  */
 function keptCopyText(name, betterChatango) {
@@ -400,7 +420,7 @@ function convActions(app, name, c) {
     received && !c.unread ? { label: 'Mark as unread', short: 'Unread', icon: 'message', onSelect: function () { app.actions.markDmUnread(name); } } : null,
     { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },
     { label: 'Delete conversation…', short: 'Delete', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Delete this conversation?', body: keptCopyText(name, LIVE), confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
+      app.ui.confirm({ title: 'Delete this conversation?', body: keptCopyText(shownName(app.state, name), LIVE), confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
     } }
   ].filter(Boolean);
 }
@@ -420,10 +440,11 @@ function friendActions(app, name) {
 var SWIPE_REVEAL = 144;
 /**
  * List row with swipe actions and a menu that also opens the profile.
- * @param {{name: string, actions: Array, children: *}} p Row member, row actions and main button.
+ * @param {{name: string, actions: Array, extra: ?Array, children: *}} p Row member, row actions, menu entries shown before them, and main button.
  */
 function SwipeRow(p) {
   var app = useAppApi(), n = p.name, actions = p.actions;
+  var shown = useStatePart(function (s) { return shownName(s, n); });
   var m = useState(null), menu = m[0], setMenu = m[1];
   var w = useState(null), swipe = w[0], setSwipe = w[1];
   var rowRef = useRef(null), drag = useRef(null), swallow = useRef(false);
@@ -479,20 +500,21 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + n, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null), whoItem(app, n)].concat(actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + shown, size: 26, iconSize: 16, items: menuGroups([[viewProfileItem(app, n, null), whoItem(app, n)].concat(p.extra || []), actions]), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
 
 /**
  * Chats list row with its conversation actions, rendered again only when its props change.
- * @param {{name: string, user: Object, convo: Object, me: string, active: boolean}} p Conversation member, the member and the conversation in the state,
- *   signed-in user, and whether the conversation is open.
+ * @param {{name: string, user: Object, convo: Object, me: string, active: boolean, beside: boolean}} p Conversation member, the member and the conversation in the state,
+ *   signed-in user, whether the conversation is open, and whether it can open beside the open one.
  */
 var ChatRow = React.memo(function ChatRow(p) {
   var app = useAppApi(), n = p.name;
   var draft = useDraftMarks(function (m) { return showsDraft(m, dmDraftKey(n), p.active); });
-  return h(SwipeRow, { name: n, actions: convActions(app, n, p.convo) }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
+  var beside = p.beside ? { label: 'Open side by side', icon: 'panel', onSelect: function () { app.actions.openSplit({ view: 'dm', id: n }); } } : null;
+  return h(SwipeRow, { name: n, actions: convActions(app, n, p.convo), extra: [beside, favoriteItem(app, { view: 'dm', id: n }, p.user.favorite)] }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
 });
 
 function FriendsList(p) {
@@ -509,14 +531,14 @@ function FriendsList(p) {
   useProfiles(friends);
   function section(label, names) {
     return names.length ? h(Frag, null, h('h3', { className: 'mlabel' }, label + ' · ' + names.length),
-      names.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(n, s.users[n], s.dms[n], s.me, function () { app.actions.openDm(n, 'friends'); }, p.current === n)); })) : null;
+      names.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n), extra: [favoriteItem(app, { view: 'dm', id: n }, s.users[n].favorite)] }, personRow(n, s.users[n], s.dms[n], s.me, function () { app.actions.openDm(n, 'friends'); }, p.current === n)); })) : null;
   }
   function add(e) {
     e.preventDefault();
     var n = name.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,20}$/.test(n)) { setErr('Enter a Chatango username.'); return; }
+    if (!ACCOUNT_NAME.test(n)) { setErr('Enter a Chatango username.'); return; }
     if (n === s.me) { setErr("You can't add yourself."); return; }
-    if (s.users[n] && s.users[n].friend) { setErr(n + ' is already a friend.'); return; }
+    if (s.users[n] && s.users[n].friend) { setErr(shownName(s, n) + ' is already a friend.'); return; }
     setErr(''); setName('');
     request.add(n);
   }

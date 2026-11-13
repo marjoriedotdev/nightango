@@ -25,12 +25,25 @@ function dropMentions(d, gid, ids) {
 }
 
 /**
+ * Returns a route with the group or PM it opens marked read, and the group's previous read position for its New messages line.
+ * @param {Object} d State being modified.
+ * @param {Object} route Route to show.
+ */
+function opened(d, route) {
+  var r = Object.assign({}, route);
+  if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = readThrough(g); g.unread = 0; g.mentions = 0; }
+  if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
+  return r;
+}
+function sameConversation(a, b) { return !!a && !!b && a.view === b.view && a.id === b.id; }
+
+/**
  * Messages that reach the user and their reading: the PM archive that holds the unreads, the reception and notification of an incoming event, and the navigation that marks the opened conversation read.
  * @param {Object} stateRef Ref to the application state.
  * @param {Function} update State update.
  * @param {Function} toast Shows a notification.
  * @param {function(boolean)} setNavOpen Opens or closes the navigation drawer.
- * @returns {{pmArchive: Object, nav: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification
+ * @returns {{pmArchive: Object, nav: Function, readInView: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification
  *   of an event and of a PM, and reception.
  */
 function useInbox(stateRef, update, toast, setNavOpen) {
@@ -46,18 +59,47 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       var cur = d.route;
       // Going back to the message log does not jump again to the message opened from Mentions or the PM search.
       if (cur && (cur.view === 'group' || cur.view === 'dm' || cur.view === 'discover' || cur.view === 'mentions')) { d.lastChat = cur; delete cur.msgId; delete cur.seek; }
-      var r = Object.assign({}, route);
-      if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = readThrough(g); g.unread = 0; g.mentions = 0; }
-      if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
-      d.route = r;
+      d.route = opened(d, route);
+      // The same conversation never shows in both panes, and only a conversation keeps one beside it.
+      if (d.split && (sameConversation(d.split, d.route) || (d.route.view !== 'group' && d.route.view !== 'dm'))) d.split = null;
     });
     setNavOpen(false);
     if (route.view === 'dm' && route.id) readPm(pmArchive.current, update, route.id);
-    if (LIVE) {
-      if (route.view === 'group' && route.id) liveBridge.focus(route.id);
-      liveBridge.focusPm(route.view === 'dm' && route.id ? route.id : false);
-    }
+    if (LIVE && route.view === 'group' && route.id) liveBridge.focus(route.id);
+    focusPms();
   }, []);
+  /**
+   * Opens a group or a PM beside the main one and marks it read.
+   * A conversation already in the main pane, or a main pane without a conversation, simply shows it there.
+   * @param {{view: string, id: string}} route Conversation to show beside.
+   */
+  var openSplit = useCallback(function (route) {
+    var r0 = stateRef.current.route;
+    if (sameConversation(r0, route) || !r0.id || (r0.view !== 'group' && r0.view !== 'dm')) { nav(route); return; }
+    update(function (d) { d.split = opened(d, route); });
+    if (route.view === 'dm') readPm(pmArchive.current, update, route.id);
+    focusPms();
+  }, []);
+  var closeSplit = useCallback(function () { update(function (d) { d.split = null; }); focusPms(); }, []);
+  /**
+   * Pops a group or a PM out into the floating window and marks it read. Called from a click: the browser opens the window only on a user action.
+   * @param {{view: string, id: string}} route Conversation to pop out.
+   */
+  var openPip = useCallback(function (route) {
+    openPipWindow(function () { update(function (d) { d.pip = null; }); }).then(function () {
+      update(function (d) { d.pip = opened(d, route); if (sameConversation(d.split, d.pip)) d.split = null; });
+      if (route.view === 'dm') readPm(pmArchive.current, update, route.id);
+    }, function (e) {
+      warn(e);
+      toast('The floating window could not open. Try again.');
+    });
+  }, []);
+  // BetterChatango's PM sound follows one open PM: the main one first, the one beside otherwise.
+  function focusPms() {
+    if (!LIVE) return;
+    var s = stateRef.current, r = s.route.view === 'dm' && s.route.id ? s.route : s.split && s.split.view === 'dm' ? s.split : null;
+    liveBridge.focusPm(r ? r.id : false);
+  }
   /**
    * Notifies an incoming event after its state update, as the notification preferences ask.
    * @param {string} kind Preference of the event: mentions, pm, friendOn or friendOff.
@@ -87,9 +129,10 @@ function useInbox(stateRef, update, toast, setNavOpen) {
    * @param {string} preview Text of the PM.
    */
   function notifyPm(from, preview) {
-    var show = stateRef.current.prefs.pmPreview;
+    if (quietOutsideSpace(stateRef.current, from)) return;
+    var show = stateRef.current.prefs.pmPreview, who = shownName(stateRef.current, from);
     notify('pm', {
-      toast: show ? from + ': ' + preview : 'New message from ' + from, title: from, body: show ? preview : 'New message', tag: 'pm:' + from,
+      toast: show ? who + ': ' + preview : 'New message from ' + who, title: who, body: show ? preview : 'New message', tag: 'pm:' + from,
       icon: 'message', action: { label: 'Reply', run: function () { nav({ view: 'dm', id: from }); } }
     });
   }
@@ -122,15 +165,16 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       g.messages.push(msg);
       trimThread(g);
       logMention(d, gid, msg);
-      if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
+      if (msg.kind === 'msg' && !focused && msg.author !== me) { g.unread += 1; if (mention) g.mentions += 1; }
       if (focused) g.lastReadTs = readThrough(g);
     });
-    if (mention && !quiet && !(s0.route.view === 'group' && s0.route.id === gid)) {
+    if (mention && msg.author !== me && !quiet && !isPaneOpen(s0, 'group', gid)) {
       var g0 = s0.groups[gid];
       // A message the log hides keeps its text out of the system alert too.
+      var who = shownName(s0, msg.author);
       var hidden = isHiddenAuthor(s0, msg.author) || (!s0.prefs.safety.guestMessages && isGuest(msg.author)) || !!(g0 && g0.hiddenChannels.indexOf(msg.channel || 'none') >= 0);
       notify('mentions', {
-        toast: msg.author + ' mentioned you in #' + gid, title: msg.author + ' in #' + gid, body: hidden ? null : messagePreview(msg), tag: 'group:' + gid,
+        toast: who + ' mentioned you in #' + gid, title: who + ' in #' + gid, body: hidden ? null : messagePreview(msg), tag: 'group:' + gid,
         icon: 'at-sign', action: { label: 'Open', run: function () { var s = stateRef.current; nav(groupRouteAt(s, gid, mentionId(s, gid, msg))); } }
       });
     }
@@ -152,5 +196,21 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     syncPmUnread(pmArchive.current, update, [from]);
     if (!focused && !userOf(s0, from).ignored) notifyPm(from, text);
   }
-  return { pmArchive: pmArchive, nav: nav, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
+  /**
+   * Marks read the conversations in front of the user that gathered unreads while the tab was hidden.
+   */
+  function readInView() {
+    var s0 = stateRef.current, panes = ['route', 'split'];
+    update(function (d) {
+      panes.forEach(function (pane) {
+        var r = d[pane], g = r && r.view === 'group' ? d.groups[r.id] : null;
+        if (g && (g.unread || g.mentions)) d[pane] = opened(d, r);
+      });
+    });
+    panes.forEach(function (pane) {
+      var r = s0[pane];
+      if (r && r.view === 'dm' && r.id && s0.dms[r.id] && s0.dms[r.id].unread) readPm(pmArchive.current, update, r.id);
+    });
+  }
+  return { pmArchive: pmArchive, nav: nav, readInView: readInView, openSplit: openSplit, closeSplit: closeSplit, openPip: openPip, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
 }

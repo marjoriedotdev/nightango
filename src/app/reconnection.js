@@ -51,8 +51,7 @@ function useReconnection(stateRef, update) {
    * @param {string} gid Group or private_message.
    */
   function reconnectAuto(gid) {
-    var r = stateRef.current.route;
-    reconnect(gid, gid !== 'private_message' && !(r.view === 'group' && r.id === gid));
+    reconnect(gid, gid !== 'private_message' && !isPaneOpen(stateRef.current, 'group', gid));
   }
   /**
    * Starts a sequence of automatic attempts with an immediate first one.
@@ -104,7 +103,7 @@ function useReconnection(stateRef, update) {
     // Only an open connection that closes starts the sequence: a failure at startup or a left group does not.
     var was = connOf(stateRef.current, op.gid);
     if (op.state === 'open') stopRetry(op.gid);
-    else if (op.state === 'closed' && (was === 'open' || was === 'connecting' && retries.current[op.gid])) scheduleRetry(op.gid, was === 'open');
+    else if (op.state === 'closed' && !op.never && (was === 'open' || was === 'connecting' && retries.current[op.gid])) scheduleRetry(op.gid, was === 'open');
   }
   return { reconnect: reconnect, startRetries: startRetries, reconnectClosed: reconnectClosed, follow: follow };
 }

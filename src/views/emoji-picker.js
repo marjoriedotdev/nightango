@@ -1,6 +1,6 @@
 /* ---------- Composer emoticon and media picker ---------- */
 var EMOJI_SECTIONS = [{ title: 'Classic', premium: false }, { title: 'Premium', premium: true }];
-var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'media', label: 'Media' }];
+var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'gif', label: 'GIF' }, { value: 'media', label: 'Media' }];
 var RECENT_EMOJI_MAX = 16;
 
 /**
@@ -23,7 +23,7 @@ function keepRecentEmoji(me, name) {
 
 /**
  * Opens a composer's picker and inserts the chosen shortcut or address into its field.
- * The picker has an Emoji tab and a Media tab.
+ * The picker has an Emoji tab, a GIF tab and a Media tab.
  * @param {Object} inputRef Ref of the composer field.
  * @param {function(string)} setValue Writes the field text.
  * @returns {{onEmoji: Function, picker: ?Object}} Emoji button action and picker to render next to the composer.
@@ -59,7 +59,7 @@ function useEmojiPicker(inputRef, setValue) {
 
 /**
  * Composer picker.
- * It shows BetterChatango's emoticons by their emoji, the account's recent ones first then Classic and Premium as in its picker, and BetterChatango's media library.
+ * It shows BetterChatango's emoticons by their emoji, the account's recent ones first then Classic and Premium as in its picker, GIFs, and BetterChatango's media library.
  * @param {{anchorRef: Object, premium: boolean, tab: string, onTab: function(string), onPick: function(string), onClose: function(Event)}} p Emoji button, Premium section shown, open tab and its change, choice of a shortcut or an address, and closing.
  */
 function EmojiPicker(p) {
@@ -74,8 +74,8 @@ function EmojiPicker(p) {
   var recentList = recent.map(function (n) { return EMOTICON_BY_NAME[n]; }).filter(allowed);
   if (recentList.length) sections.unshift({ title: 'Recent', list: recentList });
   return h(Portal, null, h('div', { ref: ref, className: 'emoji-picker', role: 'dialog', 'aria-label': 'Emoji and media', style: place },
-    h('div', { className: 'picker-tabs' }, h(T.SegmentedControl, { label: 'Emoji or media', block: true, value: p.tab, onChange: p.onTab, options: PICKER_TABS })),
-    p.tab === 'media' ? h(MediaPanel, { scrollRef: ref, onPick: p.onPick }) : sections.map(function (s) {
+    h('div', { className: 'picker-tabs' }, h(T.SegmentedControl, { label: 'Emoji, GIF or media', block: true, value: p.tab, onChange: p.onTab, options: PICKER_TABS })),
+    p.tab === 'media' ? h(MediaPanel, { scrollRef: ref, onPick: p.onPick }) : p.tab === 'gif' ? h(GifPanel, { onPick: p.onPick }) : sections.map(function (s) {
       return h(Frag, { key: s.title },
         h('h3', { className: 'mlabel' }, s.title),
         h('div', { className: 'emoji-grid' }, s.list.map(function (e) {

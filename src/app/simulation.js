@@ -48,9 +48,9 @@ function useSimulation(store, inbox, toast, actions) {
           update(function (d) { var u = d.users[f]; u.status = next; u.idleSince = 0; if (next === 'offline') u.lastOn = Date.now(); });
           if (next === 'online' && (isNotifyingOnline(s0, f) || s0.prefs.notify.friendOn.app)) {
             if (s0.prefs.notify.friendOn.sound) beep(s0.prefs.volume);
-            toast(f + ' is online.', { icon: 'users', action: { label: 'Message', run: function () { actions.openDm(f); } } });
+            toast(shownName(s0, f) + ' is online.', { icon: 'users', action: { label: 'Message', run: function () { actions.openDm(f); } } });
           }
-          if (next === 'offline' && s0.prefs.notify.friendOff.app) toast(f + ' went offline.', { icon: 'users' });
+          if (next === 'offline' && s0.prefs.notify.friendOff.app) toast(shownName(s0, f) + ' went offline.', { icon: 'users' });
         }
       }
       timer = setTimeout(tick, 5000 + Math.random() * 5000);

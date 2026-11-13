@@ -1,0 +1,42 @@
+# Same pipeline as .github/workflows/ci.yml: the code is pushed by hand to both hosts, and each publishes its own releases.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "beta")
+    - if: $CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "beta")
+
+stages: [test, release]
+
+default:
+  # Node 24 as engines.node asks, pinned by digest (tag 24-bookworm-slim, 2026-11-05). pnpm comes from packageManager through corepack.
+  image: node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+
+test:
+  stage: test
+  script:
+    - corepack enable
+    - pnpm install --frozen-lockfile
+    # Every user is told about a release from main: a beta must not reach it, even through a merge request.
+    - |
+      target="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_COMMIT_BRANCH}"
+      if [ "$target" = main ] && grep -Eq '^// @version[[:space:]]+[^[:space:]]*-' src/loader/skin-loader.js; then
+        echo "main publishes stable releases only: set @version to X.Y.Z in src/loader/skin-loader.js."
+        exit 1
+      fi
+    - pnpm test
+    # The release job publishes these exact files, checked against these checksums.
+    - (cd dist && sha256sum nightango.min.user.js nightango.user.js > SHA256SUMS)
+  artifacts:
+    paths: [dist/nightango.min.user.js, dist/nightango.user.js, dist/SHA256SUMS]
+    expire_in: 1 week
+
+release:
+  stage: release
+  needs: [test]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "beta")
+  # Releases run one at a time.
+  resource_group: release
+  script:
+    - (cd dist && sha256sum --check --strict SHA256SUMS)
+    - node scripts/release.mjs

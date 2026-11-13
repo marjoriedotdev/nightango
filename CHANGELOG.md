@@ -2,11 +2,90 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
-## [0.33.0-beta.1] - 2026-11-03
+## [0.36.0-beta.1] - 2026-11-13
 
 ### Added
 
-- After a reload, messages that came in while you were away count as unread, and a bar leads to where you left off.
+- Privacy has a Chatango account section: hide your idle time, allow anonymous messages, email messages you get while offline. The wording is not final.
+
+### Fixed
+
+- A group message or an edit that could not be sent stays in the message box.
+- Saving your profile no longer risks emptying your full profile when Chatango refuses to give it.
+- Messages from a member named constructor show, and a mention of that name opens their profile.
+- Opening a group while it reconnects no longer risks a second connection, which showed its messages twice.
+- A group that failed to connect when you signed in says so and offers Try again.
+- BetterChatango's prompt to register a group no longer shows in Nightango.
+- Coming back to the tab marks the conversation you are looking at as read.
+- A message you post from another device no longer shows as unread, or as a mention of yourself.
+- The @name suggestions no longer break the page when a suggested member leaves while the list is open.
+- The floating window keeps receiving messages while Settings are open.
+- In a browser that cannot save private messages, sending one no longer says it failed.
+- An edited private message no longer shows twice after loading older messages.
+- A voice recording no longer starts after you left the conversation, or twice.
+
+### Security
+
+- A message made of unfinished image tags can no longer freeze the page.
+- The diagnostic journal no longer keeps the text of a linked accounts lookup made from BetterChatango's own screen.
+
+## [0.35.0] - 2026-11-13
+
+### Added
+
+- Favorite people: Add to favorites, on a profile, a Chats or Friends row, the conversation options or a right click in the sidebar. They show in Favorites with their presence and unread count, and come first in Chats. The list stays in this browser.
+- On a phone, the button that opens the navigation shows how many conversations and mentions are waiting.
+
+### Changed
+
+- The conversation options and the profile menus come in groups. View profile leaves the conversation options: the profile button sits right next to them.
+- Avatars and group icons without a picture take eight clearer colors, so two neighbors in a list rarely look alike.
+- The Owner badge and the Nightango developer and Premium badges are lit by the moon, and so is the shield of the Mod and Admin badges. Ember stays for what asks for your attention.
+- The night sky turns indigo at the top, with an afterglow at its foot.
+
+## [0.34.1] - 2026-11-13
+
+### Fixed
+
+- Usernames show with the capitals their owner signed in with, in messages, member lists, private messages, profiles, dialogs and notifications. A name stays in lowercase until a message or a presence in a group carries its capitals.
+- Mentioning or quoting a member writes their name with those capitals.
+
+## [0.34.0] - 2026-11-10
+
+### Added
+
+- Group color… in a group's menu gives the group its own color, in its view and next to its name in the sidebar. Only you see it.
+- Media and links, in a group's or a conversation's menu, lists the images, videos, posts and links shared in the loaded messages. A click goes to the message.
+- A GIF tab in the emoticon picker: paste a GIF link, pick from GIFs seen in your chats or from your media. GIFs play only while you hover them.
+- A private note and label on a member's profile. The label shows next to their name in the member list. Only you see them, and Privacy deletes them all.
+- Voice messages: the plus button of the message box records up to a minute, lets you listen, then attaches it like a file.
+- Open side by side, from a right click in the sidebar or a Chats row, shows a second conversation next to the first on a wide screen. Shift Enter in Search or jump to does the same.
+- Pop out, in a group's or a conversation's menu, opens it in a small window that stays on top of your other windows.
+- Spaces gather some groups and private messages under a name. The bar under Search or jump to switches between them and shows their unread conversations.
+
+### Changed
+
+- The paperclip of the message box is now a plus button with Attach a file and Record a voice message.
+- The update check looks for new versions on GitHub and on GitLab.
+- About Nightango links the source code on GitHub and on GitLab.
+
+## [0.33.2] - 2026-11-05
+
+### Fixed
+
+- On a phone, the Alerts table in Settings, Notifications fits the screen: each event shows its checkboxes below it, no more sideways scrolling.
+
+## [0.33.1] - 2026-11-04
+
+### Fixed
+
+- Group roles you have already seen stay after a reload: moderators and admins show their badge before they speak again.
+
+## [0.33.0] - 2026-11-04
+
+### Added
+
+- After a reload, messages that came in while you were away count as unread, and the New messages line marks where you left off.
 - Mark as unread on a conversation in Chats and in the conversation menu.
 - Up in an empty message box edits your last message.
 - Paste a screenshot or drop a file on the message box to attach it.
@@ -14,7 +93,6 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - Recently used emoticons at the top of the emoticon picker.
 - Desktop alerts name the sender, open their conversation on click, and replace each other per conversation.
 - The message box shows slow mode, a message refused as too fast, and a temporary posting ban. A refused message comes back in the box.
-- Privacy has a Chatango account section: hide your idle time, allow anonymous messages, email messages you get while offline. The wording is not final.
 - The Premium page shows when your Premium ends, and a reminder comes three days before.
 - Load older at the end of a group's audit log.
 - Winter and Valentine's Day seasons, and fireworks at midnight on New Year's Eve.

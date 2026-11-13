@@ -1,15 +1,49 @@
 /* ---------- Root ---------- */
 var IDLE_DELAY = 3 * MIN;
-var RELEASES_URL = REPO_URL + '/releases/';
-
 /**
- * Reads the version of the latest Nightango release published on GitHub.
+ * Returns the first stable version of a list of release tags.
+ * @param {Array} tags Tags newest first, untrusted.
+ * @returns {?string} Version without its v, null if no tag is vX.Y.Z.
+ */
+function firstStableVersion(tags) {
+  for (var i = 0; i < tags.length; i++) { var m = /^v(\d+\.\d+\.\d+)$/.exec(tags[i]); if (m) return m[1]; }
+  return null;
+}
+/**
+ * Reads the version of the latest stable Nightango release published on GitHub.
  * @returns {Promise<?string>} Version without its v, null if the reply does not give one.
  */
-function fetchLatestVersion() {
+function latestGithubVersion() {
   return fetch('https://api.github.com/repos/marjoriedotdev/nightango/releases/latest').then(function (r) {
     if (!r.ok) return null;
-    return r.json().then(function (data) { var m = /^v(\d+\.\d+\.\d+)$/.exec(data && data.tag_name); return m ? m[1] : null; });
+    return r.json().then(function (data) { return firstStableVersion([data && data.tag_name]); });
+  });
+}
+/**
+ * Reads the version of the latest stable Nightango release published on GitLab.
+ * @returns {Promise<?string>} Version without its v, null if the reply does not give one.
+ */
+function latestGitlabVersion() {
+  return fetch('https://gitlab.com/api/v4/projects/marjoriedotdev%2Fnightango/releases?order_by=released_at&sort=desc&per_page=20').then(function (r) {
+    if (!r.ok) return null;
+    // GitLab has no prerelease flag: a beta can be the newest release, the first stable tag is the latest version.
+    return r.json().then(function (list) { return firstStableVersion(Array.isArray(list) ? list.map(function (x) { return x && x.tag_name; }) : []); });
+  });
+}
+var RELEASE_PAGES = { github: REPO_URLS.github + '/releases/tag/v', gitlab: REPO_URLS.gitlab + '/-/releases/v' };
+/**
+ * Asks GitHub and GitLab for their latest stable release and keeps the newest one. A host that fails is noted in the diagnostic journal.
+ * @returns {Promise<?{version: string, url: string}>} Version and its release page, null if neither host gives one.
+ */
+function fetchLatestRelease() {
+  function from(host, read) {
+    return read().then(function (v) { return v ? { version: v, url: RELEASE_PAGES[host] + v } : null; }, function () {
+      if (JOURNAL) JOURNAL.add('app', 'Update check failed on ' + host);
+      return null;
+    });
+  }
+  return Promise.all([from('github', latestGithubVersion), from('gitlab', latestGitlabVersion)]).then(function (found) {
+    return found.reduce(function (best, x) { return x && (!best || isNewerVersion(x.version, best.version)) ? x : best; }, null);
   });
 }
 
@@ -102,13 +136,13 @@ function useDisplayPrefs(prefs) {
     if (prefs.theme === 'dark' || prefs.theme === 'light') root.setAttribute('data-theme', prefs.theme);
     else if (VIEWER_THEME) root.setAttribute('data-theme', VIEWER_THEME);
     else root.removeAttribute('data-theme');
-    var acc = hexToRgb(prefs.accent) ? prefs.accent : '#f27a3f';
-    root.style.setProperty('--accent', acc);
-    root.style.setProperty('--on-accent', contrast(hexToRgb(acc), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff');
-    root.style.setProperty('--accent-text-d', ensureContrast(acc, SURFACE.dark.selected, 4.5));
-    root.style.setProperty('--accent-text-l', ensureContrast(acc, SURFACE.light.selected, 4.5));
-    root.style.setProperty('--accent-soft-d', rgba(acc, 0.12));
-    root.style.setProperty('--accent-soft-l', rgba(acc, 0.14));
+    var acc = accentTokens(prefs.accent);
+    root.style.setProperty('--accent', acc.accent);
+    root.style.setProperty('--on-accent', acc.onAccent);
+    root.style.setProperty('--accent-text-d', acc.text.dark);
+    root.style.setProperty('--accent-text-l', acc.text.light);
+    root.style.setProperty('--accent-soft-d', acc.soft.dark);
+    root.style.setProperty('--accent-soft-l', acc.soft.light);
     root.style.setProperty('--msg-size', prefs.textSize + 'px');
     root.classList.toggle('reduce-motion', !!prefs.a11y.reduceMotion);
     root.classList.toggle('underline-links', !!prefs.a11y.underlineLinks);
@@ -153,9 +187,8 @@ function useIdleStatus(users, update) {
 function useTabTitle(state) {
   useEffect(function () {
     if (!state.auth.loggedIn) { document.title = 'Nightango'; return; }
-    var n = unreadDmCount(state);
-    Object.keys(state.groups).forEach(function (k) { n += state.groups[k].mentions || 0; });
-    document.title = (state.prefs.tabTitle && n ? '(' + n + ') ' : '') + (state.prefs.privacy.usernameInTitle ? state.me + ' | ' : '') + 'Nightango';
+    var n = unreadTotal(state);
+    document.title = (state.prefs.tabTitle && n ? '(' + n + ') ' : '') + (state.prefs.privacy.usernameInTitle ? shownName(state, state.me) + ' | ' : '') + 'Nightango';
   });
 }
 
@@ -184,9 +217,9 @@ function useUpdateCheck(loggedIn, toast) {
   useEffect(function () {
     if (!LIVE || !loggedIn || updateChecked.current) return;
     updateChecked.current = true;
-    fetchLatestVersion().then(function (v) {
-      if (v && isNewerVersion(v, APP_VERSION)) toast('Nightango ' + v + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(RELEASES_URL + 'tag/v' + v, '_blank', 'noopener'); } } });
-    }).catch(function () { if (JOURNAL) JOURNAL.add('app', 'Update check failed'); });
+    fetchLatestRelease().then(function (latest) {
+      if (latest && isNewerVersion(latest.version, APP_VERSION)) toast('Nightango ' + latest.version + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(latest.url, '_blank', 'noopener'); } } });
+    });
   }, [loggedIn]);
 }
 
@@ -232,6 +265,8 @@ function Root(props) {
     state.auth.loggedIn && o.palette ? h(Palette, { onClose: function () { o.setPalette(false); } }) : null,
     state.auth.loggedIn && o.create ? h(CreateGroupDialog, { prefill: o.create.prefill, onClose: function () { o.setCreate(null); } }) : null,
     state.auth.loggedIn && o.newDm ? h(NewDmDialog, { onClose: function () { o.setNewDm(false); } }) : null,
+    state.auth.loggedIn && o.spacesFor ? h(ConversationSpacesDialog, { route: o.spacesFor, onClose: function () { o.setSpacesFor(null); } }) : null,
+    state.auth.loggedIn && o.spaceEditor ? h(SpaceEditorDialog, { id: o.spaceEditor.id, add: o.spaceEditor.add || null, onClose: function () { o.setSpaceEditor(null); } }) : null,
     o.confirmCfg ? h(ConfirmDialog, { confirm: o.confirmCfg, onClose: function () { o.setConfirm(null); } }) : null,
     state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
     h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast })))));
