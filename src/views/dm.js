@@ -306,7 +306,7 @@ function DmComposer(p) {
     onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
     context: mode ? Object.assign({ author: shownName(app.state, mode.m.from), text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
     onSend: function (text) {
-      if (kind === 'edit') { if (text !== mode.m.text) app.actions.sendDm(id, text, { editKey: mode.m.key }); p.onCancelMode(); return; }
+      if (kind === 'edit') { if (text !== mode.m.text && !app.actions.sendDm(id, text, { editKey: mode.m.key })) { setDraft(text); return; } p.onCancelMode(); return; }
       if (runCommand(app, text, null)) return;
       var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(shownName(app.state, mode.m.from), mode.m.text) : null };
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }

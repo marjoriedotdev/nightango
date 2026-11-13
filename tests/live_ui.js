@@ -1038,14 +1038,15 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(50);
   C.groups.test.socket.readyState = 3;
   type(editBox(), 'Lost in test'); key(editBox(), 'Enter'); await wait(30);
-  const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test.") };
+  const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test."), draft: editBox().value };
+  type(editBox(), '');
   C.groups.test.socket.readyState = 1;
   step('pm, upload, block, status and group message on a connection that is not open send nothing, keep the text and the state, and say so',
     !sent.slice(closedFrom).length && JSON.stringify(fayStill) === JSON.stringify(fayShown)
       && lostUpload.toast && lostUpload.copy && lostUpload.draft === 'Caption https://vissle.me/abc/f.png' && !lostUpload.otherToast
       && lostPm.draft === 'Lost words' && lostPm.toast
       && lostBlock.toast && !lostBlock.done && lostBlock.composer
-      && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast,
+      && lostStatus.toast && statusBefore === 'Your status: Online' && lostStatus.label === statusBefore && lostGroup.toast && lostGroup.draft === 'Lost in test',
     { sent: sent.slice(closedFrom), fayShown, fayStill, lostUpload, lostPm, lostBlock, statusBefore, lostStatus, lostGroup });
 
   /* Sent PM archived under its recipient: an upload lets the user switch to another PM or to a group before its link leaves */

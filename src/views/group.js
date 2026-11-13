@@ -136,12 +136,16 @@ function GroupView(p) {
   var closeMode = cm.close;
   function edit(m) { cm.edit(m, m.editCount || 0); }
   function send(text) {
-    if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
+    if (kind === 'edit') {
+      if (text !== mode.m.text && !app.actions.editMessage(g.id, mode.m, text)) { setDraft(text); return; }
+      closeMode();
+      return;
+    }
     if (runCommand(app, text, g.id)) return;
     log.follow();
     var opts = { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel }, sentMode = mode;
     if (attach.file) { attach.send(text, opts, function () { setMode(function (cur) { return cur === sentMode ? null : cur; }); }); return; }
-    app.actions.sendGroup(g.id, text, opts);
+    if (!app.actions.sendGroup(g.id, text, opts)) { setDraft(text); return; }
     setMode(null);
   }
   // As in BetterChatango, a hidden message still counts in unreads and mentions.
