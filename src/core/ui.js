@@ -594,7 +594,7 @@ function ConnectionIcon() {
  * Shows the short role of a member as a badge next to their name.
  * @param {?string} role Role of the member in the group.
  */
-function roleBadge(role) { return role ? h(T.Badge, { icon: role === 'owner' ? 'crown' : 'shield' }, ROLE_LABEL[role]) : null; }
+function roleBadge(role) { return role ? h(T.Badge, role === 'owner' ? { tone: 'moon', icon: 'crown' } : { tone: 'moon-quiet', icon: 'shield' }, ROLE_LABEL[role]) : null; }
 /**
  * Marks the user's own row in a list.
  * @param {boolean} isMe Row of the signed-in user.
@@ -620,7 +620,7 @@ function premiumBadge(premium, full) { return premium ? traitBadge('gem', 'Premi
  * @param {string} label Trait name.
  * @param {boolean} [full] Shows the text.
  */
-function traitBadge(icon, label, full) { return full ? h(T.Badge, { tone: 'accent', icon: icon }, label) : h(T.Badge, { tone: 'accent', icon: icon, label: label }); }
+function traitBadge(icon, label, full) { return full ? h(T.Badge, { tone: 'moon', icon: icon }, label) : h(T.Badge, { tone: 'moon', icon: icon, label: label }); }
 /**
  * Gives the presence of a list row to screen readers while the avatar dot stays visual only.
  * @param {string} status Member presence.

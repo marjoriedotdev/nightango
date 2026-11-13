@@ -182,8 +182,9 @@
   function Badge(props) {
     // Without children, the label names the icon for screen readers and on hover.
     var iconOnly = props.children == null && props.label;
-    return h('span', iconOnly ? { className: cx('tc-badge', 'tc-badge-icon', props.tone === 'accent' && 'tc-badge-accent', props.className), role: 'img', 'aria-label': props.label, title: props.label }
-      : { className: cx('tc-badge', props.tone === 'accent' && 'tc-badge-accent', props.className) },
+    var tone = props.tone && props.tone !== 'neutral' ? 'tc-badge-' + props.tone : null;
+    return h('span', iconOnly ? { className: cx('tc-badge', 'tc-badge-icon', tone, props.className), role: 'img', 'aria-label': props.label, title: props.label }
+      : { className: cx('tc-badge', tone, props.className) },
       props.icon ? h(Icon, { name: props.icon, size: 11, strokeWidth: 2.4 }) : null, iconOnly ? null : props.children);
   }
 
@@ -194,7 +195,7 @@
     return h('span', { className: 'tc-count', 'aria-label': label }, text);
   }
 
-  var AVATAR_COLORS = ['#3e5a6b', '#2f5d50', '#5d3e3e', '#6b4a2f', '#5a3e5d', '#3b4a6b', '#4a4f5a', '#2f4b5d'];
+  var AVATAR_COLORS = ['#7d4743', '#754f27', '#5b5c26', '#2d6549', '#0d646c', '#365b80', '#5b4f7e', '#744765'];
   function avatarColor(name) {
     var s = String(name || '');
     var n = 0;
