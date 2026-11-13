@@ -15,7 +15,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 
 ## Color
 
-- Dark (night) is the default theme, light (dawn) is the alternative; both use the same token names. The sky (`sky-top` to `sky-bottom`, `star`, `cloud`) sits behind everything. In front of it, put surfaces in this order from back to front: `sidebar`, `bg`, `panel`, `subtle`, `raised`.
+- Dark (night) is the default theme, light (dawn) is the alternative; both use the same token names. The sky (`sky-top` to `sky-bottom`, `star`, `cloud`) sits behind everything. At night an afterglow (`sky-horizon`) lights its foot, plum on the left and teal on the right. In front of it, put surfaces in this order from back to front: `sidebar`, `bg`, `panel`, `subtle`, `raised`.
 - Two lights, two meanings. Moonlight (`moon`, `moon-ink`, `moon-lit-top` to `moon-lit-bottom`) for structure, presence and the mark. At night the drawn moon shows the seas and bright craters of its near side (`moon-maria`, `moon-crater`) with a darker edge (`moon-limb`). At dawn it takes the colors of a sunrise, gold to coral, without its seas. Moonlight also marks the standing of a person: `moon-text` on a `moon-soft` fill for the Owner badge and for traits, `moon-text` on the icon alone for the other staff badges. Ember (`accent`) only for what asks for attention.
 - Text: `text` for names, headings and labels, `text-body` for message bodies, `text-2` for secondary text and icons, `text-3` for timestamps and hints. All four hold 4.5:1 on every surface in both themes.
 - `accent` (ember) is a fill: primary buttons, unread counts, the send button, the on state of switches. Primary buttons, counts and the send button carry `shadow-glow`, the light of the torch. Text and icons on it use `on-accent`, never white.
@@ -56,7 +56,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Panels (navigation, main, members, settings) float over the sky with a `border` hairline and `shadow-panel`. Inside a panel, separate areas with `border` hairlines, not shadows. Rows inside a section use `divider`.
 - Floating elements get a shadow: `shadow-popover` for the message toolbar and menus, `shadow-floating` for the save bar and dialogs.
 - Dialogs and the open navigation drawer sit on a `scrim` veil.
-- Gradients belong to the sky only: the sky itself, the sky band at the top of the navigation, the dusk at the top of the main panel, the mention light, hairlines that fade at their ends. Text never sits on the sky or on a cloud.
+- Gradients belong to the sky only: the sky itself and its afterglow, the sky band at the top of the navigation, the dusk at the top of the main panel, the mention light, hairlines that fade at their ends. Text never sits on the sky or on a cloud.
 - No glass effects, no colored left borders. One exception: a message posted on a Chatango channel carries a 3px stripe and a light tint in the channel color, and the message head still names the channel.
 
 ## States and behavior

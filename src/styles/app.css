@@ -26,7 +26,7 @@ h1,h2,h3{text-wrap:balance}
 
 .shell{display:flex;gap:10px;height:100%;min-height:0;padding:10px max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px))}
 /* Sky behind the panels: text always stays on a solid surface. */
-.shell,.settings{position:relative;isolation:isolate;background:linear-gradient(180deg,var(--sky-top),var(--sky-bottom))}
+.shell,.settings{position:relative;isolation:isolate;background:var(--sky-horizon),linear-gradient(180deg,var(--sky-top),var(--sky-bottom))}
 .shell::before,.settings::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:var(--stars)}
 .sidebar{width:var(--size-sidebar);flex:none;display:flex;flex-direction:column;background:var(--sidebar);border:1px solid var(--border);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel);overflow:hidden;min-height:0}
 .main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;background:var(--bg);position:relative;border:1px solid var(--border);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel);overflow:hidden}
@@ -130,7 +130,7 @@ h1,h2,h3{text-wrap:balance}
 .me-text span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .topbar{height:60px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px 0 20px;border-bottom:1px solid var(--border)}
-.main>.topbar{background:linear-gradient(180deg,color-mix(in srgb,var(--sky-top) 55%,var(--bg)),var(--bg))}
+.main>.topbar{background:linear-gradient(180deg,color-mix(in srgb,var(--sky-top) 70%,var(--bg)),var(--bg))}
 .topbar h1,.topbar h2{margin:0;font-family:var(--font-display);font-size:23px;line-height:28px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar .namebtn{font-weight:400}
 /* The title does not clip: the focus outline of the profile button overflows it, only the name gets an ellipsis. */
