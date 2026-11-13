@@ -434,6 +434,12 @@ var liveBridge = (function () {
     return !!(c && c.socket && c.socket.readyState === 1);
   }
   function pmOpen() { return opened('private_message'); }
+  // Group the user opened while its socket was closed: its reconnection focuses it even when started in the background.
+  var pendingFocus = null;
+  function focusGroup(gid, reload) {
+    pendingFocus = null;
+    C.setFocus(reload ? { group: gid, reload: true } : { group: gid });
+  }
   /**
    * Says what to do while a connection cannot carry a frame.
    * @param {string} gid Group or private_message.
@@ -990,7 +996,11 @@ var liveBridge = (function () {
       return { face: v.face, size: v.size, textColor: v.textColor, nameColor: v.nameColor, bold: v.bold, italic: v.italic, underline: v.underline, strike: v.strike };
     },
     applyStyle: function (style) { try { applyStyle(style); } catch (e) { warn(e); } },
-    focus: function (gid) { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } },
+    focus: function (gid) {
+      // On a closed socket BetterChatango's setFocus submits its own join form (inject.js:5988): the follow-up of the reconnection focuses instead.
+      if (!opened(gid)) { pendingFocus = gid; return; }
+      try { focusGroup(gid, false); } catch (e) { warn(e); }
+    },
     focusPm: focusPm,
     /**
      * Asks Chatango for the presence of correspondents with the frame BetterChatango sends for Meet people (inject.js:9387).
@@ -1017,7 +1027,7 @@ var liveBridge = (function () {
     join: function (gid) {
       delete left[gid];
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }
-      connectThen(gid, function () { C.setFocus({ group: gid }); });
+      connectThen(gid, function () { focusGroup(gid, false); });
     },
     leave: function (gid) {
       left[gid] = true;
@@ -1032,7 +1042,7 @@ var liveBridge = (function () {
      * @param {boolean=} background True for a group that is not shown: the BetterChatango focus stays on the shown group.
      */
     reconnect: function (gid, background) {
-      connectThen(gid, function () { if (gid !== 'private_message' && !background) C.setFocus({ group: gid, reload: true }); });
+      connectThen(gid, function () { if (gid !== 'private_message' && (!background || pendingFocus === gid)) focusGroup(gid, true); });
     },
     loadMore: function (gid) {
       var g = C.groups && C.groups[gid];

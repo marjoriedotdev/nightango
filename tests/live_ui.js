@@ -1040,6 +1040,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   type(editBox(), 'Lost in test'); key(editBox(), 'Enter'); await wait(30);
   const lostGroup = { toast: !!byText('.toast', "Message not sent. Try again once you're reconnected to #test."), draft: editBox().value };
   type(editBox(), '');
+  /* Focus on a closed group: BetterChatango would start its own join there (inject.js:5988) */
+  const focusFrom = calls.length;
+  click(byText('.tc-nav', 'edits')); await wait(50);
+  click(byText('.tc-nav', 'test')); await wait(50);
+  const closedFocus = calls.slice(focusFrom).filter(c => c[0] === 'focus').map(c => c[1]);
+  step('showing a group whose connection is not open leaves the BetterChatango focus alone', closedFocus.indexOf('test') < 0 && closedFocus.indexOf('edits') >= 0, closedFocus);
   C.groups.test.socket.readyState = 1;
   step('pm, upload, block, status and group message on a connection that is not open send nothing, keep the text and the state, and say so',
     !sent.slice(closedFrom).length && JSON.stringify(fayStill) === JSON.stringify(fayShown)
