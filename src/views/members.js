@@ -178,6 +178,7 @@ function useProfileActions(name, gid) {
       onSelect: function () { if (u.friend) confirmRemoveFriend(app, name); else app.actions.toggleUser(name, 'friend'); }
     },
     u.friend ? notifyOnlineItem(app, name) : null,
+    favoriteItem(app, { view: 'dm', id: name }, u.favorite),
     whoItem(app, name),
     styleItem(app, name, u.unstyled),
     ignoreItem(app, name, u.ignored),

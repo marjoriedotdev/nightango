@@ -360,6 +360,7 @@ h1,h2,h3{text-wrap:balance}
 .conv-name{flex:1;min-width:0;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conv-prev,.conv-meta{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-3)}
 .conv.unread .conv-name{font-weight:600}
+.conv-fav{margin-left:var(--space-1);vertical-align:-1px;color:var(--text-3)}
 .draft-mark{display:inline-flex;flex:none;align-items:center;gap:var(--space-1);margin-right:var(--space-1);font-size:12px;font-weight:500;color:var(--accent-text);vertical-align:baseline}
 .nav-draft{display:flex;align-items:baseline;gap:var(--space-1);min-width:0}
 .nav-draft-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
