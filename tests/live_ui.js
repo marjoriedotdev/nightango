@@ -1112,6 +1112,15 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && JSON.stringify(toGroup) === JSON.stringify({ left: true, archived: ['fay'], shownFocus: false, focus: false }),
     { toOtherPm, toGroup });
 
+  /* Own message from another device, in a group that is not shown: neither unread nor a mention */
+  const editsNav = () => { const el = byText('.tc-nav', 'edits'); return { count: (el.querySelector('.tc-count') || {}).textContent || '', unread: el.classList.contains('tc-nav-unread') }; };
+  const editsBefore = editsNav();
+  g('b', 'edits', ['1700009300.1', 'Marjorie', '', 'u0', 'UNIDO', 'tmp93', '9.9.9.9', '0', '', '<n000/><f x11000="0">@marjorie note from my phone']);
+  g('u', 'edits', ['tmp93', 'O-W_N=']);
+  await wait(80);
+  const ownElsewhere = { before: editsBefore, after: editsNav(), toast: !!byText('.toast', 'mentioned you in #edits') };
+  step('own message received from another device counts neither as unread nor as a mention',
+    JSON.stringify(ownElsewhere.after) === JSON.stringify(ownElsewhere.before) && !ownElsewhere.toast, ownElsewhere);
   click(byText('.tc-nav', 'test')); await wait(50);
   g('b', 'test', ['1700000270.1', 'Eve', '', 'u7', 'UNID7', 'tmp13', '9.9.9.9', '0', '', '<n000/><f x11000="2">Look at this']);
   g('b', 'test', ['1700000271.1', 'Eve', '', 'u7', 'UNID7', 'tmp14', '9.9.9.9', '0', '', '<n000/><f x11000="0"><i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/>']);

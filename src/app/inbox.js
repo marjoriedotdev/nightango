@@ -165,10 +165,10 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       g.messages.push(msg);
       trimThread(g);
       logMention(d, gid, msg);
-      if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
+      if (msg.kind === 'msg' && !focused && msg.author !== me) { g.unread += 1; if (mention) g.mentions += 1; }
       if (focused) g.lastReadTs = readThrough(g);
     });
-    if (mention && !quiet && !isPaneOpen(s0, 'group', gid)) {
+    if (mention && msg.author !== me && !quiet && !isPaneOpen(s0, 'group', gid)) {
       var g0 = s0.groups[gid];
       // A message the log hides keeps its text out of the system alert too.
       var who = shownName(s0, msg.author);
