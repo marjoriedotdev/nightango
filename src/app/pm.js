@@ -186,7 +186,7 @@ function useLivePms(store, localRef, pmArchive) {
     });
   }
   /**
-   * Asks again for the presence of the listed correspondents who are not friends.
+   * Asks again for the presence of the favorite people and listed correspondents who are not friends.
    * @param {boolean} ifStale Only when the last request is older than PRESENCE_REFRESH.
    */
   function refreshPmPresence(ifStale) {
@@ -194,7 +194,8 @@ function useLivePms(store, localRef, pmArchive) {
     // Before the friend list, a friend would get the approximate last online time of presence instead of the exact one of wl.
     if (!s0.pmLoaded || !s0.friendsLoaded || (ifStale && Date.now() - presenceAt.current < PRESENCE_REFRESH)) return;
     // The shown conversation follows its presence through connect, whose last online time is exact.
-    var names = listedDms(s0).filter(function (n) { return n !== s0.me && !isPaneOpen(s0, 'dm', n) && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
+    var names = favoritePeople(s0).concat(listedDms(s0).filter(function (n) { return !userOf(s0, n).favorite; }))
+      .filter(function (n) { return n !== s0.me && !isPaneOpen(s0, 'dm', n) && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
     if (names.length && liveBridge.refreshPresence(names)) presenceAt.current = Date.now();
   }
   useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);

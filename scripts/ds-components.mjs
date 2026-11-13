@@ -55,8 +55,9 @@ const COMPONENTS = [
     `Provide \`icon\` and \`label\`. The label becomes \`aria-label\` and the tooltip. Default size 32 in headers, 28 in message toolbars, 26 for dismiss buttons, 44 on touch screens.
 
 - Pass \`pressed\` for toggles (members panel, profile panel) so the state is announced and shown with \`selected\`.
+- Pass \`count\` on a button that leads to what waits for the user, such as the mobile navigation button: the number shows on its corner, 99+ past 99, and joins the accessible name as "5 unread".
 - Color is \`text-2\` at rest and \`text\` on hover.`,
-    `  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14 }));`],
+    `  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'menu', label: 'Open navigation', count: 5 }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14 }));`],
   ['TextField', 'Forms', 310,
     'A labelled text input or textarea with an optional hint or error.',
     `Always pass \`label\`; the field links it, the hint and the error for assistive tech. Use \`hint\` for format rules and \`error\` once the value is known to be wrong, written as what to do: "Enter a group name".
@@ -105,19 +106,19 @@ const COMPONENTS = [
   return h(T.SegmentedControl, { label: 'Messages from ignored users', options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }], value: s[0], onChange: s[1] });`],
   ['Badge', 'Status', 56,
     'A short label for roles and qualifiers next to a name or title.',
-    `Children are one or two words. Default tone (\`selected\` fill, \`text-2\`) for roles like Mod or Owner, with the matching icon. \`accent\` tone for qualifiers that need attention, such as Sensitive on a permission. Mark the viewer's own row with a default-tone You badge.
+    `Children are one or two words. Default tone (\`selected\` fill, \`text-2\`) for a plain label such as Friend. \`moon\` tone (\`moon-soft\` fill, \`moon-text\`) for the Owner role, with its crown. \`moon-quiet\` tone for the other staff roles, with their shield: the default fill, only the icon in \`moon-text\`. \`accent\` tone for qualifiers that need attention, such as Sensitive on a permission. Mark the viewer's own row with a default-tone You badge.
 
-- Without children, pass \`icon\` and \`label\`: the badge shows the icon alone, and the label names it for screen readers and on hover. Use it for traits of a person in lists and messages (Nightango developer, Premium), and spell them out with children where the profile is open.`,
-    `  return h('div', { className: 'row' }, h(T.Badge, { icon: 'shield' }, 'Mod'), h(T.Badge, { icon: 'crown' }, 'Owner'), h(T.Badge, { tone: 'accent' }, 'Sensitive'), h(T.Badge, null, 'Friend'), h(T.Badge, { tone: 'accent', icon: 'code', label: 'Nightango developer' }), h(T.Badge, { tone: 'accent', icon: 'gem', label: 'Premium' }));`],
+- Without children, pass \`icon\` and \`label\`: the badge shows the icon alone, and the label names it for screen readers and on hover. Use it in the \`moon\` tone for traits of a person in lists and messages (Nightango developer, Premium), and spell them out with children where the profile is open.`,
+    `  return h('div', { className: 'row' }, h(T.Badge, { tone: 'moon-quiet', icon: 'shield' }, 'Mod'), h(T.Badge, { tone: 'moon', icon: 'crown' }, 'Owner'), h(T.Badge, { tone: 'accent' }, 'Sensitive'), h(T.Badge, null, 'Friend'), h(T.Badge, { tone: 'moon', icon: 'code', label: 'Nightango developer' }), h(T.Badge, { tone: 'moon', icon: 'gem', label: 'Premium' }));`],
   ['CountBadge', 'Status', 56,
     'An accent pill with an unread or mention count.',
     `Pass \`count\`; it renders nothing at zero and caps at 99+. Pass \`mention\` to prefix @ for mentions, which outrank plain unread counts: @99+ at most. The accessible name keeps the exact count. A plain unread state with no count uses the 6px \`tc-dot\` instead.`,
     `  return h('div', { className: 'row' }, h(T.CountBadge, { count: 2 }), h(T.CountBadge, { count: 3, mention: true }), h(T.CountBadge, { count: 140 }), h(T.CountBadge, { count: 140, mention: true }));`],
   ['Avatar', 'Identity', 80,
-    'Profile picture or initials on a muted color derived from the username, with optional presence.',
+    'Profile picture or initials on a color derived from the username, with optional presence.',
     `Pass \`src\` to show a profile picture. The initials stay underneath and remain visible while it loads or if it fails (account without a picture, guest); a failed URL is not requested again on the same page. The picture fades in once loaded, and shows at once when the page already loaded it. Pass \`referrerPolicy: 'no-referrer'\` for a picture from another site than Chatango. \`onLoad\` is called each time the picture loads, to offer actions that need it, such as opening the full photo.
 
-Pass \`name\`; the color comes from a fixed palette of eight muted tones so a user keeps the same color everywhere. \`status\` is online, idle or offline, drawn as a moon phase: full moon, crescent, new moon outline. The shape carries the state, so it reads without color, yet it is never the only cue: where one person is shown, write the status next to the avatar (Online, Idle, Last online …); in a list row, the dot may stand alone and the row's accessible name states the status. Set \`ring\` to the surface color behind the avatar so the presence dot is cut out cleanly. \`square\` renders a group icon. \`decor\` is a decorative layer drawn over the picture and under the presence, positioned against the avatar box, for seasonal costumes only: it may stick out above the avatar, never cover the initials.
+Pass \`name\`; the color comes from a fixed palette of eight tones, 45° apart in hue at one lightness, so a user keeps the same color everywhere and the initials hold 4.5:1 on each. \`status\` is online, idle or offline, drawn as a moon phase: full moon, crescent, new moon outline. The shape carries the state, so it reads without color, yet it is never the only cue: where one person is shown, write the status next to the avatar (Online, Idle, Last online …); in a list row, the dot may stand alone and the row's accessible name states the status. Set \`ring\` to the surface color behind the avatar so the presence dot is cut out cleanly. \`square\` renders a group icon. \`decor\` is a decorative layer drawn over the picture and under the presence, positioned against the avatar box, for seasonal costumes only: it may stick out above the avatar, never cover the initials.
 
 Sizes:
 

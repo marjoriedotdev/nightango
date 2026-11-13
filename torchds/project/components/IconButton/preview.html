@@ -12,7 +12,7 @@
 <script>
 var T = window.Torch, h = React.createElement;
 function Demo() {
-  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14 }));
+  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'menu', label: 'Open navigation', count: 5 }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14 }));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
 </script>

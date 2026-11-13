@@ -163,7 +163,7 @@ function referenced(s) {
   });
   Object.keys(s.dms).forEach(n => names.add(n));
   Object.keys(s.friendAdds).concat(Object.keys(s.notifyOnline), s.mentionLog.map(x => x.author), s.meet ? s.meet.results : []).forEach(n => names.add(n));
-  Object.keys(s.users).forEach(n => { const u = s.users[n]; if (u.friend || u.ignored || u.blocked || u.unstyled) names.add(n); });
+  Object.keys(s.users).forEach(n => { const u = s.users[n]; if (u.friend || u.favorite || u.ignored || u.blocked || u.unstyled) names.add(n); });
   return names;
 }
 

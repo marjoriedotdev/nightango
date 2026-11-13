@@ -5,13 +5,13 @@ export type Presence = 'online' | 'idle' | 'offline';
 
 export interface IconProps { name: IconName; size?: number; strokeWidth?: number; label?: string; className?: string }
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; size?: 'sm' | 'md' | 'lg'; block?: boolean; icon?: IconName; iconRight?: IconName; children?: ReactNode }
-export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { icon: IconName; label: string; size?: number; iconSize?: number; pressed?: boolean }
+export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { icon: IconName; label: string; size?: number; iconSize?: number; pressed?: boolean; /** Number waiting behind the button, shown on its corner and added to the accessible name. */ count?: number }
 export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> { label?: string; hint?: string; error?: string; multiline?: boolean; rows?: number; labelAside?: ReactNode; action?: ReactNode; /** Formatting bar between the label and the field. */ toolbar?: ReactNode; /** Receives the input element. */ inputRef?: { current: HTMLInputElement | HTMLTextAreaElement | null } }
 export interface ToolbarProps { label: string; /** Id of the field the bar edits. */ controls?: string; className?: string; children: ReactNode }
 export interface SwitchProps extends InputHTMLAttributes<HTMLInputElement> { label?: string }
 export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> { label?: ReactNode; ariaLabel?: string }
 export interface SegmentedControlProps { options: Array<string | { value: string; label: ReactNode }>; value: string; onChange?: (value: string) => void; label: string; block?: boolean }
-export interface BadgeProps { tone?: 'neutral' | 'accent'; icon?: IconName; /** Without children, names the icon-only badge for screen readers and on hover. */ label?: string; children?: ReactNode }
+export interface BadgeProps { /** moon fills the badge with moonlight, moon-quiet only lights its icon. */ tone?: 'neutral' | 'accent' | 'moon' | 'moon-quiet'; icon?: IconName; /** Without children, names the icon-only badge for screen readers and on hover. */ label?: string; children?: ReactNode }
 export interface CountBadgeProps { count: number; mention?: boolean }
 export interface AvatarProps { name: string; size?: number; status?: Presence; color?: string; ring?: string; square?: boolean; /** Profile picture. The initials stay visible if it does not load. */ src?: string | null; /** Referrer policy of the picture, no-referrer for a picture from another site. */ referrerPolicy?: string; /** Called when the profile picture has loaded. */ onLoad?: () => void; /** Decorative layer drawn over the picture and under the presence, such as a seasonal costume. Positioned against the avatar box. */ decor?: ReactNode }
 export interface NavItemProps { label: ReactNode; icon?: IconName; avatar?: ReactNode; active?: boolean; unread?: boolean; count?: number; mention?: boolean; muted?: boolean; href?: string; onClick?: () => void; trailing?: ReactNode }

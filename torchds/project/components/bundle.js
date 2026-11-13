@@ -110,12 +110,14 @@
 
   function IconButton(props) {
     var size = props.size || 32;
-    var rest = omit(props, ['icon', 'label', 'size', 'iconSize', 'pressed', 'className', 'style']);
+    var rest = omit(props, ['icon', 'label', 'size', 'iconSize', 'pressed', 'count', 'className', 'style']);
     return h('button', Object.assign({
-      type: 'button', className: cx('tc-ib', props.className), 'aria-label': props.label, title: props.label,
+      type: 'button', className: cx('tc-ib', props.count && 'tc-ib-counted', props.className),
+      'aria-label': props.count ? props.label + ', ' + props.count + ' unread' : props.label, title: props.label,
       'aria-pressed': props.pressed == null ? undefined : String(!!props.pressed),
       style: Object.assign({ width: size, height: size }, props.style)
-    }, rest), h(Icon, { name: props.icon, size: props.iconSize || (size >= 32 ? 17 : 15) }));
+    }, rest), h(Icon, { name: props.icon, size: props.iconSize || (size >= 32 ? 17 : 15) }),
+      props.count ? h('span', { className: 'tc-ib-count', 'aria-hidden': 'true' }, props.count > 99 ? '99+' : props.count) : null);
   }
 
   function TextField(props) {
@@ -180,8 +182,9 @@
   function Badge(props) {
     // Without children, the label names the icon for screen readers and on hover.
     var iconOnly = props.children == null && props.label;
-    return h('span', iconOnly ? { className: cx('tc-badge', 'tc-badge-icon', props.tone === 'accent' && 'tc-badge-accent', props.className), role: 'img', 'aria-label': props.label, title: props.label }
-      : { className: cx('tc-badge', props.tone === 'accent' && 'tc-badge-accent', props.className) },
+    var tone = props.tone && props.tone !== 'neutral' ? 'tc-badge-' + props.tone : null;
+    return h('span', iconOnly ? { className: cx('tc-badge', 'tc-badge-icon', tone, props.className), role: 'img', 'aria-label': props.label, title: props.label }
+      : { className: cx('tc-badge', tone, props.className) },
       props.icon ? h(Icon, { name: props.icon, size: 11, strokeWidth: 2.4 }) : null, iconOnly ? null : props.children);
   }
 
@@ -192,7 +195,7 @@
     return h('span', { className: 'tc-count', 'aria-label': label }, text);
   }
 
-  var AVATAR_COLORS = ['#3e5a6b', '#2f5d50', '#5d3e3e', '#6b4a2f', '#5a3e5d', '#3b4a6b', '#4a4f5a', '#2f4b5d'];
+  var AVATAR_COLORS = ['#7d4743', '#754f27', '#5b5c26', '#2d6549', '#0d646c', '#365b80', '#5b4f7e', '#744765'];
   function avatarColor(name) {
     var s = String(name || '');
     var n = 0;

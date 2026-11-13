@@ -7,7 +7,8 @@ function DMView(p) {
   if (p.compact) column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(id, null); } };
   var convo = id ? s.dms[id] : null;
 
-  var names = listedDms(s).filter(function (n) { return inCurrentSpace(s, 'dm', n); });
+  var listed = listedDms(s).filter(function (n) { return inCurrentSpace(s, 'dm', n); });
+  var names = listed.filter(function (n) { return userOf(s, n).favorite; }).concat(listed.filter(function (n) { return !userOf(s, n).favorite; }));
   useProfiles(names);
   var shown = names.filter(function (n) {
     var c = s.dms[n];
@@ -214,13 +215,13 @@ function DmThread(p) {
   else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close, onEditLast: editLast });
   return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
-      p.onClose ? null : h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
+      p.onClose ? null : h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', count: unreadTotal(s), onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
       h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
       h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
-        label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id }), spacesItem(app, { view: 'dm', id: id })].concat(personActions, [{ divider: true }], convActions(app, id, convo))
+        label: 'Conversation options', items: menuGroups([[{ label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id }), spacesItem(app, { view: 'dm', id: id })]].concat(personActionGroups(personActions), [convActions(app, id, convo)]))
       }),
       p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
     h(MessageLog, { log: log, label: 'Messages with ' + shownName(s, id), rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
@@ -391,7 +392,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': active ? 'page' : undefined, onClick: onClick },
     h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
-      h('span', { className: 'conv-name' }, u.spelling || n), presenceSr(u.status),
+      h('span', { className: 'conv-name' }, u.spelling || n, u.favorite ? h(T.Icon, { name: 'star', size: 12, label: 'Favorite', className: 'conv-fav' }) : null), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       personMetaLine(n, u),
       c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
@@ -439,7 +440,7 @@ function friendActions(app, name) {
 var SWIPE_REVEAL = 144;
 /**
  * List row with swipe actions and a menu that also opens the profile.
- * @param {{name: string, actions: Array, extra: ?Object, children: *}} p Row member, row actions, menu entry shown before them, and main button.
+ * @param {{name: string, actions: Array, extra: ?Array, children: *}} p Row member, row actions, menu entries shown before them, and main button.
  */
 function SwipeRow(p) {
   var app = useAppApi(), n = p.name, actions = p.actions;
@@ -499,7 +500,7 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + shown, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null), whoItem(app, n), p.extra || null].concat(actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + shown, size: 26, iconSize: 16, items: menuGroups([[viewProfileItem(app, n, null), whoItem(app, n)].concat(p.extra || []), actions]), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
@@ -513,7 +514,7 @@ var ChatRow = React.memo(function ChatRow(p) {
   var app = useAppApi(), n = p.name;
   var draft = useDraftMarks(function (m) { return showsDraft(m, dmDraftKey(n), p.active); });
   var beside = p.beside ? { label: 'Open side by side', icon: 'panel', onSelect: function () { app.actions.openSplit({ view: 'dm', id: n }); } } : null;
-  return h(SwipeRow, { name: n, actions: convActions(app, n, p.convo), extra: beside }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
+  return h(SwipeRow, { name: n, actions: convActions(app, n, p.convo), extra: [beside, favoriteItem(app, { view: 'dm', id: n }, p.user.favorite)] }, personRow(n, p.user, p.convo, p.me, function () { app.nav({ view: 'dm', id: n }); }, p.active, draft));
 });
 
 function FriendsList(p) {
@@ -530,7 +531,7 @@ function FriendsList(p) {
   useProfiles(friends);
   function section(label, names) {
     return names.length ? h(Frag, null, h('h3', { className: 'mlabel' }, label + ' · ' + names.length),
-      names.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n) }, personRow(n, s.users[n], s.dms[n], s.me, function () { app.actions.openDm(n, 'friends'); }, p.current === n)); })) : null;
+      names.map(function (n) { return h(SwipeRow, { key: n, name: n, actions: friendActions(app, n), extra: [favoriteItem(app, { view: 'dm', id: n }, s.users[n].favorite)] }, personRow(n, s.users[n], s.dms[n], s.me, function () { app.actions.openDm(n, 'friends'); }, p.current === n)); })) : null;
   }
   function add(e) {
     e.preventDefault();

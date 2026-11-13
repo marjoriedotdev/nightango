@@ -11,12 +11,13 @@ function seedState(d, world) {
 /**
  * Announces the toggle of a member mark in the prototype as in live.
  * @param {string} name Target member as they spell their name.
- * @param {string} key Toggled mark (friend, ignored, blocked or unstyled).
+ * @param {string} key Toggled mark (friend, favorite, ignored, blocked or unstyled).
  * @param {boolean} was Mark before the toggle.
  */
 function toggleUserText(name, key, was) {
   return {
     friend: name + ' removed from friends.',
+    favorite: was ? name + ' removed from favorites.' : name + ' added to favorites.',
     ignored: was ? 'You no longer ignore ' + name + '.' : 'Ignoring ' + name + '.',
     blocked: was ? name + ' unblocked.' : name + ' blocked.',
     unstyled: was ? name + "'s style shown again." : name + "'s style hidden."

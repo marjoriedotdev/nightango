@@ -305,6 +305,19 @@ function DraftMark() {
   return h('bdi', { className: 'draft-mark' }, h('span', { className: 'tc-sr' }, ', '), h(T.Icon, { name: 'edit', size: 12 }), 'Draft');
 }
 
+/**
+ * Joins groups of menu entries with a divider between them, without the missing entries or the empty groups.
+ * @param {Array<Array>} groups Entries of each group, null for a missing one.
+ */
+function menuGroups(groups) {
+  var out = [];
+  groups.forEach(function (g) {
+    var items = g.filter(Boolean);
+    if (items.length) out = out.concat(out.length ? [{ divider: true }] : [], items);
+  });
+  return out;
+}
+
 /* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch, presence}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
@@ -581,7 +594,7 @@ function ConnectionIcon() {
  * Shows the short role of a member as a badge next to their name.
  * @param {?string} role Role of the member in the group.
  */
-function roleBadge(role) { return role ? h(T.Badge, { icon: role === 'owner' ? 'crown' : 'shield' }, ROLE_LABEL[role]) : null; }
+function roleBadge(role) { return role ? h(T.Badge, role === 'owner' ? { tone: 'moon', icon: 'crown' } : { tone: 'moon-quiet', icon: 'shield' }, ROLE_LABEL[role]) : null; }
 /**
  * Marks the user's own row in a list.
  * @param {boolean} isMe Row of the signed-in user.
@@ -607,7 +620,7 @@ function premiumBadge(premium, full) { return premium ? traitBadge('gem', 'Premi
  * @param {string} label Trait name.
  * @param {boolean} [full] Shows the text.
  */
-function traitBadge(icon, label, full) { return full ? h(T.Badge, { tone: 'accent', icon: icon }, label) : h(T.Badge, { tone: 'accent', icon: icon, label: label }); }
+function traitBadge(icon, label, full) { return full ? h(T.Badge, { tone: 'moon', icon: icon }, label) : h(T.Badge, { tone: 'moon', icon: icon, label: label }); }
 /**
  * Gives the presence of a list row to screen readers while the avatar dot stays visual only.
  * @param {string} status Member presence.

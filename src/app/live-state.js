@@ -30,7 +30,7 @@ function liveWorld(me) {
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', favoritePeople: 'array', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
 // The read position of the group in view moves with each message: its writes wait and go out together.
 var READ_SAVE_MS = 2000;
 var READ_POSITIONS_MAX = 100;
@@ -59,6 +59,13 @@ function storedNotes(stored) {
   });
   return out;
 }
+/**
+ * Returns the favorite people kept in this browser without the entries that are not an account name.
+ * @param {Array} stored Member names, untrusted.
+ */
+function storedFavoritePeople(stored) {
+  return stored.filter(function (n) { return typeof n === 'string' && ACCOUNT_NAME.test(n); });
+}
 var SPACE_MEMBER = /^(group|dm):[a-z0-9_-]{1,20}$/;
 /**
  * Returns the spaces kept in this browser without the entries of another shape.
@@ -71,7 +78,7 @@ function storedSpaces(stored) {
     return { id: x.id, name: x.name.trim().slice(0, SPACE_NAME_MAX), quiet: x.quiet === true, members: x.members.filter(function (m) { return typeof m === 'string' && SPACE_MEMBER.test(m); }) };
   });
 }
-function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, spaces: [], space: '', readTs: {}, badges: {}, unstyled: [], style: null }; }
+function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, favoritePeople: [], spaces: [], space: '', readTs: {}, badges: {}, unstyled: [], style: null }; }
 /**
  * Returns the most recent read positions of a map of read positions.
  * @param {Object} reads Server time of the newest read message by group.
@@ -83,7 +90,7 @@ function newestReads(reads) {
   return out;
 }
 /**
- * Closed conversations, hidden and sending channels, group colors, private notes, spaces, read positions, roles of group members, members with a hidden style and own style, kept by account in this browser in live.
+ * Closed conversations, hidden and sending channels, group colors, private notes, favorite people, spaces, read positions, roles of group members, members with a hidden style and own style, kept by account in this browser in live.
  * @param {Object} state Application state.
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
@@ -123,6 +130,7 @@ function useLocalStore(state) {
     var prev = localRef.current, o = blankLocal();
     o.style = state.ownStyle;
     o.notes = state.notes;
+    o.favoritePeople = favoritePeople(state);
     o.spaces = state.spaces;
     o.space = state.space || '';
     // Local favorites, mutes and ignored members that BetterChatango has not accepted yet: kept for the next sign-in.
@@ -262,7 +270,7 @@ function referencedUsers(s, shown) {
 }
 /**
  * Drops from the live state, on PRUNE_EVERY, the members nothing refers to any more: former members, authors of trimmed messages, search results.
- * Friends and the members the user ignores, blocks or shows without style stay, since their lists are read from the state.
+ * Friends, favorite people and the members the user ignores, blocks or shows without style stay, since their lists are read from the state.
  * The members a view shows while nothing in the state refers to them stay too: the linked accounts of Who is this, a profile opened from them.
  * @param {{stateRef: Object, update: Function}} store Ref to the application state and its update.
  * @param {boolean} loggedIn Signed in.
@@ -276,7 +284,7 @@ function usePrunedUsers(store, loggedIn) {
     if (!LIVE || !loggedIn) return;
     var timer = setInterval(function () {
       var s = store.stateRef.current, kept = referencedUsers(s, Object.keys(shown.current));
-      var gone = Object.keys(s.users).filter(function (n) { var u = s.users[n]; return !kept[n] && !u.friend && !u.ignored && !u.blocked && !u.unstyled; });
+      var gone = Object.keys(s.users).filter(function (n) { var u = s.users[n]; return !kept[n] && !u.friend && !u.favorite && !u.ignored && !u.blocked && !u.unstyled; });
       if (gone.length) store.update(function (d) { gone.forEach(function (n) { delete d.users[n]; }); });
     }, PRUNE_EVERY);
     return function () { clearInterval(timer); };

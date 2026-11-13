@@ -142,10 +142,24 @@ function listedDms(state) {
     .sort(function (a, b) { return lastTs(state.dms[b]) - lastTs(state.dms[a]); });
 }
 /**
+ * Lists the favorite people by name.
+ * @param {Object} state Application state.
+ */
+function favoritePeople(state) {
+  return Object.keys(state.users).filter(function (n) { return state.users[n].favorite; }).sort();
+}
+/**
  * Counts the unread conversations without closed conversations.
  * @param {Object} state Application state.
  */
 function unreadDmCount(state) { return listedDms(state).filter(function (n) { return state.dms[n].unread; }).length; }
+/**
+ * Counts what waits for the user: the unread conversations and the mentions of every group.
+ * @param {Object} state Application state.
+ */
+function unreadTotal(state) {
+  return Object.keys(state.groups).reduce(function (n, k) { return n + (state.groups[k].mentions || 0); }, unreadDmCount(state));
+}
 /**
  * Tells whether a conversation is shown, in the main pane, side by side or in the floating window.
  * @param {Object} state Application state.

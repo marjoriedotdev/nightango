@@ -244,7 +244,7 @@ function GroupView(p) {
         h(MenuButton, {
           label: 'Group options', items: [
             staff ? { label: 'Group settings', icon: 'sliders', onSelect: function () { app.nav({ view: 'gsettings', id: g.id, page: myRole === 'owner' || rights.manageMods ? 'overview' : 'automod' }); } } : null,
-            { label: g.favorite ? 'Remove from favorites' : 'Add to favorites', icon: 'star', onSelect: function () { app.actions.toggleFavorite(g.id); } },
+            favoriteItem(app, { view: 'group', id: g.id }, g.favorite),
             { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } },
             popOutItem(app, { view: 'group', id: g.id }),
             spacesItem(app, { view: 'group', id: g.id }),

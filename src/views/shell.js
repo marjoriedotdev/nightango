@@ -1,7 +1,7 @@
 /* ---------- Application shell ---------- */
 function MobileNavButton() {
   var app = useApp();
-  return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', onClick: app.ui.openNav });
+  return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', count: unreadTotal(app.state), onClick: app.ui.openNav });
 }
 
 /**
@@ -62,6 +62,19 @@ function splitItem(app, wide, route) {
   return wide && !isPaneOpen(app.state, route.view, route.id) ? { label: 'Open side by side', icon: 'panel', onSelect: function () { app.actions.openSplit(route); } } : null;
 }
 
+/**
+ * Menu entry that adds a group or a person to the favorites, or removes them.
+ * @param {Object} app Application context.
+ * @param {{view: string, id: string}} route Group, or PM with the person.
+ * @param {boolean} on The group or the person is a favorite.
+ */
+function favoriteItem(app, route, on) {
+  return {
+    id: 'favorite', label: on ? 'Remove from favorites' : 'Add to favorites', icon: 'star',
+    onSelect: function () { if (route.view === 'group') app.actions.toggleFavorite(route.id); else app.actions.toggleUser(route.id, 'favorite'); }
+  };
+}
+
 // Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames). The startup screen leaves New Year out.
 function BrandMark(p) {
   var moon = useApp().state.prefs.sky.moon;
@@ -86,8 +99,9 @@ function Sidebar(p) {
   var space = currentSpace(s);
   var joined = Object.keys(s.groups).map(function (k) { return s.groups[k]; }).filter(function (g) { return g.joined && inCurrentSpace(s, 'group', g.id); });
   var favs = joined.filter(function (g) { return g.favorite; }), rest = joined.filter(function (g) { return !g.favorite; });
-  var groupsLoading = LIVE && !s.groupsSeen;
-  var dmNames = listedDms(s).filter(function (n) { return inCurrentSpace(s, 'dm', n); }).slice(0, 4);
+  var groupsLoading = LIVE && !s.groupsSeen, pmsLoading = LIVE && !s.pmLoaded;
+  var favPeople = favoritePeople(s).filter(function (n) { return inCurrentSpace(s, 'dm', n); });
+  var dmNames = listedDms(s).filter(function (n) { return inCurrentSpace(s, 'dm', n) && !userOf(s, n).favorite; }).slice(0, 4);
   var drafted = useDraftMarks(function (m) { return m; });
   function toggle(k) { app.update(function (d) { d.sections[k] = !d.sections[k]; }); }
   function markedLabel(name, key, active) {
@@ -100,6 +114,15 @@ function Sidebar(p) {
       count: g.mentions || 0, mention: !!g.mentions, muted: g.muted && !g.mentions,
       avatar: h(T.Avatar, { name: g.id, square: true, size: 22, color: g.accent || undefined, style: g.accent ? { color: onAccentOf(g.accent) } : undefined }),
       onClick: function () { app.nav({ view: 'group', id: g.id }); }, onContextMenu: contextMenu({ view: 'group', id: g.id })
+    });
+  }
+  function dmItem(n) {
+    var u = userOf(s, n), c = s.dms[n], active = isPaneOpen(s, 'dm', n), unread = c ? c.unread : 0;
+    return h(T.NavItem, {
+      key: 'dm:' + n, label: h(Frag, null, markedLabel(shownName(s, n), dmDraftKey(n), active), presenceSr(u.status)), active: active, unread: unread > 0, count: unread,
+      avatar: h(T.Avatar, { name: n, size: 22, status: u.status, ring: 'var(--sidebar)' }),
+      // A favorite person may have no conversation yet, or a closed one.
+      onClick: function () { app.actions.openDm(n); }, onContextMenu: contextMenu({ view: 'dm', id: n })
     });
   }
   function section(key, label, items) {
@@ -131,17 +154,11 @@ function Sidebar(p) {
       h(T.NavItem, { icon: 'users', label: 'Friends', active: r.view === 'dm' && r.tab === 'friends', trailing: onlineFriends ? h('span', { className: 'tc-msg-time' }, onlineFriends.toLocaleString('en-US') + ' online') : null, onClick: function () { app.nav({ view: 'dm', id: null, tab: 'friends' }); } }),
       h(T.NavItem, { icon: 'search', label: 'Meet people', active: r.view === 'dm' && r.tab === 'meet', onClick: function () { app.nav({ view: 'dm', id: null, tab: 'meet' }); } }),
       h(T.NavItem, { icon: 'at-sign', label: 'Mentions', active: r.view === 'mentions', onClick: function () { app.nav({ view: 'mentions' }); } }),
-      favs.length ? section('favorites', 'Favorites', favs.map(groupItem)) : null,
+      favs.length || favPeople.length ? section('favorites', 'Favorites', favs.map(groupItem).concat(favPeople.map(dmItem))) : null,
       groupsLoading || rest.length || !joined.length ? section('groups', 'Groups', groupsLoading ? h(SkeletonRows, { count: 3, avatar: 22, square: true, label: 'Loading groups' })
         : rest.length ? rest.map(groupItem) : h('p', { className: 'pal-empty' }, space ? 'No group in ' + space.name + '. Add one from its menu, Spaces…' : 'Join a group from Discover.')) : null,
-      section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.length ? dmNames.map(function (n) {
-        var u = userOf(s, n), c = s.dms[n], active = isPaneOpen(s, 'dm', n);
-        return h(T.NavItem, {
-          key: n, label: h(Frag, null, markedLabel(shownName(s, n), dmDraftKey(n), active), presenceSr(u.status)), active: active, unread: c.unread > 0, count: c.unread || 0,
-          avatar: h(T.Avatar, { name: n, size: 22, status: u.status, ring: 'var(--sidebar)' }),
-          onClick: function () { app.nav({ view: 'dm', id: n }); }, onContextMenu: contextMenu({ view: 'dm', id: n })
-        });
-      }) : h('p', { className: 'pal-empty' }, space ? 'No private message in ' + space.name + '.' : 'No conversations yet.'))),
+      pmsLoading || dmNames.length || !favPeople.length ? section('dms', 'Private messages', pmsLoading ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' })
+        : dmNames.length ? dmNames.map(dmItem) : h('p', { className: 'pal-empty' }, space ? 'No private message in ' + space.name + '.' : 'No conversations yet.')) : null),
     h('div', { className: 'me' },
       h(MenuButton, {
         up: true, align: 'left', items: [
@@ -161,6 +178,8 @@ function Sidebar(p) {
     ctx ? h(MenuButton, {
       open: true, at: ctx.at, align: 'left', onOpenChange: function (o) { if (!o) setCtx(null); },
       renderTrigger: function () { return null; },
-      items: [{ label: 'Open', icon: ctx.route.view === 'group' ? 'hash' : 'message', onSelect: function () { app.nav(ctx.route); } }, splitItem(app, p.wide, ctx.route), spacesItem(app, ctx.route)]
+      items: ctx.route.view === 'group'
+        ? [{ label: 'Open', icon: 'hash', onSelect: function () { app.nav(ctx.route); } }, splitItem(app, p.wide, ctx.route), favoriteItem(app, ctx.route, s.groups[ctx.route.id].favorite), spacesItem(app, ctx.route)]
+        : [{ label: 'Open', icon: 'message', onSelect: function () { app.actions.openDm(ctx.route.id); } }, s.dms[ctx.route.id] ? splitItem(app, p.wide, ctx.route) : null, favoriteItem(app, ctx.route, userOf(s, ctx.route.id).favorite), spacesItem(app, ctx.route)]
     }) : null);
 }
