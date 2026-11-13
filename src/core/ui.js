@@ -305,6 +305,19 @@ function DraftMark() {
   return h('bdi', { className: 'draft-mark' }, h('span', { className: 'tc-sr' }, ', '), h(T.Icon, { name: 'edit', size: 12 }), 'Draft');
 }
 
+/**
+ * Joins groups of menu entries with a divider between them, without the missing entries or the empty groups.
+ * @param {Array<Array>} groups Entries of each group, null for a missing one.
+ */
+function menuGroups(groups) {
+  var out = [];
+  groups.forEach(function (g) {
+    var items = g.filter(Boolean);
+    if (items.length) out = out.concat(out.length ? [{ divider: true }] : [], items);
+  });
+  return out;
+}
+
 /* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch, presence}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
 function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];

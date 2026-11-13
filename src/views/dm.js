@@ -221,7 +221,7 @@ function DmThread(p) {
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
       h(MenuButton, {
-        label: 'Conversation options', items: [viewProfileItem(app, id, null), { label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id }), spacesItem(app, { view: 'dm', id: id })].concat(personActions, [{ divider: true }], convActions(app, id, convo))
+        label: 'Conversation options', items: menuGroups([[{ label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id }), spacesItem(app, { view: 'dm', id: id })]].concat(personActionGroups(personActions), [convActions(app, id, convo)]))
       }),
       p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
     h(MessageLog, { log: log, label: 'Messages with ' + shownName(s, id), rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
@@ -500,7 +500,7 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + shown, size: 26, iconSize: 16, items: [viewProfileItem(app, n, null), whoItem(app, n)].concat(p.extra || [], actions), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + shown, size: 26, iconSize: 16, items: menuGroups([[viewProfileItem(app, n, null), whoItem(app, n)].concat(p.extra || []), actions]), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
