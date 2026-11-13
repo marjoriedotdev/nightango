@@ -7,6 +7,16 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 ### Added
 
 - Privacy has a Chatango account section: hide your idle time, allow anonymous messages, email messages you get while offline. The wording is not final.
+- When the connection is lost, the dialog says what Nightango is doing: the seconds left before the next automatic attempt, which attempt it is, then Reconnecting… while it tries. Reconnect now starts an attempt right away.
+- Offline, the dialog shows that Nightango is waiting for your connection.
+
+### Changed
+
+- Notifications show what they are at a glance: a check for something done, an info icon for a notice, an alert icon for a failure.
+- A notification stays longer when its text is long, and at least 8 seconds for a failure. It waits while you point at it, while it holds the focus and while the tab is in the background.
+- A notification fades out and the ones below it move up, instead of jumping. The same notification shown twice no longer stacks.
+- The dialogs for a lost connection, being offline, being signed in somewhere else and an expired session are centered, each with its icon. Notifications dim behind them.
+- Offline, Reload is no longer the highlighted button: reloading without a network loses the page.
 
 ### Fixed
 
