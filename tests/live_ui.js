@@ -1604,6 +1604,16 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.tc-savebar .tc-btn-primary')); await until(() => !!byText('.toast', 'Nothing was saved') || profileUpdates().length > 0);
   fullDown.toast = !!byText('.toast', 'could not be read. Nothing was saved'); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
   step('full profile server error: saving another field sends nothing', fullDown.failed && fullDown.toast && fullDown.sent.length === 0, fullDown);
+  /* Refused or rate-limited read: the same, a 4xx other than 404 is not a missing file */
+  ownMod2Status = 429;
+  const refusedFrom = profileUpdates().length;
+  click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
+  click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc'));
+  type($('#pf-loc'), 'Nantes'); await until(() => !!$('.tc-savebar'));
+  // The toast of the case above is still shown: only a post tells that this save went out.
+  click($('.tc-savebar .tc-btn-primary')); await until(() => profileUpdates().length > refusedFrom, 1500);
+  const fullRefused = { sent: profileUpdates().slice(refusedFrom).map(p => p.f.full_profile) };
+  step('full profile refused (429): saving another field sends nothing', fullRefused.sent.length === 0, fullRefused);
   betterChatangoFull.value = 'FULL PAGE'; ownMod2Status = 200;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
   click(byText('.tc-nav', 'Profile')); await until(() => !!$('#pf-loc') && $('#pf-loc').value === 'Rouen');

@@ -1620,7 +1620,7 @@ var liveBridge = (function () {
   /**
    * Reads the full profile of a member (mod2.xml) as HTML to show only in an isolated frame.
    * @param {string} name Target member.
-   * @returns {Promise<string>} Empty string if the file is missing, rejected on a server error.
+   * @returns {Promise<string>} Empty string if the file is missing, rejected when Chatango refuses or fails the request.
    */
   function fetchFullProfile(name) {
       var n = lower(name);
@@ -1628,8 +1628,8 @@ var liveBridge = (function () {
       var hit = fresh(fullProfileCache, n);
       if (hit) return Promise.resolve(hit.data);
       return fetch(CH.subdomain.mod2(n)).then(function (r) {
-        // Server error rejected: read as an empty profile, it would erase the full profile on the next save.
-        if (r.status >= 500) throw new Error('Chatango returned HTTP ' + r.status + ' for mod2.xml.');
+        // Only a missing file is an empty profile: any other failure read as empty would erase the full profile on the next save.
+        if (!r.ok && r.status !== 404) throw new Error('Chatango returned HTTP ' + r.status + ' for mod2.xml.');
         return r.ok ? r.text() : '';
       }).then(function (xml) {
         var doc = new DOMParser().parseFromString(xml, 'text/xml'), body = doc.querySelector('body');
