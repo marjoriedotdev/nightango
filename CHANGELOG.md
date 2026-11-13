@@ -2,6 +2,14 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.35.0] - 2026-11-13
+
+### Changed
+
+- Avatars and group icons without a picture take eight clearer colors, so two neighbors in a list rarely look alike.
+- The Owner badge and the Nightango developer and Premium badges are lit by the moon, and so is the shield of the Mod and Admin badges. Ember stays for what asks for your attention.
+- The night sky turns indigo at the top, with an afterglow at its foot.
+
 ## [0.34.1] - 2026-11-13
 
 ### Fixed
