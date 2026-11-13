@@ -96,6 +96,10 @@ function useActions(k) {
     resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
+    setPmSetting: function (key, value) {
+      update(function (d) { d.pmSettingSave = { key: key, value: value, failed: false }; });
+      setTimeout(function () { update(function (d) { d.pmSettings[key] = value; d.pmSettingSave = null; }); }, 700);
+    },
     setMessageStyle: function (style) { update(function (d) { d.ownStyle = style; }); },
     /**
      * Keeps a private note on a member, or deletes it when both fields are empty.
@@ -131,13 +135,14 @@ function useActions(k) {
         var cmd = text.slice(1).split(/\s+/)[0].toLowerCase();
         var reply = cmd === 'roll' ? 'Rolled a ' + (1 + Math.floor(Math.random() * (parseInt(text.split(/\s+/)[1], 10) || 20))) + '.' : cmd === 'help' ? 'Commands: !weather, !define, !roll' : cmd === 'weather' ? 'Rennes: 14°C, light rain.' : 'Unknown command. Try !help.';
         setTimeout(function () { receiveGroup(gid, { id: uid(), kind: 'msg', author: 'rook', text: '@' + me + ' ' + reply, ts: Date.now() }); }, 900);
-        return;
+        return true;
       }
       var m = /@([a-z0-9_-]+)/i.exec(text);
       if (m && g && g.members.indexOf(m[1].toLowerCase()) >= 0 && m[1].toLowerCase() !== me && userOf(stateRef.current, m[1].toLowerCase()).status !== 'offline') {
         var who = m[1].toLowerCase();
         setTimeout(function () { receiveGroup(gid, { id: uid(), kind: 'msg', author: who, text: '@' + me + ' ' + pick(['On it.', 'Sure, give me a minute.', 'Thanks, checking now.', 'Good point.']), ts: Date.now() }); }, 3400);
       }
+      return true;
     },
     sendDm: function (name, text, opts) {
       opts = opts || {};
@@ -326,6 +331,7 @@ function useActions(k) {
     },
     editMessage: function (gid, m, text) {
       update(function (d) { var g = d.groups[gid]; g.messages.forEach(function (o) { if (o.id === m.id) applyGroupEdit(o, { id: uid(), text: text, embeds: o.embeds }); }); });
+      return true;
     },
     deleteMessage: function (gid, mid) {
       var me = stateRef.current.me, author = null;
@@ -490,6 +496,7 @@ function useActions(k) {
   if (LIVE) {
     actions.logout = function () { location.reload(); };
     actions.setStatus = function (st2) { if (liveBridge.setStatus(st2)) update(function (d) { d.meStatus = st2; }); };
+    actions.setPmSetting = function (key, value) { if (liveBridge.setPmSetting(key, value)) update(function (d) { d.pmSettingSave = { key: key, value: value, failed: false }; }); };
     actions.sendGroup = function (gid, text, opts) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
@@ -497,7 +504,7 @@ function useActions(k) {
       return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent.');
     };
     // Editing an edit shown on its own targets its original, the only message visible to other members.
-    actions.editMessage = function (gid, m, text) { sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited.'); };
+    actions.editMessage = function (gid, m, text) { return sendStyled(gid, text, { editId: editedId(m), channel: m.channel }, 'Message not edited.'); };
     actions.sendDm = function (name, text, opts) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;

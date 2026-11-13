@@ -26,7 +26,7 @@ function NotificationsPage() {
           h('thead', null, h('tr', null, h('th', { scope: 'col', style: { textAlign: 'left', paddingLeft: 20 } }, 'Event'), cols.map(function (c) { return h('th', { key: c[0], scope: 'col' }, c[1]); }))),
           h('tbody', null, rows.map(function (r) {
             return h('tr', { key: r[0] },
-              h('th', { scope: 'row' }, h('span', { style: { display: 'block', fontWeight: 500, color: 'var(--text)' } }, r[1]), h('span', { style: { display: 'block', fontSize: 12.5, color: 'var(--text-3)' } }, r[2])),
+              h('th', { scope: 'row' }, h('span', { style: { display: 'block', fontWeight: 500, color: 'var(--text)' } }, r[1]), h('span', { style: { display: 'block', fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, r[2])),
               cols.map(function (c) {
                 return h('td', { key: c[0] }, h(T.Checkbox, { label: c[1], ariaLabel: r[1] + ', ' + c[1], checked: !!prefs.notify[r[0]][c[0]], onChange: function (e) { pr.set('notify.' + r[0] + '.' + c[0], e.target.checked); } }));
               }));

@@ -141,7 +141,7 @@ function ProfilePageLive() {
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
         h(ProfilePreviewCard, { name: s.me, meta: meta, about: draft.about, mini: preview }),
-        draft.style && !s.prefs.styles.profileBackgrounds ? h('p', { className: 'muted', style: { margin: 0, fontSize: 12.5 } }, 'Profile backgrounds are off in Appearance, so the preview uses your theme.') : null)),
+        draft.style && !s.prefs.styles.profileBackgrounds ? h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-caption)' } }, 'Profile backgrounds are off in Appearance, so the preview uses your theme.') : null)),
     dirty && base.loaded ? h(T.SaveBar, { onDiscard: function () { setDraft(editable(base)); }, onSave: saving ? function () {} : save, saveLabel: saving ? 'Saving' : 'Save profile' }, 'Unsaved changes to your Chatango profile') : null,
     crop ? h(AvatarCropDialog, { name: s.me, initial: crop.initial, onClose: function () { setCrop(null); }, onSaved: function () { setCrop(null); avatarsChanged(); app.ui.toast('Picture crop saved to Chatango.', { icon: 'check' }); } }) : null);
 }
@@ -199,7 +199,8 @@ function PrivacyPageLive() {
   var checking = !!(pmr && pmr.pmrCheck);
   // Also runs when the setting is turned off: pmrStatus then returns null, which removes the status and the PM banner.
   useEffect(function () { app.actions.checkPmr(); }, [checking]);
-  return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
+  return h(Page, { title: 'Privacy', lede: PRIVACY_LEDE },
+    h(ChatangoPmSection, null),
     h(T.SettingsSection, { title: 'Private messages' },
       pmr ? h(T.SettingRow, {
         title: 'Check my private message status', description: checking ? PMR_STATUS[app.state.pmrStatus] : null,

@@ -16,7 +16,7 @@ function GSAuditLive(p) {
   var rows = list.filter(function (x) { return actor === 'all' || x.actor === actor; });
   return h(Page, {
     title: 'Audit log', lede: 'The latest moderation changes Chatango recorded in #' + g.id + ', newest first.',
-    aside: h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } }, 'Staff member',
+    aside: h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 'var(--font-size-body-sm)', color: 'var(--text-2)' } }, 'Staff member',
       h('select', { className: 'tc-input', style: { width: 'auto' }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, shownName(app.state, n)); })))
   },
     h(T.SettingsSection, null, log == null ? h(SkeletonRows, { count: 5, avatar: 28, label: 'Loading the log from Chatango' }) : rows.length ? rows.map(function (x, i) {

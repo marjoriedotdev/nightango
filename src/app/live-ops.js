@@ -268,7 +268,7 @@ function useLiveOps(k) {
       case 'session': update(function (d) {
         if (!d.session || SESSION_RANK[op.reason] >= SESSION_RANK[d.session.reason]) d.session = { reason: op.reason, attempts: 0 };
       }); break;
-      case 'visible': if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
+      case 'visible': k.inbox.readInView(); if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
       case 'online':
         reconnection.reconnectClosed();
         update(function (d) {
@@ -333,6 +333,19 @@ function useLiveOps(k) {
           if (!op.added) d.friendsLoaded = true;
           op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name, localRef.current); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
         });
+        break;
+      case 'pmSettings':
+        update(function (d) {
+          d.pmSettings = op.values;
+          var save = d.pmSettingSave;
+          if (!save || save.failed) return;
+          // A reply to an earlier request can still show the old value: only the reply to the request of this change refuses it.
+          if (op.values[save.key] === save.value) d.pmSettingSave = null;
+          else if (op.asked) d.pmSettingSave = { key: save.key, value: save.value, failed: true };
+        });
+        break;
+      case 'pmSettingsTimeout':
+        update(function (d) { var save = d.pmSettingSave; if (save && !save.failed) d.pmSettingSave = { key: save.key, value: save.value, failed: true }; });
         break;
       case 'friendTimeout':
         if (!stateRef.current.friendAdds[op.name]) break;

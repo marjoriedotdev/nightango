@@ -43,7 +43,7 @@ function sameConversation(a, b) { return !!a && !!b && a.view === b.view && a.id
  * @param {Function} update State update.
  * @param {Function} toast Shows a notification.
  * @param {function(boolean)} setNavOpen Opens or closes the navigation drawer.
- * @returns {{pmArchive: Object, nav: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification
+ * @returns {{pmArchive: Object, nav: Function, readInView: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification
  *   of an event and of a PM, and reception.
  */
 function useInbox(stateRef, update, toast, setNavOpen) {
@@ -165,10 +165,10 @@ function useInbox(stateRef, update, toast, setNavOpen) {
       g.messages.push(msg);
       trimThread(g);
       logMention(d, gid, msg);
-      if (msg.kind === 'msg' && !focused) { g.unread += 1; if (mention) g.mentions += 1; }
+      if (msg.kind === 'msg' && !focused && msg.author !== me) { g.unread += 1; if (mention) g.mentions += 1; }
       if (focused) g.lastReadTs = readThrough(g);
     });
-    if (mention && !quiet && !isPaneOpen(s0, 'group', gid)) {
+    if (mention && msg.author !== me && !quiet && !isPaneOpen(s0, 'group', gid)) {
       var g0 = s0.groups[gid];
       // A message the log hides keeps its text out of the system alert too.
       var who = shownName(s0, msg.author);
@@ -196,5 +196,21 @@ function useInbox(stateRef, update, toast, setNavOpen) {
     syncPmUnread(pmArchive.current, update, [from]);
     if (!focused && !userOf(s0, from).ignored) notifyPm(from, text);
   }
-  return { pmArchive: pmArchive, nav: nav, openSplit: openSplit, closeSplit: closeSplit, openPip: openPip, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
+  /**
+   * Marks read the conversations in front of the user that gathered unreads while the tab was hidden.
+   */
+  function readInView() {
+    var s0 = stateRef.current, panes = ['route', 'split'];
+    update(function (d) {
+      panes.forEach(function (pane) {
+        var r = d[pane], g = r && r.view === 'group' ? d.groups[r.id] : null;
+        if (g && (g.unread || g.mentions)) d[pane] = opened(d, r);
+      });
+    });
+    panes.forEach(function (pane) {
+      var r = s0[pane];
+      if (r && r.view === 'dm' && r.id && s0.dms[r.id] && s0.dms[r.id].unread) readPm(pmArchive.current, update, r.id);
+    });
+  }
+  return { pmArchive: pmArchive, nav: nav, readInView: readInView, openSplit: openSplit, closeSplit: closeSplit, openPip: openPip, notify: notify, notifyPm: notifyPm, receiveGroup: receiveGroup, receiveDm: receiveDm };
 }

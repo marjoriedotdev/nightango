@@ -136,12 +136,16 @@ function GroupView(p) {
   var closeMode = cm.close;
   function edit(m) { cm.edit(m, m.editCount || 0); }
   function send(text) {
-    if (kind === 'edit') { if (text !== mode.m.text) app.actions.editMessage(g.id, mode.m, text); closeMode(); return; }
+    if (kind === 'edit') {
+      if (text !== mode.m.text && !app.actions.editMessage(g.id, mode.m, text)) { setDraft(text); return; }
+      closeMode();
+      return;
+    }
     if (runCommand(app, text, g.id)) return;
     log.follow();
     var opts = { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel }, sentMode = mode;
     if (attach.file) { attach.send(text, opts, function () { setMode(function (cur) { return cur === sentMode ? null : cur; }); }); return; }
-    app.actions.sendGroup(g.id, text, opts);
+    if (!app.actions.sendGroup(g.id, text, opts)) { setDraft(text); return; }
     setMode(null);
   }
   // As in BetterChatango, a hidden message still counts in unreads and mentions.
@@ -262,7 +266,7 @@ function GroupView(p) {
       search != null ? h('div', { className: 'searchbar' },
         h('label', { htmlFor: 'gsearch-' + g.id, className: 'tc-sr' }, 'Search messages'),
         h('input', { id: 'gsearch-' + g.id, className: 'tc-input', type: 'search', placeholder: 'Search messages in #' + g.id, value: search, autoFocus: true, onChange: function (e) { setSearch(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Escape') setSearch(null); } }),
-        h(T.Button, { variant: 'ghost', size: 'sm', onClick: function () { setSearch(null); } }, 'Close')) : null,
+        h(T.Button, { variant: 'ghost', onClick: function () { setSearch(null); } }, 'Close')) : null,
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       LIVE && g.conn ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
@@ -331,7 +335,8 @@ function useMentionCompletion(g, inputRef, value, setValue) {
   var before = caretAt && caretAt.value === value ? value.slice(0, caretAt.caret) : '';
   var m = MENTION_TOKEN.exec(before), start = m ? before.length - m[1].length - 1 : -1, key = m ? start + ' ' + m[1] : '';
   var list = g && m && start !== closedAt ? mentionCandidates(s, g, m[1]) : [];
-  var open = list.length > 0, index = sel.key === key ? sel.index : 0;
+  // The list changes under the same typed text when a member leaves: the kept position stays inside it.
+  var open = list.length > 0, index = Math.min(sel.key === key ? sel.index : 0, Math.max(list.length - 1, 0));
 
   function readCaret() {
     var el = inputRef.current, text = el.value, caret = el.selectionStart === el.selectionEnd ? el.selectionEnd : -1;

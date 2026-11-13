@@ -108,6 +108,17 @@ function load(records, opts = {}) {
     c.messages.length === 1 && c.messages[0].id === 'live1' && c.messages[0].archiveTs === records[0].ts && c.messages[0].text === 'First, fixed' && c.messages[0].edited && authors.length === 2,
     c.messages);
 
+  /* Merge in pages: an edit read before its original, which an older page brings later, folds into it, and an earlier edit read after it does not win */
+  const foldOrig = t.m.pmRecordEntry(record('gus', received('gus', '1700007000.5', '<n000/><ifold0001/>Draft'), 0));
+  const foldEarly = t.m.pmRecordEntry(record('gus', received('gus', '1700007010.5', '<n000/><iedta0002/><m v="1"><g x12s000="0"><efold0001/>Draft, second</g></m>'), 0));
+  const foldLate = t.m.pmRecordEntry(record('gus', received('gus', '1700007020.5', '<n000/><iedtb0003/><m v="1"><g x12s000="0"><efold0001/>Draft, final</g></m>'), 0));
+  const paged = { messages: [] };
+  t.m.mergePmHistory(paged, [foldLate], () => {});
+  t.m.mergePmHistory(paged, [foldOrig, foldEarly], () => {});
+  step('an edit read before its original folds into it when an older page brings the original, and the newest edit keeps its text',
+    paged.messages.length === 1 && paged.messages[0].text === 'Draft, final' && paged.messages[0].edited && paged.messages[0].archiveTs === 1700007000.5 && paged.messages[0].ts === 1700007000500,
+    paged.messages.map(x => ({ key: x.key, text: x.text, edited: !!x.edited, ts: x.ts, archiveTs: x.archiveTs })));
+
   /* Local storage refusing the migration flag: the migration still runs once per page, a PM received afterwards stays unread */
   const fullRecords = [record('gus', received('gus', '1700006000.5', '<n000/>Before Nightango'), 1)];
   let fullWrites = 0;

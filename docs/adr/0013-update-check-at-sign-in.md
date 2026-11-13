@@ -31,3 +31,5 @@ Guards:
 ## Revision
 
 2026-11-10: the GitHub account was suspended on 2026-11-09. The owner pushes the same code by hand to GitHub and to gitlab.com, GitHub first, GitLab while GitHub is down, and each CI publishes its own releases. The check asks both hosts and announces the newer version, so a release published on one host only is still found. Versions installed before this change ask GitHub only: while it does not answer, their users learn about new versions only once they install one with the two-host check by hand.
+
+2026-11-13: the GitHub account is back. Both hosts keep their pipeline and their releases, and the check keeps asking both.
