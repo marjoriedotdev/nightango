@@ -189,6 +189,11 @@ function load(records, opts = {}) {
       && after.length === max && after[0] === 'una 102' && JSON.stringify(after.slice(-2)) === '["una received","una sent"]' && una.unread === 10,
     { max, sizes, capped: una.historyCapped, scrolled: [scrolled.length, scrolled[0]], after: [after.length, after[0], after.slice(-2)], unread: una.unread });
 
+  /* Spelling of a PM author: the <u…/> tag BetterChatango writes in its PMs counts only when it names the author, with capitals */
+  const spelling = body => t.m.pmRecordEntry(record('zed', received('zed', '1700009000.5', body), 0)).spelling;
+  const spellings = ['<n000/><uZeD/><m v="1"><g x12s000="0">Hi</g></m>', '<n000/><uMarjorie/><m v="1"><g x12s000="0">Hi</g></m>', '<n000/><uzed/>Hi', '<n000/><u>Hi</u>'].map(spelling);
+  step('a PM spells its author through its <u/> tag only when the tag names them', JSON.stringify(spellings) === '["ZeD",null,null,null]', spellings);
+
   console.log(log.join('\n'));
   console.log('ERRORS:', errors.length ? '\n' + errors.join('\n') : 'none');
   process.exit(0);

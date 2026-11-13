@@ -68,10 +68,11 @@ function RichAbout(p) {
 function ProfilePhoto(p) {
   var a = useState(false), hasPhoto = a[0], setHasPhoto = a[1];
   var b = useState(false), open = b[0], setOpen = b[1];
+  var shown = useStatePart(function (s) { return shownName(s, p.name); });
   var avatar = h(T.Avatar, { name: p.name, size: p.size, status: p.status, ring: p.ring, onLoad: function () { setHasPhoto(true); } });
   if (!hasPhoto) return avatar;
   return h(Frag, null,
-    h('button', { type: 'button', className: 'avatar-btn photo-btn', 'aria-label': 'View ' + p.name + "'s profile photo", onClick: function () { setOpen(true); } }, avatar),
+    h('button', { type: 'button', className: 'avatar-btn photo-btn', 'aria-label': 'View ' + shown + "'s profile photo", onClick: function () { setOpen(true); } }, avatar),
     open ? h(PhotoViewer, { name: p.name, onClose: function () { setOpen(false); } }) : null);
 }
 
@@ -82,6 +83,7 @@ function ProfilePhoto(p) {
  */
 function PhotoViewer(p) {
   var ref = useRef(null), layer = useContext(LayerCtx), thumb = avatarSrc(p.name, 96);
+  var shown = useStatePart(function (s) { return shownName(s, p.name); });
   var a = useState(profileImgSrc(p.name, 'full')), src = a[0], setSrc = a[1];
   var b = useState(false), loaded = b[0], setLoaded = b[1];
   useEffect(function () {
@@ -102,9 +104,9 @@ function PhotoViewer(p) {
       if (prev && prev.focus) prev.focus();
     };
   }, []);
-  return h(Portal, null, h('div', { className: 'overlay photo-viewer', role: 'dialog', 'aria-modal': 'true', 'aria-label': p.name + "'s profile photo", ref: ref, onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
+  return h(Portal, null, h('div', { className: 'overlay photo-viewer', role: 'dialog', 'aria-modal': 'true', 'aria-label': shown + "'s profile photo", ref: ref, onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
     loaded ? null : h('span', { className: 'photo-loading' }, h(T.Spinner, { size: 24, label: 'Loading photo' })),
-    h('img', { className: 'photo-full' + (loaded ? '' : ' photo-wait'), src: src, alt: p.name + "'s profile photo", referrerPolicy: 'no-referrer', onLoad: function () { setLoaded(true); }, onError: function () { if (src !== thumb) setSrc(thumb); } }),
+    h('img', { className: 'photo-full' + (loaded ? '' : ' photo-wait'), src: src, alt: shown + "'s profile photo", referrerPolicy: 'no-referrer', onLoad: function () { setLoaded(true); }, onError: function () { if (src !== thumb) setSrc(thumb); } }),
     h(T.Button, { onClick: p.onClose }, 'Close')));
 }
 
@@ -152,7 +154,7 @@ function ProfileSummary(p) {
     h('div', { className: 'profile-card' },
       // Key on the name: the panel keeps its instance from one conversation to the next.
       h(ProfilePhoto, { key: name, name: name, size: p.size, status: name === s.me ? s.meStatus : u.status, ring: p.ring }),
-      h(p.heading, p.focusHeading ? { className: 'profile-name', tabIndex: -1, 'data-autofocus': true } : { className: 'profile-name' }, name),
+      h(p.heading, p.focusHeading ? { className: 'profile-name', tabIndex: -1, 'data-autofocus': true } : { className: 'profile-name' }, shownName(s, name)),
       profileBadges(name, u),
       h('span', { className: 'muted profile-line' }, personStatus(s, name, p.gid)),
       profileMeta(s, name),
@@ -208,7 +210,7 @@ function FullProfileFrame(p) {
   var app = useApp(), mini = miniStyleOf(app.state.prefs, userOf(app.state, p.name), app.theme);
   var page = useMemo(function () { return unlinkFullProfile(p.html); }, [p.html]);
   return h(Frag, null,
-    h('iframe', { title: p.name + "'s full profile", className: 'fullprofile', sandbox: '', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(page.html, p.media, mini) }),
+    h('iframe', { title: shownName(app.state, p.name) + "'s full profile", className: 'fullprofile', sandbox: '', referrerPolicy: 'no-referrer', style: mini ? { background: mini.bg } : null, srcDoc: fullProfileDoc(page.html, p.media, mini) }),
     page.links.length ? h('div', { className: 'profile-links' }, h('h3', null, 'Links in this profile'),
       h('ul', null, page.links.map(function (url) { return h('li', { key: url }, memberLink(app, url, null)); }))) : null);
 }
@@ -228,7 +230,7 @@ function FullProfileDialog(p) {
   var sample = '<h2>' + String(p.name).replace(/[<>&"]/g, '') + '</h2><p>' + String(u.about || 'No full profile yet.').replace(/[<>&"]/g, '') + '</p>';
   var content = LIVE ? html : sample;
   return h(Dialog, {
-    title: p.name + "'s profile", focusTitle: true, wide: true, onClose: p.onClose,
+    title: shownName(s, p.name) + "'s profile", focusTitle: true, wide: true, onClose: p.onClose,
     footer: [
       content ? media.button : null,
       h('a', { key: 'o', className: 'tc-btn', href: 'https://' + p.name + '.chatango.com', target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, 'Open on chatango.com', h(T.Icon, { name: 'external', size: 14 })),
@@ -238,7 +240,7 @@ function FullProfileDialog(p) {
     h('div', { className: 'dialog-body' },
       err ? h('p', { className: 'muted', style: { margin: 0 } }, err)
         : content === null ? h('p', { className: 'muted', style: { margin: 0 } }, 'Loading the profile from Chatango.')
-          : !content ? h('p', { className: 'muted', style: { margin: 0 } }, p.name + " hasn't written a full profile.")
+          : !content ? h('p', { className: 'muted', style: { margin: 0 } }, shownName(s, p.name) + " hasn't written a full profile.")
             : h(FullProfileFrame, { name: p.name, html: content, media: media.on })));
 }
 
@@ -246,7 +248,7 @@ function ProfilePanel(p) {
   var app = useApp(), name = p.name;
   var actions = useProfileActions(name, null);
   var mini = miniStyleOf(app.state.prefs, userOf(app.state, name), app.theme);
-  return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + name },
+  return h('aside', { className: 'col profile', 'aria-label': 'Profile of ' + shownName(app.state, name) },
     columnHeader('Profile'),
     h('div', { className: cx('scroll profile-sheet', mini && 'mini-skin'), style: mini ? miniSkin(mini) : null },
       h(ProfileSummary, { name: name, gid: null, heading: 'h3', size: 72, ring: mini ? 'var(--raised)' : 'var(--panel)', skin: mini, nav: app.nav }),

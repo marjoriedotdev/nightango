@@ -15,8 +15,8 @@ function GSStaff(p) {
   function addMod() {
     var n = add.trim().toLowerCase();
     if (!/^[a-z0-9_-]{1,20}$/.test(n)) { setErr('Enter a Chatango username.'); return; }
-    if (n === owner) { setErr(n + ' owns the group.'); return; }
-    if (draft.modFlags[n] != null) { setErr(n + ' is already on staff.'); return; }
+    if (n === owner) { setErr(shownName(app.state, n) + ' owns the group.'); return; }
+    if (draft.modFlags[n] != null) { setErr(shownName(app.state, n) + ' is already on staff.'); return; }
     p.edit(function (d) { d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); d.staff[n] = 'mod'; });
     setAdd(''); setErr(''); setSel(n);
   }
@@ -30,11 +30,11 @@ function GSStaff(p) {
         h('div', { className: 'roles' },
           owner ? h('div', { className: 'role-btn', style: { cursor: 'default' } },
             h('span', { className: 'role-ico' }, h(T.Icon, { name: 'crown', size: 15 })),
-            h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, owner), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, 'Owner'))) : null,
+            h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, owner)), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, 'Owner'))) : null,
           names.map(function (n) {
             return h('button', { key: n, type: 'button', className: 'role-btn', 'aria-current': String(sel === n), onClick: function () { setSel(n); } },
               h('span', { className: 'role-ico' }, h(T.Icon, { name: 'shield', size: 15 })),
-              h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, n), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, ROLE_LONG[roleOfFlags(draft.modFlags[n])])),
+              h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, n)), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, ROLE_LONG[roleOfFlags(draft.modFlags[n])])),
               h(T.Icon, { name: 'chevron-right', size: 14, style: { color: 'var(--text-3)' } }));
           })),
         canEdit ? h('div', { style: { padding: '12px 14px 14px', borderTop: '1px solid var(--divider)' } },
@@ -72,14 +72,14 @@ function GSMembers(p) {
       var r = p.draft.staff[n], isMe = n === s.me, status = isMe ? s.meStatus : userOf(s, n).status;
       return h('div', { key: n, className: 'lrow', style: i ? null : { borderTop: 0 } },
         h(T.Avatar, { name: n, size: 28, status: status, ring: 'var(--panel)' }),
-        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, n), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(status))),
+        h('span', { className: 'grow' }, h('span', { className: 'lrow-title' }, shownName(s, n)), h('span', { className: 'lrow-sub' }, (r ? ROLE_LONG[r] + ' · ' : '') + statusLabel(status))),
         youBadge(isMe),
         isMe || r === 'owner' ? null : h(MenuButton, {
-          label: 'Actions for ' + n, items: [
+          label: 'Actions for ' + shownName(s, n), items: [
             viewProfileItem(app, n, g.id),
             whoItem(app, n),
-            canMods && !r ? { label: 'Make moderator', icon: 'shield', onSelect: function () { p.edit(function (d) { d.staff[n] = 'mod'; d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); }); app.ui.toast(n + ' will be a moderator once you save.'); } } : null,
-            canMods && (r === 'mod' || r === 'admin') ? { label: 'Remove from staff', icon: 'user-minus', onSelect: function () { p.edit(function (d) { delete d.staff[n]; delete d.modFlags[n]; }); app.ui.toast(n + ' leaves staff once you save.'); } } : null,
+            canMods && !r ? { label: 'Make moderator', icon: 'shield', onSelect: function () { p.edit(function (d) { d.staff[n] = 'mod'; d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); }); app.ui.toast(shownName(s, n) + ' will be a moderator once you save.'); } } : null,
+            canMods && (r === 'mod' || r === 'admin') ? { label: 'Remove from staff', icon: 'user-minus', onSelect: function () { p.edit(function (d) { delete d.staff[n]; delete d.modFlags[n]; }); app.ui.toast(shownName(s, n) + ' leaves staff once you save.'); } } : null,
             { divider: true },
             banItem(app, n, g.id)
           ]

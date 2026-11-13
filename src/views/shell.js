@@ -137,7 +137,7 @@ function Sidebar(p) {
       section('dms', 'Private messages', LIVE && !s.pmLoaded ? h(SkeletonRows, { count: 3, avatar: 22, label: 'Loading private messages' }) : dmNames.length ? dmNames.map(function (n) {
         var u = userOf(s, n), c = s.dms[n], active = isPaneOpen(s, 'dm', n);
         return h(T.NavItem, {
-          key: n, label: h(Frag, null, markedLabel(n, dmDraftKey(n), active), presenceSr(u.status)), active: active, unread: c.unread > 0, count: c.unread || 0,
+          key: n, label: h(Frag, null, markedLabel(shownName(s, n), dmDraftKey(n), active), presenceSr(u.status)), active: active, unread: c.unread > 0, count: c.unread || 0,
           avatar: h(T.Avatar, { name: n, size: 22, status: u.status, ring: 'var(--sidebar)' }),
           onClick: function () { app.nav({ view: 'dm', id: n }); }, onContextMenu: contextMenu({ view: 'dm', id: n })
         });
@@ -154,7 +154,7 @@ function Sidebar(p) {
         renderTrigger: function (tp) {
           return h('button', Object.assign({ type: 'button', className: 'me-btn', 'aria-label': 'Your status: ' + statusLabel(s.meStatus) }, tp),
             h(T.Avatar, { name: s.me, size: 32, status: s.meStatus, ring: 'var(--sidebar)' }),
-            h('span', { className: 'me-text' }, h('span', { style: { fontWeight: 600, fontSize: 13 } }, s.me), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, statusLabel(s.meStatus))));
+            h('span', { className: 'me-text' }, h('span', { style: { fontWeight: 600, fontSize: 13 } }, shownName(s, s.me)), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, statusLabel(s.meStatus))));
         }
       }),
       h(T.IconButton, { icon: 'sliders', label: 'Settings', onClick: function () { app.nav({ view: 'settings', page: 'appearance' }); } })),

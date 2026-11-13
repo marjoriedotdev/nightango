@@ -44,9 +44,9 @@ function canEditGroupMessage(m, me) {
 /**
  * Group message row with its toolbar and its action menu.
  * It reads the state only through its props: a change that leaves them alone, a presence for example, does not render it again.
- * @param {{m: Object, gid: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, ignored: boolean, msgBg: (Object|null|undefined), avatarV: (number|undefined),
+ * @param {{m: Object, shown: string, gid: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, ignored: boolean, msgBg: (Object|null|undefined), avatarV: (number|undefined),
  *   role: ?string, staff: boolean, canBan: boolean, seeIps: boolean, original: ?Object, continued: boolean, highlight: boolean,
- *   onReply: Function, onQuote: Function, onEdit: Function, onMention: Function, onJump: Function}} p Message, group, signed-in user, preferences,
+ *   onReply: Function, onQuote: Function, onEdit: Function, onMention: Function, onJump: Function}} p Message, author's name as they spell it, group, signed-in user, preferences,
  *   resolved theme, author's style, hidden style, ignore and message background (undefined while unread), version of the author's picture, author's role, whether the user is staff,
  *   ban right on the author and IP right, loaded original of a reply, follow-up of the previous message from the same author, highlight, and actions.
  */
@@ -64,22 +64,22 @@ var MessageRow = React.memo(function MessageRow(p) {
   var canDelete = p.staff;
   var canBan = p.canBan && (!LIVE || !!m.unid);
   var canEdit = canEditGroupMessage(m, me);
-  var handle = m.author !== me ? mentionHandle(m.author) : null;
+  var handle = m.author !== me ? mentionHandle(p.shown) : null;
   var showIp = LIVE && m.ip && p.seeIps;
   var canQuote = !!m.text && !!mentionHandle(m.author);
   var deleteMessage = function () { app.actions.deleteMessage(gid, m.id); };
   var menuItems = [
     canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
-    handle ? { label: 'Mention ' + m.author, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
+    handle ? { label: 'Mention ' + p.shown, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
     canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
     copyTextItem(app, m),
     showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed.'); }); } } : null,
     m.author !== me ? viewProfileItem(app, m.author, gid) : null,
     whoItem(app, m.author),
-    m.author !== me ? styleItem(app, m.author, p.unstyled, true) : null,
+    m.author !== me ? styleItem(app, m.author, p.unstyled, p.shown) : null,
     canDelete || m.author !== me || canBan ? { divider: true } : null,
     canDelete ? { label: LIVE ? 'Delete message…' : 'Delete message', icon: 'trash', danger: true, onSelect: function () { if (LIVE) app.ui.confirm({ title: 'Delete this message?', body: 'Chatango removes it from #' + gid + " for everyone. You can't undo this.", confirmLabel: 'Delete', danger: true, onConfirm: deleteMessage }); else deleteMessage(); } } : null,
-    LIVE && canBan ? { label: 'Delete all from ' + m.author + '…', icon: 'message-square-x', danger: true, onSelect: function () { app.ui.confirm({ title: 'Delete every message from ' + m.author + '?', body: 'Chatango removes their recent messages in #' + gid + ' for everyone.', confirmLabel: 'Delete all', danger: true, onConfirm: function () { app.actions.deleteAllFrom(gid, m.author, m); } }); } } : null,
+    LIVE && canBan ? { label: 'Delete all from ' + p.shown + '…', icon: 'message-square-x', danger: true, onSelect: function () { app.ui.confirm({ title: 'Delete every message from ' + p.shown + '?', body: 'Chatango removes their recent messages in #' + gid + ' for everyone.', confirmLabel: 'Delete all', danger: true, onConfirm: function () { app.actions.deleteAllFrom(gid, m.author, m); } }); } } : null,
     m.author !== me ? ignoreItem(app, m.author, p.ignored) : null,
     canBan ? banItem(app, m.author, gid, m) : null
   ];
@@ -95,8 +95,8 @@ var MessageRow = React.memo(function MessageRow(p) {
   var reply = original ? { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
     : m.replyTo ? { text: 'Original message not loaded' } : null;
   var authorBtn = handle
-    ? h('button', { type: 'button', className: 'tc-msg-author namebtn namebtn-mention', title: 'Mention ' + m.author, style: nameStyle, onClick: function () { p.onMention(handle); } }, m.author)
-    : authorName(m.author, nameStyle);
+    ? h('button', { type: 'button', className: 'tc-msg-author namebtn namebtn-mention', title: 'Mention ' + p.shown, style: nameStyle, onClick: function () { p.onMention(handle); } }, p.shown)
+    : authorName(p.shown, nameStyle);
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
     avatar: h(Person, { name: m.author, gid: gid, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(p.role), developerBadge(m.author), chan), reply: reply, actions: actions,
@@ -162,7 +162,7 @@ function editedId(m) { return m.editId || m.id; }
 
 /**
  * Author name of a message, without action.
- * @param {string} name Member name.
+ * @param {string} name Member name as they spell it.
  * @param {?Object} style Name color chosen by the member.
  */
 function authorName(name, style) {

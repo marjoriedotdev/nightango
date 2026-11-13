@@ -615,10 +615,10 @@ function traitBadge(icon, label, full) { return full ? h(T.Badge, { tone: 'accen
 function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + statusLabel(status)); }
 /**
  * Avatar and name of a person in a single button that opens their profile card.
- * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Account name, shown name if it differs, group the card opens from, avatar size, presence and outline of its dot, avatar without the name, plain text for someone without an account.
+ * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Account name, name to show instead of the member's spelling, group the card opens from, avatar size, presence and outline of its dot, avatar without the name, plain text for someone without an account.
  */
 function Person(p) {
-  var app = useAppApi(), label = p.label || p.name;
+  var app = useAppApi(), shown = useStatePart(function (s) { return shownName(s, p.name); }), label = p.label || shown;
   var avatar = h(T.Avatar, { name: p.name, size: p.size, status: p.status, ring: p.ring }), text = p.avatarOnly ? null : h('span', { className: 'namebtn' }, label);
   if (p.inert) return h('span', { className: 'person-tag' }, avatar, text);
   return h('button', { type: 'button', className: p.avatarOnly ? 'avatar-btn' : 'person-tag', 'aria-label': 'View ' + label + "'s profile", onClick: function () { app.ui.openProfile(p.name, p.gid || null); } }, avatar, text);

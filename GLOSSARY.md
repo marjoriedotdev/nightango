@@ -161,6 +161,10 @@ _Avoid_: last seen
 
 ## Profiles
 
+**Spelling**:
+Capitals of a member's name as they typed it at sign-in. Nightango shows it once a message or a session of the member carries it. The lowercase name stays the member's identity.
+_Avoid_: display name, nickname, casing
+
 **Mini profile**:
 Short public card of a member: age, gender, location, bio and Premium end date.
 _Avoid_: card, profile preview

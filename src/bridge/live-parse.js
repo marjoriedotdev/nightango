@@ -2,6 +2,13 @@
 
 function warn(e) { try { console.warn('[torch-skin]', e); } catch (x) { /* console unavailable */ } }
 function lower(v) { return String(v == null ? '' : v).toLowerCase(); }
+/**
+ * Returns the spelling of a member's name when a frame or BetterChatango carries it with capitals.
+ * @param {string} name Member name in lowercase.
+ * @param {?string} written Name as carried.
+ * @returns {?string} Spelling to show, null without capitals or if written names someone else.
+ */
+function spellingOf(name, written) { return written !== name && lower(written) === name ? written : null; }
 // Like urllib.parse.unquote (chatango-lib) and BetterChatango: "+" stays a "+".
 function unquote(v) { try { return decodeURIComponent(String(v || '')); } catch (e) { return String(v || ''); } }
 /** Escapes the typed text since client.sendMessage expects HTML like the BetterChatango input field. */
@@ -96,6 +103,8 @@ function parseContent(raw, keepMedia, premium) {
     else if (f[3] && isNaN(+f[3])) style.font = f[3];
   }
   var r = /<r([^\s<>"\/]+)\/>/.exec(s), e = /<e([^\s<>"\/]+)\/>/.exec(s), k = /<i([a-z0-9]{7,8})\/>/.exec(s);
+  // BetterChatango writes the name as typed at sign-in in its PMs (inject.js:5176), which Chatango delivers under a lowercase name.
+  var w = /<u([a-z0-9]{1,20})\/>/i.exec(s);
   var body = s
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<i\s(?:[^>]*?\s)?s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src) {
@@ -110,7 +119,7 @@ function parseContent(raw, keepMedia, premium) {
     var m = linkEmbedOf(url);
     if (m && !embeds.some(function (x) { return sameEmbed(x, m); })) embeds.push(m);
   });
-  return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null, key: k ? decodeRef(k[1]) : null };
+  return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null, key: k ? decodeRef(k[1]) : null, written: w ? w[1] : null };
 }
 /**
  * Reads the body of a received or archived PM with its Premium flag.
@@ -125,8 +134,8 @@ function parsePm(data) { return parseContent(data.slice(5).join(':'), false, !!(
 function pmRecordEntry(v) {
   var parts = String(v.data || '').split(':').slice(1);
   if (parts.length <= 5) return null;
-  var body = parsePm(parts);
-  return { from: lower(parts[0]), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
+  var body = parsePm(parts), from = lower(parts[0]);
+  return { from: from, spelling: spellingOf(from, body.written), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
 }
 var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
 /**
@@ -180,18 +189,21 @@ function emphasisParts(body) {
 function notNone(v) { return !!v && v !== 'None'; }
 // Guest named in lowercase, like the author of its messages: the card and the ban find them.
 function sessionOf(account, guest) {
-  return notNone(account) ? { account: lower(account) } : notNone(guest) ? { guest: '#' + lower(guest) } : { anon: true };
+  if (notNone(account)) return { account: lower(account), spelling: spellingOf(lower(account), account) };
+  if (notNone(guest)) return { guest: '#' + lower(guest), spelling: spellingOf('#' + lower(guest), '#' + guest) };
+  return { anon: true };
 }
 function parseParticipants(list) {
-  var names = [], sessions = {};
+  var names = [], sessions = {}, spellings = {};
   list.forEach(function (x) {
     var t = x.split(':');
     if (t.length < 4) return;
     var one = sessionOf(t[3], t[4]);
     if (one.account && names.indexOf(one.account) < 0) names.push(one.account);
+    if (one.spelling) spellings[one.account || one.guest] = one.spelling;
     sessions[t[1]] = one;
   });
-  return { names: names, sessions: sessions };
+  return { names: names, sessions: sessions, spellings: spellings };
 }
 function parseMods(entries) {
   var mods = {};

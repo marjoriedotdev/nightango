@@ -14,7 +14,7 @@ function MembersList(p) {
   var before = 0;
   function row(n) {
     var u = userOf(s, n), isMe = n === s.me;
-    return h(MemberRow, { key: n, name: n, gid: g.id, status: isMe ? s.meStatus : u.status, dim: u.status === 'offline' && !isMe, isMe: isMe, role: roleOf(g, n), avatarV: u.avatarV, label: s.notes[n] ? s.notes[n].label : '' });
+    return h(MemberRow, { key: n, name: n, shown: shownName(s, n), gid: g.id, status: isMe ? s.meStatus : u.status, dim: u.status === 'offline' && !isMe, isMe: isMe, role: roleOf(g, n), avatarV: u.avatarV, label: s.notes[n] ? s.notes[n].label : '' });
   }
   // Rows of a section within the rendered batches, null until they reach its first row: a heading never shows without its rows.
   function rows(names) {
@@ -36,14 +36,14 @@ function MembersList(p) {
 
 /**
  * Row of the member list, rendered again only when its props change.
- * @param {{name: string, gid: string, status: string, dim: boolean, isMe: boolean, role: ?string, avatarV: (number|undefined), label: string}} p Member, group, presence, dimmed when offline,
+ * @param {{name: string, shown: string, gid: string, status: string, dim: boolean, isMe: boolean, role: ?string, avatarV: (number|undefined), label: string}} p Member, their name as they spell it, group, presence, dimmed when offline,
  *   signed-in user, role in the group, picture version and private label.
  */
 var MemberRow = React.memo(function MemberRow(p) {
   var app = useAppApi(), n = p.name;
   return h('button', { type: 'button', className: 'mrow', onClick: function () { app.ui.openProfile(n, p.gid); } },
     h(T.Avatar, { name: n, size: 28, status: p.status, ring: 'var(--panel)' }),
-    h('span', { className: 'grow', style: p.dim ? { color: 'var(--text-3)' } : null }, n, p.label ? h('span', { className: 'note-label', title: 'Your private label' }, p.label) : null),
+    h('span', { className: 'grow', style: p.dim ? { color: 'var(--text-3)' } : null }, p.shown, p.label ? h('span', { className: 'note-label', title: 'Your private label' }, p.label) : null),
     presenceSr(p.status), youBadge(p.isMe), developerBadge(n), roleBadge(p.role));
 });
 
@@ -94,7 +94,8 @@ function useFriendRequest() {
  * @param {string} name Friend to remove.
  */
 function confirmRemoveFriend(app, name) {
-  app.ui.confirm({ title: 'Remove ' + name + ' from friends?', body: "You'll stop seeing when " + name + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
+  var who = shownName(app.state, name);
+  app.ui.confirm({ title: 'Remove ' + who + ' from friends?', body: "You'll stop seeing when " + who + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
 }
 
 /**
@@ -141,10 +142,10 @@ function ignoreItem(app, name, ignored) {
  * @param {Object} app Application context.
  * @param {string} name Member name.
  * @param {boolean} unstyled The member's style is hidden.
- * @param {boolean} [named] Label that names the member, for a message menu.
+ * @param {string} [shown] Member's name as they spell it, for a label that names them in a message menu.
  */
-function styleItem(app, name, unstyled, named) {
-  var label = (unstyled ? 'Show ' : 'Hide ') + (named ? name + "'s style" : 'style');
+function styleItem(app, name, unstyled, shown) {
+  var label = (unstyled ? 'Show ' : 'Hide ') + (shown ? shown + "'s style" : 'style');
   return { id: 'style', label: label, icon: 'type', onSelect: function () { app.actions.toggleUser(name, 'unstyled'); } };
 }
 
@@ -183,7 +184,7 @@ function useProfileActions(name, gid) {
     {
       id: 'block', label: u.blocked ? 'Unblock' : 'Block…', icon: 'user-x', danger: !u.blocked, onSelect: function () {
         if (u.blocked) app.actions.toggleUser(name, 'blocked');
-        else app.ui.confirm({ title: 'Block ' + name + '?', body: name + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } });
+        else app.ui.confirm({ title: 'Block ' + shownName(app.state, name) + '?', body: shownName(app.state, name) + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } });
       }
     },
     g && canBanMember(g, s.me, name) ? banItem(app, name, gid) : null
@@ -204,7 +205,7 @@ function ProfileDialog(p) {
   var buttons = actions.filter(function (it) { return it.id === 'message' || it.id === 'friend'; });
   var mini = miniStyleOf(s.prefs, u, app.theme);
   function go(route) { done(); app.nav(route); }
-  return h(Dialog, { label: 'Profile of ' + name, onClose: p.onClose, className: cx('profile-dialog', mini && 'mini-skin'), style: mini ? miniSkin(mini) : null },
+  return h(Dialog, { label: 'Profile of ' + shownName(s, name), onClose: p.onClose, className: cx('profile-dialog', mini && 'mini-skin'), style: mini ? miniSkin(mini) : null },
     // Initial focus on the name: on the first button, placed under the bio, the dialog would open scrolled.
     h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', focusHeading: true, size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
@@ -240,9 +241,9 @@ function WhoDialog(p) {
     return ACCOUNT_NAME.test(n) ? personCard(s, n, app.theme, function () { setOpen(n); }, true) : h('p', { key: name, className: 'about who-text' }, name);
   }
   var lead = !res ? h('p', { className: 'startup' }, h(T.Spinner, null), 'Asking vissle')
-    : h('p', { className: 'about' }, res.error || (total ? total + (total > 1 ? ' linked accounts' : ' linked account') + ' for ' + p.name + '.' : 'vissle has no linked accounts for ' + p.name + '.'));
+    : h('p', { className: 'about' }, res.error || (total ? total + (total > 1 ? ' linked accounts' : ' linked account') + ' for ' + shownName(s, p.name) + '.' : 'vissle has no linked accounts for ' + shownName(s, p.name) + '.'));
   return h(Frag, null,
-    h(Dialog, { title: 'Who is ' + p.name, onClose: p.onClose, footer: h(T.Button, { variant: 'primary', onClick: p.onClose }, 'Close') },
+    h(Dialog, { title: 'Who is ' + shownName(s, p.name), onClose: p.onClose, footer: h(T.Button, { variant: 'primary', onClick: p.onClose }, 'Close') },
       h('div', { className: 'dialog-body' }, lead),
       levels.map(function (x) { return h('div', { key: x.level, className: 'kv who-level' }, h('h3', null, x.level.charAt(0).toUpperCase() + x.level.slice(1) + ' · ' + x.names.length), x.names.map(row)); }),
       total ? h('div', { className: 'dialog-body' }, h('p', { className: 'about muted' }, "This is vissle's estimate. It can be wrong.")) : null),
@@ -254,12 +255,12 @@ function BanDialog(p) {
   var dl = useState(false), wipe = dl[0], setWipe = dl[1];
   if (LIVE) {
     return h(Dialog, {
-      title: 'Ban ' + p.name + ' from #' + p.gid + '?', description: 'Chatango bans the account and the IP of their last message. They cannot rejoin until unbanned.', onClose: p.onClose,
+      title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: 'Chatango bans the account and the IP of their last message. They cannot rejoin until unbanned.', onClose: p.onClose,
       footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { if (app.actions.ban(p.gid, p.name, null, { deleteAll: wipe, msg: p.msg }) !== false) p.onClose(); } }, 'Ban')]
     }, h('div', { className: 'dialog-body' }, h(T.Checkbox, { label: 'Also delete their recent messages', checked: wipe, onChange: function (e) { setWipe(e.target.checked); } })));
   }
   return h(Dialog, {
-    title: 'Ban ' + p.name + ' from #' + p.gid + '?', description: 'They are removed from the group and cannot rejoin from this IP until unbanned.', onClose: p.onClose,
+    title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: 'They are removed from the group and cannot rejoin from this IP until unbanned.', onClose: p.onClose,
     footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { app.actions.ban(p.gid, p.name); p.onClose(); } }, 'Ban')]
   });
 }

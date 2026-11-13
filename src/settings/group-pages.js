@@ -84,7 +84,7 @@ function GSBans(p) {
     if (!n) { setErr('Enter a username.'); return; }
     if (n === app.state.me) { setErr("You can't ban yourself."); return; }
     if (roleOf(g, n) === 'owner') { setErr("The owner can't be banned."); return; }
-    if (g.bans.some(function (x) { return x.name === n; })) { setErr(n + ' is already banned.'); return; }
+    if (g.bans.some(function (x) { return x.name === n; })) { setErr(shownName(app.state, n) + ' is already banned.'); return; }
     setName(''); setErr(''); app.ui.ban(n, g.id);
   }
   return h(Page, {
@@ -99,21 +99,21 @@ function GSBans(p) {
     h(T.SettingsSection, { title: 'Banned · ' + g.bans.length },
       g.bans.length ? g.bans.map(function (x) {
         return h('div', { key: x.name, className: 'lrow' },
-          h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28 }), h('span', { className: 'lrow-sub person-sub' }, 'by ' + x.by + ' · ' + ago(x.at))),
+          h('span', { className: 'grow' }, h(Person, { name: x.name, gid: g.id, size: 28 }), h('span', { className: 'lrow-sub person-sub' }, 'by ' + shownName(app.state, x.by) + ' · ' + ago(x.at))),
           showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
           h(T.Button, { size: 'sm', onClick: function () { app.actions.unban(g.id, x.name); } }, 'Unban'));
       }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
 }
 
 function GSAudit(p) {
-  var g = p.g;
+  var g = p.g, s = useApp().state;
   var a = useState('all'), actor = a[0], setActor = a[1];
   var actors = Object.keys(g.audit.reduce(function (o, x) { o[x.actor] = 1; return o; }, {}));
   var rows = g.audit.slice().reverse().filter(function (x) { return actor === 'all' || x.actor === actor; });
   return h(Page, {
     title: 'Audit log', lede: 'Every moderation and settings change in #' + g.id + ', newest first.',
     aside: h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } }, 'Staff member',
-      h('select', { className: 'tc-input', style: { width: 'auto' }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, n); })))
+      h('select', { className: 'tc-input', style: { width: 'auto' }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, shownName(s, n)); })))
   },
     h(T.SettingsSection, null, rows.length ? rows.map(function (x, i) {
       return h(ActivityRow, { key: x.id, first: !i, at: x.at }, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', x.text.charAt(0).toLowerCase() + x.text.slice(1));

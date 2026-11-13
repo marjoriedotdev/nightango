@@ -21,6 +21,12 @@ function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) &
 // One object for every unknown member: the rows that take its style as a prop keep the same props.
 var UNKNOWN_USER = { status: 'offline', about: '', style: {} };
 function userOf(state, name) { return state.users[name] || UNKNOWN_USER; }
+/**
+ * Returns a member's name as they spell it, in lowercase until a message of theirs carries its capitals.
+ * @param {Object} state Application state.
+ * @param {string} name Member name in lowercase.
+ */
+function shownName(state, name) { return userOf(state, name).spelling || name; }
 var PREMIUM_REMINDER_MS = 3 * 86400000;
 /**
  * Tells whether the account has Premium according to the premium frame: status 200 (bought) or 210 (gifted) like BetterChatango, before its end.

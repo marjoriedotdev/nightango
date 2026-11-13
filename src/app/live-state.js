@@ -312,11 +312,25 @@ function mergeStyle(u, style, ts) {
   u.styleTs = ts;
 }
 /**
- * Keeps the author's style of each merged private history entry.
+ * Keeps the spelling of a member's name carried by their most recent message that has one.
+ * @param {Object} u Member in the state being modified.
+ * @param {?string} spelling Name with its capitals, null for a message that carries none.
+ * @param {number} ts Message timestamp.
+ */
+function mergeSpelling(u, spelling, ts) {
+  // Like the style, the time moves with the spelling only: a message that keeps it leaves the member as they are.
+  if (!spelling || ts <= u.spellingTs || spelling === u.spelling) return;
+  u.spelling = spelling;
+  u.spellingTs = ts;
+}
+/**
+ * Keeps the author's style and spelling of each merged private history entry.
  * @param {Object} d State being modified.
  * @param {Object} local Account data kept in this browser.
  */
-function pmAuthor(d, local) { return function (x) { mergeStyle(ensureLiveUser(d, x.from, local), x.style, x.ts); }; }
+function pmAuthor(d, local) {
+  return function (x) { var u = ensureLiveUser(d, x.from, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
+}
 /**
  * Records the role shown by the badge of a group message, the highest seen during the session.
  * @param {Object} g Group being modified.

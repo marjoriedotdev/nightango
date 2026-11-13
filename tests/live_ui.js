@@ -382,8 +382,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     { storedPrefs, storedAccount });
   step('stored preferences without a version read as the current schema and saved with its version', storedPrefs.version === 1 && storedPrefs.sky.moon === 3, storedPrefs.version);
   step('announcement requested after init', frame('getannouncement').length >= 1);
-  step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('marjorie') && x.textContent.includes('Owner')));
-  step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('bob') && x.textContent.includes('Admin')));
+  step('owner shown in staff', !!$$('.members .mrow').find(x => x.textContent.includes('Marjorie') && x.textContent.includes('Owner')));
+  step('admin derived from flags', !!$$('.members .mrow').find(x => x.textContent.includes('Bob') && x.textContent.includes('Admin')));
 
   /* Guests: named by their name, anons counted, tracked by session timestamp */
   const guestView = () => ({
@@ -398,9 +398,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('participant', 'test', ['0', 'S4', 'U4', 'None', 'Dana', '', '1701']); await wait(80);
   const guests3 = guestView();
   step('named guests listed by name, anonymous guests counted',
-    guests1.label === 'Guests · 2' && JSON.stringify(guests1.rows) === '["#dana"]' && guests1.anon === '1 anonymous'
-      && JSON.stringify(guests2.rows) === '["#carl","#dana"]' && !guests2.anon
-      && JSON.stringify(guests3.rows) === '["#carl"]' && !guests3.anon,
+    guests1.label === 'Guests · 2' && JSON.stringify(guests1.rows) === '["#Dana"]' && guests1.anon === '1 anonymous'
+      && JSON.stringify(guests2.rows) === '["#Carl","#Dana"]' && !guests2.anon
+      && JSON.stringify(guests3.rows) === '["#Carl"]' && !guests3.anon,
     { guests1, guests2, guests3 });
 
   /* Sign-in, sign-out and account switch without leaving the group (participant, action 2), several sessions of one account */
@@ -414,11 +414,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   ]) { g('participant', 'test', data); await wait(80); switches.push(sessionView()); }
   const has = (i, n) => switches[i].members.indexOf(n) >= 0;
   step('account sign in, sign out and switch keep the member list',
-    has(0, 'dan') && !has(0, 'eve') && switches[0].anon === '1 anonymous'
-      && has(1, 'eve') && !switches[1].anon
-      && !has(2, 'eve') && switches[2].anon === '1 anonymous'
-      && has(3, 'finn') && !has(4, 'finn') && has(4, 'gus')
-      && has(5, 'dan') && !has(6, 'dan') && has(6, 'marjorie'),
+    has(0, 'Dan') && !has(0, 'Eve') && switches[0].anon === '1 anonymous'
+      && has(1, 'Eve') && !switches[1].anon
+      && !has(2, 'Eve') && switches[2].anon === '1 anonymous'
+      && has(3, 'Finn') && !has(4, 'Finn') && has(4, 'Gus')
+      && has(5, 'Dan') && !has(6, 'Dan') && has(6, 'Marjorie'),
     switches);
   g('g_participants', 'test', ['S1:1700:U1:Alice:None;S2:1700:U2:Bob:None;S3:1700:U3:None:None']); await wait(80);
 
@@ -428,7 +428,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('b', 'test', ['1700000210.1', 'Bob', '', 'u2', 'UNID2', 'tmp2', '5.6.7.8', '2048', '', '<n000/><f x11000="0"><rAhypheNBunderSC/>Welcome back']);
   g('u', 'test', ['tmp2', 'BOB1=']);
   await until(() => d.body.textContent.includes('Welcome back'));
-  step('reply resolves original', !!$$('.tc-msg-reply').find(x => x.textContent.includes('alice') && x.textContent.includes('Hi all')));
+  step('reply resolves original', !!$$('.tc-msg-reply').find(x => x.textContent.includes('Alice') && x.textContent.includes('Hi all')));
   g('b', 'test', ['1700000220.1', 'Alice', '', 'u1', 'UNID1', 'tmp3', '1.2.3.4', '0', '', '<n000/><f x11000="0"><eAhypheNBunderSC/>Hi everyone']);
   await until(() => d.body.textContent.includes('Hi everyone'));
   step('edit replaces original text', d.body.textContent.includes('Hi everyone') && !d.body.textContent.includes('Hi all') && d.body.textContent.includes('(edited)'));
@@ -469,7 +469,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(menuItem('Quote message')); await wait(30);
   type($('.tc-composer textarea'), 'yes'); key($('.tc-composer textarea'), 'Enter'); await wait(30);
   const quote = frame('bm:').pop() || '';
-  step('quote frame puts the BetterChatango quote before the text', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">@alice: `Hi everyone` yes$/.test(quote), quote);
+  step('quote frame puts the BetterChatango quote before the text', /^bm:[a-z0-9]+:0:<n000\/><f x11000="0">@Alice: `Hi everyone` yes$/.test(quote), quote);
 
   /* Moderation from a message */
   click(aliceMsg.querySelector('button[aria-label="More actions"]')); await wait(30);
@@ -486,8 +486,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.dialog-foot button', 'Ban')); await wait(30);
   step('ban frame', frame('block:').pop() === 'block:UNID1:1.2.3.4:alice', frame('block:'));
   step('delete-all frame with ban', frame('delallmsg:').pop() === 'delallmsg:UNID1:1.2.3.4:alice', frame('delallmsg:'));
-  g('blocked', 'test', ['UNID1', '1.2.3.4', 'alice', 'marjorie']); await until(() => d.body.textContent.includes('alice was banned'));
-  step('ban event shown', d.body.textContent.includes('alice was banned'));
+  g('blocked', 'test', ['UNID1', '1.2.3.4', 'alice', 'marjorie']); await until(() => d.body.textContent.includes('Alice was banned'));
+  step('ban event shown', d.body.textContent.includes('Alice was banned'));
   g('delete', 'test', ['BOB1=']); await until(() => d.body.textContent.includes('Message deleted by staff'));
   step('server delete marks message', d.body.textContent.includes('Message deleted by staff'));
 
@@ -559,18 +559,18 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     !guestOffers && accountOffers && whoAsked().length === 1 && firstCall.url === 'https://vissle.me/api/v1/who/alice' && (!firstCall.credentials || firstCall.credentials === 'omit'),
     { guestOffers, accountOffers, calls: whoAsked() });
   step('who is this shows the five levels as text and keeps nothing',
-    pendingWho.title === 'Who is alice' && pendingWho.spinner && !!whoShown && JSON.stringify(whoShown.levels) === '["Definite · 2","Strong · 1","Weak · 1"]'
-      && whoShown.text.includes('4 linked accounts for alice.') && JSON.stringify(whoShown.cards) === '["alice2","zoe","dave"]'
+    pendingWho.title === 'Who is Alice' && pendingWho.spinner && !!whoShown && JSON.stringify(whoShown.levels) === '["Definite · 2","Strong · 1","Weak · 1"]'
+      && whoShown.text.includes('4 linked accounts for Alice.') && JSON.stringify(whoShown.cards) === '["alice2","zoe","dave"]'
       && JSON.stringify(whoShown.texts) === '["<img src=\\"x\\" onerror=\\"alert(5)\\">"]' && !whoShown.injected
       && !/42|evil|object|carl|zed/.test(whoShown.text) && /vissle's estimate/.test(whoShown.text)
       && !whoDialog() && !/alice2|dave/.test(stored),
     { pendingWho, whoShown, open: !!whoDialog() });
   step("who is this shows each account's mini profile and opens its profile over the list",
-    !!whoShown && whoShown.zoe === ZOE_ASL && onTop[onTop.length - 1] === 'Profile of zoe' && backToList[backToList.length - 1] === 'Who is alice' && whoAsked().length === 1,
+    !!whoShown && whoShown.zoe === ZOE_ASL && onTop[onTop.length - 1] === 'Profile of zoe' && backToList[backToList.length - 1] === 'Who is Alice' && whoAsked().length === 1,
     { zoe: whoShown && whoShown.zoe, onTop, backToList, calls: whoAsked().length });
   const whoReplies = [await whoAnswer(JSON.stringify({ target: 'alice', definite: [], weak: [7] })), await whoAnswer('{"definite":["x"]}'), await whoAnswer('<html>'), await whoAnswer(null)];
   step('who is this says when vissle has nothing, an unreadable answer or no answer',
-    /vissle has no linked accounts for alice\./.test(whoReplies[0]) && /vissle sent an answer Nightango can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])
+    /vissle has no linked accounts for Alice\./.test(whoReplies[0]) && /vissle sent an answer Nightango can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])
       && /vissle could not be reached\. Try again later\./.test(whoReplies[3]) && whoAsked().length === 5,
     { whoReplies, calls: whoAsked().length });
 
@@ -745,8 +745,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const next = { top: $('.log').scrollTop, button: !!$('.jump') };
   if ($('.jump')) { click($('.jump')); await wait(30); }
   step('older history keeps a scrolled-up reader in place without New messages, the next message shows it',
-    olderPage.top === -2000 && !olderPage.button && olderPage.last === 'alice was banned'
-      && oldestPage.top === -2000 && !oldestPage.button && oldestPage.last === 'alice was banned'
+    olderPage.top === -2000 && !olderPage.button && olderPage.last === 'Alice was banned'
+      && oldestPage.top === -2000 && !oldestPage.button && oldestPage.last === 'Alice was banned'
       && next.top === -2000 && next.button && $('.log').scrollTop === 0 && !$('.jump'),
     { olderPage, oldestPage, next, after: $('.log').scrollTop });
   g('nomore', 'test', []); await until(() => d.body.textContent.includes('beginning of the history'));
@@ -793,11 +793,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('getannc', 'test', ['3', 'test', '5', '1800', '<nF00/><f x12F00="1"><b><i>Be kind</i></b>']); await wait(80);
 
   click(byText('.tc-nav', 'Staff and roles')); await wait(50);
-  step('staff list from mods frame', !!byText('.role-btn', 'alice') && !!byText('.role-btn', 'bob'));
-  click(byText('.role-btn', 'alice')); await wait(30);
+  step('staff list from mods frame', !!byText('.role-btn', 'Alice') && !!byText('.role-btn', 'Bob'));
+  click(byText('.role-btn', 'Alice')); await wait(30);
   click(row('See IP addresses')); await wait(20);
   type($('#add-mod'), 'Carol'); click(byText('button', 'Add')); await wait(30);
-  click(byText('.role-btn', 'bob')); await wait(30);
+  click(byText('.role-btn', 'Bob')); await wait(30);
   click(byText('.btnrow button', 'Remove')); await wait(30);
   click($('.tc-savebar .tc-btn-primary')); await wait(30);
   step('permission change frame keeps other bits', frame('addmod:alice:').pop() === 'addmod:alice:' + (MOD & ~16384), frame('addmod:'));
@@ -826,8 +826,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   g('blocklist', 'test', ['UNID1:1.2.3.4:alice:1700000300:marjorie;UNID9:9.9.9.9::1700000000:bob']);
   await until(() => banTitle() === 'Banned · 2');
   step('unrequested ban list replaces the loaded pages', banTitle() === 'Banned · 2' && !byText('.lrow', 'user0'), banTitle());
-  step('ban list shown', !!byText('.lrow', 'alice') && !!byText('.lrow', '!anon'));
-  click(byText('.lrow', 'alice').querySelector('.tc-btn')); await wait(20);
+  step('ban list shown', !!byText('.lrow', 'Alice') && !!byText('.lrow', '!anon'));
+  click(byText('.lrow', 'Alice').querySelector('.tc-btn')); await wait(20);
   step('unban frame', frame('removeblock:').pop() === 'removeblock:UNID1:1.2.3.4');
   /* Ban search like BetterChatango: searchban, then bansearchresult (date in Pacific time, with its colons) or badbansearchstring */
   type($('#ban-search'), ' spamking '); key($('#ban-search'), 'Enter'); await wait(30);
@@ -851,7 +851,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => ($('#ban-search-hint') || {}).textContent === "That's not a valid username.");
   banSearch.error = ($('#ban-search-hint') || {}).textContent || null;
   step('ban search frame, result, unban and refusals',
-    banSearch.frame === 'searchban:spamking' && /spamking/.test(banSearch.found) && /by marjorie/.test(banSearch.found) && /Includes alt1, alt2\./.test(banSearch.found) && !banSearch.list
+    banSearch.frame === 'searchban:spamking' && /spamking/.test(banSearch.found) && /by Marjorie/.test(banSearch.found) && /Includes alt1, alt2\./.test(banSearch.found) && !banSearch.list
       && banSearch.unban === 'removeblock:UNID7:1.2.3.4' && banSearch.none && banSearch.cleared && banSearch.error === "That's not a valid username.",
     banSearch);
   /* Unbans: Unbanned tab loaded in pages like BetterChatango, kept up to date by unblocked (author in the second-to-last field) */
@@ -867,14 +867,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   unbanTab.rows = $$('.spage .lrow').map(x => x.textContent);
   unbanTab.buttons = $$('.spage .lrow .tc-btn').length;
   click(byText('.spage .tc-seg button', 'Banned')); await wait(30);
-  unbanTab.aliceBanned = !!byText('.spage .lrow', 'alice');
+  unbanTab.aliceBanned = !!byText('.spage .lrow', 'Alice');
   step('unbanned tab loads from BetterChatango and follows unblocked',
-    unbanTab.frame === 'blocklist:unblock:0:next:50:anons:1' && /by marjorie/.test(unbanTab.carl) && unbanTab.rows.length === 2 && /alice/.test(unbanTab.rows[0]) && /by marjorie/.test(unbanTab.rows[0])
+    unbanTab.frame === 'blocklist:unblock:0:next:50:anons:1' && /by Marjorie/.test(unbanTab.carl) && unbanTab.rows.length === 2 && /Alice/.test(unbanTab.rows[0]) && /by Marjorie/.test(unbanTab.rows[0])
       && /carl/.test(unbanTab.rows[1]) && unbanTab.buttons === 0 && !unbanTab.aliceBanned,
     unbanTab);
 
   click(byText('.tc-nav', 'Audit log')); await wait(50);
-  step('audit entries', !!byText('.lrow', 'made bob a moderator') && !!byText('.lrow', 'changed banned words'));
+  step('audit entries', !!byText('.lrow', 'made Bob a moderator') && !!byText('.lrow', 'changed banned words'));
   // Chadango GetModActions: the offset of the prev direction is the id of the oldest loaded action minus 1.
   const auditTail = () => $$('.spage .lrow').slice(-1)[0].textContent;
   const loadOlder = () => byText('.spage .tc-btn', 'Load older');
@@ -1247,11 +1247,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   const convPrev = n => { const c = $$('.conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === n); return c ? c.querySelector('.conv-prev').textContent : null; };
-  pm('msg', ['gus', 'marjorie', 'unknown', '1700000400.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="https://x.test/a.png"/></g></m>']); await until(() => convPrev('gus') !== null);
-  const prevImage = convPrev('gus');
-  pm('msg', ['gus', 'marjorie', 'unknown', '1700000401.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="img://cam:abc123"/></g></m>']); await until(() => convPrev('gus') !== prevImage);
-  const prevPhoto = convPrev('gus');
-  click(byText('.conv', 'gus')); await wait(50);
+  pm('msg', ['gus', 'marjorie', 'unknown', '1700000400.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="https://x.test/a.png"/></g></m>']); await until(() => convPrev('Gus') !== null);
+  const prevImage = convPrev('Gus');
+  pm('msg', ['gus', 'marjorie', 'unknown', '1700000401.5', '0', '<n000/><m v="1"><g x12s000="0"><i s="img://cam:abc123"/></g></m>']); await until(() => convPrev('Gus') !== prevImage);
+  const prevPhoto = convPrev('Gus');
+  click(byText('.conv', 'Gus')); await wait(50);
   const imgsBefore = $$('.thread .embeds img').length;
   $$('.thread .embeds button').filter(x => x.textContent.includes('Show image')).forEach(click); await wait(30);
   const imgs = $$('.thread .embeds img').map(x => [x.getAttribute('src'), x.getAttribute('referrerpolicy')]);
@@ -1358,7 +1358,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const asked = !!$('.dialog') && !calls.some(c => c[0] === 'clearHistory' && c[1] === 'hank');
   if (asked) { click(byText('.dialog-foot button', 'Delete')); await wait(50); }
   const hankDeleted = calls.some(c => c[0] === 'clearHistory' && c[1] === 'hank') && !listed('hank');
-  const gusRow = convRow('gus');
+  const gusRow = convRow('Gus');
   const pointer = (type, x) => {
     const e = new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: 100 });
     Object.defineProperties(e, { pointerId: { value: 1 }, pointerType: { value: 'touch' } });
@@ -1367,7 +1367,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pointer('pointerdown', 250); pointer('pointermove', 240); pointer('pointermove', 120); pointer('pointerup', 120);
   click(gusRow.querySelector('.conv')); await wait(30);
   const swipeButtons = [...gusRow.querySelectorAll('button')].filter(b => !b.closest('.conv')).map(b => b.textContent);
-  const gusOpened = !!$('.thread .topbar h2 .namebtn') && $('.thread .topbar h2 .namebtn').textContent === 'gus';
+  const gusOpened = !!$('.thread .topbar h2 .namebtn') && $('.thread .topbar h2 .namebtn').textContent === 'Gus';
   step('chat row actions', hasRowItems(ctxItems) && hasRowItems(moreItems) && asked && hankDeleted && swipeButtons.includes('Close') && swipeButtons.includes('Delete') && !gusOpened, { ctxItems, moreItems, asked, hankDeleted, swipeButtons, gusOpened });
 
   /* Friends and Meet people */
@@ -1395,7 +1395,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   w.setTimeout = (fn, ms, ...args) => setTimeout0.call(w, fn, ms >= 20 ? ms - 20 : ms, ...args);
   pm('wladd', ['ivy', 'on', '5']); pm('wladd', ['jade', 'on', '1']); pm('wladd', ['kim', 'on', '2.99']); pm('idleupdate', ['zoe', '0']); await until(() => !!convRow('kim'));
   const presenceRow = n => { const r = $$('.convs .conv').find(x => x.querySelector('.conv-name').textContent === n); return r ? [(r.querySelector('.tc-presence') || {}).className || '', (r.querySelector('.conv-time') || {}).textContent || ''] : []; };
-  const before3 = { ivy: presenceRow('ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
+  const before3 = { ivy: presenceRow('Ivy'), jade: presenceRow('jade'), kim: presenceRow('kim'), zoe: presenceRow('zoe') };
   await until(() => /tc-presence-idle/.test(presenceRow('kim')[0]));
   w.setTimeout = setTimeout0;
   const after3 = presenceRow('kim');
@@ -1932,12 +1932,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const gusUnreadRecords = () => pmRecords.filter(r => r.target === 'gus' && r.unread).length;
   const unreadOf = n => { const r = convRow(n), b = r && r.querySelector('.tc-count'); return r ? (b ? +b.textContent : 0) : null; };
   // One migration write without a stored flag: a single one for the whole page, despite Nightango writes to the same storage.
-  const kept = gusUnreadRecords(), resumed = unreadOf('gus'), migrations = calls.filter(c => c[0] === 'written' && !c[1]).length;
+  const kept = gusUnreadRecords(), resumed = unreadOf('Gus'), migrations = calls.filter(c => c[0] === 'written' && !c[1]).length;
   pm('OK', []); await wait(150);
-  const again = unreadOf('gus');
+  const again = unreadOf('Gus');
   step('unread migration not redone once flagged', kept === 3 && migrations === 1, { kept, migrations });
   step('history unread resumed once, not doubled by a second OK', resumed === 3 && again === 3, { resumed, again });
-  click(byText('.conv', 'gus')); await until(() => $$('.thread .tc-msg-text').some(x => x.textContent === 'ok') && !gusUnreadRecords());
+  click(byText('.conv', 'Gus')); await until(() => $$('.thread .tc-msg-text').some(x => x.textContent === 'ok') && !gusUnreadRecords());
   step('opening a conversation marks its history read', gusUnreadRecords() === 0, pmRecords.filter(r => r.target === 'gus'));
   const oks = $$('.thread .tc-msg-text').filter(x => x.textContent === 'ok').length;
   step('offline messages archived', !!pmConnect && pmConnect[2] === true && archived.length === 1 && archived[0][1] === true && oks === 2, { pmConnect, archived, oks });
@@ -2008,13 +2008,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'badges'));
   g('b', 'badges', ['1700040003.1', 'Lee', '', 'u10', 'UNID10', 'tmp600', '8.8.8.8', '64', '', '<n000/><f x11000="0">Hello']);
   const roleRow = n => ($$('.members .mrow').find(x => x.textContent.includes(n)) || {}).textContent || '';
-  await until(() => roleRow('lee').includes('Mod'));
-  const fromBadges = { kim: roleRow('kim'), lee: roleRow('lee'), dana: roleRow('dana'), ola: roleRow('ola') };
+  await until(() => roleRow('Lee').includes('Mod'));
+  const fromBadges = { kim: roleRow('Kim'), lee: roleRow('Lee'), dana: roleRow('Dana'), ola: roleRow('Ola') };
   const storedRoles = () => (JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').badges || {}).badges;
   const rolesKept = storedRoles();
   g('mods', 'badges', ['lee,' + MOD]);
-  await until(() => !roleRow('kim').includes('Admin'));
-  const fromList = { kim: roleRow('kim'), lee: roleRow('lee'), ola: roleRow('ola') };
+  await until(() => !roleRow('Kim').includes('Admin'));
+  const fromList = { kim: roleRow('Kim'), lee: roleRow('Lee'), ola: roleRow('Ola') };
   step("roles come from message badges without a moderator list, the highest one stays, and Chatango's list replaces them",
     fromBadges.kim.includes('Admin') && fromBadges.lee.includes('Mod') && fromBadges.dana.includes('Owner') && !/Admin|Mod/.test(fromList.kim) && fromList.lee.includes('Mod'),
     { fromBadges, fromList });

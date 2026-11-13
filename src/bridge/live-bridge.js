@@ -57,7 +57,7 @@ var liveBridge = (function () {
     var premium = !!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner);
     var parsed = parseContent(data.slice(9).join(':'), false, premium);
     return {
-      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: name, text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
+      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: name, spelling: spellingOf(name, data[1] || '#' + data[2]), text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
       style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags),
       badge: badgeRoleOf(flags), bg: !!(flags & MSG_FLAG.BG_ON) && premium
     };
@@ -106,6 +106,7 @@ var liveBridge = (function () {
     sessions[room] = p.sessions;
     emit({ op: 'members', gid: room, names: p.names });
     emitGuests(room);
+    emit({ op: 'spellings', names: p.spellings });
   }
   function holders(t, name) { return Object.keys(t).filter(function (k) { return t[k].account === name; }).length; }
   function participant(room, data) {
@@ -121,6 +122,7 @@ var liveBridge = (function () {
     if (before.account && before.account !== after.account && !holders(t, before.account)) emit({ op: 'member', gid: room, action: 0, name: before.account });
     if (after.account && after.account !== before.account && holders(t, after.account) === 1) emit({ op: 'member', gid: room, action: 1, name: after.account });
     emitGuests(room);
+    if (after.spelling) { var spelled = {}; spelled[after.account || after.guest] = after.spelling; emit({ op: 'spellings', names: spelled }); }
   }
   function tapGroup(name, room, data) {
     if (room === ENV) return;
@@ -212,7 +214,7 @@ var liveBridge = (function () {
     switch (name) {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
-        emit({ op: 'pm', from: lower(data[0]), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, replyId: p2.replyId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
+        emit({ op: 'pm', from: lower(data[0]), spelling: spellingOf(lower(data[0]), p2.written), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, replyId: p2.replyId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
         // BetterChatango plays the sound itself for the PM of client.private.focus, reset to false on each private connection: the bridge plays it for the others, like BetterChatango, except for edits and ignored members.
         var from = lower(data[0]);
         if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
@@ -871,7 +873,7 @@ var liveBridge = (function () {
       // With connect_start, BetterChatango clicks its PM tab 6 s later, and its PM screen moves client.private.focus: disabled the same way.
       var pmTab = document.querySelector('[data-sidebar="private"]');
       if (pmTab) pmTab.click = function () {};
-      emit({ op: 'login', me: me });
+      emit({ op: 'login', me: me, spelling: spellingOf(me, C.user.full) });
       // Groups already connected before us: their inited and participants frames have gone by.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
       if (typeof window.__TORCH_SHOW__ === 'function') window.__TORCH_SHOW__();
