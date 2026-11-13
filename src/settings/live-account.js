@@ -141,7 +141,7 @@ function ProfilePageLive() {
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
         h(ProfilePreviewCard, { name: s.me, meta: meta, about: draft.about, mini: preview }),
-        draft.style && !s.prefs.styles.profileBackgrounds ? h('p', { className: 'muted', style: { margin: 0, fontSize: 12.5 } }, 'Profile backgrounds are off in Appearance, so the preview uses your theme.') : null)),
+        draft.style && !s.prefs.styles.profileBackgrounds ? h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-caption)' } }, 'Profile backgrounds are off in Appearance, so the preview uses your theme.') : null)),
     dirty && base.loaded ? h(T.SaveBar, { onDiscard: function () { setDraft(editable(base)); }, onSave: saving ? function () {} : save, saveLabel: saving ? 'Saving' : 'Save profile' }, 'Unsaved changes to your Chatango profile') : null,
     crop ? h(AvatarCropDialog, { name: s.me, initial: crop.initial, onClose: function () { setCrop(null); }, onSaved: function () { setCrop(null); avatarsChanged(); app.ui.toast('Picture crop saved to Chatango.', { icon: 'check' }); } }) : null);
 }

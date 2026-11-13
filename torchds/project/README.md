@@ -40,6 +40,8 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Instrument Serif comes in one weight. Never bold it: a name in a header stays at 400.
 - Numbers that stack or update in place (times, counters, sliders) use tabular figures, so their digits line up.
 - Default text is `body` (14/20). Author names and unread rows use `body-strong`. Descriptions use `caption`.
+- A control takes its text size from its height: `control` (13.5px) at `size-control-md`, `caption` at `size-control-sm`, `body` at `size-control-lg`. A button and the field next to it share one size.
+- In CSS a font size is the variable of its style, `--font-size-<style>` (`--font-size-body`, `--font-size-control`), never a pixel value.
 - Page titles use `display-lg`, profile names and empty state titles `display-md`, conversation header names `display-sm`. Section titles stay `title-sm`, dialog titles `title-md`.
 - Timestamps are `meta-sm` in `text-3`: `12:42`, never "12:42 PM" unless the reader turns off 24-hour time.
 
@@ -82,4 +84,4 @@ Chatango lets members choose name colors, fonts, text colors and message backgro
 
 ## Logo
 
-The mark is tonight's moon: a 30px `Moon` with its phase name as accessible label, in its moonlight colors whatever the accent. The word Nightango follows in `font-display` at 28px. The mark changes with the moon; do not freeze it into a fixed full moon.
+The mark is tonight's moon: a 30px `Moon` with its phase name as accessible label, in its moonlight colors whatever the accent. The word Nightango follows in `font-display` at `wordmark` (28px). The mark changes with the moon; do not freeze it into a fixed full moon.

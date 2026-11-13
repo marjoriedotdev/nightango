@@ -144,6 +144,7 @@ function themeRules(tokens, root, auto, light, dark) {
   const statics = [];
   for (const family of ['spacing', 'radius', 'size', 'motion']) for (const t of tokens[family].tokens) statics.push(`--${t.name}: ${t.value};`);
   for (const [key, stack] of Object.entries(tokens.type.families)) statics.push(`--font-${key}: ${stack};`);
+  for (const group of tokens.type.groups) for (const style of group.styles) statics.push(`--font-size-${style.name}: ${style.fontSize};`);
   return `${root} { color-scheme: dark; ${ACCENT_DEFAULTS} ${statics.join(' ')} ${themeBlock(tokens, 'dark')} }\n` +
     `@media (prefers-color-scheme: light) { ${auto} { color-scheme: light; ${themeBlock(tokens, 'light')} } }\n` +
     `${light} { color-scheme: light; ${themeBlock(tokens, 'light')} }\n` +

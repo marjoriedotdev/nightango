@@ -151,7 +151,7 @@ function useVoiceRecorder(key, onFiles) {
 function attachMenu(attach, voice) {
   if (!canRecordVoice()) return null;
   return h(MenuButton, {
-    icon: 'plus', label: 'Add to your message', size: 30, iconSize: 16, up: true, align: 'left',
+    icon: 'plus', label: 'Add to your message', up: true, align: 'left',
     items: [
       { label: 'Attach a file', icon: 'paperclip', disabled: !attach.onAttach, onSelect: function () { attach.onAttach(); } },
       { label: 'Record a voice message', icon: 'mic', disabled: !attach.onFiles || voice.busy, onSelect: voice.start }
