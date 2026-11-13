@@ -2,6 +2,20 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.35.0] - 2026-11-13
+
+### Added
+
+- Favorite people: Add to favorites, on a profile, a Chats or Friends row, the conversation options or a right click in the sidebar. They show in Favorites with their presence and unread count, and come first in Chats. The list stays in this browser.
+- On a phone, the button that opens the navigation shows how many conversations and mentions are waiting.
+
+### Changed
+
+- The conversation options and the profile menus come in groups. View profile leaves the conversation options: the profile button sits right next to them.
+- Avatars and group icons without a picture take eight clearer colors, so two neighbors in a list rarely look alike.
+- The Owner badge and the Nightango developer and Premium badges are lit by the moon, and so is the shield of the Mod and Admin badges. Ember stays for what asks for your attention.
+- The night sky turns indigo at the top, with an afterglow at its foot.
+
 ## [0.34.1] - 2026-11-13
 
 ### Fixed
