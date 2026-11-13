@@ -55,8 +55,9 @@ const COMPONENTS = [
     `Provide \`icon\` and \`label\`. The label becomes \`aria-label\` and the tooltip. Default size 32 in headers, 28 in message toolbars, 26 for dismiss buttons, 44 on touch screens.
 
 - Pass \`pressed\` for toggles (members panel, profile panel) so the state is announced and shown with \`selected\`.
+- Pass \`count\` on a button that leads to what waits for the user, such as the mobile navigation button: the number shows on its corner, 99+ past 99, and joins the accessible name as "5 unread".
 - Color is \`text-2\` at rest and \`text\` on hover.`,
-    `  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14 }));`],
+    `  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'menu', label: 'Open navigation', count: 5 }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14 }));`],
   ['TextField', 'Forms', 310,
     'A labelled text input or textarea with an optional hint or error.',
     `Always pass \`label\`; the field links it, the hint and the error for assistive tech. Use \`hint\` for format rules and \`error\` once the value is known to be wrong, written as what to do: "Enter a group name".

@@ -110,12 +110,14 @@
 
   function IconButton(props) {
     var size = props.size || 32;
-    var rest = omit(props, ['icon', 'label', 'size', 'iconSize', 'pressed', 'className', 'style']);
+    var rest = omit(props, ['icon', 'label', 'size', 'iconSize', 'pressed', 'count', 'className', 'style']);
     return h('button', Object.assign({
-      type: 'button', className: cx('tc-ib', props.className), 'aria-label': props.label, title: props.label,
+      type: 'button', className: cx('tc-ib', props.count && 'tc-ib-counted', props.className),
+      'aria-label': props.count ? props.label + ', ' + props.count + ' unread' : props.label, title: props.label,
       'aria-pressed': props.pressed == null ? undefined : String(!!props.pressed),
       style: Object.assign({ width: size, height: size }, props.style)
-    }, rest), h(Icon, { name: props.icon, size: props.iconSize || (size >= 32 ? 17 : 15) }));
+    }, rest), h(Icon, { name: props.icon, size: props.iconSize || (size >= 32 ? 17 : 15) }),
+      props.count ? h('span', { className: 'tc-ib-count', 'aria-hidden': 'true' }, props.count > 99 ? '99+' : props.count) : null);
   }
 
   function TextField(props) {
