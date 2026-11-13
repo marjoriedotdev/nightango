@@ -335,7 +335,8 @@ function useMentionCompletion(g, inputRef, value, setValue) {
   var before = caretAt && caretAt.value === value ? value.slice(0, caretAt.caret) : '';
   var m = MENTION_TOKEN.exec(before), start = m ? before.length - m[1].length - 1 : -1, key = m ? start + ' ' + m[1] : '';
   var list = g && m && start !== closedAt ? mentionCandidates(s, g, m[1]) : [];
-  var open = list.length > 0, index = sel.key === key ? sel.index : 0;
+  // The list changes under the same typed text when a member leaves: the kept position stays inside it.
+  var open = list.length > 0, index = Math.min(sel.key === key ? sel.index : 0, Math.max(list.length - 1, 0));
 
   function readCaret() {
     var el = inputRef.current, text = el.value, caret = el.selectionStart === el.selectionEnd ? el.selectionEnd : -1;
