@@ -224,7 +224,7 @@ function FullProfileDialog(p) {
   useEffect(function () {
     if (!LIVE) return;
     if (isProfilePending(p.name, u)) app.actions.loadProfile(p.name);
-    liveBridge.fetchFullProfile(p.name).then(setHtml, function () { setErr('Chatango did not return this profile.'); });
+    liveBridge.fetchFullProfile(p.name).then(setHtml, function () { setErr("Couldn't load this profile from Chatango."); });
   }, [p.name]);
   // Prototype: escaped sample page built from the simulated data.
   var sample = '<h2>' + String(p.name).replace(/[<>&"]/g, '') + '</h2><p>' + String(u.about || 'No full profile yet.').replace(/[<>&"]/g, '') + '</p>';

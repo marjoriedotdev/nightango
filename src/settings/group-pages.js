@@ -11,8 +11,8 @@ function GSOverview(p) {
         h('p', { className: 'tc-hint', style: { margin: 0 } }, 'Edit the title, description and icon on chatango.com.'))),
     LIVE && owner ? h(T.SettingsSection, { title: 'Messages' },
       h(T.SettingRow, {
-        asLabel: false, title: 'Clear all messages', description: 'Removes every message in #' + g.id + ' for everyone. This cannot be undone.',
-        control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Clear all messages in #' + g.id + '?', body: 'Every message is removed for everyone. This cannot be undone.', confirmLabel: 'Clear all', danger: true, onConfirm: function () { app.actions.clearGroup(g.id); } }); } }, 'Clear all')
+        asLabel: false, title: 'Clear all messages', description: 'Removes every message in #' + g.id + " for everyone. You can't undo this.",
+        control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Clear all messages in #' + g.id + '?', body: "Every message is removed for everyone. You can't undo this.", confirmLabel: 'Clear all', danger: true, onConfirm: function () { app.actions.clearGroup(g.id); } }); } }, 'Clear all')
       })) : null);
 }
 
@@ -68,7 +68,7 @@ function GSAutoMod(p) {
 
 function GSMedia(p) {
   var m = p.draft.media;
-  return h(Page, { title: 'Media and links', lede: 'What members can share in #' + p.g.id + '. Staff are not restricted.' },
+  return h(Page, { title: 'Media and links', lede: 'What members can share in #' + p.g.id + ". Staff aren't restricted." },
     h(T.SettingsSection, null, [['links', 'Allow links'], ['images', 'Allow images'], ['videos', 'Allow videos']].map(function (r) {
       return h(T.SettingRow, { key: r[0], title: r[1], control: h(T.Switch, { checked: !!m[r[0]], onChange: function (e) { var v = e.target.checked; p.edit(function (d) { d.media[r[0]] = v; }); } }) });
     })));
@@ -88,7 +88,7 @@ function GSBans(p) {
     setName(''); setErr(''); app.ui.ban(n, g.id);
   }
   return h(Page, {
-    title: 'Bans', lede: 'Banned members cannot read or post. Bans apply to the account and its IP.',
+    title: 'Bans', lede: "Banned members can't read or post. Bans apply to the account and its IP.",
     aside: g.bans.length && (p.myRole === 'owner' || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: plural(g.bans.length, 'member', 'members') + ' will be able to join #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
   },
     h(T.SettingsSection, { title: 'Ban someone', padded: true },
@@ -117,5 +117,5 @@ function GSAudit(p) {
   },
     h(T.SettingsSection, null, rows.length ? rows.map(function (x, i) {
       return h(ActivityRow, { key: x.id, first: !i, at: x.at }, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', x.text.charAt(0).toLowerCase() + x.text.slice(1));
-    }) : h('p', { className: 'pal-empty' }, 'No entries.')));
+    }) : h('p', { className: 'pal-empty' }, 'Nothing logged yet.')));
 }

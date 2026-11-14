@@ -8,8 +8,8 @@ var MENTION_TOKEN = /(?:^|\s)@([A-Za-z0-9_-]{0,20})$/;
 var MENTION_SUGGESTIONS = 8;
 var COMPOSER_MODES = {
   // BetterChatango renders replies and edits too (inject.js:5407, 5514), other Chatango apps show a new message.
-  reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply', note: 'Only visible to Nightango and BetterChatango users.' },
-  edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit', note: 'Only visible to Nightango and BetterChatango users.' },
+  reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply', note: 'Only people on Nightango or BetterChatango see this.' },
+  edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit', note: 'Only people on Nightango or BetterChatango see this.' },
   quote: { icon: 'quote', verb: 'Quoting', cancelLabel: 'Cancel quote' }
 };
 
@@ -29,9 +29,9 @@ function ComposerLimit(p) {
   });
   // No duration shown: the unit of the ban length is unconfirmed, read as minutes it could overstate the ban 60 times.
   var text = banned ? 'Temporary posting ban. Try again later.'
-    : wait && cd.refused ? 'Too fast. Try again in ' + wait + ' s.'
-    : wait ? 'Slow mode: wait ' + wait + ' s.'
-    : p.rate > 0 && !p.bypass ? 'Slow mode: ' + p.rate + ' s per message.' : null;
+    : wait && cd.refused ? 'Too fast. Try again in ' + plural(wait, 'second', 'seconds') + '.'
+    : wait ? 'Slow mode: wait ' + plural(wait, 'second', 'seconds') + '.'
+    : p.rate > 0 && !p.bypass ? 'Slow mode: one message every ' + plural(p.rate, 'second', 'seconds') + '.' : null;
   if (!text) return null;
   return h(Frag, null, banned || wait && cd.refused ? h(T.Icon, { name: 'alert', size: 14, className: 'limit-alert' }) : null, text);
 }

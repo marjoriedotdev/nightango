@@ -5,9 +5,13 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Write interface copy in English, sentence case: "Save changes", "Private messages", "Discover groups". Capitals only for `label-caps` section labels (FAVORITES, STAFF · 3).
 - Buttons start with a verb and say what happens: "Join", "Send reset link", "Create account". Never "OK" or "Submit".
 - A menu entry that opens a dialog to confirm or complete the action ends with an ellipsis (…, not three dots): "Block…", "Leave group…", "Create a group…". Entries that act at once or only show something ("Copy text", "View profile") have none, and neither do buttons, even one that asks for confirmation ("Clear all").
-- Address the reader as "you", the product as "Nightango". BetterChatango is named when BetterChatango does the work: sign-in, the private message history, the media library, its own settings. Chatango is named when an action goes to Chatango: "Your Chatango profile. Everyone on Chatango sees it."
-- Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read."
-- Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input".
+- Address the reader as "you", the product as "Nightango". A setting does not speak as the reader: "Join groups you own", not "Join groups I own". The one exception is the set phrase "Don't warn me again".
+- Other people are "people", "members" inside a group and "friends" on the friends list, never "users". They come online and go offline, they do not connect.
+- Buttons say "Log in" and "Log out", and sentences follow them: "Reload the page and log in again."
+- BetterChatango is named when BetterChatango does the work: logging in, the private message history, the media library, its own settings. vissle is "vissle" when it does the work, "vissle.me" only as an address. Chatango is named when an action goes to Chatango: "Your Chatango profile. Everyone on Chatango sees it."
+- Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read." The line is optional: leave it out when it would only repeat the label ("Friend comes online" needs none).
+- Write the way people talk: contractions ("can't", "didn't", "you're"), the active voice, everyday words. "Couldn't save the announcement.", not "The announcement could not be saved." The legal notice in About keeps the full form, and the two texts of a connection that stays lost keep the wording of the official client.
+- Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input". A status code, a file name or a protocol word never reaches the reader: it goes to the diagnostic log.
 - No emoji in the interface, no exclamation marks, no filler ("Oops", "Awesome").
 - Be honest about trade-offs where they affect trust. The login screen states that credentials are stored encrypted on BetterChatango servers.
 - Roles: next to a name, the short role is a `Badge` with its icon: Owner with a crown in the `moon` tone, Mod and Admin with a shield in the `moon-quiet` tone. The long role (Moderator) belongs in a sentence or a title. The viewer's own row carries a `You` badge, never "(you)" in text.

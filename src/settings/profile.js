@@ -41,7 +41,7 @@ function ProfilePage() {
  */
 function VisibilitySection(p) {
   return h(T.SettingsSection, { title: 'Visibility' },
-    h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other Chatango users find you by age and location.', control: h(T.Switch, { checked: !!p.meet, disabled: p.disabled, onChange: function (e) { p.onChange(e.target.checked); } }) }));
+    h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other people on Chatango find you by age and location.', control: h(T.Switch, { checked: !!p.meet, disabled: p.disabled, onChange: function (e) { p.onChange(e.target.checked); } }) }));
 }
 
 /**
@@ -110,14 +110,14 @@ function VisitorsSection(p) {
   }
   useEffect(function () { app.actions.loadVisitors(get, false); }, []);
   return h(T.SettingsSection, {
-    title: 'Visitors', description: 'Activity on your profile recorded by vissle.me.',
+    title: 'Visitors', description: 'Activity on your profile recorded by vissle.',
     headerAside: h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', iconSize: 15, disabled: loading, onClick: function () { app.actions.loadVisitors(get, false); } })
   },
     h(T.SettingRow, { asLabel: false, title: 'Profile tracker', description: tracked ? 'The vissle tracker is in your bio.' : inviteInList ? null : invite, control: h(T.Button, { size: 'sm', disabled: p.disabled, onClick: toggleTracker }, drafted ? 'Remove tracker' : 'Add tracker') }),
     h('div', { className: 'tc-section-pad seg-scroll' }, h(T.SegmentedControl, { label: 'Activity type', value: get, options: VISIT_FILTERS, onChange: function (g) { app.actions.loadVisitors(g, false); } })),
     rows.map(visitorRow),
     v && v.error ? h('p', { className: 'pal-empty' }, v.error)
-      : !rows.length ? loading ? h(SkeletonRows, { count: 5, avatar: 28, label: 'Loading activity from vissle.me' }) : h('p', { className: 'pal-empty' }, tracked ? 'No activity yet.' : invite)
+      : !rows.length ? loading ? h(SkeletonRows, { count: 5, avatar: 28, label: 'Loading activity from vissle' }) : h('p', { className: 'pal-empty' }, tracked ? 'No activity yet.' : invite)
         : v.next ? h('div', { style: { padding: 12, display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--divider)' } },
           loading ? h(T.Spinner, { label: 'Loading more activity' }) : h(T.Button, { size: 'sm', onClick: function () { app.actions.loadVisitors(get, true); } }, 'Load more')) : null);
 }

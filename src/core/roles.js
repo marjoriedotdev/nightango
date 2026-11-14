@@ -1,16 +1,16 @@
 /* ---------- Data ---------- */
 var PERMS = [
   { key: 'seeCounter', group: 'Visibility', title: 'See the member count', desc: 'Shows how many people are in the group, guests included.' },
-  { key: 'seeIps', group: 'Visibility', title: 'See IP addresses', desc: 'Shows the IP behind each message. Needed to ban evaders.', sensitive: true },
+  { key: 'seeIps', group: 'Visibility', title: 'See IP addresses', desc: 'Shows the IP behind each message. Needed to ban people who come back under another name.', sensitive: true },
   { key: 'staffChannel', group: 'Visibility', title: 'Access the staff channel', desc: 'Read and post in the channel only staff can see.' },
   { key: 'modLog', group: 'Visibility', title: 'See the moderation log', desc: 'Who deleted, banned or unbanned whom, and when.' },
   { key: 'broadcast', group: 'Moderation', title: 'Post in broadcast mode', desc: 'Keep posting while the group is limited to staff.' },
   { key: 'bypass', group: 'Moderation', title: 'Bypass AutoMod and rate limits', desc: 'Messages are never filtered or slowed down.' },
-  { key: 'bannedWords', group: 'Moderation', title: 'Edit banned words', desc: 'Add or remove words that are blocked in the group.' },
+  { key: 'bannedWords', group: 'Moderation', title: 'Edit banned words' },
   { key: 'automod', group: 'Moderation', title: 'Configure AutoMod', desc: 'Change the nonsense and repeated message filters.' },
   { key: 'unbanAll', group: 'Moderation', title: 'Unban everyone', desc: 'Lift every ban at once from the Bans page.' },
   { key: 'editGroup', group: 'Administration', title: 'Edit group info', desc: 'Title and description.' },
-  { key: 'editAnnouncement', group: 'Administration', title: 'Edit the announcement', desc: 'Text, style and how often it is posted.' },
+  { key: 'editAnnouncement', group: 'Administration', title: 'Edit the announcement', desc: "Text, style and how often it's posted." },
   { key: 'editRestrictions', group: 'Administration', title: 'Edit restrictions', desc: 'Media, links and proxy rules.' },
   { key: 'manageMods', group: 'Administration', title: 'Manage moderators', desc: 'Add and remove moderators and their permissions.' },
   { key: 'closeGroup', group: 'Administration', title: 'Close the group', desc: 'Stop everyone from posting until it reopens.' }
@@ -18,7 +18,7 @@ var PERMS = [
 var ROLE_LABEL = { owner: 'Owner', admin: 'Admin', mod: 'Mod' };
 var ROLE_LONG = { owner: 'Owner', admin: 'Admin', mod: 'Moderator' };
 var ROLE_DESC = {
-  owner: 'Created the group. Always has every permission and cannot be removed.',
+  owner: "Created the group. Always has every permission and can't be removed.",
   admin: 'A moderator allowed to change group settings.',
   mod: "A moderator who can't change group settings."
 };

@@ -2,6 +2,21 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.36.0-beta.6] - 2026-11-14
+
+### Changed
+
+- Messages about something that failed say it in plain words, with what to do next: "Couldn't save the announcement.", "The ban didn't go through."
+- Technical wording leaves messages and settings: no more status codes or file names in a message, and the first screen says "Starting BetterChatango…".
+- Settings talk to you as "you": "Join groups you own", "Block external media until you click", "Hide your idle time".
+- Other people are "people", not "users": "Messages from people you ignore", "Hide people you block in groups too".
+- Meet people spells out Male and Female in its gender filter, and slow mode hints spell out seconds.
+- Three alert rows, the Online now filter, the Edit banned words permission and Name colors lose a second line that only repeated their label.
+
+### Fixed
+
+- The desktop alerts banner no longer says your browser blocks alerts before it was ever asked.
+
 ## [0.36.0-beta.5] - 2026-11-14
 
 ### Changed

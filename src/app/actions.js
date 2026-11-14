@@ -243,7 +243,7 @@ function useActions(k) {
       return askOnce(tiktokPosts.current, e.url, click, function () {
         // Prototype: a post link shows the sample cover, a short link turns back into a link.
         return LIVE ? liveBridge.tiktokPost(e.url) : e.id ? Promise.resolve({ post: e.id, link: e.url, thumb: SAMPLE_TIKTOK_THUMB })
-          : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.'));
+          : Promise.reject(new Error("Short TikTok links aren't part of this prototype. Open the link instead."));
       });
     },
     /**
@@ -427,7 +427,7 @@ function useActions(k) {
     var m0 = base.modFlags || {}, m1 = draft.modFlags || {};
     Object.keys(m1).forEach(function (n) { if (m0[n] !== m1[n]) count(liveBridge.setMod(g.id, n, m1[n])); });
     Object.keys(m0).forEach(function (n) { if (!(n in m1)) count(liveBridge.removeMod(g.id, n)); });
-    if (failed) toast(failed + (failed > 1 ? ' changes' : ' change') + " could not be sent. Check the connection to #" + g.id + '.', { tone: 'error' });
+    if (failed) toast(failed + (failed > 1 ? " changes weren't sent" : " change wasn't sent") + '. Check the connection to #' + g.id + '.', { tone: 'error' });
     else toast(sent ? 'Changes sent to Chatango.' : 'Nothing to save.', { tone: sent ? 'success' : 'info' });
     return sent;
   }
@@ -448,7 +448,7 @@ function useActions(k) {
    * @param {string} gid Group or private_message.
    * @param {string} outcome What did not happen, such as Message not sent.
    */
-  function messageFailed(gid, outcome) { toast(outcome + ' ' + (liveBridge.closedHint(gid) || 'BetterChatango rejected it.'), { tone: 'error' }); }
+  function messageFailed(gid, outcome) { toast(outcome + ' ' + (liveBridge.closedHint(gid) || 'Try again, or reload the page if it keeps failing.'), { tone: 'error' }); }
   /**
    * Sends a group message built by BetterChatango with the own style and keeps its style.
    * @param {string} gid Target group.
@@ -529,7 +529,7 @@ function useActions(k) {
         var sent = to.kind === 'dm' ? actions.sendDm(to.id, body, o) : actions.sendGroup(to.id, body, o);
         setUpload(to, null);
         if (sent) { toast('File sent.', { tone: 'success' }); return null; }
-        toast('The file was uploaded, but the message was not sent.', { tone: 'error', action: { label: 'Copy link', run: function () {
+        toast("The file was uploaded, but the message wasn't sent.", { tone: 'error', action: { label: 'Copy link', run: function () {
           copyText(link, function (ok) { toast(ok ? 'Link copied.' : 'Copy failed. The link is ' + link, { tone: ok ? 'success' : 'error' }); });
         } } });
         return body;
@@ -544,8 +544,8 @@ function useActions(k) {
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
-    actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', liveBridge.setFavorite, 'BetterChatango could not save this favorite. Reload the page and try again.'); };
-    actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', liveBridge.setMuted, 'BetterChatango could not save the mute for #' + gid + '. Reload the page and try again.'); };
+    actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', liveBridge.setFavorite, "BetterChatango couldn't save this favorite. Reload the page and try again."); };
+    actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', liveBridge.setMuted, "BetterChatango couldn't save the mute for #" + gid + '. Reload the page and try again.'); };
     actions.setTrustedHost = function (host, on) {
       if (!liveBridge.setTrustedHost(host, on)) { toast(BETTER_CHATANGO_SAVE_FAILED, { tone: 'error' }); return false; }
       update(function (d) { d.prefs.safety.trustedHosts = liveBridge.trustedHosts(); });
@@ -554,7 +554,7 @@ function useActions(k) {
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
       var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
-      if (kept) toast('BetterChatango could not remove #' + gid + ' from favorites. Reload the page and try again.', { tone: 'error' });
+      if (kept) toast("BetterChatango couldn't remove #" + gid + ' from favorites. Reload the page and try again.', { tone: 'error' });
       update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
@@ -625,7 +625,7 @@ function useActions(k) {
           d.meet = { results: prev.concat(fresh), next: from + names.length, loading: false, error: null, done: names.length < 40, filters: f, token: token };
         });
       }, function (e) {
-        update(function (d) { if (d.meet.token === token) Object.assign(d.meet, { loading: false, error: e && e.message ? e.message : 'The search failed.' }); });
+        update(function (d) { if (d.meet.token === token) Object.assign(d.meet, { loading: false, error: e && e.message ? e.message : "Search didn't work. Try again." }); });
       });
     };
     /**
@@ -641,7 +641,7 @@ function useActions(k) {
       }, function (e) {
         warn(e);
         update(function (d) { Object.assign(d.dms[name], { loadingOlder: false, olderFailed: true }); });
-        toast('Earlier messages could not be loaded.', { tone: 'error' });
+        toast("Couldn't load earlier messages.", { tone: 'error' });
       });
     };
     actions.loadMore = function (gid) {
@@ -658,19 +658,19 @@ function useActions(k) {
       }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
-      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('BetterChatango could not save its ignore list. Reload the page and try again.', { tone: 'error' }); return; }
+      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast("BetterChatango couldn't save its ignore list. Reload the page and try again.", { tone: 'error' }); return; }
       update(function (d) { ensureLiveUser(d, name, localRef.current)[key] = !was; });
       toast(toggleUserText(shownName(stateRef.current, name), key, was), { tone: 'success', action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
-    actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
+    actions.deleteDm = function (name) { deleteLiveDms([name], "BetterChatango couldn't delete this conversation. Try again in a moment."); };
     actions.removeDmMessage = function (name, m) {
       liveBridge.removePm(name, m).then(function (ok) {
-        if (!ok) { toast('This message could not be removed. Reload the page and try again.', { tone: 'error' }); return; }
+        if (!ok) { toast("Couldn't remove this message. Reload the page and try again.", { tone: 'error' }); return; }
         dropDmMessage(name, m.id);
         syncPmUnread(pmArchive.current, update, [name]);
       });
     };
-    actions.deleteAllDms = function () { deleteLiveDms(Object.keys(stateRef.current.dms), 'BetterChatango could not delete your saved conversations. Try again in a moment.'); };
+    actions.deleteAllDms = function () { deleteLiveDms(Object.keys(stateRef.current.dms), "BetterChatango couldn't delete your saved conversations. Try again in a moment."); };
     actions.checkPmr = function () {
       liveBridge.pmrStatus().then(function (st) { update(function (d) { if (d.auth.loggedIn) d.pmrStatus = st; }); });
     };
@@ -706,7 +706,7 @@ function useActions(k) {
     };
     actions.unban = function (gid, name) {
       var g = stateRef.current.groups[gid], b = g && g.bans.filter(function (x) { return x.name === name; })[0];
-      if (!b) { toast(shownName(stateRef.current, name) + ' is not in the ban list.'); return; }
+      if (!b) { toast(shownName(stateRef.current, name) + " isn't in the ban list."); return; }
       liveBridge.unban(gid, b);
     };
     actions.unbanEntry = function (gid, b) { liveBridge.unban(gid, b); };

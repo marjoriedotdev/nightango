@@ -15,7 +15,7 @@ function JoinedGroups() {
   var owned = rest.filter(function (k) { return s.groups[k].owned; });
   var recent = rest.filter(function (k) { return !s.groups[k].owned; });
   return h(Frag, null,
-    h(GroupSection, { id: 'lj-h', title: 'Joined groups', names: joined, empty: LIVE ? 'Connecting to your groups. They appear here as BetterChatango joins them.' : 'You have not joined any group yet.' }),
+    h(GroupSection, { id: 'lj-h', title: 'Joined groups', names: joined, empty: LIVE ? 'Connecting to your groups. They appear here as BetterChatango joins them.' : "You haven't joined any group yet." }),
     owned.length ? h(GroupSection, { id: 'lo-h', title: 'Groups you own', names: owned }) : null,
     recent.length ? h(GroupSection, { id: 'lr-h', title: 'Recent groups', names: recent }) : null);
 }

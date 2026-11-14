@@ -94,8 +94,8 @@ function GifPanel(p) {
     h('h3', { className: 'mlabel' }, 'Seen recently'),
     recent.length ? h(GifGrid, { label: 'GIFs seen recently', urls: recent, safety: safety, revealed: revealed, onPick: p.onPick })
       : h('p', { className: 'media-note' }, 'GIFs sent in your groups and private messages show up here.'),
-    h('h3', { className: 'mlabel' }, 'My GIFs'),
-    lib.failed ? h('p', { className: 'media-note' }, 'BetterChatango could not open your media library. Reload the page and try again.')
+    h('h3', { className: 'mlabel' }, 'Your GIFs'),
+    lib.failed ? h('p', { className: 'media-note' }, "BetterChatango couldn't open your media library. Reload the page and try again.")
       : lib.loading ? h(T.Spinner, { label: 'Loading GIFs' })
         : lib.list.length ? h(GifGrid, { label: 'Your GIFs', urls: lib.list.map(function (e) { return e.url; }), names: names, safety: safety, revealed: revealed, onPick: p.onPick })
           : h('p', { className: 'media-note' }, 'No GIF in your media yet. Star one to keep it here.'));

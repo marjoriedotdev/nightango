@@ -134,7 +134,7 @@ function ownLabel(mine) {
 function DmSearchHits(p) {
   var app = useApp(), me = app.state.me, found = p.found, body;
   if (!found) body = h('div', { className: 'list-more' }, h(T.Spinner, { label: 'Searching messages' }));
-  else if (found.failed) body = h('p', { className: 'pal-empty' }, 'Messages could not be searched.');
+  else if (found.failed) body = h('p', { className: 'pal-empty' }, "Search didn't work. Try again.");
   else if (!found.list.length) body = h('p', { className: 'pal-empty' }, 'No message matches.');
   else body = h(Frag, null, found.list.map(function (hit) {
     return h(MessageEntry, {
@@ -408,7 +408,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
  * @param {boolean} betterChatango True to say first that only BetterChatango's copy goes away.
  */
 function keptCopyText(name, betterChatango) {
-  return (betterChatango ? 'Removes the copy BetterChatango keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
+  return (betterChatango ? 'Removes the copy BetterChatango keeps in this browser. ' : '') + "Chatango doesn't store private messages, and " + name + ' keeps their copy.';
 }
 
 /**

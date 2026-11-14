@@ -3,7 +3,7 @@ var PULL_TRIGGER = 64, PULL_MAX = 96;
 /** Filters that differ from BetterChatango's defaults, for the counter and the chips. */
 function meetActive(f) {
   var out = [];
-  if (f.sex !== 'B') out.push(['sex', f.sex]);
+  if (f.sex !== 'B') out.push(['sex', GENDER_LABEL[f.sex]]);
   if (+f.ageMin !== 13 || +f.ageMax !== 99) out.push(['age', 'Age ' + f.ageMin + ' to ' + f.ageMax]);
   if (+f.avatar) out.push(['avatar', +f.avatar === 1 ? 'Photos' : 'Characters']);
   if (!f.online) out.push(['online', 'Offline included']);
@@ -71,14 +71,14 @@ function MeetFilters(p) {
     ]
   },
     h('div', { className: 'dialog-body', style: { gap: 18 } },
-      seg('Gender', f.sex, [{ value: 'B', label: 'Anyone' }, { value: 'M', label: 'M' }, { value: 'F', label: 'F' }], function (v) { set('sex', v); }),
+      seg('Gender', f.sex, [{ value: 'B', label: 'Anyone' }, { value: 'M', label: GENDER_LABEL.M }, { value: 'F', label: GENDER_LABEL.F }], function (v) { set('sex', v); }),
       h('div', { className: 'tc-field', role: 'group', 'aria-labelledby': 'meet-age-l' },
         h('span', { className: 'age-range-head' }, h('span', { className: 'tc-label', id: 'meet-age-l' }, 'Age'), h('span', { className: 'tnum' }, f.ageMin + ' to ' + f.ageMax)),
         h(AgeRange, { lo: f.ageMin, hi: f.ageMax, onChange: function (lo, hi) { setF(function (x) { return Object.assign({}, x, { ageMin: lo, ageMax: hi }); }); } }),
-        h('span', { className: 'tc-hint' }, 'Chatango searches two ages or more.')),
+        h('span', { className: 'tc-hint' }, 'Chatango needs at least two ages, like 20 to 21.')),
       seg('Profile picture', String(f.avatar || 0), [{ value: '0', label: 'Any' }, { value: '1', label: 'Photos' }, { value: '2', label: 'Characters' }], function (v) { set('avatar', +v); }),
       h('label', { className: 'tc-checkline', style: { justifyContent: 'space-between', width: '100%' } },
-        h('span', null, h('span', { style: { display: 'block', fontWeight: 500 } }, 'Online now'), h('span', { className: 'tc-hint' }, 'Only people connected right now.')),
+        h('span', { style: { fontWeight: 500 } }, 'Online now'),
         h(T.Switch, { checked: !!f.online, onChange: function (e) { set('online', e.target.checked); } }))));
 }
 

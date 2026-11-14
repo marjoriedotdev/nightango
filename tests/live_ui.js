@@ -273,7 +273,7 @@ d.addEventListener('torch-skin:tiktok-request', e => {
   tiktokReqs.push(q.url);
   const link = /\/video\//.test(q.url) ? q.url : /ok\/$/.test(q.url) ? 'https://www.tiktok.com/@clown/video/7400000000000000001' : null;
   const out = link ? { post: link.split('/').pop(), link, thumb: TIKTOK_THUMB + link.split('/').pop() + '.jpg' }
-    : /odd\/$/.test(q.url) ? { post: 'player', link: 'https://www.tiktok.com/@clown/video/player' } : { error: 'TikTok could not be reached. Open the link instead.' };
+    : /odd\/$/.test(q.url) ? { post: 'player', link: 'https://www.tiktok.com/@clown/video/player' } : { error: "Couldn't reach TikTok. Open the link instead." };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:tiktok-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
 
@@ -286,7 +286,7 @@ d.addEventListener('torch-skin:x-request', e => {
   xReqs.push(id);
   const media = id.endsWith('1') ? { kind: 'video', thumb: X_THUMB + id + '.jpg', video: X_VIDEO, width: 1280, height: 720, sensitive: false }
     : id.endsWith('2') ? { kind: 'photo', thumb: X_THUMB + id + '.jpg', width: 800, height: 600, sensitive: true } : null;
-  const out = media ? { author: 'Clown', handle: 'clown', text: 'Post ' + id + '\nsecond line', date: 'Oct 31, 2026', link: 'https://x.com/clown/status/' + id, media, avatar: X_AVATAR, time: X_TIME } : { error: 'X could not be reached. Open the link instead.' };
+  const out = media ? { author: 'Clown', handle: 'clown', text: 'Post ' + id + '\nsecond line', date: 'Oct 31, 2026', link: 'https://x.com/clown/status/' + id, media, avatar: X_AVATAR, time: X_TIME } : { error: "Couldn't reach X. Open the link instead." };
   setTimeout(() => d.dispatchEvent(new w.CustomEvent('torch-skin:x-response', { detail: JSON.stringify(Object.assign({ id: q.id }, out)) })), 0);
 });
 
@@ -571,7 +571,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const whoReplies = [await whoAnswer(JSON.stringify({ target: 'alice', definite: [], weak: [7] })), await whoAnswer('{"definite":["x"]}'), await whoAnswer('<html>'), await whoAnswer(null)];
   step('who is this says when vissle has nothing, an unreadable answer or no answer',
     /vissle has no linked accounts for Alice\./.test(whoReplies[0]) && /vissle sent an answer Nightango can't read\./.test(whoReplies[1]) && /can't read/.test(whoReplies[2])
-      && /vissle could not be reached\. Try again later\./.test(whoReplies[3]) && whoAsked().length === 5,
+      && /Couldn't reach vissle\. Try again later\./.test(whoReplies[3]) && whoAsked().length === 5,
     { whoReplies, calls: whoAsked().length });
 
   /* Message edit, like BetterChatango: <e…/> frame, history merge, deletion of edits */
@@ -657,14 +657,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const failFrom = sent.length;
   await pickFile('g.png');
   type(editBox(), 'Again'); key(editBox(), 'Enter');
-  await until(() => !!byText('.toast', 'The file could not be uploaded. Try again.'));
+  await until(() => !!byText('.toast', "Couldn't upload the file. Try again."));
   await wait(30);
   const failKept = { draft: editBox().value, chip: !!byText('.tc-composer', 'g.png') };
   const removeFile = $('.tc-composer button[aria-label="Remove g.png"]');
   if (removeFile) { click(removeFile); await wait(30); }
   type(editBox(), '');
   step('rejected upload sends nothing and keeps the text and the file',
-    !!byText('.toast', 'The file could not be uploaded. Try again.') && !linkFrames(failFrom).length && failKept.draft === 'Again' && failKept.chip && !!removeFile && !byText('.tc-composer', 'g.png'),
+    !!byText('.toast', "Couldn't upload the file. Try again.") && !linkFrames(failFrom).length && failKept.draft === 'Again' && failKept.chip && !!removeFile && !byText('.tc-composer', 'g.png'),
     { sent: linkFrames(failFrom), failKept, removed: !!removeFile });
 
   /* Full group: at 500 messages each new one trims the oldest, so the count no longer changes */
@@ -952,7 +952,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* PM restriction of one's own account: requested before the private connection, read from vissle only once after it */
   C.settings.privacy.private_messages = { check_pmr: true };
-  const pmrRow = () => $$('section[aria-label="Private messages"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === 'Check my private message status');
+  const pmrRow = () => $$('section[aria-label="Private messages"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === 'Check your private message status');
   const pmrView = () => { const r = pmrRow(); return r && { on: r.querySelector('[role=switch]').checked, status: (r.querySelector('.tc-row-desc') || {}).textContent || null, asked: fetches.filter(x => /api\.vissle\.me/.test(x.url)).map(x => x.url) }; };
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow()); await wait(50);
@@ -989,8 +989,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('pm escaped and sent as BetterChatango built it', /^msg:dave:<n3366FF\/><ipm\d{5}\/><m v="1"><g x12s9900cc="4">x &lt; y<\/g><\/m>$/.test(escapedPm) && !calls.some(c => c[0] === 'pm'), escapedPm);
   click(byText('.profile .mrow', 'Add friend')); await wait(30);
   step('add friend frame', frame('wladd:dave').length === 1);
-  pm('wladd', ['nobody', 'invalid']); await until(() => !!byText('.toast', 'No Chatango user named nobody.'));
-  step('unknown friend reported', !!byText('.toast', 'No Chatango user named nobody.'));
+  pm('wladd', ['nobody', 'invalid']); await until(() => !!byText('.toast', 'Nobody on Chatango is named nobody.'));
+  step('unknown friend reported', !!byText('.toast', 'Nobody on Chatango is named nobody.'));
   click(byText('.profile .mrow', 'Block')); await wait(30);
   click(byText('.dialog-foot button', 'Block')); await wait(30);
   step('pm block frame', frame('block:dave:dave:S').length === 1);
@@ -1049,17 +1049,17 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   uploadReply = () => Promise.resolve('data:abc/f.png');
   await pickFile('h.png');
   type(pmBox(), 'Caption'); key(pmBox(), 'Enter');
-  await until(() => !!byText('.toast', 'The file was uploaded, but the message was not sent.'));
-  const lostUpload = { toast: !!byText('.toast', 'The file was uploaded, but the message was not sent.'), copy: !!byText('.toast button', 'Copy link'), draft: pmBox().value, otherToast: !!byText('.toast', 'Private message not sent') };
+  await until(() => !!byText('.toast', "The file was uploaded, but the message wasn't sent."));
+  const lostUpload = { toast: !!byText('.toast', "The file was uploaded, but the message wasn't sent."), copy: !!byText('.toast button', 'Copy link'), draft: pmBox().value, otherToast: !!byText('.toast', 'Private message not sent') };
   type(pmBox(), 'Lost words'); key(pmBox(), 'Enter'); await wait(30);
   const lostPm = { draft: pmBox().value, toast: !!byText('.toast', "Private message not sent. Try again once you're reconnected to private messages.") };
   type(pmBox(), '');
   click(byText('.profile .mrow', 'Block')); await wait(30);
   click(byText('.dialog-foot button', 'Block')); await wait(30);
-  const lostBlock = { toast: !!byText('.toast', "The block could not be sent. Try again once you're reconnected to private messages."), done: !!byText('.toast', 'fay blocked.'), composer: !!pmBox() };
+  const lostBlock = { toast: !!byText('.toast', "The block didn't go through. Try again once you're reconnected to private messages."), done: !!byText('.toast', 'fay blocked.'), composer: !!pmBox() };
   click($('.me-btn')); await wait(30);
   click(menuItem('Idle')); await wait(30);
-  const lostStatus = { toast: !!byText('.toast', 'Your status could not be changed.'), label: $('.me-btn').getAttribute('aria-label') };
+  const lostStatus = { toast: !!byText('.toast', "Couldn't change your status."), label: $('.me-btn').getAttribute('aria-label') };
   const fayStill = fayTexts();
   C.private.socket.readyState = 1;
   click(byText('.tc-nav', 'test')); await wait(50);
@@ -1152,10 +1152,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await toggle('Appearance', 'Message backgrounds');
   await until(() => (bgLook('Rosa first') || [])[0] === ROSA);
   const blockedBg = BG_TEXTS.slice(0, 4).map(bgLook);
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   await until(() => !!(bgLook('Pale says hi') || [])[1]);
   const shownBg = BG_TEXTS.map(bgLook), askedBg = ['rosa', 'trap', 'pale', 'plain', 'nobg'].map(bgAsked).concat(fetches.filter(x => /visitor\/msgbg/.test(x.url)).length), leaked = /evil\.test|onload/.test($('.log').innerHTML);
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   await toggle('Appearance', 'Message backgrounds');
   const bgImg = (n, opacity, position, repeat) => ['url("https://ust.chatango.com/' + n + '/msgbg.jpg")', opacity, position, repeat];
   step('premium message backgrounds', JSON.stringify(askedOff) === '[0,0,0,0]'
@@ -1170,9 +1170,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!mediaRow());
   const mediaLook = () => { const r = mediaRow(); return r && { links: [...r.querySelectorAll('.tc-msg-text a')].map(a => a.getAttribute('href')), embeds: [...r.querySelectorAll('.embeds > *')].map(x => x.className + ':' + x.textContent), players: r.querySelectorAll('video, audio, iframe').length }; };
   const mediaBlocked = mediaLook();
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   const mediaOpen = mediaLook();
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   [...mediaRow().querySelectorAll('.embed-video, .embed-reveal')].forEach(click);
   await until(() => mediaRow().querySelectorAll('video, audio, iframe').length === 5);
   const player = el => [el.getAttribute('src'), el.hasAttribute('controls'), el.hasAttribute('autoplay')];
@@ -1197,20 +1197,20 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const tiktokThumbs = () => [...tiktokRow().querySelectorAll('.embed-tiktok img')].map(x => x.getAttribute('src'));
   const tiktokEmbeds = () => [...tiktokRow().querySelectorAll('.embeds > *')].map(x => x.className + (x.style.display === 'none' ? ':hidden' : ''));
   const tiktokBefore = { asked: tiktokReqs.slice(), links: [...tiktokRow().querySelectorAll('.tc-msg-text a')].map(a => a.getAttribute('href')), embeds: tiktokEmbeds(), thumbs: tiktokThumbs() };
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   await until(() => tiktokRow().querySelectorAll('.embeds img').length === 2);
   const tiktokLoading = tiktokEmbeds();
   // jsdom loads no image: the test fires their load event.
   [...tiktokRow().querySelectorAll('.embeds img')].forEach(x => x.dispatchEvent(new w.Event('load')));
   await until(() => tiktokThumbs().length === 2);
   const tiktokOpen = { asked: tiktokReqs.slice().sort(), thumbs: tiktokThumbs(), embeds: tiktokEmbeds() };
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   const tiktokBlocked = tiktokThumbs();
   const tiktokBlockedEmbeds = tiktokEmbeds();
   [...tiktokRow().querySelectorAll('.embed-reveal')].forEach(click);
   await until(() => tiktokRow().querySelectorAll('iframe').length === 2 && !!tiktokRow().querySelector('.embeds a.msg-link'));
   const tiktokAfter = { asked: tiktokReqs.length, frames: [...tiktokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: [...tiktokRow().querySelectorAll('.embeds a.msg-link')].map(a => a.getAttribute('href')) };
-  const tiktokToast = !!byText('.toast', 'TikTok could not be reached. Open the link instead.');
+  const tiktokToast = !!byText('.toast', "Couldn't reach TikTok. Open the link instead.");
   const TIKTOK_POST0 = 'https://www.tiktok.com/@clown/video/7400000000000000000';
   const REVEALS = Array(3).fill('embed-reveal');
   step('tiktok cards: thumbnail only when media are not blocked and loaded, short links resolved once, player on click',
@@ -1226,7 +1226,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!oddTikTokRow());
   click(oddTikTokRow().querySelector('.embed-reveal'));
   await until(() => !!oddTikTokRow().querySelector('.embeds a.msg-link, iframe'));
-  const oddTikTok = { frames: [...oddTikTokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: !!oddTikTokRow().querySelector('.embeds a.msg-link'), toast: !!byText('.toast', 'TikTok did not say which video this link leads to. Open the link instead.') };
+  const oddTikTok = { frames: [...oddTikTokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: !!oddTikTokRow().querySelector('.embeds a.msg-link'), toast: !!byText('.toast', "TikTok didn't say which video this link leads to. Open the link instead.") };
   step('a TikTok reply without a numeric post id turns back into a link', !oddTikTok.frames.length && oddTikTok.link && oddTikTok.toast, oddTikTok);
 
   /* X: buttons under proxyMedia, cards read once when media are not blocked, video and sensitive photo on click, failure asked again at the click then turned back into a link */
@@ -1237,7 +1237,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!xRow());
   const xEmbeds = () => [...xRow().querySelectorAll('.embeds > *')].map(x => x.className);
   const xBefore = { asked: xReqs.slice(), embeds: xEmbeds() };
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   await until(() => xRow().querySelectorAll('.embed-x').length === 2);
   const xOpen = {
     asked: xReqs.slice().sort(), embeds: xEmbeds(),
@@ -1253,11 +1253,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!xRow().querySelector('video') && !!xRow().querySelector('a.embed-x-media img'));
   const xVideo = xRow().querySelector('video'), xPhoto = xRow().querySelector('a.embed-x-media');
   const xPlayed = { video: xVideo && [xVideo.getAttribute('src'), xVideo.autoplay, xVideo.controls], photo: xPhoto && [xPhoto.getAttribute('href'), xPhoto.querySelector('img').getAttribute('src')] };
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   const xBlocked = xEmbeds();
   [...xRow().querySelectorAll('.embed-reveal')].forEach(click);
   await until(() => xRow().querySelectorAll('.embed-x').length === 2 && !!xRow().querySelector('.embeds a.msg-link'));
-  const xAfter = { asked: xReqs.slice(), embeds: xEmbeds(), toast: !!byText('.toast', 'X could not be reached. Open the link instead.') };
+  const xAfter = { asked: xReqs.slice(), embeds: xEmbeds(), toast: !!byText('.toast', "Couldn't reach X. Open the link instead.") };
   await toggle('Safety', 'Embed X posts');
   const xOff = [...xRow().querySelectorAll('.embeds > a')].map(a => a.getAttribute('href'));
   await toggle('Safety', 'Embed X posts');
@@ -1363,12 +1363,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.thread button[aria-label="Conversation options"]')); await wait(30);
   click(menuItem('Delete conversation')); await wait(30);
   click(byText('.dialog-foot button', 'Delete')); await wait(50);
-  const keptOne = { listed: listed('dave'), shown: daveShown(), toast: !!byText('.toast', 'BetterChatango could not delete this conversation. Try again in a moment.') };
+  const keptOne = { listed: listed('dave'), shown: daveShown(), toast: !!byText('.toast', "BetterChatango couldn't delete this conversation. Try again in a moment.") };
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!byText('button', 'Delete all'));
   click(byText('button', 'Delete all')); await wait(30);
   click(byText('.dialog-foot button', 'Delete all')); await wait(50);
-  const keptAll = { toast: !!byText('.toast', 'BetterChatango could not delete your saved conversations. Try again in a moment.') };
+  const keptAll = { toast: !!byText('.toast', "BetterChatango couldn't delete your saved conversations. Try again in a moment.") };
   click(byText('.tc-nav', 'Back to chat')); await until(daveShown);
   Object.assign(keptAll, { dave: listed('dave'), fay: listed('fay'), shown: daveShown() });
   C.private.clearHistory = clearHistory;
@@ -1385,8 +1385,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const checking = byText('.dialog-foot button', 'Checking');
   const ghostAsk = { frames: sent.slice(sentBeforeGhost), waiting: !!checking && checking.disabled };
   pm('connect', ['ghost', '0', 'invalid']);
-  await until(() => !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'));
-  const ghost = { error: !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'), listed: listed('ghost'), head: ($('.thread .topbar h2 .namebtn') || {}).textContent || '' };
+  await until(() => !!$('.dialog') && $('.dialog').textContent.includes('Nobody on Chatango is named ghost.'));
+  const ghost = { error: !!$('.dialog') && $('.dialog').textContent.includes('Nobody on Chatango is named ghost.'), listed: listed('ghost'), head: ($('.thread .topbar h2 .namebtn') || {}).textContent || '' };
   if ($('.dialog')) { click(byText('.dialog-foot button', 'Cancel')); await wait(30); }
   step('new pm checks the name with Chatango', JSON.stringify(ghostAsk.frames) === JSON.stringify([['private_message', 'connect:ghost']]) && ghostAsk.waiting && ghost.error && !ghost.listed && ghost.head !== 'ghost', { ghostAsk, ghost });
   click($('.convs button[aria-label="New message"]')); await wait(50);
@@ -1618,7 +1618,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     click(refresh()); await wait(30); await until(() => !refresh().disabled);
     return { text: visitors().textContent, rows: visitorRows().length };
   };
-  const UNREADABLE = 'vissle.me sent an unreadable reply.', oddReplies = [];
+  const UNREADABLE = "vissle sent an answer Nightango can't read.", oddReplies = [];
   for (const data of [null, 42, { action: 'activity' }, { get: [{ user: 'zoe' }] }, { get: [{ user: 'zoe', time: NOW, msg: { text: 'Hi' } }] }]) oddReplies.push(await refreshVisitors(() => data));
   step('own visitors list: a reply of another shape shows the unreadable reply error', oddReplies.every(x => x.text.includes(UNREADABLE) && x.rows === 0), oddReplies);
   // No reply, as without the sandbox half of the userscript: the bridge gives up on its own timer, which the test runs at once.
@@ -1641,17 +1641,17 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (giveUp) { w.clearTimeout(giveUp.id); giveUp.fn(); }
   await until(() => !visitorsRefresh().disabled);
   silent.text = visitors().textContent;
-  step('own visitors list: a request without a reply ends on an error', silent.asked === 1 && silent.loading && silent.text.includes('vissle.me did not answer in time.'), silent);
+  step('own visitors list: a request without a reply ends on an error', silent.asked === 1 && silent.loading && silent.text.includes("vissle didn't answer in time."), silent);
   vissleReply = () => ({ action: 'activity', get: [] });
   /* Unreadable full profile (server error): saving another field sends nothing, never an empty full profile */
   const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
   betterChatangoFull.value = ''; ownMod2Status = 500;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
-  click(byText('.tc-nav', 'Profile')); await until(() => !!byText('.tc-hint', 'did not return your full profile'));
-  const fullDown = { failed: !!byText('.tc-hint', 'did not return your full profile') };
+  click(byText('.tc-nav', 'Profile')); await until(() => !!byText('.tc-hint', "Couldn't load your full profile from Chatango"));
+  const fullDown = { failed: !!byText('.tc-hint', "Couldn't load your full profile from Chatango") };
   type($('#pf-loc'), 'Lille'); await until(() => !!$('.tc-savebar'));
   click($('.tc-savebar .tc-btn-primary')); await until(() => !!byText('.toast', 'Nothing was saved') || profileUpdates().length > 0);
-  fullDown.toast = !!byText('.toast', 'could not be read. Nothing was saved'); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
+  fullDown.toast = !!byText('.toast', "Couldn't read your full profile. Nothing was saved"); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
   step('full profile server error: saving another field sends nothing', fullDown.failed && fullDown.toast && fullDown.sent.length === 0, fullDown);
   /* Refused or rate-limited read: the same, a 4xx other than 404 is not a missing file */
   ownMod2Status = 429;
@@ -1691,7 +1691,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Password and email')); await wait(50);
   step('account page has no password form', !$('input[type=password]') && !!byText('.tc-banner', 'never handles your password'));
   click(byText('.tc-nav', 'Chatango Premium')); await wait(50);
-  step('premium page has no purchase form', !!byText('.tc-banner', 'does not take payments'));
+  step('premium page has no purchase form', !!byText('.tc-banner', "doesn't take payments"));
   /* Premium expiry: premium frame of the private connection, reminder at most once per day per account */
   const DAY = 86400000, later = Date.now() + 40 * DAY, soon = Date.now() + 2 * DAY;
   const reminders = () => $$('.toast').map(x => x.textContent).filter(t => t.indexOf('Your Chatango Premium ends on') === 0);
@@ -1728,14 +1728,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     click(pmrRow().querySelector('[role=switch]')); await until(() => !!pmrView().status);
     pmrSeen.push(pmrView());
   }
-  const PMR_URL = ['https://api.vissle.me/v1/pmr/marjorie'], PMR_TEXT = 'vissle reports that your private messages appear to be restricted.';
+  const PMR_URL = ['https://api.vissle.me/v1/pmr/marjorie'], PMR_TEXT = 'vissle thinks your private messages are restricted.';
   step('own private message restriction read once from vissle after the private connection', JSON.stringify(pmrSeen) === JSON.stringify([
     { on: true, status: null, asked: [] }, { on: true, status: PMR_TEXT, asked: PMR_URL },
     { on: false, status: null, asked: PMR_URL, betterChatango: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
   ]), pmrSeen);
 
   /* Chatango account PM settings: a switch follows the settings reply only, setsettings in chadango's format */
-  const ACCOUNT_ROWS = ['Hide my idle time', 'Allow anonymous messages', 'Email me messages I get while offline'];
+  const ACCOUNT_ROWS = ['Hide your idle time', 'Allow anonymous messages', 'Email messages you get while offline'];
   const accountRow = title => $$('section[aria-label="Chatango account"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title);
   const accountView = () => ACCOUNT_ROWS.map(t => {
     const r = accountRow(t), sw = r && r.querySelector('[role=switch]');
@@ -1991,7 +1991,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmQuote = { frame: frame('msg:rex:').pop() || '' };
   step('pm edit carries <e> after the <g> head and changes its original in place, pm quote goes before the text, edit only on own keyed pms',
     pmMenus.otherOld.includes('Quote message') && !pmMenus.otherOld.includes('Edit message') && pmMenus.official.includes('Quote message')
-      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.note === 'Only visible to Nightango and BetterChatango users.'
+      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.note === 'Only people on Nightango or BetterChatango see this.'
       && new RegExp(PM_HEAD + '<e' + rex.answerKey + '\\/>' + PM_TEXT('Answer fixed')).test(pmEdit.frame) && pmEdit.sentOnce
       && JSON.stringify(pmEdit.rows) === JSON.stringify(['Answer fixed']) && pmEdit.edited && pmEdit.draftBack === 'kept draft'
       && quoteShown.context.includes('Quoting') && !quoteShown.note && new RegExp(PM_HEAD + PM_TEXT('@rex: `Old question` Yes')).test(pmQuote.frame),
@@ -2134,8 +2134,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(80);
   const ownerHint = limitHint();
   step('getratelimit sent on join, slow mode counted down, a refused message back in the composer, a posting ban shown without a duration and with Send enabled, no countdown with the bypass right',
-    slowAsked.includes('getratelimit') && /^Slow mode: wait [34] s\.$/.test(onJoin) && draftAfterSend === ''
-      && refusedShown.draft === 'Too quick' && /^Too fast\. Try again in [45] s\.$/.test(refusedShown.hint)
+    slowAsked.includes('getratelimit') && /^Slow mode: wait [34] seconds\.$/.test(onJoin) && draftAfterSend === ''
+      && refusedShown.draft === 'Too quick' && /^Too fast\. Try again in [45] seconds\.$/.test(refusedShown.hint)
       && banShown.hint === 'Temporary posting ban. Try again later.' && banShown.canSend
       && !/posting ban/.test(banLifted) && !/Slow mode/.test(ownerHint),
     { slowAsked, onJoin, draftAfterSend, refusedShown, banShown, banLifted, ownerHint });
@@ -2150,8 +2150,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fayBefore = JSON.stringify(pmRecords.filter(r => r.target === 'fay')), countBefore = pmRecords.length;
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!$('input[type="file"]'));
-  chooseFile('{"messages":[]}'); await until(() => !!byText('.toast', 'This file is not a BetterChatango message history.'));
-  const notHistory = { toast: !!byText('.toast', 'This file is not a BetterChatango message history.'), written: pmRecords.length - countBefore };
+  chooseFile('{"messages":[]}'); await until(() => !!byText('.toast', "This file isn't a BetterChatango message history."));
+  const notHistory = { toast: !!byText('.toast', "This file isn't a BetterChatango message history."), written: pmRecords.length - countBefore };
   const RECEIVED = 'msg:ivan:marjorie:unknown:1700003000.5:0:<n000/>Kept from my old browser', SENT = 'msg:marjorie:marjorie:unknown:1700003010.5:0:<n000/>My old reply';
   chooseFile(JSON.stringify([
     { target: 'ivan', ts: 1700003000.5, data: RECEIVED, unread: 1 },
@@ -2244,8 +2244,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !pmRow('Remove me') && !!byText('.toast', 'Message removed from this browser.'));
   const removed = { ask: removeAsk, record: !!recordAt(1700003900.5), shown: !!pmRow('Remove me'), toast: !!byText('.toast', 'Message removed from this browser.') };
   await removeFromBrowser('Keep me');
-  await until(() => !!byText('.toast', 'This message could not be removed.'));
-  const refused = { walt: (recordAt(1700004000.5) || {}).target, vera: (recordAt(1700004001.5) || {}).target, shown: !!pmRow('Keep me'), toast: !!byText('.toast', 'This message could not be removed. Reload the page and try again.') };
+  await until(() => !!byText('.toast', "Couldn't remove this message."));
+  const refused = { walt: (recordAt(1700004000.5) || {}).target, vera: (recordAt(1700004001.5) || {}).target, shown: !!pmRow('Keep me'), toast: !!byText('.toast', "Couldn't remove this message. Reload the page and try again.") };
   // Edited original: read again by its key, it goes with its edit, but not the PM from nell that has the same key.
   click(byText('.conv', 'olga')); await until(() => !!pmRow('Final text'));
   await removeFromBrowser('Final text');
@@ -2260,7 +2260,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !pmRow('Only the edit'));
   const editOnly = { original: !!recordAt(1700004100.5), edit: !!recordAt(1700004200.5), shown: !!pmRow('Only the edit') };
   step('remove a private message from this browser',
-    removed.ask.item && /Remove this message from this browser\?/.test(removed.ask.dialog) && removed.ask.dialog.includes('Removes the copy BetterChatango keeps in this browser. Chatango does not store private messages, and vera keeps their copy.')
+    removed.ask.item && /Remove this message from this browser\?/.test(removed.ask.dialog) && removed.ask.dialog.includes("Removes the copy BetterChatango keeps in this browser. Chatango doesn't store private messages, and vera keeps their copy.")
       && !removed.record && !removed.shown && removed.toast
       && refused.walt === 'walt' && refused.vera === 'vera' && refused.shown && refused.toast
       && !edited.original && !edited.edit && edited.nell && !edited.shown
@@ -2454,7 +2454,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('DENIED', []); await wait(50);
   const denied = overlay();
   step('session overlay',
-    !!kicked && kicked.text.includes("You're signed in somewhere else") && kicked.buttons.includes('Reload') && kicked.buttons.includes('Reconnect here') && hereAsked && !afterHere
+    !!kicked && kicked.text.includes("You're logged in somewhere else") && kicked.buttons.includes('Reload') && kicked.buttons.includes('Reconnect here') && hereAsked && !afterHere
       && !!offline && offline.text.includes("You're offline") && onlineReconnects === 1
       && !lost.dialog && !lost.inert && !!lost.banner && lost.banner.includes('Connection lost') && lost.banner.includes('Reconnecting…') && lost.banner.includes('Attempt 1 of 3')
       && !!lostWaiting && /Reconnecting in \d+ s/.test(lostWaiting) && lostWaiting.includes('Attempt 2 of 3')

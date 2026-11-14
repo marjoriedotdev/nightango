@@ -6,7 +6,7 @@ var MODLOG_TEXT = {
   cntr: 'turned the member counter on or off', chbw: 'changed banned words', enlp: 'changed auto-moderation', annc: 'changed the announcement',
   egrp: 'edited the group', shwi: 'made moderator badges visible', hidi: 'hid moderator badges', chsi: 'let moderators choose their badge visibility', ubna: 'removed all bans'
 };
-var MODLOG_SYSTEM = { acls: 'The group closed automatically: no moderator was online.', aopn: 'The group reopened when a moderator signed in.' };
+var MODLOG_SYSTEM = { acls: 'The group closed automatically: no moderator was online.', aopn: 'The group reopened when a moderator logged in.' };
 
 function GSAuditLive(p) {
   var app = useApp(), g = p.g, log = g.live.modlog, page = g.live.modlogPage;
@@ -20,10 +20,10 @@ function GSAuditLive(p) {
       h('select', { className: 'tc-input', style: { width: 'auto' }, value: actor, onChange: function (e) { setActor(e.target.value); } }, h('option', { value: 'all' }, 'Everyone'), actors.map(function (n) { return h('option', { key: n, value: n }, shownName(app.state, n)); })))
   },
     h(T.SettingsSection, null, log == null ? h(SkeletonRows, { count: 5, avatar: 28, label: 'Loading the log from Chatango' }) : rows.length ? rows.map(function (x, i) {
-      var sys = MODLOG_SYSTEM[x.type], text = (MODLOG_TEXT[x.type] || 'did ' + x.type).replace('*t*', x.target ? shownName(app.state, x.target) : 'someone');
+      var sys = MODLOG_SYSTEM[x.type], text = (MODLOG_TEXT[x.type] || "made a change Nightango doesn't know yet").replace('*t*', x.target ? shownName(app.state, x.target) : 'someone');
       return h(ActivityRow, { key: x.id, first: !i, at: x.at, lead: sys ? h('span', { className: 'role-ico' }, h(T.Icon, { name: 'lock', size: 14 })) : null },
         sys || h(Frag, null, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', text));
-    }) : h('p', { className: 'pal-empty' }, 'No entries.'),
+    }) : h('p', { className: 'pal-empty' }, 'Nothing logged yet.'),
     log && page.more ? h('div', { className: 'list-more' }, page.loading ? h(T.Spinner, { label: 'Loading older entries' })
       : h(T.Button, { size: 'sm', onClick: function () { app.actions.olderModLog(g.id); } }, 'Load older')) : null));
 }

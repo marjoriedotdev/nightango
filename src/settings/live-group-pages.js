@@ -35,7 +35,7 @@ function GSAutoModLive(p) {
 
 function GSMediaLive(p) {
   var m = p.draft.media, can = p.myRole === 'owner' || p.perms.editRestrictions;
-  return h(Page, { title: 'Media and links', lede: 'What members can share in #' + p.g.id + '. Staff are not restricted.' },
+  return h(Page, { title: 'Media and links', lede: 'What members can share in #' + p.g.id + ". Staff aren't restricted." },
     can ? null : h(T.Banner, { icon: 'lock' }, 'Your permissions let you view these rules but not change them.'),
     h(T.SettingsSection, null, [['links', 'Allow links'], ['images', 'Allow images'], ['videos', 'Allow videos']].map(function (r) {
       return h(T.SettingRow, { key: r[0], title: r[1], control: h(T.Switch, { checked: !!m[r[0]], disabled: !can, onChange: function (e) { var v = e.target.checked; p.edit(function (d) { d.media[r[0]] = v; }); } }) });
@@ -109,7 +109,7 @@ function GSBansLive(p) {
   }
   function unbanButton(x) { return h(T.Button, { size: 'sm', onClick: function () { app.actions.unbanEntry(g.id, x); } }, 'Unban'); }
   return h(Page, {
-    title: 'Bans', lede: 'Banned members cannot post. Chatango bans the account and the IP of one of their messages.',
+    title: 'Bans', lede: "Banned members can't post. Chatango bans the account and the IP of one of their messages.",
     aside: g.bans.length && (owner || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: g.live.banPage.more ? 'Everyone banned in #' + g.id + ' will be able to post again.' : plural(g.bans.length, 'member', 'members') + ' will be able to post in #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null
   },
     h(T.SettingsSection, { title: 'Ban someone', padded: true },

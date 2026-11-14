@@ -109,7 +109,7 @@ function trimEnd(text) {
   while (end && /\s/.test(text.charAt(end - 1))) end--;
   return text.slice(0, end);
 }
-function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
+function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
 // Own key only: a name such as constructor is also a key of every object.
 function ownOf(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
 function isGuest(name) { return /^[!#]/.test(name); }

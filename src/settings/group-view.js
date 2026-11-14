@@ -12,7 +12,7 @@ function GroupSettingsView(p) {
   var page = listedPage(sections, p.page);
   function edit(fn) { setDraft(function (d0) { var d1 = JSON.parse(JSON.stringify(d0)); fn(d1); return d1; }); }
   function leave() {
-    if (dirty) app.ui.confirm({ title: 'Discard unsaved changes?', body: 'Your changes to #' + g.id + ' are not saved yet.', confirmLabel: 'Discard', danger: true, onConfirm: function () { app.nav({ view: 'group', id: g.id }); } });
+    if (dirty) app.ui.confirm({ title: 'Discard unsaved changes?', body: 'Your changes to #' + g.id + " aren't saved yet.", confirmLabel: 'Discard', danger: true, onConfirm: function () { app.nav({ view: 'group', id: g.id }); } });
     else app.nav({ view: 'group', id: g.id });
   }
   var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: manage };

@@ -2,8 +2,8 @@
 var SESSION_ATTEMPTS = 3;
 // A lost connection has no dialog: it shows in SessionBanner.
 var SESSION_COPY = {
-  kicked: { icon: 'monitor-smartphone', title: "You're signed in somewhere else", body: 'Chatango closed your private messages here because your account connected from another window or device.' },
-  denied: { icon: 'lock', title: 'Your session expired', body: 'Reload the page and sign in again on the BetterChatango screen.' },
+  kicked: { icon: 'monitor-smartphone', title: "You're logged in somewhere else", body: 'Chatango closed your private messages here because your account connected from another window or device.' },
+  denied: { icon: 'lock', title: 'Your session expired', body: 'Reload the page and log in again on the BetterChatango screen.' },
   offline: { icon: 'wifi-off', title: "You're offline", body: 'Nightango will reconnect when your connection is back.' }
 };
 // Texts of the official client for a connection that stays lost.

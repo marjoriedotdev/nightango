@@ -44,7 +44,7 @@ function useAttachMedia(to, setDraft) {
     return function () { URL.revokeObjectURL(url); setPreview(null); };
   }, [file]);
   if (!LIVE) {
-    var unavailable = function () { app.ui.toast('Uploading media is not part of this prototype.'); };
+    var unavailable = function () { app.ui.toast("Uploading media isn't part of this prototype."); };
     return { onAttach: unavailable, onFiles: unavailable, status: null, busy: false, attachment: null, file: null, send: null, input: null };
   }
   var name = app.uploads[key];
@@ -68,7 +68,7 @@ function useAttachMedia(to, setDraft) {
     busy: !!name,
     attachment: file ? {
       name: file.name, preview: preview, icon: UPLOAD_ICONS[file.type.split('/')[0]] || 'paperclip',
-      note: name ? null : 'vissle.me hosts it when you send. Anyone with the link can open it.',
+      note: name ? null : 'vissle hosts it when you send. Anyone with the link can open it.',
       onRemove: name ? null : function () { setStaged(null); }
     } : null,
     file: file,

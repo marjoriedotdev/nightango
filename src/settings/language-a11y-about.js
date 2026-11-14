@@ -1,9 +1,9 @@
 function AccessibilityPage() {
   var app = useApp(), pr = usePref();
-  var keys = [['Ctrl K', 'Search or jump to a group, person or setting'], ['Enter', 'Send the message'], ['Shift Enter', 'New line in the message'], ['Up', 'Edit your last message when the message field is empty'], ['Esc', 'Cancel a reply or an edit, close a menu or a dialog'], ['Tab', 'Move between controls. Focus is always visible.']];
-  return h(Page, { title: 'Accessibility', lede: 'Your system motion and contrast settings apply. These add to them.' },
+  var keys = [['Ctrl K', 'Search or jump to a group, person or setting'], ['Enter', 'Send the message'], ['Shift Enter', 'New line in the message'], ['Up', 'Edit your last message when the message field is empty'], ['Esc', 'Cancel a reply or an edit, close a menu or a dialog'], ['Tab', 'Move between controls']];
+  return h(Page, { title: 'Accessibility', lede: "Nightango already follows your system's motion and contrast settings. These go further." },
     h(T.SettingsSection, { title: 'Display' },
-      h(T.SettingRow, { title: 'Reduce motion', description: 'Turns off transitions.', control: pr.sw('a11y.reduceMotion') }),
+      h(T.SettingRow, { title: 'Reduce motion', description: 'Turns off animations and fades.', control: pr.sw('a11y.reduceMotion') }),
       h(T.SettingRow, { title: 'Always underline links', description: 'Links in messages are underlined, not only colored.', control: pr.sw('a11y.underlineLinks') }),
       h(T.SettingRow, { asLabel: false, title: 'Text size', description: 'Set in Appearance.', control: h(T.Button, { size: 'sm', onClick: function () { app.nav({ view: 'settings', page: 'appearance' }); } }, 'Open Appearance') })),
     h(T.SettingsSection, { title: 'Keyboard shortcuts' },
@@ -46,7 +46,7 @@ function DiagnosticsPage() {
   var r = useState(0), setRev = r[1];
   useEffect(function () { return JOURNAL.subscribe(function () { setRev(function (n) { return n + 1; }); }); }, []);
   var list = JOURNAL.entries(), shown = list.slice(-JOURNAL_SHOWN).reverse();
-  function copy() { copyText(journalText(list), function (ok) { app.ui.toast(ok ? 'Log copied.' : 'The log could not be copied. Download it instead.', { tone: ok ? 'success' : 'error' }); }); }
+  function copy() { copyText(journalText(list), function (ok) { app.ui.toast(ok ? 'Log copied.' : "Couldn't copy the log. Download it instead.", { tone: ok ? 'success' : 'error' }); }); }
   function download() { var d = new Date(); downloadFile('torch-skin-log-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.txt', journalText(list), 'text/plain'); }
   function clear() { app.ui.confirm({ title: 'Clear the log?', body: 'Events recorded for this account are deleted from this browser.', confirmLabel: 'Clear log', danger: true, onConfirm: JOURNAL.clear }); }
   return h(Page, { title: 'Diagnostics', lede: 'Connection and page events, to trace why a group or private messages disconnect.' },
@@ -78,7 +78,7 @@ function AboutPage() {
     h(T.SettingsSection, { title: 'Built on BetterChatango', description: 'By Vissle, under the MIT license.', padded: true },
       h('a', { href: 'https://github.com/Vissle-Drissle/Torch-Client', target: '_blank', rel: 'noopener noreferrer' }, 'BetterChatango source code and issue tracker')),
     h(T.SettingsSection, { title: 'Independent project', description: 'Nightango is not affiliated with, endorsed by or sponsored by BetterChatango or Chatango.' }),
-    LIVE ? h(T.Banner, { icon: 'info' }, 'Test build. Nightango runs on top of BetterChatango on st.chatango.com. BetterChatango handles sign-in and the Chatango connection; Nightango never sees your password.') : null,
+    LIVE ? h(T.Banner, { icon: 'info' }, 'Test build. Nightango runs on top of BetterChatango on st.chatango.com. BetterChatango handles login and the Chatango connection; Nightango never sees your password.') : null,
     LIVE ? null : h(T.SettingsSection, { title: 'Prototype', description: 'This build runs on sample data. Nothing is sent to Chatango.' },
       h(T.SettingRow, { title: 'Simulate activity', description: 'Members post, join, leave and send you messages every few seconds.', control: pr.sw('simulate') }),
       h(T.SettingRow, {

@@ -69,7 +69,7 @@ async function suite(userscript) {
   const a = page(userscript, 'https://st.chatango.com/', w => Object.defineProperty(w, 'claude', { get() { hookReads++; return { hot: {} }; } }));
   const starts = a.d.querySelectorAll('script[src="' + START + '"]');
   step('starts BetterChatango once on the home page', starts.length === 1);
-  step('shows the BetterChatango loading text', a.d.querySelector('h1').textContent === 'Loading...');
+  step('shows the BetterChatango loading text', a.d.querySelector('h1').textContent === 'Starting BetterChatango…');
   step('no overlay before BetterChatango is ready', !a.d.getElementById('torch-skin'));
   step('React loaded with integrity check', [...a.d.querySelectorAll('script[src*="cdnjs"]')].every(s => s.integrity.indexOf('sha384-') === 0 && s.crossOrigin === 'anonymous'));
   await deliverReact(a.w);
@@ -233,7 +233,7 @@ async function suite(userscript) {
   const s = e.d.querySelector('script[src="' + START + '"]');
   s.dispatchEvent(new e.w.Event('error'));
   await wait(20);
-  step('explains when BetterChatango cannot be reached', /could not be reached/.test(e.d.querySelector('h1').textContent));
+  step('explains when BetterChatango cannot be reached', /Couldn't reach BetterChatango/.test(e.d.querySelector('h1').textContent));
   e.w.close();
 
   /* React unreachable: the sign-in screen gets its BetterChatango look back */
