@@ -59,17 +59,18 @@ function useReconnection(stateRef, update) {
    */
   function startRetries(gid) {
     stopRetry(gid);
-    trackRetry(gid, { tries: 0, timer: null });
+    trackRetry(gid, { tries: 0, at: null, timer: null });
     reconnectAuto(gid);
   }
   /**
-   * Records the sequence of a connection and copies its presence into the state, which the connection banner reads.
+   * Records the sequence of a connection and copies its attempt number and the time of its next attempt into the state,
+   * which the connection banner and the session dialog read.
    * @param {string} gid Group or private_message.
-   * @param {?{tries: number, timer: ?number}} r Sequence in progress, null when it ends.
+   * @param {?{tries: number, at: ?number, timer: ?number}} r Sequence in progress with the time its timer fires, null when it ends.
    */
   function trackRetry(gid, r) {
     if (r) retries.current[gid] = r; else delete retries.current[gid];
-    update(function (d) { if (!d.auth.loggedIn) return; if (r) d.retrying[gid] = true; else delete d.retrying[gid]; });
+    update(function (d) { if (!d.auth.loggedIn) return; if (r) d.retrying[gid] = { attempt: r.tries, at: r.at }; else delete d.retrying[gid]; });
   }
   function stopRetry(gid) {
     var r = retries.current[gid];
@@ -87,7 +88,7 @@ function useReconnection(stateRef, update) {
     if (tries >= RECONNECT_DELAYS.length) { liveBridge.note('Stopped reconnecting to ' + liveBridge.connName(gid) + ' after ' + tries + ' attempts'); return; }
     var delay = RECONNECT_DELAYS[tries];
     liveBridge.note('Reconnecting to ' + liveBridge.connName(gid) + ' in ' + delay / 1000 + ' s, attempt ' + (tries + 1) + ' of ' + RECONNECT_DELAYS.length);
-    trackRetry(gid, { tries: tries + 1, timer: setTimeout(function () {
+    trackRetry(gid, { tries: tries + 1, at: Date.now() + delay, timer: setTimeout(function () {
       var s0 = stateRef.current, conn = connOf(s0, gid);
       // Attempt already started elsewhere (Reconnect, network back): its failure resumes the sequence.
       if (conn === 'connecting') return;

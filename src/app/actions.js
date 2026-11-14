@@ -77,7 +77,7 @@ function useActions(k) {
    */
   function dropDmMessage(name, id) {
     update(function (d) { var c = d.dms[name]; c.messages = c.messages.filter(function (x) { return x.id !== id; }); });
-    toast('Message removed from this browser.');
+    toast('Message removed from this browser.', { tone: 'success' });
   }
 
   var mediaLib = LIVE ? liveBridge : sampleMedia;
@@ -93,7 +93,7 @@ function useActions(k) {
     closePip: closePipWindow,
     login: function (name) { var world = sampleWorld(name); drafts.clear(); update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
-    resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.'); },
+    resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.', { tone: 'success' }); },
     backToChat: function () { nav(stateRef.current.lastChat || { view: 'group', id: 'community' }); },
     setStatus: function (st2) { update(function (d) { d.meStatus = st2; }); },
     setPmSetting: function (key, value) {
@@ -190,7 +190,7 @@ function useActions(k) {
       if (r.view === 'dm' && r.id === name) nav({ view: 'dm', id: null });
       unreadPm(pmArchive.current, update, name).then(function (flagged) {
         if (!flagged) toast('No message from ' + shownName(stateRef.current, name) + ' is saved in this browser.');
-      }, function (e) { toast(e.message); });
+      }, function (e) { toast(e.message, { tone: 'error' }); });
     },
     deleteDm: function (name) { actions.closeDm(name); update(function (d) { d.dms[name].messages = []; }); },
     /**
@@ -266,8 +266,8 @@ function useActions(k) {
     toggleMedia: function (url, saved) {
       (saved ? mediaLib.removeMedia(url) : mediaLib.addMedia({ url: url, name: mediaName(url) })).then(function () {
         mediaChanged();
-        toast(saved ? 'Removed from your media.' : 'Added to your media.', { icon: 'check' });
-      }, function (e) { toast(e.message); });
+        toast(saved ? 'Removed from your media.' : 'Added to your media.', { tone: 'success' });
+      }, function (e) { toast(e.message, { tone: 'error' }); });
     },
     exportMedia: function () { return mediaLib.exportMedia(); },
     /** GIFs of the media library that a message would show, by name. */
@@ -281,7 +281,7 @@ function useActions(k) {
       var was = !!userOf(stateRef.current, name)[key];
       update(function (d) { if (!d.users[name]) d.users[name] = { status: 'offline', about: '', style: {} }; d.users[name][key] = !was; });
       if (key === 'friend' && !was) return;
-      toast(toggleUserText(shownName(stateRef.current, name), key, was), { action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
+      toast(toggleUserText(shownName(stateRef.current, name), key, was), { tone: 'success', action: { label: 'Undo', run: function () { update(function (d) { d.users[name][key] = was; }); } } });
     },
     toggleMute: function (gid) { update(function (d) { d.groups[gid].muted = !d.groups[gid].muted; }); },
     toggleHiddenChannel: function (gid, k) {
@@ -341,7 +341,7 @@ function useActions(k) {
         if (author && author !== me) g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Deleted a message from ' + author });
         dropMentions(d, gid, [mid]);
       });
-      toast('Message deleted.');
+      toast('Message deleted.', { tone: 'success' });
     },
     ban: function (gid, name) {
       var me = stateRef.current.me, now = Date.now();
@@ -353,12 +353,12 @@ function useActions(k) {
         g.messages.push({ id: uid(), kind: 'ban', user: name, ts: now });
         g.audit.push({ id: uid(), at: now, actor: me, text: 'Banned ' + shownName(d, name) });
       });
-      toast(shownName(stateRef.current, name) + ' was banned from #' + gid + '.', { action: { label: 'Undo', run: function () { actions.unban(gid, name, true); } } });
+      toast(shownName(stateRef.current, name) + ' was banned from #' + gid + '.', { tone: 'success', action: { label: 'Undo', run: function () { actions.unban(gid, name, true); } } });
     },
     unban: function (gid, name, quiet) {
       var me = stateRef.current.me;
       update(function (d) { var g = d.groups[gid]; g.bans = g.bans.filter(function (b) { return b.name !== name; }); g.audit.push({ id: uid(), at: Date.now(), actor: me, text: 'Unbanned ' + shownName(d, name) }); });
-      if (!quiet) toast(shownName(stateRef.current, name) + ' can join #' + gid + ' again.');
+      if (!quiet) toast(shownName(stateRef.current, name) + ' can join #' + gid + ' again.', { tone: 'success' });
     },
     unbanAll: function (gid) {
       var me = stateRef.current.me, n = stateRef.current.groups[gid].bans.length;
@@ -371,7 +371,7 @@ function useActions(k) {
         g.audit.push({ id: uid(), at: Date.now(), actor: me, text: closed ? 'Closed the group' : 'Reopened the group' });
         g.messages.push({ id: uid(), kind: 'system', text: closed ? me + ' closed the group. Nobody can post until it reopens.' : me + ' reopened the group.', ts: Date.now() });
       });
-      toast(closed ? '#' + gid + ' is closed.' : '#' + gid + ' is open again.');
+      toast(closed ? '#' + gid + ' is closed.' : '#' + gid + ' is open again.', { tone: 'success' });
     },
     saveGroupSettings: function (gid, draft) {
       var me = stateRef.current.me, old = stateRef.current.groups[gid].settings, now = Date.now();
@@ -387,7 +387,7 @@ function useActions(k) {
         if (old.announcement.text !== draft.announcement.text || (!old.announcement.enabled && draft.announcement.enabled)) g.dismissedAnnouncement = false;
         g.settings = JSON.parse(JSON.stringify(draft));
       });
-      toast('Changes to #' + gid + ' saved.', { icon: 'check' });
+      toast('Changes to #' + gid + ' saved.', { tone: 'success' });
     }
   };
 
@@ -427,8 +427,8 @@ function useActions(k) {
     var m0 = base.modFlags || {}, m1 = draft.modFlags || {};
     Object.keys(m1).forEach(function (n) { if (m0[n] !== m1[n]) count(liveBridge.setMod(g.id, n, m1[n])); });
     Object.keys(m0).forEach(function (n) { if (!(n in m1)) count(liveBridge.removeMod(g.id, n)); });
-    if (failed) toast(failed + (failed > 1 ? ' changes' : ' change') + " could not be sent. Check the connection to #" + g.id + '.');
-    else toast(sent ? 'Changes sent to Chatango.' : 'Nothing to save.', { icon: sent ? 'check' : 'info' });
+    if (failed) toast(failed + (failed > 1 ? ' changes' : ' change') + " could not be sent. Check the connection to #" + g.id + '.', { tone: 'error' });
+    else toast(sent ? 'Changes sent to Chatango.' : 'Nothing to save.', { tone: sent ? 'success' : 'info' });
     return sent;
   }
   /**
@@ -440,7 +440,7 @@ function useActions(k) {
    */
   function toggleBetterChatangoList(gid, key, save, failure) {
     var on = !stateRef.current.groups[gid][key];
-    if (!save(gid, on)) { toast(failure); return; }
+    if (!save(gid, on)) { toast(failure, { tone: 'error' }); return; }
     update(function (d) { d.groups[gid][key] = on; });
   }
   /**
@@ -448,7 +448,7 @@ function useActions(k) {
    * @param {string} gid Group or private_message.
    * @param {string} outcome What did not happen, such as Message not sent.
    */
-  function messageFailed(gid, outcome) { toast(outcome + ' ' + (liveBridge.closedHint(gid) || 'BetterChatango rejected it.')); }
+  function messageFailed(gid, outcome) { toast(outcome + ' ' + (liveBridge.closedHint(gid) || 'BetterChatango rejected it.'), { tone: 'error' }); }
   /**
    * Sends a group message built by BetterChatango with the own style and keeps its style.
    * @param {string} gid Target group.
@@ -482,7 +482,7 @@ function useActions(k) {
     var cleared = names.filter(function (n) { return liveBridge.clearPmHistory(n) || unsaved; });
     cleared.forEach(function (n) { actions.closeDm(n); });
     update(function (d) { cleared.forEach(function (n) { Object.assign(d.dms[n], { messages: [], olderMore: false, historyCapped: false }); }); });
-    if (cleared.length < names.length) toast(failure);
+    if (cleared.length < names.length) toast(failure, { tone: 'error' });
   }
   function setOwnStyle(style) {
     update(function (d) {
@@ -528,12 +528,12 @@ function useActions(k) {
         var body = text ? text + ' ' + link : link, o = Object.assign({}, opts, { quiet: true });
         var sent = to.kind === 'dm' ? actions.sendDm(to.id, body, o) : actions.sendGroup(to.id, body, o);
         setUpload(to, null);
-        if (sent) { toast('File sent.', { icon: 'check' }); return null; }
-        toast('The file was uploaded, but the message was not sent.', { action: { label: 'Copy link', run: function () {
-          copyText(link, function (ok) { toast(ok ? 'Link copied.' : 'Copy failed. The link is ' + link); });
+        if (sent) { toast('File sent.', { tone: 'success' }); return null; }
+        toast('The file was uploaded, but the message was not sent.', { tone: 'error', action: { label: 'Copy link', run: function () {
+          copyText(link, function (ok) { toast(ok ? 'Link copied.' : 'Copy failed. The link is ' + link, { tone: ok ? 'success' : 'error' }); });
         } } });
         return body;
-      }, function (e) { setUpload(to, null); toast(e.message); throw e; });
+      }, function (e) { setUpload(to, null); toast(e.message, { tone: 'error' }); throw e; });
     };
     actions.setMessageStyle = function (style) {
       liveBridge.applyStyle(style);
@@ -547,14 +547,14 @@ function useActions(k) {
     actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', liveBridge.setFavorite, 'BetterChatango could not save this favorite. Reload the page and try again.'); };
     actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', liveBridge.setMuted, 'BetterChatango could not save the mute for #' + gid + '. Reload the page and try again.'); };
     actions.setTrustedHost = function (host, on) {
-      if (!liveBridge.setTrustedHost(host, on)) { toast(BETTER_CHATANGO_SAVE_FAILED); return false; }
+      if (!liveBridge.setTrustedHost(host, on)) { toast(BETTER_CHATANGO_SAVE_FAILED, { tone: 'error' }); return false; }
       update(function (d) { d.prefs.safety.trustedHosts = liveBridge.trustedHosts(); });
       return true;
     };
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
       var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
-      if (kept) toast('BetterChatango could not remove #' + gid + ' from favorites. Reload the page and try again.');
+      if (kept) toast('BetterChatango could not remove #' + gid + ' from favorites. Reload the page and try again.', { tone: 'error' });
       update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
@@ -641,7 +641,7 @@ function useActions(k) {
       }, function (e) {
         warn(e);
         update(function (d) { Object.assign(d.dms[name], { loadingOlder: false, olderFailed: true }); });
-        toast('Earlier messages could not be loaded.');
+        toast('Earlier messages could not be loaded.', { tone: 'error' });
       });
     };
     actions.loadMore = function (gid) {
@@ -658,14 +658,14 @@ function useActions(k) {
       }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
-      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('BetterChatango could not save its ignore list. Reload the page and try again.'); return; }
+      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('BetterChatango could not save its ignore list. Reload the page and try again.', { tone: 'error' }); return; }
       update(function (d) { ensureLiveUser(d, name, localRef.current)[key] = !was; });
-      toast(toggleUserText(shownName(stateRef.current, name), key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
+      toast(toggleUserText(shownName(stateRef.current, name), key, was), { tone: 'success', action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
     actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
     actions.removeDmMessage = function (name, m) {
       liveBridge.removePm(name, m).then(function (ok) {
-        if (!ok) { toast('This message could not be removed. Reload the page and try again.'); return; }
+        if (!ok) { toast('This message could not be removed. Reload the page and try again.', { tone: 'error' }); return; }
         dropDmMessage(name, m.id);
         syncPmUnread(pmArchive.current, update, [name]);
       });
@@ -681,7 +681,7 @@ function useActions(k) {
       return liveBridge.createGroup({ name: name, title: title, description: desc, discovery: listed }).then(function () {
         actions.joinGroup(name);
         return true;
-      }, function (e) { toast(e && e.message ? e.message : 'Chatango refused to create the group.'); return false; });
+      }, function (e) { toast(e && e.message ? e.message : 'Chatango refused to create the group.', { tone: 'error' }); return false; });
     };
     actions.deleteMessage = function (gid, mid) {
       if (!liveBridge.delivered(mid)) { toast('This message is still being delivered. Try again in a moment.'); return; }

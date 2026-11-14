@@ -33,7 +33,7 @@ function usePref() {
  */
 function saveBetterChatangoSetting(app, write, key, value) {
   if (write(key, value)) return true;
-  app.ui.toast(BETTER_CHATANGO_SAVE_FAILED);
+  app.ui.toast(BETTER_CHATANGO_SAVE_FAILED, { tone: 'error' });
   return false;
 }
 

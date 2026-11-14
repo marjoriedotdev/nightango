@@ -253,7 +253,7 @@ function GroupView(p) {
             popOutItem(app, { view: 'group', id: g.id }),
             spacesItem(app, { view: 'group', id: g.id }),
             { label: 'Group color…', icon: 'palette', onSelect: function () { setColorOpen(true); } },
-            { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com'); }); } },
+            { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com', { tone: ok ? 'success' : 'error' }); }); } },
             { divider: true },
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
           ]

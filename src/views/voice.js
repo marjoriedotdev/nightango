@@ -94,7 +94,7 @@ function useVoiceRecorder(key, onFiles) {
         }, function (e) {
           warn(e);
           setRec(null);
-          app.ui.toast('The recording could not be prepared. Try again.');
+          app.ui.toast('The recording could not be prepared. Try again.', { tone: 'error' });
         });
       };
       r.timer = setInterval(function () {
@@ -109,7 +109,7 @@ function useVoiceRecorder(key, onFiles) {
       if (asking.current !== ask) return;
       asking.current = null;
       app.ui.toast(e && e.name === 'NotAllowedError' ? "Nightango can't use your microphone. Allow it for this site in your browser, then try again."
-        : 'No microphone is available. Plug one in, then try again.');
+        : 'No microphone is available. Plug one in, then try again.', { tone: 'error' });
     });
   }
   function stop() {

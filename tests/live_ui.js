@@ -2452,7 +2452,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('session overlay',
     !!kicked && kicked.text.includes("You're signed in somewhere else") && kicked.buttons.includes('Reload') && kicked.buttons.includes('Reconnect here') && hereAsked && !afterHere
       && !!offline && offline.text.includes("You're offline") && onlineReconnects === 1
-      && !!lost && lost.text.includes('Connection lost')
+      && !!lost && lost.text.includes('Connection lost') && /Next attempt in \d+ s/.test(lost.text)
       && !!denied && denied.text.includes('Your session expired') && !calls.some(c => c[0] === 'alert'),
     { kicked, hereAsked, afterHere, offline, onlineReconnects, lost, denied, alerts: calls.filter(c => c[0] === 'alert').length });
 

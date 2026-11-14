@@ -65,15 +65,15 @@ function PmHistoryRows() {
   function exportFile() {
     app.actions.exportDms().then(function (records) {
       downloadJson(app.state.me + '_history.json', records);
-    }, function (e) { toast(e.message); });
+    }, function (e) { toast(e.message, { tone: 'error' }); });
   }
   function importFile(file) {
     readJsonArray(file).then(function (records) {
-      if (!records) { toast('This file is not a BetterChatango message history.'); return; }
+      if (!records) { toast('This file is not a BetterChatango message history.', { tone: 'error' }); return; }
       app.actions.importDms(records).then(function (r) {
-        if (r.foreign) toast("This file holds another account's messages. Nothing was imported.");
-        else toast('Imported ' + plural(r.added, 'message', 'messages') + '. ' + r.saved + ' already saved, ' + r.skipped + ' skipped.', { icon: r.added ? 'check' : 'info' });
-      }, function (e) { toast(e.message); });
+        if (r.foreign) toast("This file holds another account's messages. Nothing was imported.", { tone: 'error' });
+        else toast('Imported ' + plural(r.added, 'message', 'messages') + '. ' + r.saved + ' already saved, ' + r.skipped + ' skipped.', { tone: r.added ? 'success' : 'info' });
+      }, function (e) { toast(e.message, { tone: 'error' }); });
     });
   }
   return h(Frag, null,
