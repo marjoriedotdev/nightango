@@ -1,10 +1,10 @@
 var React = window.React, ReactDOM = window.ReactDOM, h = React.createElement;
 // In live mode, each member avatar gets its Chatango picture. Groups keep their initial: Chatango serves a "?" picture, not an error, when there is no icon.
-// At Halloween and in winter, member avatars from 24px up wear a costume.
+// In a season with costumes, member avatars from 24px up wear one.
 var T = Object.assign({}, window.Torch, {
   Avatar: function (p) {
     var season = useContext(SeasonCtx);
-    var costume = (season === 'halloween' || season === 'winter') && !p.square && (p.size || 36) >= 24;
+    var costume = season && COSTUMES[season] && !p.square && (p.size || 36) >= 24;
     var extra = {};
     if (p.src === undefined) extra.src = p.square ? null : avatarSrc(p.name, p.size);
     if (costume) extra.decor = h(Costume, { season: season, name: p.name, color: p.color });

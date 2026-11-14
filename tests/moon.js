@@ -30,16 +30,21 @@ check(svg('2024-04-23T23:49Z').includes('aria-label="Full moon, 100% lit"') && !
 const util = {};
 vm.runInNewContext(fs.readFileSync(process.argv[2] + '/src/core/util.js', 'utf8'), util);
 const seasonAt = (south) => ([y, m, d, hh, mm, ss]) => util.seasonOf(new Date(y, m - 1, d, hh, mm, ss), south);
+/* Each range with the season around it: Christmas cuts the northern winter in two and stands alone in the south */
 const ranges = [
-  ['halloween', [2026, 10, 24], [2026, 11, 2], 'both'],
-  ['winter', [2026, 12, 1], [2027, 1, 6], 'north'],
-  ['winter', [2027, 6, 1], [2027, 7, 6], 'south'],
-  ['valentine', [2027, 2, 10], [2027, 2, 14], 'both']
+  ['halloween', [2026, 10, 24], [2026, 11, 2], 'both', null, null],
+  ['winter', [2026, 12, 1], [2026, 12, 17], 'north', null, 'christmas'],
+  ['christmas', [2026, 12, 18], [2026, 12, 26], 'both', 'winter', 'winter'],
+  ['winter', [2026, 12, 27], [2027, 1, 6], 'north', 'christmas', null],
+  ['winter', [2027, 6, 1], [2027, 7, 6], 'south', null, null],
+  ['valentine', [2027, 2, 10], [2027, 2, 14], 'both', null, null]
 ];
-for (const [season, first, last, where] of ranges) for (const south of [false, true]) {
+for (const [season, first, last, where, before, after] of ranges) for (const south of [false, true]) {
   const shown = where === 'both' || (where === 'south') === south, at = seasonAt(south);
   const name = season + ' ' + first.join('-') + ' to ' + last.join('-') + ' in the ' + (south ? 'south' : 'north');
   const inside = [[...first, 0, 0, 0], [...last, 23, 59, 59]], outside = [[first[0], first[1], first[2] - 1, 23, 59, 59], [last[0], last[1], last[2] + 1, 0, 0, 0]];
+  // The winter around Christmas is the northern one: the south has no season there.
+  const around = [before, after].map((id) => id === 'winter' && south ? null : id);
   check(inside.every((t) => at(t) === (shown ? season : null)), name + (shown ? ': shown' : ': not shown') + ' from its first to its last second', inside.map(at));
-  check(outside.every((t) => at(t) === null), name + ': no season the second before and after', outside.map(at));
+  check(outside.every((t, i) => at(t) === around[i]), name + ': ' + around.map((id) => id || 'no season').join(' the second before, ') + ' the second after', outside.map(at));
 }
