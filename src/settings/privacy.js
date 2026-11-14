@@ -27,7 +27,7 @@ function NotesSection() {
 }
 
 var PRIVACY_LEDE = 'Who can reach you, and what Nightango keeps in this browser.';
-// Labels to confirm on a real account before release (#83): what disable_idle_time hides, and whether allow_anon covers guests.
+// Labels checked by the owner on a real account before 0.36.0 (#83).
 var CHATANGO_PM_ROWS = [
   ['hideIdle', 'Hide your idle time', "People don't see how long you've been away."],
   ['allowAnon', 'Allow anonymous messages', 'People without a Chatango account can message you.'],
