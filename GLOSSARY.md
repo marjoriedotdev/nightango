@@ -75,6 +75,13 @@ Nightango's tokens, components and guidelines (torchds, namespace `window.Torch`
 A few days a year when the night of the interface changes, computed on the device: Halloween from October 24 to November 2, winter from December 1 to January 6 (June 1 to July 6 for a sky seen from the southern hemisphere), Valentine's Day from February 10 to 14. Its palette, its decorations and the costumes on avatars are seen only by the reader and can be turned off in Appearance.
 _Avoid_: theme (the dark or light theme, chosen by the reader)
 
+**Base sky**:
+The sky of a theme as it shows most of the day and under Calm sky: the night in the dark theme, the morning in the light theme.
+
+**Early sky, late sky**:
+The two skies a theme moves to by the device hour, each time from the base sky and back: first light before sunrise and dusk in the dark theme, full daylight and golden hour in the light theme.
+_Avoid_: stage, phase (reserved for the moon)
+
 ## Groups
 
 **Group**:

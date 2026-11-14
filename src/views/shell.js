@@ -83,6 +83,15 @@ function BrandMark(p) {
     p.startup ? null : h(NewYearMark, null));
 }
 
+// In seconds, as the duration of sky-turn in the stylesheet: the two must stay equal for the stars to start where they stand.
+var SIDEREAL_DAY = 86164;
+// Stars of the sky band. They turn in the stylesheet: only where the turn stands when they start moving is read here, from the device time.
+function BrandSky() {
+  var moves = skyMoves(useStatePart(function (s) { return s.prefs; }));
+  var turned = useMemo(function () { return Math.round(Date.now() / 1000 % SIDEREAL_DAY); }, [moves]);
+  return h('span', { className: 'brand-sky', 'aria-hidden': 'true' }, h('span', { className: 'sky-turn', style: { animationDelay: -turned + 's' } }));
+}
+
 function StartupScreen() {
   return h('main', { className: 'main' },
     h('div', { className: 'empty', role: 'status' },
@@ -135,6 +144,7 @@ function Sidebar(p) {
   var onlineFriends = Object.keys(s.users).filter(function (n) { return n !== s.me && s.users[n].friend && s.users[n].status !== 'offline'; }).length;
   return h('nav', { className: 'sidebar', 'aria-label': 'Groups and messages' },
     h('div', { className: 'brand' },
+      h(BrandSky, null),
       app.season ? h(SeasonSky, { season: app.season }) : null,
       h(BrandMark),
       h('span', { className: 'brand-name' }, 'Nightango'),
