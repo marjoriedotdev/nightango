@@ -344,7 +344,7 @@ function MenuButton(p) {
   }
   var trigger = p.renderTrigger
     ? p.renderTrigger({ onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' })
-    : h(T.IconButton, { icon: p.icon || 'more', label: p.label, size: p.size || 32, iconSize: p.iconSize, onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' });
+    : h(T.IconButton, { icon: p.icon || 'more', label: p.label, size: p.size, iconSize: p.iconSize, onClick: toggle, 'aria-expanded': String(open), 'aria-haspopup': 'menu' });
   return h('div', { className: 'menu-anchor', ref: ref },
     trigger,
     open ? h(Portal, null, h('div', { className: 'menu floating', role: 'menu', ref: menuRef, onKeyDown: onKey, style: place },
@@ -370,7 +370,7 @@ function ColorField(p) {
     h('label', { className: 'tc-label', htmlFor: p.id }, p.label),
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
       h('input', { id: p.id, type: 'color', className: 'color-in', style: { borderRadius: 7 }, value: p.value, onChange: function (e) { p.onChange(e.target.value); } }),
-      h('span', { className: 'tnum', style: { fontSize: 12.5, color: 'var(--text-2)' } }, p.value)));
+      h('span', { className: 'tnum', style: { fontSize: 'var(--font-size-caption)', color: 'var(--text-2)' } }, p.value)));
 }
 
 /**
@@ -386,7 +386,7 @@ function AccentSwatches(p) {
         on ? h(T.Icon, { name: 'check', size: 16, strokeWidth: 2.6, style: { color: onAccentOf(a[1]) } }) : null);
     }),
     h('span', { className: 'vsep', style: { margin: '0 4px' } }),
-    h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-2)' } },
+    h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 'var(--font-size-body-sm)', color: 'var(--text-2)' } },
       h('input', { type: 'color', className: 'color-in', value: p.value || p.fallback, 'aria-label': 'Custom ' + p.label.toLowerCase(), onChange: function (e) { p.onChange(e.target.value); }, style: custom ? { boxShadow: '0 0 0 2px var(--bg), 0 0 0 4px var(--text)' } : null }),
       'Custom'));
 }
@@ -566,7 +566,7 @@ function Toast(p) {
     h('span', { key: t.rev || 0, className: 'toast-icon' }, h(T.Icon, { name: t.icon || TOAST_ICON[tone], size: 15 })),
     h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
     t.action ? h(T.Button, { size: 'sm', variant: 'ghost', className: 'toast-action', onClick: function () { setLeaving(true); t.action.run(); } }, t.action.label) : null,
-    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 13, className: 'toast-close', onClick: function () { setLeaving(true); } }));
+    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 28, iconSize: 13, className: 'toast-close', onClick: function () { setLeaving(true); } }));
 }
 
 var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;

@@ -186,7 +186,7 @@ function MemberNote(p) {
     h('p', { className: 'muted' }, 'Only you see it. Kept in this browser, never sent.'),
     h(T.TextField, { id: 'note-label-' + p.name, label: 'Label', value: label, maxLength: NOTE_LABEL_MAX, placeholder: 'Shown next to their name', onChange: function (e) { setLabel(e.target.value); } }),
     h(T.TextField, { id: 'note-text-' + p.name, label: 'Note', multiline: true, rows: 3, maxLength: NOTE_TEXT_MAX, value: note, onChange: function (e) { setNote(e.target.value); } }),
-    h('div', { className: 'note-actions' }, h(T.Button, { size: 'sm', disabled: !changed, onClick: save }, 'Save note')));
+    h('div', { className: 'note-actions' }, h(T.Button, { disabled: !changed, onClick: save }, 'Save note')));
 }
 
 /**

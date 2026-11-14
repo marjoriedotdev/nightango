@@ -2,6 +2,16 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.36.0-beta.2] - 2026-11-14
+
+### Changed
+
+- A button and the field next to it share one text size and one height, everywhere: joining a group, searching, banning, inviting.
+- Lists to pick from show a Nightango arrow in place of the browser's, at the height of the other fields.
+- The buttons of the message box and of the bio toolbar are a little larger, all at one size.
+- Small text comes in fewer sizes: badges, unread counts, times and keyboard hints are slightly larger.
+- The name at the top of a conversation is a touch smaller and the sign-in title a touch larger.
+
 ## [0.36.0-beta.1] - 2026-11-13
 
 ### Added

@@ -141,10 +141,10 @@ function useMarkupToolbar(inputRef, fieldId, disabled) {
     tag(name);
   }
   function button(icon, label, onClick, keys) {
-    return h(T.IconButton, { icon: icon, label: label, size: 30, iconSize: 16, disabled: disabled, 'aria-keyshortcuts': keys, onClick: onClick });
+    return h(T.IconButton, { icon: icon, label: label, disabled: disabled, 'aria-keyshortcuts': keys, onClick: onClick });
   }
   function menu(icon, label, items) {
-    return h(MenuButton, { label: label, items: items, align: 'left', renderTrigger: function (t) { return h(T.IconButton, Object.assign({ icon: icon, label: label, size: 30, iconSize: 16, disabled: disabled }, t)); } });
+    return h(MenuButton, { label: label, items: items, align: 'left', renderTrigger: function (t) { return h(T.IconButton, Object.assign({ icon: icon, label: label, disabled: disabled }, t)); } });
   }
   var sep = h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' });
   var toolbar = h(T.Toolbar, { label: 'Formatting', controls: fieldId },

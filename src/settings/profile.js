@@ -24,7 +24,7 @@ function ProfilePage() {
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
         h(ProfilePreviewCard, { name: s.me, meta: meta, about: draft.about, mini: miniStyleOf(s.prefs, me, app.theme) }),
-        h('p', { className: 'muted', style: { margin: 0, fontSize: 12.5 } }, 'How other members see you when they open your profile from a group or a private message.'))),
+        h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-caption)' } }, 'How other members see you when they open your profile from a group or a private message.'))),
     dirty ? h(T.SaveBar, {
       onDiscard: function () { setDraft(snapshot()); },
       onSave: function () {
@@ -58,8 +58,8 @@ function ProfilePreviewCard(p) {
       cover.shown ? h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer', style: { display: 'block', width: '100%', height: '100%', objectFit: 'cover' } }) : null),
     h('div', { style: { padding: '0 18px 18px', marginTop: -32 } },
       h(T.Avatar, { name: p.name, size: 64, style: { border: '4px solid ' + bg, boxSizing: 'content-box' } }),
-      h('p', { style: { margin: '8px 0 0', fontSize: 17, fontWeight: 600 } }, p.name),
-      p.meta ? h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, p.meta) : null,
+      h('p', { style: { margin: '8px 0 0', fontSize: 'var(--font-size-title-md)', fontWeight: 600 } }, p.name),
+      p.meta ? h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-body-sm)' } }, p.meta) : null,
       p.about ? h('div', { style: { marginTop: 12 } }, h(RichText, { html: p.about, bg: mini ? mini.bg : null, link: mini ? mini.link : null })) : h('p', { className: 'about', style: { marginTop: 12 } }, 'No bio yet.'),
       mini ? coverReveal(cover, mini) : null));
 }
@@ -111,7 +111,7 @@ function VisitorsSection(p) {
   useEffect(function () { app.actions.loadVisitors(get, false); }, []);
   return h(T.SettingsSection, {
     title: 'Visitors', description: 'Activity on your profile recorded by vissle.me.',
-    headerAside: h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', size: 34, iconSize: 15, disabled: loading, onClick: function () { app.actions.loadVisitors(get, false); } })
+    headerAside: h(T.IconButton, { icon: 'rotate-cw', label: 'Refresh', iconSize: 15, disabled: loading, onClick: function () { app.actions.loadVisitors(get, false); } })
   },
     h(T.SettingRow, { asLabel: false, title: 'Profile tracker', description: tracked ? 'The vissle tracker is in your bio.' : inviteInList ? null : invite, control: h(T.Button, { size: 'sm', disabled: p.disabled, onClick: toggleTracker }, drafted ? 'Remove tracker' : 'Add tracker') }),
     h('div', { className: 'tc-section-pad seg-scroll' }, h(T.SegmentedControl, { label: 'Activity type', value: get, options: VISIT_FILTERS, onChange: function (g) { app.actions.loadVisitors(g, false); } })),

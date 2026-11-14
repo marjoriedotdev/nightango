@@ -52,12 +52,12 @@ const COMPONENTS = [
     h('div', { className: 'row' }, h(T.Button, { variant: 'primary', size: 'lg', icon: 'plus' }, 'Create a group'), h(T.Button, { size: 'sm' }, 'Join'), h(T.Button, { variant: 'primary', disabled: true }, 'Disabled')));`],
   ['IconButton', 'Actions', 64,
     'A square button that holds a single icon, with a required accessible label.',
-    `Provide \`icon\` and \`label\`. The label becomes \`aria-label\` and the tooltip. Default size 32 in headers, 28 in message toolbars, 26 for dismiss buttons, 44 on touch screens.
+    `Provide \`icon\` and \`label\`. The label becomes \`aria-label\` and the tooltip. Three sizes: 34 by default, the height of the buttons and fields it sits next to, 28 in message toolbars and for dismiss buttons, 24 inside a composer chip.
 
 - Pass \`pressed\` for toggles (members panel, profile panel) so the state is announced and shown with \`selected\`.
 - Pass \`count\` on a button that leads to what waits for the user, such as the mobile navigation button: the number shows on its corner, 99+ past 99, and joins the accessible name as "5 unread".
 - Color is \`text-2\` at rest and \`text\` on hover.`,
-    `  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'menu', label: 'Open navigation', count: 5 }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14 }));`],
+    `  return h('div', { className: 'row' }, h(T.IconButton, { icon: 'search', label: 'Search' }), h(T.IconButton, { icon: 'bell', label: 'Notifications' }), h(T.IconButton, { icon: 'users', label: 'Members', pressed: true }), h(T.IconButton, { icon: 'more', label: 'More actions' }), h(T.IconButton, { icon: 'menu', label: 'Open navigation', count: 5 }), h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 28, iconSize: 14 }));`],
   ['TextField', 'Forms', 310,
     'A labelled text input or textarea with an optional hint or error.',
     `Always pass \`label\`; the field links it, the hint and the error for assistive tech. Use \`hint\` for format rules and \`error\` once the value is known to be wrong, written as what to do: "Enter a group name".
@@ -75,17 +75,17 @@ const COMPONENTS = [
     'A row of icon buttons that act on one field, reached with a single Tab stop.',
     `Pass \`label\` for the toolbar's accessible name and \`controls\` with the id of the field it edits. Put it in a \`TextField\` through \`toolbar\`.
 
-- Children are \`IconButton\`s at size 30 with 16px icons, like the composer bar. Disabled buttons are skipped.
+- Children are \`IconButton\`s at their default size, like the composer bar. Disabled buttons are skipped.
 - Tab enters on the last button used. Left and Right arrows move between buttons and wrap, Home and End jump to the ends.
 - Separate groups with a \`span.tc-toolbar-sep\`.
 - Every button has a label that names the format, verb free: "Bold", "Text color", "Add a link".`,
     `  return h('div', { className: 'col', style: { maxWidth: 420 } },
     h(T.TextField, { id: 'tb-demo', label: 'Bio', multiline: true, rows: 3, defaultValue: '<b>Night owl</b> and moon watcher.', toolbar: h(T.Toolbar, { label: 'Formatting', controls: 'tb-demo' },
-      h(T.IconButton, { icon: 'bold', label: 'Bold', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'italic', label: 'Italic', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'underline', label: 'Underline', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'strikethrough', label: 'Strikethrough', size: 30, iconSize: 16 }),
+      h(T.IconButton, { icon: 'bold', label: 'Bold' }), h(T.IconButton, { icon: 'italic', label: 'Italic' }), h(T.IconButton, { icon: 'underline', label: 'Underline' }), h(T.IconButton, { icon: 'strikethrough', label: 'Strikethrough' }),
       h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' }),
-      h(T.IconButton, { icon: 'palette', label: 'Text color', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'type', label: 'Font', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'text-size', label: 'Text size', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'align-left', label: 'Alignment', size: 30, iconSize: 16 }),
+      h(T.IconButton, { icon: 'palette', label: 'Text color' }), h(T.IconButton, { icon: 'type', label: 'Font' }), h(T.IconButton, { icon: 'text-size', label: 'Text size' }), h(T.IconButton, { icon: 'align-left', label: 'Alignment' }),
       h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' }),
-      h(T.IconButton, { icon: 'link', label: 'Add a link', size: 30, iconSize: 16 }), h(T.IconButton, { icon: 'image', label: 'Add an image', size: 30, iconSize: 16 })) }));`],
+      h(T.IconButton, { icon: 'link', label: 'Add a link' }), h(T.IconButton, { icon: 'image', label: 'Add an image' })) }));`],
   ['Switch', 'Forms', 72,
     'An on or off setting that applies immediately.',
     `Use a Switch for preferences that take effect at once. Put it in a \`SettingRow\` so the whole row is the click target and the row title is its label. Alone, pass \`label\` for \`aria-label\`.
@@ -210,7 +210,7 @@ Pass \`date\` (the timestamp of the first message) to draw the moon as it was at
 - \`canSend={false}\` disables Send, and Enter neither sends nor clears the input. Say why in \`hint\`.`,
     `  var s = React.useState('Thanks @sa'), long = React.useState('A message past the length BetterChatango allows');
   return h('div', { className: 'col' },
-    h(T.Composer, { placeholder: 'Message #community', value: s[0], onChange: s[1], onKeyDown: function (e) { if (e.key === 'Tab' && !e.shiftKey && /@sa$/.test(s[0])) { e.preventDefault(); s[1](s[0] + 'ble '); } }, context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply', note: 'Only visible to Nightango and BetterChatango users.' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style', size: 30, iconSize: 16 }) }),
+    h(T.Composer, { placeholder: 'Message #community', value: s[0], onChange: s[1], onKeyDown: function (e) { if (e.key === 'Tab' && !e.shiftKey && /@sa$/.test(s[0])) { e.preventDefault(); s[1](s[0] + 'ble '); } }, context: { icon: 'reply', verb: 'Replying to', author: 'sable', text: "Known issue on server s12", cancelLabel: 'Cancel reply', note: 'Only visible to Nightango and BetterChatango users.' }, onCancelContext: function () {}, onSend: function () {}, beforeSend: h(T.IconButton, { icon: 'type', label: 'Message style' }) }),
     h(T.Composer, { placeholder: 'Message #community', onSend: function () {}, onAttach: function () {}, attachment: { name: 'reconnect-loop.png', icon: 'image', note: 'vissle.me hosts it when you send. Anyone with the link can open it.', onRemove: function () {} } }),
     h(T.Composer, { placeholder: 'Message #community', value: long[0], onChange: long[1], onSend: function () {}, hint: 'Shorten your message by 12 characters to send it.', hintTone: 'warning', canSend: false }));`],
   ['Skeleton', 'Feedback', 120,
