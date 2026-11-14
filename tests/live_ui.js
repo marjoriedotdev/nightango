@@ -58,7 +58,7 @@ w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
 // Diagnostic journal of the page code: the bridge gives it the account at sign-in and notes its connections there.
 const journal = [];
-w.__TORCH_JOURNAL__ = { limit: 1000, add: (k, m) => { journal.push({ t: Date.now(), k, m: String(m) }); }, signIn: noop, entries: () => journal.slice(), clear: () => { journal.length = 0; }, subscribe: () => noop };
+w.__TORCH_JOURNAL__ = { limit: 1000, add: (k, m) => { journal.push({ t: clock(), k, m: String(m) }); }, signIn: noop, entries: () => journal.slice(), clear: () => { journal.length = 0; }, subscribe: () => noop };
 // Like a browser WebSocket: a frame reaches onmessage only while the socket is open.
 const sockets = [];
 w.WebSocket = function (url) { this.url = url; this.readyState = 0; sockets.push(this); };
@@ -298,6 +298,7 @@ w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'u
 
 /* ---------- Clock ---------- */
 // The app timers and Date.now follow real time on a clock that skip moves forward. React, loaded above, keeps the real timers.
+// A time the test hands to the app is read on this clock too: Node's own Date.now falls behind it at each skip.
 const nativeSetTimeout = w.setTimeout.bind(w), nativeClearTimeout = w.clearTimeout.bind(w);
 const timers = new Map();
 let ahead = 0, nextTimer = 1;
@@ -1501,7 +1502,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const zoeRow = $$('.convs .conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === 'zoe');
   const zoeText = zoeRow ? zoeRow.textContent : '';
   step('friends rows show ASL and last message', zoeText.includes(ZOE_ASL) && zoeText.includes('See you at 8') && !zoeText.includes('Bold'), zoeText);
-  const nowS = Date.now() / 1000;
+  const nowS = clock() / 1000;
   pm('wl', ['zoe', String(nowS), 'on', '0', 'erin', String(nowS - 3 * 86400), 'off', '0', 'frank', String(nowS - 600), 'off', '0', 'abe', 'None', 'off', '0']); await until(() => !!convRow('frank') && !!convRow('abe'));
   const friendMeta = () => $$('.convs .conv').map(x => [x.querySelector('.conv-name').textContent, x.querySelector('.conv-meta').textContent, (x.querySelector('.conv-time') || {}).textContent || '']);
   const seen = friendMeta(), metaOf = n => (seen.find(x => x[0] === n) || [])[1] || '', timeOf = n => (seen.find(x => x[0] === n) || [])[2] || '';
@@ -1661,7 +1662,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('idle status frame', frame('idle:0').length === 1);
 
   /* Profile */
-  const NOW = Date.now() / 1000, KINDS = ['log', 'like', 'dislike', 'msg', 'refer'];
+  const NOW = clock() / 1000, KINDS = ['log', 'like', 'dislike', 'msg', 'refer'];
   const firstPage = Array.from({ length: 16 }, (_, i) => ({ user: i === 15 ? 'sentinel' : i === 5 ? '!anon5681' : 'visitor' + i, action: KINDS[i % 5], time: NOW - 600 * i - 0.25, msg: i % 5 === 3 ? 'Nice page' : undefined }));
   vissleReply = q => ({ action: 'activity', get: q.page === 1 ? firstPage : firstPage.slice(0, 3).map((x, i) => ({ user: 'older' + i, action: 'log', time: NOW - 86400 - i })) });
   const visitors = () => $('section[aria-label="Visitors"]') || d.createElement('section'), visitorRows = () => [...visitors().querySelectorAll('.lrow')].map(x => x.textContent);
@@ -1763,7 +1764,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Chatango Premium')); await wait(50);
   step('premium page has no purchase form', !!byText('.tc-banner', "doesn't take payments"));
   /* Premium expiry: premium frame of the private connection, reminder at most once per day per account */
-  const DAY = 86400000, later = Date.now() + 40 * DAY, soon = Date.now() + 2 * DAY;
+  const DAY = 86400000, later = clock() + 40 * DAY, soon = clock() + 2 * DAY;
   const reminders = () => $$('.toast').map(x => x.textContent).filter(t => t.indexOf('Your Chatango Premium ends on') === 0);
   const premiumView = () => ({
     status: ($$('.tc-row-title').find(x => /^(Premium until|No Premium)/.test(x.textContent)) || {}).textContent || null,
@@ -1987,7 +1988,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Media of a sent PM: shown as soon as it is sent, without a duplicate when OK replays the BetterChatango archive */
   type($('.thread .tc-composer textarea'), 'Watch https://youtu.be/PLe_UgXBBCU'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
   const sentVideo = $$('.thread .embed-video').length;
-  pmRecords.push(pmRecord('kim', 'msg:marjorie:marjorie:unknown:' + (Date.now() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', 0));
+  pmRecords.push(pmRecord('kim', 'msg:marjorie:marjorie:unknown:' + (clock() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', 0));
   pm('OK', []); await wait(150);
   const watch = { sentVideo, videos: $$('.thread .embed-video').length, texts: $$('.thread .tc-msg-text').filter(x => x.textContent.indexOf('Watch') === 0).length };
   step('own pm media shows at once and is not duplicated by history', watch.sentVideo === 1 && watch.videos === 1 && watch.texts === 1, watch);
