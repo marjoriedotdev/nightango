@@ -204,7 +204,7 @@ Both userscripts come out of the same `userscript()` function, which describes t
 
 ## Tests
 
-jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
+jsdom suites in `tests/`, run by `tests/run.mjs` after the build. The runner starts as many suites side by side as the machine has cores and prints their outputs in the order of the list:
 
 - `smoke`: hosted prototype, loaded from `dist/nightango.html` and started through its hook.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format. The app timers and `Date.now` follow real time on a clock the suite moves forward: `skip` jumps over a delay and `skipUntil` jumps from one app timer to the next until a condition holds, so the 2 s socket poll, the connection timeout and the reconnection delays cost no real wait. React keeps the real timers, and each timer run that way is followed by a short real pause for the render.
