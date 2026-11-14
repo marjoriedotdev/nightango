@@ -2,6 +2,17 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.36.0-beta.4] - 2026-11-14
+
+### Changed
+
+- A lost connection no longer blocks Nightango: you can still read your groups and private messages. A banner above the message box, or at the top of the page, counts down to the next try, then says Reconnected and folds away.
+- While Nightango tries again on its own, Reconnect now is a plain button. It turns orange once Nightango has stopped trying.
+
+### Fixed
+
+- After you click Reconnect three times, Nightango no longer says it gave up while it is still trying.
+
 ## [0.36.0-beta.3] - 2026-11-14
 
 ### Added
