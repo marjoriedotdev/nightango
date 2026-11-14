@@ -392,8 +392,9 @@ function personRow(n, u, c, me, onClick, active, draft) {
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': active ? 'page' : undefined, onClick: onClick },
     h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
-      h('span', { className: 'conv-name' }, u.spelling || n, u.favorite ? h(T.Icon, { name: 'star', size: 12, label: 'Favorite', className: 'conv-fav' }) : null), presenceSr(u.status),
+      h('span', { className: 'conv-name' }, u.spelling || n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
+      u.favorite ? h(T.Icon, { name: 'star', size: 14, label: 'Favorite', className: 'conv-fav' }) : null,
       personMetaLine(n, u),
       c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
