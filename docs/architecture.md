@@ -207,7 +207,7 @@ Both userscripts come out of the same `userscript()` function, which describes t
 jsdom suites in `tests/`, run by `tests/run.mjs` after the build:
 
 - `smoke`: hosted prototype, loaded from `dist/nightango.html` and started through its hook.
-- `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format.
+- `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format. The app timers and `Date.now` follow real time on a clock the suite moves forward: `skip` jumps over a delay and `skipUntil` jumps from one app timer to the next until a condition holds, so the 2 s socket poll, the connection timeout and the reconnection delays cost no real wait. React keeps the real timers, and each timer run that way is followed by a short real pause for the render.
 - `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle, TikTok and X bridges, diagnostic journal, recovery screen, prototype hook left out. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
 - `layers`: menus, dialogs and toasts of `core/ui.js` in a Shadow DOM, as in live, on the sources of `src/core/` and the design system bundle. The cases move the clock of the app timers forward themselves.
 - `pm`: PM unreads, private history reading, merge, import and pages up to the cap, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
