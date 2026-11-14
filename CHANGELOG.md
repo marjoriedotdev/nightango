@@ -2,68 +2,33 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
-## [0.36.0-beta.6] - 2026-11-14
-
-### Changed
-
-- Messages about something that failed say it in plain words, with what to do next: "Couldn't save the announcement.", "The ban didn't go through."
-- Technical wording leaves messages and settings: no more status codes or file names in a message, and the first screen says "Starting BetterChatango…".
-- Settings talk to you as "you": "Join groups you own", "Block external media until you click", "Hide your idle time".
-- Other people are "people", not "users": "Messages from people you ignore", "Hide people you block in groups too".
-- Meet people spells out Male and Female in its gender filter, and slow mode hints spell out seconds.
-- Three alert rows, the Online now filter, the Edit banned words permission and Name colors lose a second line that only repeated their label.
-
-### Fixed
-
-- The desktop alerts banner no longer says your browser blocks alerts before it was ever asked.
-
-## [0.36.0-beta.5] - 2026-11-14
-
-### Changed
-
-- A lost connection no longer blocks Nightango: you can still read your groups and private messages. A banner above the message box, or at the top of the page, counts down to the next try, then says Reconnected and folds away.
-- While Nightango tries again on its own, Reconnect now is a plain button. It turns orange once Nightango has stopped trying.
-
-### Fixed
-
-- After you click Reconnect three times, Nightango no longer says it gave up while it is still trying.
-
-## [0.36.0-beta.4] - 2026-11-14
-
-### Changed
-
-- After a dropped connection, the first automatic attempt to reconnect starts right away instead of after 3 seconds.
-
-## [0.36.0-beta.3] - 2026-11-14
+## [0.36.0] - 2026-11-14
 
 ### Added
 
-- When the connection is lost, the dialog says what Nightango is doing: the seconds left before the next automatic attempt, which attempt it is, then Reconnecting… while it tries. Reconnect now starts an attempt right away.
-- Offline, the dialog shows that Nightango is waiting for your connection.
+- Privacy has a Chatango account section: hide your idle time, allow anonymous messages, email messages you get while offline.
 
 ### Changed
 
+- A lost connection no longer blocks Nightango: you can still read your groups and private messages. A banner above the message box, or at the top of the page, counts down to the next automatic try and says which try it is, then says Reconnected and folds away.
+- After a dropped connection, the first automatic try starts right away instead of after 3 seconds, and Reconnect now starts the next one without waiting.
+- Being offline, logged in somewhere else or on an expired session still shows a dialog, now centered with its icon, and notifications dim behind it. Offline, it says Nightango is waiting for your connection, and Reload is no longer the highlighted button: reloading without a network loses the page.
 - Notifications show what they are at a glance: a check for something done, an info icon for a notice, an alert icon for a failure.
 - A notification stays longer when its text is long, and at least 8 seconds for a failure. It waits while you point at it, while it holds the focus and while the tab is in the background.
 - A notification fades out and the ones below it move up, instead of jumping. The same notification shown twice no longer stacks.
-- The dialogs for a lost connection, being offline, being signed in somewhere else and an expired session are centered, each with its icon. Notifications dim behind them.
-- Offline, Reload is no longer the highlighted button: reloading without a network loses the page.
-
-## [0.36.0-beta.2] - 2026-11-14
-
-### Changed
-
 - A button and the field next to it share one text size and one height, everywhere: joining a group, searching, banning, inviting.
 - Lists to pick from show a Nightango arrow in place of the browser's, at the height of the other fields.
 - The buttons of the message box and of the bio toolbar are a little larger, all at one size.
 - Small text comes in fewer sizes: badges, unread counts, times and keyboard hints are slightly larger.
-- The name at the top of a conversation is a touch smaller and the sign-in title a touch larger.
-
-## [0.36.0-beta.1] - 2026-11-13
-
-### Added
-
-- Privacy has a Chatango account section: hide your idle time, allow anonymous messages, email messages you get while offline. The wording is not final.
+- The name at the top of a conversation is a touch smaller and the title of the login screen a touch larger.
+- In Chats and Friends, the star of a favorite is gold and sits at the end of the name line, no longer right after the name.
+- Messages about something that failed say it in plain words, with what to do next: "Couldn't save the announcement.", "The ban didn't go through."
+- Technical wording leaves messages and settings: no more status codes or file names in a message, and the first screen says "Starting BetterChatango…".
+- Settings talk to you as "you": "Join groups you own", "Block external media until you click", "Show your username in the tab title".
+- Other people are "people", not "users": "Messages from people you ignore", "Hide people you block in groups too".
+- Nightango says "log in" everywhere, where some screens said "sign in".
+- Meet people spells out Male and Female in its gender filter, and slow mode hints spell out seconds.
+- Three alert rows, the Online now filter, the Edit banned words permission and Name colors lose a second line that only repeated their label.
 
 ### Fixed
 
@@ -71,7 +36,7 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - Saving your profile no longer risks emptying your full profile when Chatango refuses to give it.
 - Messages from a member named constructor show, and a mention of that name opens their profile.
 - Opening a group while it reconnects no longer risks a second connection, which showed its messages twice.
-- A group that failed to connect when you signed in says so and offers Try again.
+- A group that failed to connect when you logged in says so and offers Try again.
 - BetterChatango's prompt to register a group no longer shows in Nightango.
 - Coming back to the tab marks the conversation you are looking at as read.
 - A message you post from another device no longer shows as unread, or as a mention of yourself.
@@ -80,6 +45,8 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - In a browser that cannot save private messages, sending one no longer says it failed.
 - An edited private message no longer shows twice after loading older messages.
 - A voice recording no longer starts after you left the conversation, or twice.
+- After you click Reconnect three times, Nightango no longer says it gave up while it is still trying.
+- The desktop alerts banner no longer says your browser blocks alerts before it was ever asked.
 
 ### Security
 
