@@ -24,7 +24,7 @@ function AppearancePage() {
       var colors = [src.backdrop, src.primary, src.secondary, accent].filter(hexToRgb);
       app.update(function (d) { d.prefs.customThemes = (d.prefs.customThemes || []).concat([{ id: uid(), name: name, accent: accent, colors: colors, at: Date.now() }]); });
       app.ui.toast('Imported ' + name + '.', { icon: 'check' });
-    }).catch(function () { app.ui.toast('This file is not a BetterChatango theme. Export one from the old theme editor and try again.'); });
+    }).catch(function () { app.ui.toast("This file isn't a BetterChatango theme. Export one from the old theme editor and try again."); });
   }
   var custom = prefs.customThemes || [];
   return h(Page, { title: 'Appearance', lede: 'Saved on this device.' },

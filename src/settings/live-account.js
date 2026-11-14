@@ -51,7 +51,7 @@ function ProfilePageLive() {
   function save() {
     if (ageErr) { app.ui.toast('Fix the age before saving.'); return; }
     if (imageErr) { app.ui.toast('Fix the background image link before saving.'); return; }
-    if (!base.loaded) { app.ui.toast('Your profile is not loaded yet. Nothing was saved.'); return; }
+    if (!base.loaded) { app.ui.toast("Your profile isn't loaded yet. Nothing was saved."); return; }
     var sent = draft, profileDirty = JSON.stringify(fields(sent)) !== JSON.stringify(fields(base));
     var styleDirty = !!sent.style && JSON.stringify(sent.style) !== JSON.stringify(base.style);
     setSaving(true);
@@ -70,7 +70,7 @@ function ProfilePageLive() {
       app.ui.toast('Profile saved to Chatango.', { icon: 'check' });
     }, function (e) {
       setSaving(false);
-      app.ui.toast(e && e.message ? e.message : 'Chatango did not save your profile.');
+      app.ui.toast(e && e.message ? e.message : "Chatango didn't save your profile.");
     });
   }
   // Re-renders the whole application: the avatars read again the version the bridge set.
@@ -206,7 +206,7 @@ function PrivacyPageLive() {
       }) : null,
       h(PmHistoryRows, null),
       h(T.SettingRow, {
-        asLabel: false, title: 'Delete saved conversations', description: 'BetterChatango keeps a copy of your private messages in this browser. Chatango does not store them.',
+        asLabel: false, title: 'Delete saved conversations', description: "BetterChatango keeps a copy of your private messages in this browser. Chatango doesn't store them.",
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message BetterChatango saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
     h(NotesSection, null),
@@ -217,7 +217,7 @@ function PrivacyPageLive() {
 function AccountPage() {
   return h(Page, { title: 'Password and email', lede: 'Login details for your Chatango account.' },
     h(T.Banner, { icon: 'lock', title: 'Managed on chatango.com', action: chatangoLink('Open chatango.com') },
-      'Nightango never handles your password, so it cannot change it, change your email or delete your account. Do it on chatango.com.'));
+      "Nightango never handles your password, so it can't change it, change your email or delete your account. Do it on chatango.com."));
 }
 
 function PremiumPage() {

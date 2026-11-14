@@ -91,7 +91,7 @@ function SpaceEditorDialog(p) {
   },
     h('div', { className: 'dialog-body' },
       h(T.TextField, { id: 'space-name', label: 'Name', value: name, maxLength: SPACE_NAME_MAX, error: err, placeholder: 'Friends, Games, Moderation', onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') save(); } }),
-      h(T.Checkbox, { checked: quiet, onChange: function (e) { setQuiet(e.target.checked); }, label: 'Mute private messages from outside this space while it is open' })));
+      h(T.Checkbox, { checked: quiet, onChange: function (e) { setQuiet(e.target.checked); }, label: "Mute private messages from outside this space while it's open" })));
 }
 
 /**

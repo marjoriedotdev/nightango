@@ -44,7 +44,7 @@ function useAttachMedia(to, setDraft) {
     return function () { URL.revokeObjectURL(url); setPreview(null); };
   }, [file]);
   if (!LIVE) {
-    var unavailable = function () { app.ui.toast('Uploading media is not part of this prototype.'); };
+    var unavailable = function () { app.ui.toast("Uploading media isn't part of this prototype."); };
     return { onAttach: unavailable, onFiles: unavailable, status: null, busy: false, attachment: null, file: null, send: null, input: null };
   }
   var name = app.uploads[key];

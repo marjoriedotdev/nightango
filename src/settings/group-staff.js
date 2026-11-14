@@ -89,7 +89,7 @@ function GSMembers(p) {
 
 function GSInvites(p) {
   var app = useApp(), link = 'https://' + p.g.id + '.chatango.com';
-  return h(Page, { title: 'Invites', lede: 'Anyone with the link can join. Banned members still cannot.' },
+  return h(Page, { title: 'Invites', lede: "Anyone with the link can join. Banned members still can't." },
     h(T.SettingsSection, { title: 'Invite link', padded: true },
       h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },
         h('input', { className: 'tc-input', style: { flex: '1 1 260px' }, readOnly: true, value: link, 'aria-label': 'Invite link', onFocus: function (e) { e.target.select(); } }),

@@ -81,13 +81,13 @@ function MediaPanel(p) {
   }
   function importFile(file) {
     readJsonArray(file).then(function (entries) {
-      if (!entries) { toast('This file is not a BetterChatango media file.'); return; }
+      if (!entries) { toast("This file isn't a BetterChatango media file."); return; }
       app.actions.importMedia(entries).then(function (res) {
         toast('Imported ' + plural(res.added, 'image', 'images') + '. ' + res.skipped + ' skipped.', { icon: res.added ? 'check' : 'info' });
       }, function (e) { toast(e.message); });
     });
   }
-  if (lib.failed) return h('p', { className: 'media-note' }, 'BetterChatango could not open your media library. Reload the page and try again.');
+  if (lib.failed) return h('p', { className: 'media-note' }, "BetterChatango couldn't open your media library. Reload the page and try again.");
   var grid = safety.embedImages, held = lib.list.some(function (e) { return !mediaThumbShown(safety, revealed, e.url); });
   var note = !lib.list.length ? (lib.loading ? h(T.Spinner, { label: 'Loading media' })
     : h('p', { className: 'media-note' }, text ? 'No media matches your search.' : 'No media yet. Star an image in a message to add it here.')) : null;

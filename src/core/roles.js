@@ -10,7 +10,7 @@ var PERMS = [
   { key: 'automod', group: 'Moderation', title: 'Configure AutoMod', desc: 'Change the nonsense and repeated message filters.' },
   { key: 'unbanAll', group: 'Moderation', title: 'Unban everyone', desc: 'Lift every ban at once from the Bans page.' },
   { key: 'editGroup', group: 'Administration', title: 'Edit group info', desc: 'Title and description.' },
-  { key: 'editAnnouncement', group: 'Administration', title: 'Edit the announcement', desc: 'Text, style and how often it is posted.' },
+  { key: 'editAnnouncement', group: 'Administration', title: 'Edit the announcement', desc: "Text, style and how often it's posted." },
   { key: 'editRestrictions', group: 'Administration', title: 'Edit restrictions', desc: 'Media, links and proxy rules.' },
   { key: 'manageMods', group: 'Administration', title: 'Manage moderators', desc: 'Add and remove moderators and their permissions.' },
   { key: 'closeGroup', group: 'Administration', title: 'Close the group', desc: 'Stop everyone from posting until it reopens.' }
@@ -18,7 +18,7 @@ var PERMS = [
 var ROLE_LABEL = { owner: 'Owner', admin: 'Admin', mod: 'Mod' };
 var ROLE_LONG = { owner: 'Owner', admin: 'Admin', mod: 'Moderator' };
 var ROLE_DESC = {
-  owner: 'Created the group. Always has every permission and cannot be removed.',
+  owner: "Created the group. Always has every permission and can't be removed.",
   admin: 'A moderator allowed to change group settings.',
   mod: "A moderator who can't change group settings."
 };

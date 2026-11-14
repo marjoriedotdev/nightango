@@ -238,7 +238,7 @@ function useActions(k) {
       return askOnce(tiktokPosts.current, e.url, click, function () {
         // Prototype: a post link shows the sample cover, a short link turns back into a link.
         return LIVE ? liveBridge.tiktokPost(e.url) : e.id ? Promise.resolve({ post: e.id, link: e.url, thumb: SAMPLE_TIKTOK_THUMB })
-          : Promise.reject(new Error('Short TikTok links are not part of this prototype. Open the link instead.'));
+          : Promise.reject(new Error("Short TikTok links aren't part of this prototype. Open the link instead."));
       });
     },
     /**
@@ -537,8 +537,8 @@ function useActions(k) {
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
-    actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', liveBridge.setFavorite, 'BetterChatango could not save this favorite. Reload the page and try again.'); };
-    actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', liveBridge.setMuted, 'BetterChatango could not save the mute for #' + gid + '. Reload the page and try again.'); };
+    actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', liveBridge.setFavorite, "BetterChatango couldn't save this favorite. Reload the page and try again."); };
+    actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', liveBridge.setMuted, "BetterChatango couldn't save the mute for #" + gid + '. Reload the page and try again.'); };
     actions.setTrustedHost = function (host, on) {
       if (!liveBridge.setTrustedHost(host, on)) { toast(BETTER_CHATANGO_SAVE_FAILED); return false; }
       update(function (d) { d.prefs.safety.trustedHosts = liveBridge.trustedHosts(); });
@@ -547,7 +547,7 @@ function useActions(k) {
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
       var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
-      if (kept) toast('BetterChatango could not remove #' + gid + ' from favorites. Reload the page and try again.');
+      if (kept) toast("BetterChatango couldn't remove #" + gid + ' from favorites. Reload the page and try again.');
       update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
       nav(next ? { view: 'group', id: next } : { view: 'discover' });
@@ -651,11 +651,11 @@ function useActions(k) {
       }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
-      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast('BetterChatango could not save its ignore list. Reload the page and try again.'); return; }
+      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast("BetterChatango couldn't save its ignore list. Reload the page and try again."); return; }
       update(function (d) { ensureLiveUser(d, name, localRef.current)[key] = !was; });
       toast(toggleUserText(shownName(stateRef.current, name), key, was), { action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };
-    actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
+    actions.deleteDm = function (name) { deleteLiveDms([name], "BetterChatango couldn't delete this conversation. Try again in a moment."); };
     actions.removeDmMessage = function (name, m) {
       liveBridge.removePm(name, m).then(function (ok) {
         if (!ok) { toast("Couldn't remove this message. Reload the page and try again."); return; }
@@ -663,7 +663,7 @@ function useActions(k) {
         syncPmUnread(pmArchive.current, update, [name]);
       });
     };
-    actions.deleteAllDms = function () { deleteLiveDms(Object.keys(stateRef.current.dms), 'BetterChatango could not delete your saved conversations. Try again in a moment.'); };
+    actions.deleteAllDms = function () { deleteLiveDms(Object.keys(stateRef.current.dms), "BetterChatango couldn't delete your saved conversations. Try again in a moment."); };
     actions.checkPmr = function () {
       liveBridge.pmrStatus().then(function (st) { update(function (d) { if (d.auth.loggedIn) d.pmrStatus = st; }); });
     };
@@ -699,7 +699,7 @@ function useActions(k) {
     };
     actions.unban = function (gid, name) {
       var g = stateRef.current.groups[gid], b = g && g.bans.filter(function (x) { return x.name === name; })[0];
-      if (!b) { toast(shownName(stateRef.current, name) + ' is not in the ban list.'); return; }
+      if (!b) { toast(shownName(stateRef.current, name) + " isn't in the ban list."); return; }
       liveBridge.unban(gid, b);
     };
     actions.unbanEntry = function (gid, b) { liveBridge.unban(gid, b); };

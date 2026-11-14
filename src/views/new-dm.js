@@ -17,7 +17,7 @@ function NewDmDialog(p) {
   useEffect(function () {
     if (!answer) return;
     setAsked(null);
-    if (answer.timeout) { setErr('Chatango did not answer. Try again.'); return; }
+    if (answer.timeout) { setErr("Chatango didn't answer. Try again."); return; }
     if (!answer.found) { setErr(unknownUserText(answer.name)); return; }
     p.onClose(); app.actions.openDm(answer.name);
   }, [answer && answer.ts]);

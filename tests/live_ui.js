@@ -1176,7 +1176,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!oddTikTokRow());
   click(oddTikTokRow().querySelector('.embed-reveal'));
   await until(() => !!oddTikTokRow().querySelector('.embeds a.msg-link, iframe'));
-  const oddTikTok = { frames: [...oddTikTokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: !!oddTikTokRow().querySelector('.embeds a.msg-link'), toast: !!byText('.toast', 'TikTok did not say which video this link leads to. Open the link instead.') };
+  const oddTikTok = { frames: [...oddTikTokRow().querySelectorAll('iframe')].map(x => x.getAttribute('src')), link: !!oddTikTokRow().querySelector('.embeds a.msg-link'), toast: !!byText('.toast', "TikTok didn't say which video this link leads to. Open the link instead.") };
   step('a TikTok reply without a numeric post id turns back into a link', !oddTikTok.frames.length && oddTikTok.link && oddTikTok.toast, oddTikTok);
 
   /* X: buttons under proxyMedia, cards read once when media are not blocked, video and sensitive photo on click, failure asked again at the click then turned back into a link */
@@ -1313,12 +1313,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click($('.thread button[aria-label="Conversation options"]')); await wait(30);
   click(menuItem('Delete conversation')); await wait(30);
   click(byText('.dialog-foot button', 'Delete')); await wait(50);
-  const keptOne = { listed: listed('dave'), shown: daveShown(), toast: !!byText('.toast', 'BetterChatango could not delete this conversation. Try again in a moment.') };
+  const keptOne = { listed: listed('dave'), shown: daveShown(), toast: !!byText('.toast', "BetterChatango couldn't delete this conversation. Try again in a moment.") };
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!byText('button', 'Delete all'));
   click(byText('button', 'Delete all')); await wait(30);
   click(byText('.dialog-foot button', 'Delete all')); await wait(50);
-  const keptAll = { toast: !!byText('.toast', 'BetterChatango could not delete your saved conversations. Try again in a moment.') };
+  const keptAll = { toast: !!byText('.toast', "BetterChatango couldn't delete your saved conversations. Try again in a moment.") };
   click(byText('.tc-nav', 'Back to chat')); await until(daveShown);
   Object.assign(keptAll, { dave: listed('dave'), fay: listed('fay'), shown: daveShown() });
   C.private.clearHistory = clearHistory;
@@ -2068,8 +2068,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fayBefore = JSON.stringify(pmRecords.filter(r => r.target === 'fay')), countBefore = pmRecords.length;
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!$('input[type="file"]'));
-  chooseFile('{"messages":[]}'); await until(() => !!byText('.toast', 'This file is not a BetterChatango message history.'));
-  const notHistory = { toast: !!byText('.toast', 'This file is not a BetterChatango message history.'), written: pmRecords.length - countBefore };
+  chooseFile('{"messages":[]}'); await until(() => !!byText('.toast', "This file isn't a BetterChatango message history."));
+  const notHistory = { toast: !!byText('.toast', "This file isn't a BetterChatango message history."), written: pmRecords.length - countBefore };
   const RECEIVED = 'msg:ivan:marjorie:unknown:1700003000.5:0:<n000/>Kept from my old browser', SENT = 'msg:marjorie:marjorie:unknown:1700003010.5:0:<n000/>My old reply';
   chooseFile(JSON.stringify([
     { target: 'ivan', ts: 1700003000.5, data: RECEIVED, unread: 1 },
@@ -2178,7 +2178,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !pmRow('Only the edit'));
   const editOnly = { original: !!recordAt(1700004100.5), edit: !!recordAt(1700004200.5), shown: !!pmRow('Only the edit') };
   step('remove a private message from this browser',
-    removed.ask.item && /Remove this message from this browser\?/.test(removed.ask.dialog) && removed.ask.dialog.includes('Removes the copy BetterChatango keeps in this browser. Chatango does not store private messages, and vera keeps their copy.')
+    removed.ask.item && /Remove this message from this browser\?/.test(removed.ask.dialog) && removed.ask.dialog.includes("Removes the copy BetterChatango keeps in this browser. Chatango doesn't store private messages, and vera keeps their copy.")
       && !removed.record && !removed.shown && removed.toast
       && refused.walt === 'walt' && refused.vera === 'vera' && refused.shown && refused.toast
       && !edited.original && !edited.edit && edited.nell && !edited.shown

@@ -43,7 +43,7 @@ function PmHistoryRows() {
   }
   function importFile(file) {
     readJsonArray(file).then(function (records) {
-      if (!records) { toast('This file is not a BetterChatango message history.'); return; }
+      if (!records) { toast("This file isn't a BetterChatango message history."); return; }
       app.actions.importDms(records).then(function (r) {
         if (r.foreign) toast("This file holds another account's messages. Nothing was imported.");
         else toast('Imported ' + plural(r.added, 'message', 'messages') + '. ' + r.saved + ' already saved, ' + r.skipped + ' skipped.', { icon: r.added ? 'check' : 'info' });
@@ -51,7 +51,7 @@ function PmHistoryRows() {
     });
   }
   return h(Frag, null,
-    h(T.SettingRow, { asLabel: false, title: 'Export messages', description: 'The file is not encrypted.', control: h(T.Button, { size: 'sm', onClick: exportFile }, 'Export') }),
+    h(T.SettingRow, { asLabel: false, title: 'Export messages', description: "The file isn't encrypted.", control: h(T.Button, { size: 'sm', onClick: exportFile }, 'Export') }),
     h(T.SettingRow, { asLabel: false, title: 'Import messages', description: 'Adds messages from a BetterChatango history file. Saved messages are kept.', control: h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import') }));
 }
 

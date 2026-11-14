@@ -76,7 +76,7 @@
   var TIKTOK_COVER = /"cover":"(https:[^"\s]+)"/;
   function tiktokPostLink(m) { return 'https://www.tiktok.com/@' + m[1] + '/' + m[2] + '/' + m[3]; }
   document.addEventListener('torch-skin:tiktok-request', function (e) {
-    var q = request(e), url = q && typeof q.url === 'string' ? q.url : '', short = TIKTOK_SHORT.exec(url), post = TIKTOK_POST.exec(url), unknown = 'TikTok did not say which video this link leads to. Open the link instead.';
+    var q = request(e), url = q && typeof q.url === 'string' ? q.url : '', short = TIKTOK_SHORT.exec(url), post = TIKTOK_POST.exec(url), unknown = "TikTok didn't say which video this link leads to. Open the link instead.";
     if (!short && !post) { reply('tiktok', q ? q.id : undefined, { error: unknown }); return; }
     GM_xmlhttpRequest({
       method: 'GET', url: short ? 'https://' + short[1] + '/' + short[2] + '/' : tiktokPostLink(post), anonymous: true, timeout: 15000,
@@ -89,7 +89,7 @@
         reply('tiktok', q.id, out);
       },
       onerror: function () { reply('tiktok', q.id, { error: "Couldn't reach TikTok. Open the link instead." }); },
-      ontimeout: function () { reply('tiktok', q.id, { error: 'TikTok did not answer in time. Open the link instead.' }); }
+      ontimeout: function () { reply('tiktok', q.id, { error: "TikTok didn't answer in time. Open the link instead." }); }
     });
   });
 
@@ -135,7 +135,7 @@
   }
   document.addEventListener('torch-skin:x-request', function (e) {
     var q = request(e), post = q && typeof q.url === 'string' && X_POST.exec(q.url);
-    if (!post) { reply('x', q ? q.id : undefined, { error: 'X did not share this post. Open the link instead.' }); return; }
+    if (!post) { reply('x', q ? q.id : undefined, { error: "X didn't share this post. Open the link instead." }); return; }
     var link = 'https://x.com/' + post[1] + '/status/' + post[2], card = null, extra = {}, error = null, left = 2;
     // The card waits for both replies: the media is a bonus, the text decides.
     function done() {
@@ -150,11 +150,11 @@
         try { o = r.status === 200 ? JSON.parse(r.responseText) : null; } catch (x) { /* unreadable reply: no card */ }
         if (o && typeof o.html === 'string') { body = xText(o.html); author = X_AUTHOR.exec(o.author_url || ''); }
         if (body && author) card = { author: String(o.author_name || author[1]), handle: author[1], text: body.text, date: body.date, link: 'https://x.com/' + author[1] + '/status/' + post[2] };
-        else error = 'X did not share this post. Open the link instead.';
+        else error = "X didn't share this post. Open the link instead.";
         done();
       },
       onerror: function () { error = "Couldn't reach X. Open the link instead."; done(); },
-      ontimeout: function () { error = 'X did not answer in time. Open the link instead.'; done(); }
+      ontimeout: function () { error = "X didn't answer in time. Open the link instead."; done(); }
     });
     GM_xmlhttpRequest({
       method: 'GET', url: 'https://cdn.syndication.twimg.com/tweet-result?id=' + post[2] + '&lang=en&token=' + xToken(post[2]), anonymous: true, timeout: 15000,

@@ -405,7 +405,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
  * @param {boolean} betterChatango True to say first that only BetterChatango's copy goes away.
  */
 function keptCopyText(name, betterChatango) {
-  return (betterChatango ? 'Removes the copy BetterChatango keeps in this browser. ' : '') + 'Chatango does not store private messages, and ' + name + ' keeps their copy.';
+  return (betterChatango ? 'Removes the copy BetterChatango keeps in this browser. ' : '') + "Chatango doesn't store private messages, and " + name + ' keeps their copy.';
 }
 
 /**

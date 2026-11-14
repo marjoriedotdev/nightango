@@ -276,7 +276,7 @@ var liveBridge = (function () {
       case 'kickingoff': emit({ op: 'session', reason: 'kicked' }); break;
       case 'DENIED': emit({ op: 'session', reason: 'denied' }); break;
       case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: "You're sending messages too fast. Slow down, or Chatango may disconnect your private messages." }); break;
-      case 'toofast': emit({ op: 'notice', gid: 'private_message', text: 'You are sending private messages too fast.' }); break;
+      case 'toofast': emit({ op: 'notice', gid: 'private_message', text: "You're sending private messages too fast." }); break;
       case 'show_offline_limit': emit({ op: 'notice', gid: 'private_message', text: 'This person has too many offline messages. Try again later.' }); break;
       default: break;
     }
@@ -558,7 +558,7 @@ var liveBridge = (function () {
    */
   function pmDbOrFail() {
     return openPmDb().then(function (db) {
-      if (!db) throw new Error('BetterChatango could not open your message history. Reload the page and try again.');
+      if (!db) throw new Error("BetterChatango couldn't open your message history. Reload the page and try again.");
       return db;
     });
   }
@@ -633,7 +633,7 @@ var liveBridge = (function () {
    */
   function mediaStore(mode) {
     return new Promise(function (resolve) {
-      if (!C.database.media) throw new Error('BetterChatango could not open your media library. Reload the page and try again.');
+      if (!C.database.media) throw new Error("BetterChatango couldn't open your media library. Reload the page and try again.");
       resolve(C.database.media.transaction(['media'], mode).objectStore('media'));
     });
   }
@@ -1138,7 +1138,7 @@ var liveBridge = (function () {
       return pmDbOrFail().then(function (db) { return new Promise(function (resolve, reject) {
         var req = db.transaction(['messages'], 'readonly').objectStore('messages').getAll();
         req.onsuccess = function () { resolve(req.result); };
-        req.onerror = function () { warn(req.error); reject(new Error('BetterChatango could not read your message history. Reload the page and try again.')); };
+        req.onerror = function () { warn(req.error); reject(new Error("BetterChatango couldn't read your message history. Reload the page and try again.")); };
       }); });
     },
     /**
@@ -1157,7 +1157,7 @@ var liveBridge = (function () {
           req.onerror = function (e) { if (req.error.name === 'ConstraintError') { e.preventDefault(); out.saved++; } };
         });
         tx.oncomplete = function () { resolve(out); };
-        tx.onabort = function () { warn(tx.error); reject(new Error('BetterChatango could not save these messages. Nothing was imported. Reload the page and try again.')); };
+        tx.onabort = function () { warn(tx.error); reject(new Error("BetterChatango couldn't save these messages. Nothing was imported. Reload the page and try again.")); };
       }); });
     },
     /**
@@ -1211,16 +1211,16 @@ var liveBridge = (function () {
      * @param {{url: string, name: string}} e Entry written.
      */
     addMedia: function (e) {
-      return mediaWrite(function (store) { store.put({ url: e.url, name: e.name }); }, 'BetterChatango could not add this image to your media. Reload the page and try again.');
+      return mediaWrite(function (store) { store.put({ url: e.url, name: e.name }); }, "BetterChatango couldn't add this image to your media. Reload the page and try again.");
     },
     /** Removes a media item by its address like unfavoriteMedia. */
     removeMedia: function (url) {
-      return mediaWrite(function (store) { store.delete(url); }, 'BetterChatango could not remove this image from your media. Reload the page and try again.');
+      return mediaWrite(function (store) { store.delete(url); }, "BetterChatango couldn't remove this image from your media. Reload the page and try again.");
     },
     /** Raw media library entries as BetterChatango exports them (exportMedia). */
     exportMedia: function () {
       return mediaStore('readonly').then(function (store) {
-        return requestResult(store.getAll()).catch(function (e) { warn(e); throw new Error('BetterChatango could not read your media library. Reload the page and try again.'); });
+        return requestResult(store.getAll()).catch(function (e) { warn(e); throw new Error("BetterChatango couldn't read your media library. Reload the page and try again."); });
       });
     },
     /**
@@ -1230,7 +1230,7 @@ var liveBridge = (function () {
      */
     importMedia: function (entries) {
       var screened = screenMediaEntries(entries);
-      return mediaWrite(function (store) { screened.valid.forEach(function (e) { store.put(e); }); }, 'BetterChatango could not save these images. Nothing was imported. Reload the page and try again.')
+      return mediaWrite(function (store) { screened.valid.forEach(function (e) { store.put(e); }); }, "BetterChatango couldn't save these images. Nothing was imported. Reload the page and try again.")
         .then(function () { return { added: screened.valid.length, skipped: screened.skipped }; });
     },
     /**
@@ -1256,7 +1256,7 @@ var liveBridge = (function () {
           if (names.length) send('private_message', 'getpresence:' + names.join(';'), "Couldn't load people.");
           return names;
         }
-        var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: 'Chatango does not allow this search.', None: '', unauthed: 'Your Chatango session expired. Reload the page and log in again.' };
+        var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: "Chatango doesn't allow this search.", None: '', unauthed: 'Your Chatango session expired. Reload the page and log in again.' };
         if (text.trim() in reason) { if (!reason[text.trim()]) return []; throw new Error(reason[text.trim()]); }
         throw new Error("Chatango sent an answer Nightango can't read. Try the search again.");
       });
@@ -1342,7 +1342,7 @@ var liveBridge = (function () {
           cur.continue();
         };
         tx.oncomplete = function () { resolve(flagged); };
-        tx.onabort = function () { warn(tx.error); reject(new Error('BetterChatango could not update your message history. Reload the page and try again.')); };
+        tx.onabort = function () { warn(tx.error); reject(new Error("BetterChatango couldn't update your message history. Reload the page and try again.")); };
       }); });
     },
     /**
@@ -1424,7 +1424,7 @@ var liveBridge = (function () {
         // Only known success reply: the BetterChatango progress branch handles it under this name (inject.js:4788).
         if (kind === 'pix') { bumpAvatar(); return; }
         throw new Error(kind === 'unauthed' ? 'Your Chatango session expired. Reload the page and log in again.'
-          : kind === 'error' ? 'Chatango did not accept this picture. Try a smaller JPG or PNG.'
+          : kind === 'error' ? "Chatango didn't accept this picture. Try a smaller JPG or PNG."
             : "Chatango sent an answer Nightango can't read. Check your picture on chatango.com.");
       }, busyOr("Couldn't upload your picture. Try again."));
     },
@@ -1457,7 +1457,7 @@ var liveBridge = (function () {
         var prev = profileCache[me] ? profileCache[me].data : {};
         profileCache[me] = { at: Date.now(), data: Object.assign({}, prev, { mini: miniStyleOfForm(form) }) };
         return data;
-      }, busyOr('Chatango did not save your background. Try again.'));
+      }, busyOr("Chatango didn't save your background. Try again."));
     },
     setting: readSetting,
     /**
@@ -1582,8 +1582,8 @@ var liveBridge = (function () {
      * @returns {Promise<{post: string, link: string, thumb: ?string}>} Post id and link, and cover address if the page gives one, rejected with the text to show if TikTok does not give the post.
      */
     tiktokPost: function (url) {
-      return askLoader('tiktok', { url: url }, 'TikTok did not answer in time. Open the link instead.').then(function (r) {
-        if (typeof r.post !== 'string' || !/^\d+$/.test(r.post) || typeof r.link !== 'string') throw new Error('TikTok did not say which video this link leads to. Open the link instead.');
+      return askLoader('tiktok', { url: url }, "TikTok didn't answer in time. Open the link instead.").then(function (r) {
+        if (typeof r.post !== 'string' || !/^\d+$/.test(r.post) || typeof r.link !== 'string') throw new Error("TikTok didn't say which video this link leads to. Open the link instead.");
         return { post: r.post, link: r.link, thumb: typeof r.thumb === 'string' ? r.thumb : null };
       });
     },
@@ -1593,9 +1593,9 @@ var liveBridge = (function () {
      * @returns {Promise<Object>} Author, handle, text, date and link of the post, and its author picture, time and media if X gives them, rejected with the text to show.
      */
     xPost: function (url) {
-      return askLoader('x', { url: url }, 'X did not answer in time. Open the link instead.').then(function (r) {
+      return askLoader('x', { url: url }, "X didn't answer in time. Open the link instead.").then(function (r) {
         var post = xCard(r);
-        if (!post) throw new Error('X did not share this post. Open the link instead.');
+        if (!post) throw new Error("X didn't share this post. Open the link instead.");
         return post;
       });
     },
@@ -1610,7 +1610,7 @@ var liveBridge = (function () {
       return post(VISSLE_UPLOAD, { filedata: file }, { key: true }).then(function (resp) {
         var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
         if (path) return 'https://vissle.me/' + path[1];
-        throw new Error(resp.split(':')[0] === 'unauthed' ? 'vissle did not accept your session. Reload the page and log in again.' : failed);
+        throw new Error(resp.split(':')[0] === 'unauthed' ? "vissle didn't accept your session. Reload the page and log in again." : failed);
       }, busyOr(failed));
     },
     createGroup: function (o) {

@@ -265,12 +265,12 @@ function BanDialog(p) {
   var dl = useState(false), wipe = dl[0], setWipe = dl[1];
   if (LIVE) {
     return h(Dialog, {
-      title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: 'Chatango bans the account and the IP of their last message. They cannot rejoin until unbanned.', onClose: p.onClose,
+      title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: "Chatango bans the account and the IP of their last message. They can't rejoin until unbanned.", onClose: p.onClose,
       footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { if (app.actions.ban(p.gid, p.name, null, { deleteAll: wipe, msg: p.msg }) !== false) p.onClose(); } }, 'Ban')]
     }, h('div', { className: 'dialog-body' }, h(T.Checkbox, { label: 'Also delete their recent messages', checked: wipe, onChange: function (e) { setWipe(e.target.checked); } })));
   }
   return h(Dialog, {
-    title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: 'They are removed from the group and cannot rejoin from this IP until unbanned.', onClose: p.onClose,
+    title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: "They're removed from the group and can't rejoin from this IP until unbanned.", onClose: p.onClose,
     footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { app.actions.ban(p.gid, p.name); p.onClose(); } }, 'Ban')]
   });
 }
@@ -304,7 +304,7 @@ function LinkDialog(p) {
   var choice = !hosts ? h(T.Checkbox, { label: "Don't warn me again", onChange: function (e) { var v = e.target.checked; app.update(function (d) { d.prefs.safety.warnLinks = !v; }); } })
     : host ? h(T.Checkbox, { label: 'Trust ' + host, checked: trust, onChange: function (e) { setTrust(e.target.checked); } }) : null;
   return h(Dialog, {
-    title: 'This link leaves Nightango', description: 'Check the address before you continue. Nightango does not check external sites.', onClose: p.onClose,
+    title: 'This link leaves Nightango', description: "Check the address before you continue. Nightango doesn't check external sites.", onClose: p.onClose,
     footer: [
       h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
       openLinkButton(p.url, 'primary', function () { if (trust) app.actions.setTrustedHost(host, true); p.onClose(); })
