@@ -22,6 +22,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - An unread count is a `CountBadge` on the navigation item that leads to the list. A filter inside the list does not repeat it.
 - When the accent is text or an icon (mentions, links, the announcement pin), use `accent-text`, which is darkened in light for contrast. A message that mentions the viewer is lit from the left: the accent fades through `accent-soft` to the surface.
 - Use `danger` as text only, on destructive actions that also say what they do (Block, Log out, Close group). Use `warning` for the icon of a warning banner; the sentence carries the meaning.
+- A favorite is a star filled with `favorite`, at the end of the name line of its list row, never right after the name, where it would read as part of it.
 - Presence is a moon phase: full moon (`status-online`), crescent (`status-idle`), new moon outline (`status-offline`). The shape carries the state, so a list reads in grayscale. Where one person is shown (a conversation header, a profile), a text label sits next to the dot (Online, Idle, Last online …). In a list, the phase may stand alone on screen; the row's accessible name then states the status.
 - Focus: a 2px solid `focus-ring` outline offset by 2px on every interactive element. It holds 3:1 on every surface.
 
