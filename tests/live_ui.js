@@ -1568,7 +1568,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     click(refresh()); await wait(30); await until(() => !refresh().disabled);
     return { text: visitors().textContent, rows: visitorRows().length };
   };
-  const UNREADABLE = 'vissle.me sent an unreadable reply.', oddReplies = [];
+  const UNREADABLE = "vissle sent an answer Nightango can't read.", oddReplies = [];
   for (const data of [null, 42, { action: 'activity' }, { get: [{ user: 'zoe' }] }, { get: [{ user: 'zoe', time: NOW, msg: { text: 'Hi' } }] }]) oddReplies.push(await refreshVisitors(() => data));
   step('own visitors list: a reply of another shape shows the unreadable reply error', oddReplies.every(x => x.text.includes(UNREADABLE) && x.rows === 0), oddReplies);
   // No reply, as without the sandbox half of the userscript: the bridge gives up on its own timer, which the test runs at once.
@@ -1597,8 +1597,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
   betterChatangoFull.value = ''; ownMod2Status = 500;
   click(byText('.tc-nav', 'Password and email')); await until(() => !$('#pf-loc'));
-  click(byText('.tc-nav', 'Profile')); await until(() => !!byText('.tc-hint', 'did not return your full profile'));
-  const fullDown = { failed: !!byText('.tc-hint', 'did not return your full profile') };
+  click(byText('.tc-nav', 'Profile')); await until(() => !!byText('.tc-hint', "Couldn't load your full profile from Chatango"));
+  const fullDown = { failed: !!byText('.tc-hint', "Couldn't load your full profile from Chatango") };
   type($('#pf-loc'), 'Lille'); await until(() => !!$('.tc-savebar'));
   click($('.tc-savebar .tc-btn-primary')); await until(() => !!byText('.toast', 'Nothing was saved') || profileUpdates().length > 0);
   fullDown.toast = !!byText('.toast', "Couldn't read your full profile. Nothing was saved"); fullDown.sent = profileUpdates().map(p => p.f.full_profile);
@@ -1631,7 +1631,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Password and email')); await wait(50);
   step('account page has no password form', !$('input[type=password]') && !!byText('.tc-banner', 'never handles your password'));
   click(byText('.tc-nav', 'Chatango Premium')); await wait(50);
-  step('premium page has no purchase form', !!byText('.tc-banner', 'does not take payments'));
+  step('premium page has no purchase form', !!byText('.tc-banner', "doesn't take payments"));
   /* Premium expiry: premium frame of the private connection, reminder at most once per day per account */
   const DAY = 86400000, later = Date.now() + 40 * DAY, soon = Date.now() + 2 * DAY;
   const reminders = () => $$('.toast').map(x => x.textContent).filter(t => t.indexOf('Your Chatango Premium ends on') === 0);
@@ -1668,7 +1668,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     click(pmrRow().querySelector('[role=switch]')); await until(() => !!pmrView().status);
     pmrSeen.push(pmrView());
   }
-  const PMR_URL = ['https://api.vissle.me/v1/pmr/marjorie'], PMR_TEXT = 'vissle reports that your private messages appear to be restricted.';
+  const PMR_URL = ['https://api.vissle.me/v1/pmr/marjorie'], PMR_TEXT = 'vissle thinks your private messages are restricted.';
   step('own private message restriction read once from vissle after the private connection', JSON.stringify(pmrSeen) === JSON.stringify([
     { on: true, status: null, asked: [] }, { on: true, status: PMR_TEXT, asked: PMR_URL },
     { on: false, status: null, asked: PMR_URL, betterChatango: false, saved: false }, { on: true, status: PMR_TEXT, asked: PMR_URL }
@@ -2052,8 +2052,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(80);
   const ownerHint = limitHint();
   step('getratelimit sent on join, slow mode counted down, a refused message back in the composer, a posting ban shown without a duration and with Send enabled, no countdown with the bypass right',
-    slowAsked.includes('getratelimit') && /^Slow mode: wait [34] s\.$/.test(onJoin) && draftAfterSend === ''
-      && refusedShown.draft === 'Too quick' && /^Too fast\. Try again in [45] s\.$/.test(refusedShown.hint)
+    slowAsked.includes('getratelimit') && /^Slow mode: wait [34] seconds\.$/.test(onJoin) && draftAfterSend === ''
+      && refusedShown.draft === 'Too quick' && /^Too fast\. Try again in [45] seconds\.$/.test(refusedShown.hint)
       && banShown.hint === 'Temporary posting ban. Try again later.' && banShown.canSend
       && !/posting ban/.test(banLifted) && !/Slow mode/.test(ownerHint),
     { slowAsked, onJoin, draftAfterSend, refusedShown, banShown, banLifted, ownerHint });

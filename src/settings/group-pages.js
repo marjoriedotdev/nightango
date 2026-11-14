@@ -117,5 +117,5 @@ function GSAudit(p) {
   },
     h(T.SettingsSection, null, rows.length ? rows.map(function (x, i) {
       return h(ActivityRow, { key: x.id, first: !i, at: x.at }, h(Person, { name: x.actor, gid: g.id, size: 28 }), ' ', x.text.charAt(0).toLowerCase() + x.text.slice(1));
-    }) : h('p', { className: 'pal-empty' }, 'No entries.')));
+    }) : h('p', { className: 'pal-empty' }, 'Nothing logged yet.')));
 }

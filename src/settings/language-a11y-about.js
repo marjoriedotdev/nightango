@@ -1,9 +1,9 @@
 function AccessibilityPage() {
   var app = useApp(), pr = usePref();
   var keys = [['Ctrl K', 'Search or jump to a group, person or setting'], ['Enter', 'Send the message'], ['Shift Enter', 'New line in the message'], ['Up', 'Edit your last message when the message field is empty'], ['Esc', 'Cancel a reply or an edit, close a menu or a dialog'], ['Tab', 'Move between controls. Focus is always visible.']];
-  return h(Page, { title: 'Accessibility', lede: 'Your system motion and contrast settings apply. These add to them.' },
+  return h(Page, { title: 'Accessibility', lede: "Nightango already follows your system's motion and contrast settings. These go further." },
     h(T.SettingsSection, { title: 'Display' },
-      h(T.SettingRow, { title: 'Reduce motion', description: 'Turns off transitions.', control: pr.sw('a11y.reduceMotion') }),
+      h(T.SettingRow, { title: 'Reduce motion', description: 'Turns off animations and fades.', control: pr.sw('a11y.reduceMotion') }),
       h(T.SettingRow, { title: 'Always underline links', description: 'Links in messages are underlined, not only colored.', control: pr.sw('a11y.underlineLinks') }),
       h(T.SettingRow, { asLabel: false, title: 'Text size', description: 'Set in Appearance.', control: h(T.Button, { size: 'sm', onClick: function () { app.nav({ view: 'settings', page: 'appearance' }); } }, 'Open Appearance') })),
     h(T.SettingsSection, { title: 'Keyboard shortcuts' },

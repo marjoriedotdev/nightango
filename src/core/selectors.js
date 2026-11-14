@@ -200,6 +200,7 @@ function pmShownIndex(list, x) {
   return i >= 0 ? i : list.findIndex(function (y) { return !y.archiveTs && (key && y.key ? y.key === key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000); });
 }
 function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
+var GENDER_LABEL = { M: 'Male', F: 'Female' };
 /**
  * Abbreviates the gender of a profile.
  * @param {string} g Gender in full.

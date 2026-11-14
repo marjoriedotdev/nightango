@@ -109,7 +109,7 @@ function AvatarCropDialog(p) {
     ]
   },
     h('div', { className: 'dialog-body crop-body' },
-      failed ? h('p', { className: 'muted', style: { margin: 0 } }, 'Chatango did not return your picture. Try again later.')
+      failed ? h('p', { className: 'muted', style: { margin: 0 } }, "Couldn't load your picture from Chatango. Try again later.")
         : h(Frag, null,
           h('div', { className: 'crop-stage' },
             h('img', { src: src, alt: 'Your profile picture', referrerPolicy: 'no-referrer', draggable: false, onLoad: loaded, onError: function () { setFailed(true); } }),

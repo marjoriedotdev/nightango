@@ -33,9 +33,9 @@ function AppearancePage() {
         return h('button', { key: t[0], type: 'button', role: 'radio', className: 'pick', 'aria-checked': String(prefs.theme === t[0]), onClick: function () { pr.set('theme', t[0]); } },
           thumb(t[2]), h('span', { className: 'pick-title' }, t[1]));
       }))),
-    h(T.SettingsSection, { title: 'Accent color', description: 'Buttons, mentions and unread markers. Text on it is adjusted for contrast.', padded: true },
+    h(T.SettingsSection, { title: 'Accent color', description: 'Buttons, mentions and unread markers. Text on it stays readable.', padded: true },
       h(AccentSwatches, { label: 'Accent color', value: prefs.accent, fallback: prefs.accent, onChange: function (v) { pr.set('accent', v); } })),
-    h(T.SettingsSection, { title: 'Sky', description: 'Computed on this device, without a network request.' },
+    h(T.SettingsSection, { title: 'Sky', description: 'Drawn on your device. Nothing is downloaded.' },
       h(T.SettingRow, {
         title: 'Moon', description: "Next to the Nightango name. Day dividers show each night's moon.",
         control: h('select', { className: 'tc-input', style: { width: 'auto' }, value: String(prefs.sky.moon), onChange: function (e) { pr.set('sky.moon', e.target.value === 'auto' ? 'auto' : +e.target.value); } },

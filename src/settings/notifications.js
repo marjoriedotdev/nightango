@@ -15,11 +15,11 @@ function NotificationsPage() {
   function ask() {
     try {
       window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.'); }, function () { app.ui.toast("Your browser didn't answer. Allow desktop alerts in its site settings."); });
-    } catch (e) { app.ui.toast('This browser view cannot show desktop alerts.'); }
+    } catch (e) { app.ui.toast("This browser can't show desktop alerts."); }
   }
   return h(Page, { title: 'Notifications' },
     permission !== 'granted' ? h(T.Banner, { tone: 'warning', action: permission === 'unsupported' ? null : h(T.Button, { size: 'sm', onClick: ask }, 'Allow in browser') },
-      permission === 'unsupported' ? 'This browser view cannot show desktop alerts. The Desktop column has no effect here.' : "Your browser blocks desktop notifications for this site. Desktop alerts won't show until you allow them.") : null,
+      permission === 'unsupported' ? "This browser can't show desktop alerts. The Desktop column has no effect here." : "Your browser blocks desktop notifications for this site. Desktop alerts won't show until you allow them.") : null,
     h(T.SettingsSection, { title: 'Alerts' },
       h('div', { className: 'matrix-wrap' },
         h('table', { className: 'matrix' },
@@ -36,7 +36,7 @@ function NotificationsPage() {
         asLabel: false, title: 'Volume', description: 'Applies to every alert sound.',
         control: h(VolumeControl, { label: 'Volume', value: prefs.volume, onChange: function (v) { pr.set('volume', v); }, onPlay: function () { beep(prefs.volume, true); } })
       }),
-      h(T.SettingRow, { title: 'Only when Nightango is in focus', description: "Silent while you're in another tab or app.", control: pr.sw('soundFocusOnly') })),
+      h(T.SettingRow, { title: "Only when you're on Nightango", description: "Silent while you're in another tab or app.", control: pr.sw('soundFocusOnly') })),
     h(T.SettingsSection, { title: 'In the app' },
       h(T.SettingRow, { title: 'Show mentions in the tab title', description: 'Example: (2) Nightango.' + (LIVE ? " Also turns off BetterChatango's tab title alerts, even outside Nightango." : ''), control: pr.sw('tabTitle') }),
       h(T.SettingRow, { title: 'Mark new messages', description: "Draws a line above the first message you haven't read.", control: pr.sw('markNew') }),

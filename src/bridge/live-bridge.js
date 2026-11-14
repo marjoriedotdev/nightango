@@ -34,6 +34,7 @@ var liveBridge = (function () {
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { deliverOp(f, op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(function (op) { deliverOp(fn, op); }); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
   function note(text) { if (JOURNAL) JOURNAL.add('app', text); }
+  var CHATANGO_TROUBLE = 'Chatango is having trouble right now. Try again in a moment.';
   function connName(gid) { return gid === 'private_message' ? 'private messages' : '#' + gid; }
   /**
    * Forwards a page of the ban list (block) or the unban list (unblock).
@@ -274,7 +275,7 @@ var liveBridge = (function () {
         break;
       case 'kickingoff': emit({ op: 'session', reason: 'kicked' }); break;
       case 'DENIED': emit({ op: 'session', reason: 'denied' }); break;
-      case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: 'Flood warning: slow down or Chatango may disconnect your private messages.' }); break;
+      case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: "You're sending messages too fast. Slow down, or Chatango may disconnect your private messages." }); break;
       case 'toofast': emit({ op: 'notice', gid: 'private_message', text: 'You are sending private messages too fast.' }); break;
       case 'show_offline_limit': emit({ op: 'notice', gid: 'private_message', text: 'This person has too many offline messages. Try again later.' }); break;
       default: break;
@@ -1257,7 +1258,7 @@ var liveBridge = (function () {
         }
         var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: 'Chatango does not allow this search.', None: '', unauthed: 'Your Chatango session expired. Reload the page and sign in again.' };
         if (text.trim() in reason) { if (!reason[text.trim()]) return []; throw new Error(reason[text.trim()]); }
-        throw new Error('Chatango sent an unexpected reply to the search.');
+        throw new Error("Chatango sent an answer Nightango can't read. Try the search again.");
       });
     },
     /**
@@ -1270,7 +1271,7 @@ var liveBridge = (function () {
       return cached(profileCache, n, function () {
         return fetch(CH.subdomain.mod1(n)).then(function (r) {
           // Server error rejected: read as a missing profile, it would stay cached for the cache delay instead of being read again.
-          if (r.status >= 500) throw new Error('Chatango returned HTTP ' + r.status + ' for mod1.xml.');
+          if (r.status >= 500) { note('Chatango answered mod1.xml with HTTP ' + r.status); throw new Error(CHATANGO_TROUBLE); }
           return r.text();
         }).then(function (xml) {
           var doc = new DOMParser().parseFromString(xml, 'text/xml');
@@ -1424,7 +1425,7 @@ var liveBridge = (function () {
         if (kind === 'pix') { bumpAvatar(); return; }
         throw new Error(kind === 'unauthed' ? 'Your Chatango session expired. Reload the page and sign in again.'
           : kind === 'error' ? 'Chatango did not accept this picture. Try a smaller JPG or PNG.'
-            : 'Chatango sent an unexpected reply. Check your picture on chatango.com.');
+            : "Chatango sent an answer Nightango can't read. Check your picture on chatango.com.");
       }, busyOr("Couldn't upload your picture. Try again."));
     },
     /**
@@ -1571,7 +1572,7 @@ var liveBridge = (function () {
       return askLoader('vissle', { page: q.page, order: q.order, get: q.get }, 'vissle.me did not answer in time. Reload the page and try again.').then(function (r) {
         if (r.data && typeof r.data.error === 'string') throw new Error(r.data.error);
         var items = parseVisits(r.data);
-        if (!items) throw new Error('vissle.me sent an unreadable reply.');
+        if (!items) throw new Error("vissle sent an answer Nightango can't read.");
         return items;
       });
     },
@@ -1629,7 +1630,7 @@ var liveBridge = (function () {
       if (hit) return Promise.resolve(hit.data);
       return fetch(CH.subdomain.mod2(n)).then(function (r) {
         // Server error rejected: read as an empty profile, it would erase the full profile on the next save.
-        if (r.status >= 500) throw new Error('Chatango returned HTTP ' + r.status + ' for mod2.xml.');
+        if (r.status >= 500) { note('Chatango answered mod2.xml with HTTP ' + r.status); throw new Error(CHATANGO_TROUBLE); }
         return r.ok ? r.text() : '';
       }).then(function (xml) {
         var doc = new DOMParser().parseFromString(xml, 'text/xml'), body = doc.querySelector('body');
@@ -1652,7 +1653,7 @@ var liveBridge = (function () {
   function profileReply(resp, keys) {
     var data = parseProfileReply(resp);
     if (data.error) throw new Error(unquote(data.error));
-    if (!keys.some(function (k) { return k in data; })) throw new Error('Chatango sent an unexpected reply. Check your profile on chatango.com.');
+    if (!keys.some(function (k) { return k in data; })) throw new Error("Chatango sent an answer Nightango can't read. Check your profile on chatango.com.");
     try { C.setProfile(data); } catch (e) { warn(e); }
     return data;
   }

@@ -29,9 +29,9 @@ function ComposerLimit(p) {
   });
   // No duration shown: the unit of the ban length is unconfirmed, read as minutes it could overstate the ban 60 times.
   var text = banned ? 'Temporary posting ban. Try again later.'
-    : wait && cd.refused ? 'Too fast. Try again in ' + wait + ' s.'
-    : wait ? 'Slow mode: wait ' + wait + ' s.'
-    : p.rate > 0 && !p.bypass ? 'Slow mode: ' + p.rate + ' s per message.' : null;
+    : wait && cd.refused ? 'Too fast. Try again in ' + plural(wait, 'second', 'seconds') + '.'
+    : wait ? 'Slow mode: wait ' + plural(wait, 'second', 'seconds') + '.'
+    : p.rate > 0 && !p.bypass ? 'Slow mode: one message every ' + plural(p.rate, 'second', 'seconds') + '.' : null;
   if (!text) return null;
   return h(Frag, null, banned || wait && cd.refused ? h(T.Icon, { name: 'alert', size: 14, className: 'limit-alert' }) : null, text);
 }

@@ -1,5 +1,4 @@
 /* ---------- Account settings in live mode ---------- */
-var GENDER_LABEL = { M: 'Male', F: 'Female' };
 var GENDER_CODE = { Male: 'M', Female: 'F' };
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
 
@@ -130,7 +129,7 @@ function ProfilePageLive() {
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },
             h('div', null, h(T.SegmentedControl, { label: 'Full profile view', value: fullView, options: FULL_PROFILE_VIEWS, onChange: setFullView })),
             draft.full === null ? h('div', { className: 'btnrow', style: { alignItems: 'center' } },
-              h('span', { className: 'tc-hint' }, fullFailed ? 'Chatango did not return your full profile.' : 'Loading your full profile from Chatango.'),
+              h('span', { className: 'tc-hint' }, fullFailed ? "Couldn't load your full profile from Chatango." : 'Loading your full profile from Chatango.'),
               fullFailed ? h(T.Button, { size: 'sm', onClick: fetchFull }, 'Try again') : null) : null,
             fullView === 'edit' ? h(T.TextField, { id: 'pf-full', label: 'HTML', multiline: true, rows: 10, maxLength: 20000, value: draft.full || '', inputRef: fullInput, toolbar: fullMarkup.toolbar, onKeyDown: fullMarkup.onKeyDown, disabled: locked || draft.full === null, labelAside: draft.full === null ? null : h('span', { className: 'tc-msg-time' }, draft.full.length + ' / 20000'), onChange: function (e) { set('full', e.target.value); } })
               : draft.full === null ? null
@@ -159,7 +158,7 @@ function ProfilePageLive() {
 function MiniBackgroundSection(p) {
   var st = p.style;
   return h(T.SettingsSection, { title: 'Mini profile background', description: 'Everyone sees them while you have Premium.', padded: true },
-    st === null ? h('span', { className: 'tc-hint' }, p.failed ? 'Chatango did not return your mini profile. Reload the page to try again.' : 'Loading your mini profile from Chatango.')
+    st === null ? h('span', { className: 'tc-hint' }, p.failed ? "Couldn't load your mini profile from Chatango. Reload the page to try again." : 'Loading your mini profile from Chatango.')
       : st === false ? h('p', { className: 'muted', style: { margin: 0 } }, 'Mini profile backgrounds need Chatango Premium.')
         : h('fieldset', { disabled: p.locked, style: { border: 0, margin: 0, padding: 0, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 } },
           h('div', { className: 'grid3' }, [['bg', 'Background'], ['text', 'Text'], ['link', 'Links']].map(function (c) {
@@ -186,9 +185,9 @@ function useBetterChatangoSettings(read, write) {
 }
 
 var PMR_STATUS = {
-  ok: 'vissle reports no restriction on your private messages.',
-  restricted: 'vissle reports that your private messages appear to be restricted.',
-  unknown: 'vissle could not check your private message status.'
+  ok: 'vissle sees no restriction on your private messages.',
+  restricted: 'vissle thinks your private messages are restricted.',
+  unknown: "vissle couldn't check your private message status."
 };
 function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === null ? null : { pmrCheck: v }; }
 
@@ -230,6 +229,6 @@ function PremiumPage() {
       asLabel: false, title: premiumActive(p, now) ? 'Premium until ' + shortDate(p.until, true) : 'No Premium',
       description: premiumEndsSoon(p, now) ? 'Renew on chatango.com to keep your backgrounds and badges.' : null
     })) : null,
-    h(T.Banner, { icon: 'info', title: 'Not available in Nightango', action: chatangoLink('Open chatango.com') },
-      'Nightango does not take payments. Buy or gift Premium on chatango.com.'));
+    h(T.Banner, { icon: 'info', title: 'Buy or gift Premium on chatango.com', action: chatangoLink('Open chatango.com') },
+      "Nightango doesn't take payments."));
 }

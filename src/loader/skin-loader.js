@@ -60,8 +60,8 @@
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       data: JSON.stringify({ action: 'activity', profile: me, page: q.page, order: q.order, get: q.get }),
       onload: function (r) {
-        if (r.status !== 200) { reply('vissle', q.id, { error: 'vissle.me answered with HTTP ' + r.status + '.' }); return; }
-        try { reply('vissle', q.id, { data: JSON.parse(r.responseText) }); } catch (x) { reply('vissle', q.id, { error: 'vissle.me sent an unreadable reply.' }); }
+        if (r.status !== 200) { reply('vissle', q.id, { error: 'vissle is having trouble right now. Try again in a moment.' }); return; }
+        try { reply('vissle', q.id, { data: JSON.parse(r.responseText) }); } catch (x) { reply('vissle', q.id, { error: "vissle sent an answer Nightango can't read." }); }
       },
       onerror: function () { reply('vissle', q.id, { error: "Couldn't reach vissle. Try again later." }); },
       ontimeout: function () { reply('vissle', q.id, { error: 'vissle.me did not answer in time.' }); }
