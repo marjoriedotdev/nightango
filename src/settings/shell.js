@@ -57,7 +57,7 @@ function SettingsShell(p) {
       h('label', { htmlFor: 'snav-sel', className: 'tc-sr' }, 'Settings page'),
       h('select', { id: 'snav-sel', className: 'tc-input', style: { height: 36 }, value: p.page, onChange: function (e) { p.onPage(e.target.value); } },
         p.sections.map(function (sec) { return h('optgroup', { key: sec.title, label: sec.title }, sec.items.map(function (it) { return h('option', { key: it[0], value: it[0] }, it[1]); })); }))),
-    h('div', { ref: p.scrollRef, className: 'spage' }, p.children));
+    h('div', { ref: p.scrollRef, className: 'spage' }, h(SessionBanner, { className: 'session-banner-page' }), p.children));
 }
 
 /**

@@ -28,6 +28,7 @@ function Discover() {
   }
   return h('main', { className: 'main' },
     pageHeader('Discover groups'),
+    h(SessionBanner, null),
     h('div', { className: 'scroll' },
       h('div', { style: { maxWidth: 1080, margin: '0 auto', padding: '32px 24px 56px', display: 'flex', flexDirection: 'column', gap: 28 } },
         h('div', { className: 'page-head' },

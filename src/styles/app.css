@@ -216,6 +216,12 @@ h1,h2,h3{text-wrap:balance}
 .conn-banner[data-phase="done"] .tc-banner-icon{color:var(--accent-text)}
 .conn-banner[data-phase="failed"] .tc-banner-icon{color:var(--warning)}
 .conn-banner-actions{display:flex;flex:none;gap:8px}
+.countdown-ring{display:block;transform:rotate(-90deg)}
+.countdown-ring circle{fill:none;stroke-width:2}
+.countdown-ring-track{stroke:var(--border-strong)}
+.countdown-ring-arc{stroke:currentColor;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.session-banner-page{margin:0 0 var(--space-6)}
+.session-banner-page>.conn-banner-clip>.tc-banner{margin-top:0}
 @media (max-width:640px){.conn-banner .tc-banner{flex-wrap:wrap}.conn-banner-actions{flex-basis:100%;padding-left:26px}}
 .conn-fade{animation:tc-fade-in var(--duration-base) var(--ease-out)}
 .conn-icon{display:inline-grid;width:16px;height:16px}
@@ -309,13 +315,9 @@ h1,h2,h3{text-wrap:balance}
 .dialog.session{max-width:380px;text-align:center}
 .session-head{display:flex;flex-direction:column;align-items:center;padding:var(--space-6) var(--space-5) 0}
 .session-icon{display:grid;place-items:center;width:var(--space-12);height:var(--space-12);margin-bottom:var(--space-3);border-radius:var(--radius-full);background:var(--subtle);border:1px solid var(--border);color:var(--text-2)}
-.session-icon-warning{color:var(--warning)}
 .session-head h2{margin:0;font-size:var(--font-size-title-md);line-height:24px;font-weight:600;text-wrap:balance}
 .session-head p{margin:var(--space-1) 0 0;color:var(--text-2);font-size:var(--font-size-body-sm)}
 .session-status{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--space-2);margin:14px var(--space-5) 0;color:var(--text-2);font-size:var(--font-size-body-sm)}
-.session-status b{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
-.session-attempt{color:var(--text-3);font-variant-numeric:tabular-nums}
-.session-attempt::before{content:"\00b7";margin-right:var(--space-2)}
 .dialog.session .dialog-foot{padding:18px var(--space-5) var(--space-5)}
 .dialog.session .dialog-foot .tc-btn{flex:1 1 0}
 .pal-input{width:100%;height:52px;padding:0 18px;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--text);font-size:var(--font-size-title-sm);outline:none}

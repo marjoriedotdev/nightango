@@ -228,5 +228,5 @@ _Avoid_: muted style, blocked style
 ## Session
 
 **Session loss**:
-Loss of the BetterChatango session that blocks the interface: signed in elsewhere, session expired, offline or connection lost.
+Loss of the BetterChatango session: signed in elsewhere, session expired, offline or connection lost. The first three block the interface with a dialog. A lost connection shows a banner on the page in view and leaves the interface open.
 _Avoid_: disconnection (ambiguous with closing a single group)

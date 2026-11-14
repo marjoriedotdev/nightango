@@ -2428,7 +2428,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     reserved.shown && !reserved.ops.length && reserved.dialog && !reserved.recovery && !reserved.polluted.length, reserved);
   click(byText('.tc-nav', 'Mentions')); await wait(50);
 
-  /* Session loss: signed in elsewhere, offline, connection lost, session expired */
+  /* Session loss: signed in elsewhere, offline, connection lost, session expired. A lost connection is a banner on the page in view, here Mentions. */
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
   C.private.socket.readyState = 3;
@@ -2446,13 +2446,13 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   w.dispatchEvent(new w.Event('online')); await wait(50);
   const onlineReconnects = connects('test') - testConnects2;
   Object.keys(C.groups).forEach(k => { C.groups[k].socket.readyState = 3; }); C.private.socket.readyState = 3; await wait(2300);
-  const lost = overlay();
+  const lost = { dialog: overlay(), banner: ($('.session-banner') || {}).textContent || null, inert: d.getElementById('app').hasAttribute('inert') };
   pm('DENIED', []); await wait(50);
   const denied = overlay();
   step('session overlay',
     !!kicked && kicked.text.includes("You're signed in somewhere else") && kicked.buttons.includes('Reload') && kicked.buttons.includes('Reconnect here') && hereAsked && !afterHere
       && !!offline && offline.text.includes("You're offline") && onlineReconnects === 1
-      && !!lost && lost.text.includes('Connection lost') && /Next attempt in \d+ s/.test(lost.text)
+      && !lost.dialog && !lost.inert && !!lost.banner && lost.banner.includes('Connection lost') && /Reconnecting in \d+ s/.test(lost.banner)
       && !!denied && denied.text.includes('Your session expired') && !calls.some(c => c[0] === 'alert'),
     { kicked, hereAsked, afterHere, offline, onlineReconnects, lost, denied, alerts: calls.filter(c => c[0] === 'alert').length });
 
