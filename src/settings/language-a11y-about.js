@@ -1,6 +1,6 @@
 function AccessibilityPage() {
   var app = useApp(), pr = usePref();
-  var keys = [['Ctrl K', 'Search or jump to a group, person or setting'], ['Enter', 'Send the message'], ['Shift Enter', 'New line in the message'], ['Up', 'Edit your last message when the message field is empty'], ['Esc', 'Cancel a reply or an edit, close a menu or a dialog'], ['Tab', 'Move between controls. Focus is always visible.']];
+  var keys = [['Ctrl K', 'Search or jump to a group, person or setting'], ['Enter', 'Send the message'], ['Shift Enter', 'New line in the message'], ['Up', 'Edit your last message when the message field is empty'], ['Esc', 'Cancel a reply or an edit, close a menu or a dialog'], ['Tab', 'Move between controls']];
   return h(Page, { title: 'Accessibility', lede: "Nightango already follows your system's motion and contrast settings. These go further." },
     h(T.SettingsSection, { title: 'Display' },
       h(T.SettingRow, { title: 'Reduce motion', description: 'Turns off animations and fades.', control: pr.sw('a11y.reduceMotion') }),

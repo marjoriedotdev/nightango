@@ -6,7 +6,7 @@ var PERMS = [
   { key: 'modLog', group: 'Visibility', title: 'See the moderation log', desc: 'Who deleted, banned or unbanned whom, and when.' },
   { key: 'broadcast', group: 'Moderation', title: 'Post in broadcast mode', desc: 'Keep posting while the group is limited to staff.' },
   { key: 'bypass', group: 'Moderation', title: 'Bypass AutoMod and rate limits', desc: 'Messages are never filtered or slowed down.' },
-  { key: 'bannedWords', group: 'Moderation', title: 'Edit banned words', desc: 'Add or remove words that are blocked in the group.' },
+  { key: 'bannedWords', group: 'Moderation', title: 'Edit banned words' },
   { key: 'automod', group: 'Moderation', title: 'Configure AutoMod', desc: 'Change the nonsense and repeated message filters.' },
   { key: 'unbanAll', group: 'Moderation', title: 'Unban everyone', desc: 'Lift every ban at once from the Bans page.' },
   { key: 'editGroup', group: 'Administration', title: 'Edit group info', desc: 'Title and description.' },

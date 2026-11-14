@@ -6,7 +6,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Buttons start with a verb and say what happens: "Join", "Send reset link", "Create account". Never "OK" or "Submit".
 - A menu entry that opens a dialog to confirm or complete the action ends with an ellipsis (…, not three dots): "Block…", "Leave group…", "Create a group…". Entries that act at once or only show something ("Copy text", "View profile") have none, and neither do buttons, even one that asks for confirmation ("Clear all").
 - Address the reader as "you", the product as "Nightango". BetterChatango is named when BetterChatango does the work: sign-in, the private message history, the media library, its own settings. Chatango is named when an action goes to Chatango: "Your Chatango profile. Everyone on Chatango sees it."
-- Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read."
+- Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read." The line is optional: leave it out when it would only repeat the label ("Friend comes online" needs none).
 - Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input".
 - No emoji in the interface, no exclamation marks, no filler ("Oops", "Awesome").
 - Be honest about trade-offs where they affect trust. The login screen states that credentials are stored encrypted on BetterChatango servers.

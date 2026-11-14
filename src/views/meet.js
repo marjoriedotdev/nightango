@@ -78,7 +78,7 @@ function MeetFilters(p) {
         h('span', { className: 'tc-hint' }, 'Chatango needs at least two ages, like 20 to 21.')),
       seg('Profile picture', String(f.avatar || 0), [{ value: '0', label: 'Any' }, { value: '1', label: 'Photos' }, { value: '2', label: 'Characters' }], function (v) { set('avatar', +v); }),
       h('label', { className: 'tc-checkline', style: { justifyContent: 'space-between', width: '100%' } },
-        h('span', null, h('span', { style: { display: 'block', fontWeight: 500 } }, 'Online now'), h('span', { className: 'tc-hint' }, 'Only people connected right now.')),
+        h('span', { style: { fontWeight: 500 } }, 'Online now'),
         h(T.Switch, { checked: !!f.online, onChange: function (e) { set('online', e.target.checked); } }))));
 }
 
