@@ -112,7 +112,7 @@ function SessionBanner(p) {
     // Ember only once Nightango has stopped trying: until then the automatic attempts are the way back.
     action = [reload('ghost'), h(T.Button, { key: 'now', size: 'sm', onClick: app.actions.reconnectSession }, 'Reconnect now')];
   } else if (shown === 'trying') {
-    title = 'Reconnecting…'; text = attempt; icon = h(T.Spinner, { size: 16 });
+    title = 'Connection lost'; text = ['Reconnecting…', attempt].filter(Boolean).join(' '); icon = h(T.Spinner, { size: 16 });
   } else if (shown === 'idle') {
     title = "Couldn't reconnect"; text = SESSION_IDLE; icon = h(T.Icon, { name: 'unplug', size: 16 });
     action = [reload('ghost'), h(T.Button, { key: 'now', size: 'sm', variant: 'primary', onClick: app.actions.reconnectSession }, 'Reconnect')];

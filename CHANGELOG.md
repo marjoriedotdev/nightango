@@ -2,7 +2,7 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
-## [0.36.0-beta.4] - 2026-11-14
+## [0.36.0-beta.5] - 2026-11-14
 
 ### Changed
 
@@ -12,6 +12,12 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 ### Fixed
 
 - After you click Reconnect three times, Nightango no longer says it gave up while it is still trying.
+
+## [0.36.0-beta.4] - 2026-11-14
+
+### Changed
+
+- After a dropped connection, the first automatic attempt to reconnect starts right away instead of after 3 seconds.
 
 ## [0.36.0-beta.3] - 2026-11-14
 
