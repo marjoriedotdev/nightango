@@ -1,6 +1,6 @@
 /* ---------- Reconnection of the live connections ---------- */
-// Delays of the attempts that follow a connection loss: a Chatango restart makes an immediate retry fail.
-var RECONNECT_DELAYS = [3000, 10000, 30000];
+// Delays of the attempts that follow a connection loss: the first one starts right away, the next ones leave a Chatango restart time to finish.
+var RECONNECT_DELAYS = [0, 10000, 30000];
 /**
  * Returns the state of a tracked connection: the private connection or a joined group.
  * @param {Object} s Application state.
@@ -87,7 +87,8 @@ function useReconnection(stateRef, update) {
     if (!canRetry(stateRef.current)) return;
     if (tries >= RECONNECT_DELAYS.length) { liveBridge.note('Stopped reconnecting to ' + liveBridge.connName(gid) + ' after ' + tries + ' attempts'); return; }
     var delay = RECONNECT_DELAYS[tries];
-    liveBridge.note('Reconnecting to ' + liveBridge.connName(gid) + ' in ' + delay / 1000 + ' s, attempt ' + (tries + 1) + ' of ' + RECONNECT_DELAYS.length);
+    liveBridge.note('Reconnecting to ' + liveBridge.connName(gid) + (delay ? ' in ' + delay / 1000 + ' s' : ' now') + ', attempt ' + (tries + 1) + ' of ' + RECONNECT_DELAYS.length);
+    // Even without a delay, the timer lets the closed state reach the store first: the attempt checks it and then shows the connection connecting.
     trackRetry(gid, { tries: tries + 1, at: Date.now() + delay, timer: setTimeout(function () {
       var s0 = stateRef.current, conn = connOf(s0, gid);
       // Attempt already started elsewhere (Reconnect, network back): its failure resumes the sequence.

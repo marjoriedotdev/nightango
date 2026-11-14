@@ -737,7 +737,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     lostBanner && lostBanner.phase === 'trying' && lostBanner.text.includes('Reconnecting to #test') && !lostBanner.buttons.length
       && backBanner && backBanner.phase === 'done' && backBanner.text.includes('Reconnected to #test') && !connBanner(),
     { lostBanner, backBanner, after: connBanner() });
-  // A loss while the page is hidden starts no attempt: the same state as a spent sequence, which takes 43 s.
+  // A loss while the page is hidden starts no attempt: the same state as a spent sequence, which takes 40 s.
   Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
   C.groups.test.socket.readyState = 3; await wait(2300);
   delete d.visibilityState;
@@ -2339,7 +2339,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const slowSocket = sockets[slowFrom.sockets];
   if (slowSocket) { slowSocket.readyState = 1; slowSocket.receive('ok:marjorie::::1700000000:::0'); }
   await until(() => slowNotes().some(m => m.startsWith('Could not connect to #test')), 15000);
-  // Past the next 2 s poll and the 3 s before a first automatic attempt.
+  // Past the next 2 s poll, which would start an immediate automatic attempt.
   await wait(5500);
   const slow = { connects: connectsOf('test') - slowFrom.connects, socket: slowSocket ? slowSocket.readyState : null, cached: C.cache.connect.includes('test'), notes: slowNotes(), banner: connBanner() };
   connectHeld = false;
@@ -2447,14 +2447,18 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const onlineReconnects = connects('test') - testConnects2;
   Object.keys(C.groups).forEach(k => { C.groups[k].socket.readyState = 3; }); C.private.socket.readyState = 3; await wait(2300);
   const lost = overlay();
+  // The first attempt starts right away and fails on the closed sockets: the dialog then counts down to the second one.
+  await until(() => /Next attempt in \d+ s/.test((overlay() || {}).text), 5000);
+  const lostWaiting = overlay();
   pm('DENIED', []); await wait(50);
   const denied = overlay();
   step('session overlay',
     !!kicked && kicked.text.includes("You're signed in somewhere else") && kicked.buttons.includes('Reload') && kicked.buttons.includes('Reconnect here') && hereAsked && !afterHere
       && !!offline && offline.text.includes("You're offline") && onlineReconnects === 1
-      && !!lost && lost.text.includes('Connection lost') && /Next attempt in \d+ s/.test(lost.text)
+      && !!lost && lost.text.includes('Connection lost') && lost.text.includes('Reconnecting…') && lost.text.includes('Attempt 1 of 3')
+      && !!lostWaiting && /Next attempt in \d+ s/.test(lostWaiting.text) && lostWaiting.text.includes('Attempt 2 of 3')
       && !!denied && denied.text.includes('Your session expired') && !calls.some(c => c[0] === 'alert'),
-    { kicked, hereAsked, afterHere, offline, onlineReconnects, lost, denied, alerts: calls.filter(c => c[0] === 'alert').length });
+    { kicked, hereAsked, afterHere, offline, onlineReconnects, lost, lostWaiting, denied, alerts: calls.filter(c => c[0] === 'alert').length });
 
   step('no bridge operation failed to apply during the scenario', opFailures.length === 0, opFailures);
   console.log(log.join('\n'));
