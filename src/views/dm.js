@@ -27,6 +27,7 @@ function DMView(p) {
     LIVE && s.pmrStatus === 'restricted' && !s.pmrDismissed ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: 'Your private messages are restricted', onDismiss: app.actions.dismissPmr },
       'People might not receive your messages.')) : null,
     LIVE && s.pmUnsaved ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: "Private messages aren't saved in this browser" }, "They'll be gone after a reload.")) : null,
+    convo ? null : h(SessionBanner, { inset: 12 }),
     convo ? null : pmConnBanner(app, 12),
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
@@ -60,7 +61,7 @@ function DMView(p) {
 
 /**
  * Shows the private connection loss once PMs are loaded and outside a session loss.
- * A session loss has its own dialog.
+ * A session loss has its own banner or dialog.
  * @param {Object} app Application context.
  * @param {number=} inset Side margin.
  */
@@ -225,6 +226,7 @@ function DmThread(p) {
       }),
       p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
     h(MessageLog, { log: log, label: 'Messages with ' + shownName(s, id), rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
+    p.onClose ? null : h(SessionBanner, null),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom)),
     sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + shownName(s, id), messages: convo.messages, authorOf: dmAuthorOf, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
