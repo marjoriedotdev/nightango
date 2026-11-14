@@ -27,6 +27,7 @@ function DMView(p) {
     LIVE && s.pmrStatus === 'restricted' && !s.pmrDismissed ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: 'Your private messages are restricted', onDismiss: app.actions.dismissPmr },
       'People might not receive your messages.')) : null,
     LIVE && s.pmUnsaved ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: "Private messages aren't saved in this browser" }, "They'll be gone after a reload.")) : null,
+    convo ? null : h(SessionBanner, { inset: 12 }),
     convo ? null : pmConnBanner(app, 12),
     h('div', { style: { padding: '12px 12px 0' } }, h(T.SegmentedControl, {
       label: 'Show', block: true, value: section, onChange: function (v) { app.nav({ view: 'dm', id: id, tab: v === 'chats' ? undefined : v }); },
@@ -60,7 +61,7 @@ function DMView(p) {
 
 /**
  * Shows the private connection loss once PMs are loaded and outside a session loss.
- * A session loss has its own dialog.
+ * A session loss has its own banner or dialog.
  * @param {Object} app Application context.
  * @param {number=} inset Side margin.
  */
@@ -225,6 +226,7 @@ function DmThread(p) {
       }),
       p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
     h(MessageLog, { log: log, label: 'Messages with ' + shownName(s, id), rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
+    p.onClose ? null : h(SessionBanner, null),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom)),
     sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + shownName(s, id), messages: convo.messages, authorOf: dmAuthorOf, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
@@ -306,7 +308,7 @@ function DmComposer(p) {
     onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
     context: mode ? Object.assign({ author: shownName(app.state, mode.m.from), text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
     onSend: function (text) {
-      if (kind === 'edit') { if (text !== mode.m.text) app.actions.sendDm(id, text, { editKey: mode.m.key }); p.onCancelMode(); return; }
+      if (kind === 'edit') { if (text !== mode.m.text && !app.actions.sendDm(id, text, { editKey: mode.m.key })) { setDraft(text); return; } p.onCancelMode(); return; }
       if (runCommand(app, text, null)) return;
       var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(shownName(app.state, mode.m.from), mode.m.text) : null };
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
@@ -392,8 +394,9 @@ function personRow(n, u, c, me, onClick, active, draft) {
   return h('button', { key: n, type: 'button', className: cx('conv', c && c.unread && 'unread'), 'aria-current': active ? 'page' : undefined, onClick: onClick },
     h(T.Avatar, { name: n, size: 28, status: u.status, ring: 'var(--panel)' }),
     h('span', { className: 'conv-main conv-grid' },
-      h('span', { className: 'conv-name' }, u.spelling || n, u.favorite ? h(T.Icon, { name: 'star', size: 12, label: 'Favorite', className: 'conv-fav' }) : null), presenceSr(u.status),
+      h('span', { className: 'conv-name' }, u.spelling || n), presenceSr(u.status),
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
+      u.favorite ? h(T.Icon, { name: 'star', size: 14, label: 'Favorite', className: 'conv-fav' }) : null,
       personMetaLine(n, u),
       c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
@@ -500,7 +503,7 @@ function SwipeRow(p) {
     })) : null,
     p.children,
     h('div', { className: 'conv-more' }, h(MenuButton, {
-      label: 'Options for ' + shown, size: 26, iconSize: 16, items: menuGroups([[viewProfileItem(app, n, null), whoItem(app, n)].concat(p.extra || []), actions]), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
+      label: 'Options for ' + shown, size: 28, iconSize: 16, items: menuGroups([[viewProfileItem(app, n, null), whoItem(app, n)].concat(p.extra || []), actions]), open: !!menu, at: menu && menu.at, align: menu && menu.at ? 'left' : undefined,
       onOpenChange: function (o) { setMenu(o ? { at: null } : null); }
     })));
 }
@@ -536,7 +539,7 @@ function FriendsList(p) {
   function add(e) {
     e.preventDefault();
     var n = name.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,20}$/.test(n)) { setErr('Enter a Chatango username.'); return; }
+    if (!ACCOUNT_NAME.test(n)) { setErr('Enter a Chatango username.'); return; }
     if (n === s.me) { setErr("You can't add yourself."); return; }
     if (s.users[n] && s.users[n].friend) { setErr(shownName(s, n) + ' is already a friend.'); return; }
     setErr(''); setName('');

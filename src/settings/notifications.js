@@ -14,8 +14,8 @@ function NotificationsPage() {
   if (LIVE) cols = cols.filter(function (c) { return c[0] !== 'sound'; });
   function ask() {
     try {
-      window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.'); }, function () { app.ui.toast("Your browser didn't answer. Allow desktop alerts in its site settings."); });
-    } catch (e) { app.ui.toast("This browser can't show desktop alerts."); }
+      window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.', { tone: r === 'granted' ? 'success' : 'error' }); }, function () { app.ui.toast("Your browser didn't answer. Allow desktop alerts in its site settings.", { tone: 'error' }); });
+    } catch (e) { app.ui.toast("This browser can't show desktop alerts.", { tone: 'error' }); }
   }
   return h(Page, { title: 'Notifications' },
     permission !== 'granted' ? h(T.Banner, { tone: 'warning', action: permission === 'unsupported' ? null : h(T.Button, { size: 'sm', onClick: ask }, 'Allow in browser') },
@@ -26,7 +26,7 @@ function NotificationsPage() {
           h('thead', null, h('tr', null, h('th', { scope: 'col', style: { textAlign: 'left', paddingLeft: 20 } }, 'Event'), cols.map(function (c) { return h('th', { key: c[0], scope: 'col' }, c[1]); }))),
           h('tbody', null, rows.map(function (r) {
             return h('tr', { key: r[0] },
-              h('th', { scope: 'row' }, h('span', { style: { display: 'block', fontWeight: 500, color: 'var(--text)' } }, r[1]), r[2] ? h('span', { style: { display: 'block', fontSize: 12.5, color: 'var(--text-3)' } }, r[2]) : null),
+              h('th', { scope: 'row' }, h('span', { style: { display: 'block', fontWeight: 500, color: 'var(--text)' } }, r[1]), r[2] ? h('span', { style: { display: 'block', fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, r[2]) : null),
               cols.map(function (c) {
                 return h('td', { key: c[0] }, h(T.Checkbox, { label: c[1], ariaLabel: r[1] + ', ' + c[1], checked: !!prefs.notify[r[0]][c[0]], onChange: function (e) { pr.set('notify.' + r[0] + '.' + c[0], e.target.checked); } }));
               }));
@@ -59,7 +59,7 @@ function BetterChatangoSoundsSection() {
   var app = useApp();
   var st = useBetterChatangoSettings(liveBridge.betterChatangoSounds, liveBridge.setBetterChatangoSound), sounds = st[0], set = st[1];
   function play(kind) {
-    liveBridge.playBetterChatangoSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.'); });
+    liveBridge.playBetterChatangoSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.', { tone: 'error' }); });
   }
   return h(T.SettingsSection, { title: 'Sounds', description: 'Played by BetterChatango. Nightango plays none of its own.' },
     sounds ? BETTER_CHATANGO_SOUND_ROWS.map(function (r) {

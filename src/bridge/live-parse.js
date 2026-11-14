@@ -107,8 +107,12 @@ function parseContent(raw, keepMedia, premium) {
   var w = /<u([a-z0-9]{1,20})\/>/i.exec(s);
   var body = s
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<i\s(?:[^>]*?\s)?s=["']?([^"'\s>]+)["']?[^>]*\/?>/gi, function (tag, src) {
-      var m = embedOf(decodeHtml(src)), sm = /^sm:\/\/(.*)/i.exec(src);
+    // Two steps, the tag then its s attribute: a single pattern for both backtracks for seconds on a body of unclosed tags.
+    .replace(/<i\s[^>]*>/gi, function (tag) {
+      // An s attribute further in the tag wins over the one right after <i, as the single pattern did.
+      var rest = tag.slice(3), at = /\ss=["']?([^"'\s>]+)/i.exec(rest) || /^s=["']?([^"'\s>]+)/i.exec(rest);
+      if (!at) return tag;
+      var src = at[1], m = embedOf(decodeHtml(src)), sm = /^sm:\/\/(.*)/i.exec(src);
       if (m) embeds.push(m);
       if (keepMedia) return ' ' + src + ' ';
       return sm ? emoticonText(sm[1], premium) : m ? ' ' : ' ' + src + ' ';
@@ -158,6 +162,22 @@ function screenPmRecords(records, me) {
   // Another account's file: its received PMs pass the screening one by one, but none is written.
   if (skipped && foreign === skipped) return { valid: [], skipped: skipped, foreign: true };
   return { valid: valid, skipped: skipped, foreign: false };
+}
+// Chatango name of each PM setting of the account (chadango GetSettings and SetSettings).
+var PM_SETTING_NAMES = { hideIdle: 'disable_idle_time', allowAnon: 'allow_anon', emailOffline: 'email_offline_msg' };
+/**
+ * Reads the settings reply of the private connection.
+ * @param {Array<string>} data Frame split on :, name and on or off for each setting.
+ * @returns {?Object} hideIdle, allowAnon and emailOffline as booleans, null if one of them is missing.
+ */
+function parsePmSettings(data) {
+  var read = {}, out = {};
+  for (var i = 0; i + 1 < data.length; i += 2) read[data[i]] = data[i + 1];
+  return Object.keys(PM_SETTING_NAMES).every(function (k) {
+    var v = read[PM_SETTING_NAMES[k]];
+    out[k] = v === 'on';
+    return v === 'on' || v === 'off';
+  }) ? out : null;
 }
 /**
  * Splits a message body into emphasis segments.

@@ -54,7 +54,7 @@ function SpaceBar() {
         it.name, it.count && !on ? h(T.CountBadge, { count: it.count }) : null);
     }),
     h(MenuButton, {
-      icon: 'plus', label: 'Spaces', size: 26, iconSize: 15, align: 'left', items: [
+      icon: 'plus', label: 'Spaces', size: 28, iconSize: 15, align: 'left', items: [
         s.spaces.length < SPACE_MAX ? { label: 'New space…', icon: 'plus', onSelect: function () { app.ui.openSpaceEditor({ id: null }); } } : null,
         sp ? { label: 'Edit ' + sp.name + '…', icon: 'edit', onSelect: function () { app.ui.openSpaceEditor({ id: sp.id }); } } : null
       ]

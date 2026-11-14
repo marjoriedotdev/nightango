@@ -86,6 +86,21 @@ try {
     slowText.length === 0 && runs.parts.out.length === 2 && runs.parts.out[1].text === spaces + 'y' && runs.shown.out.length === 1 && runs.shown.out[0].text === 'x' + spaces + 'y',
     { slow: slowText, ms: Object.keys(runs).map(k => [k, runs[k].ms]) });
 
+  /* Message tags: emoticon and image tags read as before, and a body of unclosed tags read in one pass */
+  const read = s => { const c = m.parseContent(s, false, false); return [c.text, c.embeds.map(e => e.url)]; };
+  const tags = {
+    image: read('<i s="https://i.example/a.png" w="10" h="10"/>'),
+    later: read('<i s=x1 s=https://i.example/b.png>'),
+    first: read("<i s='https://i.example/c.png'>"),
+    none: read('<i w="1">kept</i>')
+  };
+  const TAGS_WANT = { image: ['', ['https://i.example/a.png']], later: ['', ['https://i.example/b.png']], first: ['', ['https://i.example/c.png']], none: ['kept', []] };
+  const emoticon = read('a <i s="sm://lol" w="14.52" h="14.52"/> b');
+  const unclosed = timed(() => m.parseContent('<i s=a '.repeat(1200), false, false).text.length);
+  step('message tags: emoticon and image tags read, a body of unclosed tags read in one pass',
+    JSON.stringify(tags) === JSON.stringify(TAGS_WANT) && emoticon[0].indexOf('sm://') < 0 && emoticon[0] !== 'a  b' && !emoticon[1].length && unclosed.ms <= BUDGET_MS,
+    { tags, emoticon, ms: unclosed.ms });
+
   console.log(log.join('\n'));
   process.exit(0);
 } catch (e) {

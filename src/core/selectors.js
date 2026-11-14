@@ -20,7 +20,7 @@ function groupRights(group, name) {
 function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) && name !== me && roleOf(group, name) !== 'owner'; }
 // One object for every unknown member: the rows that take its style as a prop keep the same props.
 var UNKNOWN_USER = { status: 'offline', about: '', style: {} };
-function userOf(state, name) { return state.users[name] || UNKNOWN_USER; }
+function userOf(state, name) { return ownOf(state.users, name) || UNKNOWN_USER; }
 /**
  * Returns a member's name as they spell it, in lowercase until a message of theirs carries its capitals.
  * @param {Object} state Application state.

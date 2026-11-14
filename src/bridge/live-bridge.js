@@ -81,7 +81,7 @@ var liveBridge = (function () {
    */
   function profileChanged(name) {
     var n = lower(name), now = Date.now();
-    if (!/^[a-z0-9_-]{1,20}$/.test(n) || now - (refreshedAt[n] || 0) < REFRESH_MS) return;
+    if (!ACCOUNT_NAME.test(n) || now - (refreshedAt[n] || 0) < REFRESH_MS) return;
     refreshedAt[n] = AVATAR_VERSION[n] = now;
     // Own caches hold the version just saved: mod1.xml and mod2.xml can come back older from the HTTP cache, and the next save would send it back.
     if (n !== lower(C.user && C.user.name)) { delete profileCache[n]; delete fullProfileCache[n]; }
@@ -142,7 +142,7 @@ var liveBridge = (function () {
       }
       case 'delete': emit({ op: 'del', gid: room, ids: withTempIds([data[0]]) }); break;
       case 'deleteall': emit({ op: 'del', gid: room, ids: withTempIds(data.slice()) }); break;
-      case 'clearall': if (data[0] === 'ok') emit({ op: 'cleared', gid: room }); else emit({ op: 'notice', gid: room, text: 'Chatango refused to clear the messages.' }); break;
+      case 'clearall': if (data[0] === 'ok') emit({ op: 'cleared', gid: room }); else emit({ op: 'notice', gid: room, text: 'Chatango refused to clear the messages.', tone: 'error' }); break;
       case 'g_participants': participants(room, data.join(':').split(';')); break;
       case 'gparticipants': participants(room, data.slice(1).join(':').split(';')); break;
       case 'participant': participant(room, data); break;
@@ -200,11 +200,11 @@ var liveBridge = (function () {
       case 'denied':
         // Neither inited nor participants will arrive: the message log and the members stop waiting.
         emit({ op: 'denied', gid: room });
-        emit({ op: 'notice', gid: room, text: 'Chatango refused the connection to #' + room + '.' });
+        emit({ op: 'notice', gid: room, text: 'Chatango refused the connection to #' + room + '.', tone: 'error' });
         break;
-      case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator. Check the username and try again.' }); break;
-      case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions." }); break;
-      case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.' }); break;
+      case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator. Check the username and try again.', tone: 'error' }); break;
+      case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions.", tone: 'error' }); break;
+      case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.', tone: 'error' }); break;
       // Unit unconfirmed: chadango reads minutes, its own show_nlp_tb:3:900 sample suggests seconds.
       case 'show_tb': case 'tb': case 'nlptb': emit({ op: 'tempBan', gid: room, length: parseInt(data[0], 10) || 0 }); break;
       case 'show_nlp_tb': emit({ op: 'tempBan', gid: room, length: parseInt(data[1], 10) || 0 }); break;
@@ -265,6 +265,11 @@ var liveBridge = (function () {
       // BetterChatango reads the end time in seconds (inject.js:3301-3302).
       case 'premium': emit({ op: 'premium', status: parseInt(data[0], 10) || 0, until: epochMs(data[1]) }); break;
       case 'block_list': emit({ op: 'pmBlocked', list: data.filter(Boolean).map(lower) }); break;
+      case 'settings': {
+        var pmSettings = parsePmSettings(data);
+        if (pmSettings) emit({ op: 'pmSettings', values: pmSettings, asked: gotReply('settings') });
+        break;
+      }
       case 'unblocked': emit({ op: 'pmUnblocked', name: lower(data[0]) }); break;
       case 'OK':
         // Chatango forgets the connect of the previous connection, and BetterChatango builds a new client.private after this handler.
@@ -275,9 +280,9 @@ var liveBridge = (function () {
         break;
       case 'kickingoff': emit({ op: 'session', reason: 'kicked' }); break;
       case 'DENIED': emit({ op: 'session', reason: 'denied' }); break;
-      case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: "You're sending messages too fast. Slow down, or Chatango may disconnect your private messages." }); break;
-      case 'toofast': emit({ op: 'notice', gid: 'private_message', text: "You're sending private messages too fast." }); break;
-      case 'show_offline_limit': emit({ op: 'notice', gid: 'private_message', text: 'This person has too many offline messages. Try again later.' }); break;
+      case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: "You're sending messages too fast. Slow down, or Chatango may disconnect your private messages.", tone: 'error' }); break;
+      case 'toofast': emit({ op: 'notice', gid: 'private_message', text: "You're sending private messages too fast.", tone: 'error' }); break;
+      case 'show_offline_limit': emit({ op: 'notice', gid: 'private_message', text: 'This person has too many offline messages. Try again later.', tone: 'error' }); break;
       default: break;
     }
   }
@@ -303,10 +308,11 @@ var liveBridge = (function () {
 
   /* BetterChatango warnings: server refusals, lost connection, limits */
   var lastAlert = { text: '', at: 0 };
-  function alertOnce(op) {
+  function alertOnce(op, unkept) {
     if (op.text === lastAlert.text && Date.now() - lastAlert.at < 2500) return;
     lastAlert = { text: op.text, at: Date.now() };
-    note('BetterChatango notice: ' + op.text);
+    // Neither a linked accounts result nor the arguments of a frame reach the journal (ADR-0010, ADR-0011).
+    note('BetterChatango notice: ' + (unkept ? '(text not kept)' : op.text));
     emit(op);
   }
   var QUIET = [/^Start a conversation/i, /^Private messages$/i, /^You have logged in to private messages elsewhere/i];
@@ -318,7 +324,7 @@ var liveBridge = (function () {
           var text = String(data && data.content || '').replace(/\r/g, ' ').trim();
           // Friend presence (unique status): BetterChatango meant it for the open PM, with no group. The friend list already shows it.
           var presence = data && data.unique === 'status';
-          if (text && !presence && !QUIET.some(function (re) { return re.test(text); })) alertOnce({ op: 'notice', gid: (data && data.group) || C.focus, text: text });
+          if (text && !presence && !QUIET.some(function (re) { return re.test(text); })) alertOnce({ op: 'notice', gid: (data && data.group) || C.focus, text: text }, !!(data.unique || data.username));
         } catch (e) { warn(e); }
         return sys.apply(this, arguments);
       };
@@ -329,8 +335,14 @@ var liveBridge = (function () {
       C.setNotice = function (data) {
         try {
           // The connection banner already shows it, and this BetterChatango Reconnect bypasses the bridge: the automatic retry would open a second socket.
-          var lost = /^You have disconnected from #/.test(String(data && data.content));
-          if (data && data.icon === 'warning' && data.content && !lost) alertOnce({ op: 'alert', text: String(data.content), button: data.button || null, action: typeof data.action === 'function' ? data.action : null });
+          var text = String(data && data.content);
+          var lost = /^You have disconnected from #/.test(text);
+          // Its Register posts to vissle /chatango/room, a call outside the closed list (ADR-0001).
+          var register = / is not a registered group\.$/.test(text);
+          // Its Continue calls client.connect outside the bridge, like the Reconnect of the lost connection notice.
+          var crowded = / has a lot of users$/.test(text);
+          var action = data && typeof data.action === 'function' && !crowded ? data.action : null;
+          if (data && data.icon === 'warning' && data.content && !lost && !register) alertOnce({ op: 'alert', text: text, button: action ? data.button || null : null, action: action });
         } catch (e) { warn(e); }
         return notice.apply(this, arguments);
       };
@@ -340,6 +352,8 @@ var liveBridge = (function () {
 
   /* Connection state: BetterChatango publishes no event, so we watch its sockets. */
   var connState = {}, pmState = null, left = {}, attempts = {};
+  // Groups BetterChatango showed in its list and when: one it never registers has failed to connect at startup, which it only logs.
+  var expected = {};
   function watchConnections() {
     setInterval(function () {
       try {
@@ -353,6 +367,14 @@ var liveBridge = (function () {
         });
         Object.keys(connState).forEach(function (gid) {
           if (!seen[gid] && connState[gid] !== 'closed') { connState[gid] = 'closed'; if (!left[gid]) { note(connName(gid) + ' was removed by BetterChatango'); emit({ op: 'conn', gid: gid, state: 'closed' }); } }
+        });
+        Object.keys(expected).forEach(function (gid) {
+          if (seen[gid] || connState[gid] || left[gid]) { delete expected[gid]; return; }
+          if (attempts[gid] || Date.now() - expected[gid] < CONNECT_TIMEOUT) return;
+          delete expected[gid];
+          connState[gid] = 'closed';
+          note(connName(gid) + ' did not connect at startup');
+          emit({ op: 'conn', gid: gid, state: 'closed', never: true });
         });
         var pm = C.private && C.private.socket;
         var pst = pm ? stateOf(pm) : 'closed';
@@ -435,6 +457,12 @@ var liveBridge = (function () {
     return !!(c && c.socket && c.socket.readyState === 1);
   }
   function pmOpen() { return opened('private_message'); }
+  // Group the user opened while its socket was closed: its reconnection focuses it even when started in the background.
+  var pendingFocus = null;
+  function focusGroup(gid, reload) {
+    pendingFocus = null;
+    C.setFocus(reload ? { group: gid, reload: true } : { group: gid });
+  }
   /**
    * Says what to do while a connection cannot carry a frame.
    * @param {string} gid Group or private_message.
@@ -452,7 +480,7 @@ var liveBridge = (function () {
     // BetterChatango's socket catches every error and only shows a line: on a connection that is not open, the frame would read as sent.
     var hint = closedHint(gid);
     if (hint) {
-      if (failure) alertOnce({ op: 'notice', gid: gid, text: failure + ' ' + hint });
+      if (failure) alertOnce({ op: 'notice', gid: gid, text: failure + ' ' + hint, tone: 'error' });
       return false;
     }
     try { C.socket(gid, frame, failure); return true; } catch (e) { warn(e); return false; }
@@ -881,6 +909,7 @@ var liveBridge = (function () {
       if (pmOpen()) {
         // Session already open: the friend list and the history were received before us, so we request them again.
         emit({ op: 'pmReady' });
+        send('private_message', 'settings', '');
         send('private_message', 'wl', '');
         send('private_message', 'getblock', '');
       } else {
@@ -904,6 +933,7 @@ var liveBridge = (function () {
   if (SB && typeof SB.renderGroup === 'function') {
     var renderGroup = SB.renderGroup.bind(SB);
     SB.renderGroup = function (data) {
+      try { if (data && data.group && data.group !== ENV && !data.hidden) expected[lower(data.group)] = Date.now(); } catch (e) { warn(e); }
       try { if (data && data.group && data.group !== ENV) emit({ op: 'group', id: lower(data.group), title: data.header ? String(data.header) : '', hidden: !!data.hidden, owned: data.recent === false }); } catch (e) { warn(e); }
       return renderGroup(data);
     };
@@ -976,7 +1006,8 @@ var liveBridge = (function () {
         if (opts.quote) body = withQuote(body, at + ref.length, opts.quote, true);
         var failure = opts.editId ? "Your message wasn't edited." : opts.replyId ? "Your reply wasn't sent." : opts.quote ? "Your quote wasn't sent." : "Your message wasn't sent.";
         // BetterChatango archives a sent PM under client.private.focus, not its recipient: an upload can leave after a switch.
-        C.private.focus = user;
+        // Without its history database that archive throws once the frame has left, and BetterChatango announces a failure (inject.js:4633-4667).
+        C.private.focus = C.database && C.database.pm ? user : false;
         try { if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
         // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
@@ -991,7 +1022,11 @@ var liveBridge = (function () {
       return { face: v.face, size: v.size, textColor: v.textColor, nameColor: v.nameColor, bold: v.bold, italic: v.italic, underline: v.underline, strike: v.strike };
     },
     applyStyle: function (style) { try { applyStyle(style); } catch (e) { warn(e); } },
-    focus: function (gid) { try { C.setFocus({ group: gid }); } catch (e) { warn(e); } },
+    focus: function (gid) {
+      // On a closed socket BetterChatango's setFocus submits its own join form (inject.js:5988): the follow-up of the reconnection focuses instead.
+      if (!opened(gid)) { pendingFocus = gid; return; }
+      try { focusGroup(gid, false); } catch (e) { warn(e); }
+    },
     focusPm: focusPm,
     /**
      * Asks Chatango for the presence of correspondents with the frame BetterChatango sends for Meet people (inject.js:9387).
@@ -1018,7 +1053,7 @@ var liveBridge = (function () {
     join: function (gid) {
       delete left[gid];
       try { if (SB && SB.renderGroup) SB.renderGroup({ group: gid, header: gid, recent: true }); } catch (e) { warn(e); }
-      connectThen(gid, function () { C.setFocus({ group: gid }); });
+      connectThen(gid, function () { focusGroup(gid, false); });
     },
     leave: function (gid) {
       left[gid] = true;
@@ -1033,7 +1068,7 @@ var liveBridge = (function () {
      * @param {boolean=} background True for a group that is not shown: the BetterChatango focus stays on the shown group.
      */
     reconnect: function (gid, background) {
-      connectThen(gid, function () { if (gid !== 'private_message' && !background) C.setFocus({ group: gid, reload: true }); });
+      connectThen(gid, function () { if (gid !== 'private_message' && (!background || pendingFocus === gid)) focusGroup(gid, true); });
     },
     loadMore: function (gid) {
       var g = C.groups && C.groups[gid];
@@ -1099,6 +1134,19 @@ var liveBridge = (function () {
     removeFriend: function (name) { return send('private_message', 'wldelete:' + name, "Couldn't remove this friend."); },
     block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', "The block didn't go through."); },
     unblock: function (name) { return send('private_message', 'unblock:' + name, "The unblock didn't go through."); },
+    /**
+     * Changes a PM setting of the Chatango account then asks for the settings again to confirm it.
+     * @param {string} key PM_SETTING_NAMES key.
+     * @param {boolean} on New value.
+     * @returns {boolean} True if the frames were handed to BetterChatango.
+     */
+    setPmSetting: function (key, on) {
+      if (!send('private_message', 'setsettings:' + PM_SETTING_NAMES[key] + ':' + (on ? 'on' : 'off'), "Couldn't save your Chatango setting.")) return false;
+      // chadango sends setsettings without waiting for a reply: only the settings reply tells the new value.
+      send('private_message', 'settings', '');
+      awaitReply('settings', CONFIRM_TIMEOUT, { op: 'pmSettingsTimeout' });
+      return true;
+    },
     /**
      * History archived by BetterChatango in IndexedDB and grouped by correspondent with the read state of each message.
      * @param {number} perTarget Number of entries kept per correspondent, the most recent ones.
@@ -1267,7 +1315,7 @@ var liveBridge = (function () {
      */
     fetchProfile: function (name) {
       var n = lower(name);
-      if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.reject(new Error('Guests have no profile.'));
+      if (!ACCOUNT_NAME.test(n)) return Promise.reject(new Error('Guests have no profile.'));
       return cached(profileCache, n, function () {
         return fetch(CH.subdomain.mod1(n)).then(function (r) {
           // Server error rejected: read as a missing profile, it would stay cached for the cache delay instead of being read again.
@@ -1621,16 +1669,16 @@ var liveBridge = (function () {
   /**
    * Reads the full profile of a member (mod2.xml) as HTML to show only in an isolated frame.
    * @param {string} name Target member.
-   * @returns {Promise<string>} Empty string if the file is missing, rejected on a server error.
+   * @returns {Promise<string>} Empty string if the file is missing, rejected when Chatango refuses or fails the request.
    */
   function fetchFullProfile(name) {
       var n = lower(name);
-      if (!/^[a-z0-9_-]{1,20}$/.test(n)) return Promise.resolve('');
+      if (!ACCOUNT_NAME.test(n)) return Promise.resolve('');
       var hit = fresh(fullProfileCache, n);
       if (hit) return Promise.resolve(hit.data);
       return fetch(CH.subdomain.mod2(n)).then(function (r) {
-        // Server error rejected: read as an empty profile, it would erase the full profile on the next save.
-        if (r.status >= 500) { note('Chatango answered mod2.xml with HTTP ' + r.status); throw new Error(CHATANGO_TROUBLE); }
+        // Only a missing file is an empty profile: any other failure read as empty would erase the full profile on the next save.
+        if (!r.ok && r.status !== 404) { note('Chatango answered mod2.xml with HTTP ' + r.status); throw new Error(CHATANGO_TROUBLE); }
         return r.ok ? r.text() : '';
       }).then(function (xml) {
         var doc = new DOMParser().parseFromString(xml, 'text/xml'), body = doc.querySelector('body');

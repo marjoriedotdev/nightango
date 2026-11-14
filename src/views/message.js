@@ -73,7 +73,7 @@ var MessageRow = React.memo(function MessageRow(p) {
     handle ? { label: 'Mention ' + p.shown, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
     canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
     copyTextItem(app, m),
-    showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed. The IP is ' + m.ip + '.'); }); } } : null,
+    showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed. The IP is ' + m.ip + '.', { tone: ok ? 'success' : 'error' }); }); } } : null,
     m.author !== me ? viewProfileItem(app, m.author, gid) : null,
     whoItem(app, m.author),
     m.author !== me ? styleItem(app, m.author, p.unstyled, p.shown) : null,
@@ -110,7 +110,7 @@ var MessageRow = React.memo(function MessageRow(p) {
  * @param {Object} m Message.
  */
 function copyTextItem(app, m) {
-  return { label: 'Copy text', icon: 'copy', onSelect: function () { copyText(m.text || messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed. Select the text and copy it.'); }); } };
+  return { label: 'Copy text', icon: 'copy', onSelect: function () { copyText(m.text || messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed. Select the text and copy it.', { tone: ok ? 'success' : 'error' }); }); } };
 }
 
 /**
@@ -256,7 +256,7 @@ function TikTokEmbed(p) {
   function play() {
     if (post) { setPhase('playing'); return; }
     setPhase('loading');
-    app.actions.tiktokPost({ id: p.id, url: p.url }, true).then(function (r) { setPost(r.post); setPhase('playing'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
+    app.actions.tiktokPost({ id: p.id, url: p.url }, true).then(function (r) { setPost(r.post); setPhase('playing'); }, function (e) { app.ui.toast(e.message, { tone: 'error' }); setPhase('failed'); });
   }
   var loading = phase === 'loading', card = preview && thumb && loaded;
   // Loaded hidden behind the button first: an empty vertical card would take the height of a video for nothing.
@@ -290,7 +290,7 @@ function XPostEmbed(p) {
   if (post && (preview || phase === 'shown')) return h(XPostCard, { post: post });
   function show() {
     setPhase('loading');
-    app.actions.xPost({ id: p.id, url: p.url }, true).then(function (r) { setPost(r); setPhase('shown'); }, function (e) { app.ui.toast(e.message); setPhase('failed'); });
+    app.actions.xPost({ id: p.id, url: p.url }, true).then(function (r) { setPost(r); setPhase('shown'); }, function (e) { app.ui.toast(e.message, { tone: 'error' }); setPhase('failed'); });
   }
   var loading = phase === 'loading';
   return h(RevealButton, { icon: 'quote', label: loading ? 'Loading post' : 'Show post', url: p.url, onClick: loading ? null : show });

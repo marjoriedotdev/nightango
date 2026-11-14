@@ -51,6 +51,9 @@
     image: [['rect', { width: 18, height: 18, x: 3, y: 3, rx: 2 }], ['circle', { cx: 9, cy: 9, r: 2 }], ['path', { d: 'm21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21' }]],
     play: [['polygon', { points: '6 3 20 12 6 21 6 3' }]],
     'rotate-cw': [['path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8' }], ['path', { d: 'M21 3v5h-5' }]],
+    'wifi-off': [['path', { d: 'M12 20h.01' }], ['path', { d: 'M8.5 16.429a5 5 0 0 1 7 0' }], ['path', { d: 'M5 12.859a10 10 0 0 1 5.17-2.69' }], ['path', { d: 'M19 12.859a10 10 0 0 0-2.007-1.523' }], ['path', { d: 'M2 8.82a15 15 0 0 1 4.177-2.643' }], ['path', { d: 'M22 8.82a15 15 0 0 0-11.288-3.764' }], ['path', { d: 'm2 2 20 20' }]],
+    'monitor-smartphone': [['path', { d: 'M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8' }], ['path', { d: 'M10 19v-3.96 3.15' }], ['path', { d: 'M7 19h5' }], ['rect', { width: 6, height: 10, x: 16, y: 12, rx: 2 }]],
+    unplug: [['path', { d: 'm19 5 3-3' }], ['path', { d: 'm2 22 3-3' }], ['path', { d: 'M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z' }], ['path', { d: 'M7.5 13.5 10 11' }], ['path', { d: 'M10.5 16.5 13 14' }], ['path', { d: 'm12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z' }]],
     paperclip: [['path', { d: 'm21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48' }]],
     bold: [['path', { d: 'M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8' }]],
     italic: [['line', { x1: 19, x2: 10, y1: 4, y2: 4 }], ['line', { x1: 14, x2: 5, y1: 20, y2: 20 }], ['line', { x1: 15, x2: 9, y1: 4, y2: 20 }]],
@@ -109,7 +112,7 @@
   }
 
   function IconButton(props) {
-    var size = props.size || 32;
+    var size = props.size || 34;
     var rest = omit(props, ['icon', 'label', 'size', 'iconSize', 'pressed', 'count', 'className', 'style']);
     return h('button', Object.assign({
       type: 'button', className: cx('tc-ib', props.count && 'tc-ib-counted', props.className),
@@ -345,7 +348,7 @@
         props.title ? h('span', { className: 'tc-banner-title' }, props.title) : null,
         h('span', { className: 'tc-banner-text' }, props.children)),
       props.action || null,
-      props.onDismiss ? h(IconButton, { icon: 'x', label: 'Dismiss', size: 26, iconSize: 14, onClick: props.onDismiss }) : null);
+      props.onDismiss ? h(IconButton, { icon: 'x', label: 'Dismiss', size: 28, iconSize: 14, onClick: props.onDismiss }) : null);
   }
 
   function SettingsSection(props) {
@@ -450,8 +453,8 @@
         }
       }),
       h('div', { className: 'tc-composer-bar' },
-        props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', size: 30, iconSize: 16, onClick: props.onEmoji }) : null,
-        props.attachMenu || (props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', size: 30, iconSize: 16, onClick: props.onAttach }) : null),
+        props.onEmoji ? h(IconButton, { icon: 'smile', label: 'Emoji', onClick: props.onEmoji }) : null,
+        props.attachMenu || (props.onAttach ? h(IconButton, { icon: 'paperclip', label: 'Attach media', onClick: props.onAttach }) : null),
         props.hint ? h('span', { id: hintId, className: cx('tc-composer-hint', props.hintTone === 'warning' && 'tc-composer-hint-warning') },
           props.hintTone === 'warning' ? h(Icon, { name: 'alert', size: 14 }) : null, props.hint) : h('span', { style: { flex: 1 } }),
         props.aside || null,

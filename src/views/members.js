@@ -176,7 +176,7 @@ function personActionGroups(actions) {
  * @param {?string} gid Group the profile is opened from.
  */
 function useProfileActions(name, gid) {
-  var app = useApp(), s = app.state, u = userOf(s, name), busy = !!s.friendAdds[name];
+  var app = useApp(), s = app.state, u = userOf(s, name), busy = !!ownOf(s.friendAdds, name);
   var g = gid ? s.groups[gid] : null;
   var inDm = isPaneOpen(s, 'dm', name);
   var friendLabel = busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend';
@@ -220,7 +220,7 @@ function ProfileDialog(p) {
     h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', focusHeading: true, size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
-      : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
+      : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 'var(--font-size-body-sm)' } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
         buttons.map(function (it) { return h(T.Button, { key: it.id, variant: it.id === 'message' ? 'primary' : undefined, icon: it.icon, disabled: it.disabled, onClick: it.onSelect }, it.buttonLabel || it.label); }),
         h(MenuButton, { label: 'More profile actions', items: menuGroups(personActionGroups(actions.filter(function (it) { return buttons.indexOf(it) < 0; }))) }))));
 }
@@ -289,7 +289,7 @@ function openLinkButton(url, variant, onClose) {
  * @param {string} url Link address.
  */
 function linkAddress(url) {
-  return h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 12.5, overflowWrap: 'anywhere', color: 'var(--text-body)' } }, url);
+  return h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 'var(--font-size-caption)', overflowWrap: 'anywhere', color: 'var(--text-body)' } }, url);
 }
 
 /**

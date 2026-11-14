@@ -171,7 +171,7 @@ function ProfileSummary(p) {
  * @param {{name: string}} p Member name.
  */
 function MemberNote(p) {
-  var app = useApp(), saved = app.state.notes[p.name] || { label: '', note: '' };
+  var app = useApp(), saved = ownOf(app.state.notes, p.name) || { label: '', note: '' };
   var a = useState(saved.label), label = a[0], setLabel = a[1];
   var b = useState(saved.note), note = b[0], setNote = b[1];
   var next = { label: label.trim(), note: note.trim() };
@@ -179,14 +179,14 @@ function MemberNote(p) {
   function save() {
     app.actions.setNote(p.name, next);
     setLabel(next.label); setNote(next.note);
-    app.ui.toast(next.label || next.note ? 'Note saved.' : 'Note deleted.', { icon: 'check' });
+    app.ui.toast(next.label || next.note ? 'Note saved.' : 'Note deleted.', { tone: 'success' });
   }
   return h('div', { className: 'kv member-note' },
     h('h3', null, 'Private note'),
     h('p', { className: 'muted' }, 'Only you see it. Kept in this browser, never sent.'),
     h(T.TextField, { id: 'note-label-' + p.name, label: 'Label', value: label, maxLength: NOTE_LABEL_MAX, placeholder: 'Shown next to their name', onChange: function (e) { setLabel(e.target.value); } }),
     h(T.TextField, { id: 'note-text-' + p.name, label: 'Note', multiline: true, rows: 3, maxLength: NOTE_TEXT_MAX, value: note, onChange: function (e) { setNote(e.target.value); } }),
-    h('div', { className: 'note-actions' }, h(T.Button, { size: 'sm', disabled: !changed, onClick: save }, 'Save note')));
+    h('div', { className: 'note-actions' }, h(T.Button, { disabled: !changed, onClick: save }, 'Save note')));
 }
 
 /**

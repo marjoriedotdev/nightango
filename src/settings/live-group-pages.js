@@ -24,13 +24,13 @@ function GSAutoModLive(p) {
       h(ProxiesRow, { on: am.proxies, disabled: !canRes, onChange: function (v) { p.edit(function (d) { d.automod.proxies = v; }); } }),
       h(T.SettingRow, {
         asLabel: false, title: 'Slow mode', description: 'Minimum time between two messages from the same member.',
-        control: am.slowMode == null ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Loading') : liveSelect('slow', 'Slow mode', am.slowMode, slowOptions, function (v) { p.edit(function (d) { d.automod.slowMode = v; }); }, !canRes)
+        control: am.slowMode == null ? h('span', { className: 'muted', style: { fontSize: 'var(--font-size-body-sm)' } }, 'Loading') : liveSelect('slow', 'Slow mode', am.slowMode, slowOptions, function (v) { p.edit(function (d) { d.automod.slowMode = v; }); }, !canRes)
       })),
     h(T.SettingsSection, { title: 'Banned words', description: 'Separate words with commas. Messages that contain them are blocked.', padded: true },
       am.banned ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
         h(T.TextField, { id: 'bw-part', label: 'Blocked anywhere in a word', multiline: true, rows: 2, value: am.banned.part, disabled: !canBw, hint: 'Parts of words, 4 characters or more.', onChange: function (e) { var v = e.target.value; p.edit(function (d) { d.automod.banned.part = v; }); } }),
         h(T.TextField, { id: 'bw-whole', label: 'Blocked as whole words', multiline: true, rows: 2, value: am.banned.whole, disabled: !canBw, onChange: function (e) { var v = e.target.value; p.edit(function (d) { d.automod.banned.whole = v; }); } }))
-        : h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, 'Loading banned words from Chatango.')));
+        : h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-body-sm)' } }, 'Loading banned words from Chatango.')));
 }
 
 function GSMediaLive(p) {
@@ -58,7 +58,7 @@ function banRow(g, s, x, showIp, action) {
       h(Person, { name: x.name, gid: g.id, size: 28, inert: !ACCOUNT_NAME.test(x.name) }),
       h('span', { className: 'lrow-sub person-sub' }, [x.by && 'by ' + shownName(s, x.by), x.at && ago(x.at)].filter(Boolean).join(' · ')),
       x.includes && x.includes.length ? h('span', { className: 'lrow-sub person-sub' }, 'Includes ' + x.includes.map(function (n) { return shownName(s, n); }).join(', ') + '.') : null),
-    showIp ? h('span', { className: 'muted', style: { fontSize: 12 } }, x.ip) : null,
+    showIp ? h('span', { className: 'muted', style: { fontSize: 'var(--font-size-caption)' } }, x.ip) : null,
     action);
 }
 

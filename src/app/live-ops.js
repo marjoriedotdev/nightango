@@ -227,7 +227,7 @@ function useLiveOps(k) {
           if (!g.bans.some(function (b) { return b.unid === op.ban.unid && b.ip === op.ban.ip; })) g.bans.unshift(op.ban);
           g.messages.push({ id: uid(), kind: 'ban', user: op.ban.name, ts: Date.now() });
         });
-        if (mine) toast(shownName(stateRef.current, op.ban.name) + ' was banned from #' + op.gid + '.', { action: { label: 'Undo', run: function () { liveBridge.unban(op.gid, op.ban); } } });
+        if (mine) toast(shownName(stateRef.current, op.ban.name) + ' was banned from #' + op.gid + '.', { tone: 'success', action: { label: 'Undo', run: function () { liveBridge.unban(op.gid, op.ban); } } });
         break;
       }
       case 'unbanned': groupUpdate(update, op.gid, function (g) {
@@ -268,7 +268,7 @@ function useLiveOps(k) {
       case 'session': update(function (d) {
         if (!d.session || SESSION_RANK[op.reason] >= SESSION_RANK[d.session.reason]) d.session = { reason: op.reason, attempts: 0 };
       }); break;
-      case 'visible': if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
+      case 'visible': k.inbox.readInView(); if (navigator.onLine) reconnection.reconnectClosed(); pms.refreshPresence(true); break;
       case 'online':
         reconnection.reconnectClosed();
         update(function (d) {
@@ -279,8 +279,8 @@ function useLiveOps(k) {
         });
         break;
       // BetterChatango addresses its notices to the group it believes is open: a toast avoids writing them in the wrong message log.
-      case 'notice': toast(op.text, { icon: 'info' }); break;
-      case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { icon: 'info', action: { label: op.button, run: op.action } } : { icon: 'info' }); break;
+      case 'notice': toast(op.text, { tone: op.tone }); break;
+      case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { tone: 'error', action: { label: op.button, run: op.action } } : { tone: 'error' }); break;
       case 'pm': {
         var s0 = stateRef.current;
         var focused = isDmInView(s0, op.from);
@@ -334,19 +334,32 @@ function useLiveOps(k) {
           op.list.forEach(function (f) { var u = ensureLiveUser(d, f.name, localRef.current); u.friend = true; applyPresence(u, f); delete d.friendAdds[f.name]; });
         });
         break;
+      case 'pmSettings':
+        update(function (d) {
+          d.pmSettings = op.values;
+          var save = d.pmSettingSave;
+          if (!save || save.failed) return;
+          // A reply to an earlier request can still show the old value: only the reply to the request of this change refuses it.
+          if (op.values[save.key] === save.value) d.pmSettingSave = null;
+          else if (op.asked) d.pmSettingSave = { key: save.key, value: save.value, failed: true };
+        });
+        break;
+      case 'pmSettingsTimeout':
+        update(function (d) { var save = d.pmSettingSave; if (save && !save.failed) d.pmSettingSave = { key: save.key, value: save.value, failed: true }; });
+        break;
       case 'friendTimeout':
         if (!stateRef.current.friendAdds[op.name]) break;
         update(function (d) { delete d.friendAdds[op.name]; });
-        toast("Chatango didn't confirm adding " + shownName(stateRef.current, op.name) + ' to friends.');
+        toast("Chatango didn't confirm adding " + shownName(stateRef.current, op.name) + ' to friends.', { tone: 'error' });
         break;
       case 'friendRefused':
         update(function (d) { delete d.friendAdds[op.name]; });
-        toast(unknownUserText(op.name), { icon: 'info' });
+        toast(unknownUserText(op.name));
         break;
       case 'pmChecked': {
         update(function (d) { d.pmChecked = { name: op.name, found: !!op.found, timeout: !!op.timeout, ts: Date.now() }; });
         // Name checked by New private message: its refusal shows in the dialog, not as a toast.
-        if (!op.found && !op.timeout && !op.asked && stateRef.current.dms[op.name]) toast(unknownUserText(op.name), { icon: 'info' });
+        if (!op.found && !op.timeout && !op.asked && stateRef.current.dms[op.name]) toast(unknownUserText(op.name));
         break;
       }
       case 'unfriend': update(function (d) { if (d.users[op.name]) d.users[op.name].friend = false; }); break;
