@@ -14,7 +14,7 @@ function NotificationsPage() {
   if (LIVE) cols = cols.filter(function (c) { return c[0] !== 'sound'; });
   function ask() {
     try {
-      window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.'); }, function () { app.ui.toast('The browser refused the request.'); });
+      window.Notification.requestPermission().then(function (r) { setPermission(r); app.ui.toast(r === 'granted' ? 'Desktop alerts are on.' : 'The browser kept desktop alerts blocked. Allow them in its site settings.'); }, function () { app.ui.toast("Your browser didn't answer. Allow desktop alerts in its site settings."); });
     } catch (e) { app.ui.toast('This browser view cannot show desktop alerts.'); }
   }
   return h(Page, { title: 'Notifications' },
@@ -70,5 +70,5 @@ function BetterChatangoSoundsSection() {
           h(T.Switch, { label: r[1], checked: on, onChange: function (e) { set('play_' + r[0], e.target.checked); } }),
           h(VolumeControl, { label: r[3], value: sounds['volume_' + r[0]], disabled: !on, onChange: function (v) { set('volume_' + r[0], v); }, onPlay: function () { play(r[0]); } }))
       });
-    }) : h('p', { className: 'pal-empty' }, "BetterChatango's sound settings could not be read. Reload the page and try again."));
+    }) : h('p', { className: 'pal-empty' }, "Couldn't read BetterChatango's sound settings. Reload the page and try again."));
 }

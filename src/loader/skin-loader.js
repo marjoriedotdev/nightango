@@ -53,7 +53,7 @@
     }
     // The queried profile is always the one of the BetterChatango session, never one the page would ask for.
     var me = accountName();
-    if (!me) { reply('vissle', q.id, { error: 'Your BetterChatango account could not be read. Reload the page and try again.' }); return; }
+    if (!me) { reply('vissle', q.id, { error: "Couldn't read your BetterChatango account. Reload the page and try again." }); return; }
     GM_xmlhttpRequest({
       method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, timeout: 15000,
       // Same header as the vissle client, which sends the JSON as plain text.
@@ -63,7 +63,7 @@
         if (r.status !== 200) { reply('vissle', q.id, { error: 'vissle.me answered with HTTP ' + r.status + '.' }); return; }
         try { reply('vissle', q.id, { data: JSON.parse(r.responseText) }); } catch (x) { reply('vissle', q.id, { error: 'vissle.me sent an unreadable reply.' }); }
       },
-      onerror: function () { reply('vissle', q.id, { error: 'vissle.me could not be reached.' }); },
+      onerror: function () { reply('vissle', q.id, { error: "Couldn't reach vissle. Try again later." }); },
       ontimeout: function () { reply('vissle', q.id, { error: 'vissle.me did not answer in time.' }); }
     });
   });
@@ -88,7 +88,7 @@
         if (cover) { try { out.thumb = JSON.parse('"' + cover[1] + '"'); } catch (x) { /* malformed escape: no cover */ } }
         reply('tiktok', q.id, out);
       },
-      onerror: function () { reply('tiktok', q.id, { error: 'TikTok could not be reached. Open the link instead.' }); },
+      onerror: function () { reply('tiktok', q.id, { error: "Couldn't reach TikTok. Open the link instead." }); },
       ontimeout: function () { reply('tiktok', q.id, { error: 'TikTok did not answer in time. Open the link instead.' }); }
     });
   });
@@ -153,7 +153,7 @@
         else error = 'X did not share this post. Open the link instead.';
         done();
       },
-      onerror: function () { error = 'X could not be reached. Open the link instead.'; done(); },
+      onerror: function () { error = "Couldn't reach X. Open the link instead."; done(); },
       ontimeout: function () { error = 'X did not answer in time. Open the link instead.'; done(); }
     });
     GM_xmlhttpRequest({

@@ -233,7 +233,7 @@ async function suite(userscript) {
   const s = e.d.querySelector('script[src="' + START + '"]');
   s.dispatchEvent(new e.w.Event('error'));
   await wait(20);
-  step('explains when BetterChatango cannot be reached', /could not be reached/.test(e.d.querySelector('h1').textContent));
+  step('explains when BetterChatango cannot be reached', /Couldn't reach BetterChatango/.test(e.d.querySelector('h1').textContent));
   e.w.close();
 
   /* React unreachable: the sign-in screen gets its BetterChatango look back */

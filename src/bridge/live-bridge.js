@@ -201,7 +201,7 @@ var liveBridge = (function () {
         emit({ op: 'denied', gid: room });
         emit({ op: 'notice', gid: room, text: 'Chatango refused the connection to #' + room + '.' });
         break;
-      case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator.' }); break;
+      case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator. Check the username and try again.' }); break;
       case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions." }); break;
       case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.' }); break;
       // Unit unconfirmed: chadango reads minutes, its own show_nlp_tb:3:900 sample suggests seconds.
@@ -491,7 +491,7 @@ var liveBridge = (function () {
    */
   function connectPm(name) {
     var n = lower(name);
-    if (!pmOpen() || !send('private_message', 'connect:' + n, 'The conversation with ' + n + ' could not be opened.')) return false;
+    if (!pmOpen() || !send('private_message', 'connect:' + n, "Couldn't open the conversation with " + n + '.')) return false;
     connectTarget = n;
     return true;
   }
@@ -933,7 +933,7 @@ var liveBridge = (function () {
       var built;
       try { built = groupBody(gid, text, opts); } catch (e) { warn(e); return null; }
       if (!built) return null;
-      var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
+      var failure = opts.editId ? "Your message wasn't edited." : opts.replyId ? "Your reply wasn't sent." : opts.quote ? "Your quote wasn't sent." : "Your message wasn't sent.";
       var user = (C.groups[gid] && C.groups[gid].user) || {};
       var flag = (CHANNEL_FLAG[opts.channel] || 0) + (parseInt(user.badge, 10) || 0);
       if (!send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure)) return null;
@@ -973,7 +973,7 @@ var liveBridge = (function () {
         var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
         body = body.slice(0, at) + ref + body.slice(at);
         if (opts.quote) body = withQuote(body, at + ref.length, opts.quote, true);
-        var failure = opts.editId ? 'Your message could not be edited.' : opts.replyId ? 'Your reply could not be sent.' : opts.quote ? 'Your quote could not be sent.' : 'Your message failed to be delivered.';
+        var failure = opts.editId ? "Your message wasn't edited." : opts.replyId ? "Your reply wasn't sent." : opts.quote ? "Your quote wasn't sent." : "Your message wasn't sent.";
         // BetterChatango archives a sent PM under client.private.focus, not its recipient: an upload can leave after a switch.
         C.private.focus = user;
         try { if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
@@ -1037,38 +1037,38 @@ var liveBridge = (function () {
     loadMore: function (gid) {
       var g = C.groups && C.groups[gid];
       if (g && g.load === -1) return 'done';
-      return send(gid, 'get_more:20:' + (g && g.load || 0), 'Earlier messages could not be loaded.') ? 'sent' : 'failed';
+      return send(gid, 'get_more:20:' + (g && g.load || 0), "Couldn't load earlier messages.") ? 'sent' : 'failed';
     },
     /* Moderation: frames identical to the BetterChatango ones */
-    deleteMessage: function (gid, id) { return send(gid, 'delmsg:' + id, 'The message could not be deleted.'); },
-    deleteAllFrom: function (gid, m) { return send(gid, 'delallmsg:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), 'The messages could not be deleted.'); },
-    ban: function (gid, m) { return send(gid, 'block:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), 'The ban could not be sent.'); },
-    unban: function (gid, b) { return send(gid, 'removeblock:' + b.unid + ':' + b.ip, 'The unban could not be sent.'); },
-    unbanAll: function (gid) { return send(gid, 'unbanall', 'The unban could not be sent.'); },
+    deleteMessage: function (gid, id) { return send(gid, 'delmsg:' + id, "Couldn't delete the message."); },
+    deleteAllFrom: function (gid, m) { return send(gid, 'delallmsg:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), "Couldn't delete the messages."); },
+    ban: function (gid, m) { return send(gid, 'block:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), "The ban didn't go through."); },
+    unban: function (gid, b) { return send(gid, 'removeblock:' + b.unid + ':' + b.ip, "The unban didn't go through."); },
+    unbanAll: function (gid) { return send(gid, 'unbanall', "The unban didn't go through."); },
     /**
      * Requests a page of bans or unbans like BetterChatango.
      * @param {string} gid Target group.
      * @param {string} kind block or unblock.
      * @param {string} ts Timestamp of the last loaded row, 0 for the first page.
      */
-    banList: function (gid, kind, ts) { return send(gid, 'blocklist:' + kind + ':' + ts + ':next:' + BAN_PAGE + ':anons:1', 'The ban list could not be loaded.'); },
+    banList: function (gid, kind, ts) { return send(gid, 'blocklist:' + kind + ':' + ts + ':next:' + BAN_PAGE + ':anons:1', "Couldn't load the ban list."); },
     searchBans: function (gid, query) {
-      if (!send(gid, 'searchban:' + query, 'The search could not be sent.')) return false;
+      if (!send(gid, 'searchban:' + query, "The search didn't go through.")) return false;
       awaitReply('searchban:' + gid, CONFIRM_TIMEOUT, { op: 'banSearchTimeout', gid: gid });
       return true;
     },
-    clearAll: function (gid) { return send(gid, 'clearall', 'The messages could not be cleared.'); },
+    clearAll: function (gid) { return send(gid, 'clearall', "Couldn't clear the messages."); },
     /* Group settings: frames found in chadango and chatango-lib */
     requestSettings: function (gid) {
-      ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:' + MODLOG_PAGE].forEach(function (f) { send(gid, f, 'Group settings could not be loaded.'); });
+      ['getannouncement', 'getbannedwords', 'getratelimit', 'getmodactions:prev:0:' + MODLOG_PAGE].forEach(function (f) { send(gid, f, "Couldn't load group settings."); });
     },
     /**
      * Requests the page of the audit log older than the offset like chadango.
      * @param {string} gid Target group.
      * @param {number} offset Id of the oldest loaded action minus 1.
      */
-    modLog: function (gid, offset) { return send(gid, 'getmodactions:prev:' + offset + ':' + MODLOG_PAGE, 'Older audit log entries could not be loaded.'); },
-    setFlags: function (gid, add, remove) { return send(gid, 'updategroupflags:' + add + ':' + remove, 'The group settings could not be saved.'); },
+    modLog: function (gid, offset) { return send(gid, 'getmodactions:prev:' + offset + ':' + MODLOG_PAGE, "Couldn't load older audit log entries."); },
+    setFlags: function (gid, add, remove) { return send(gid, 'updategroupflags:' + add + ':' + remove, "Couldn't save the group settings."); },
     setAnnouncement: function (gid, enabled, seconds, text, read) {
       var prefix = read.prefix || '<n000/><f x11000="0">';
       var close = (prefix.match(/<[biu]>/g) || []).reverse().join('').replace(/</g, '</');
@@ -1076,28 +1076,28 @@ var liveBridge = (function () {
       var mode = !enabled ? 0 : read.mode === 3 ? 3 : 1;
       // Line breaks as \r like BetterChatango, whose editor strips the <br/> tags when reading back.
       var body = prefix + esc(text).replace(/\r?\n/g, '\r') + close;
-      var ok = send(gid, 'updateannouncement:' + mode + ':' + seconds + ':' + body, 'The announcement could not be saved.');
+      var ok = send(gid, 'updateannouncement:' + mode + ':' + seconds + ':' + body, "Couldn't save the announcement.");
       setTimeout(function () { send(gid, 'getannouncement', ''); }, 1000);
       return ok;
     },
     setBannedWords: function (gid, part, whole) {
-      var ok = send(gid, 'setbannedwords:' + encodeURIComponent(part) + ':' + encodeURIComponent(whole), 'Banned words could not be saved.');
+      var ok = send(gid, 'setbannedwords:' + encodeURIComponent(part) + ':' + encodeURIComponent(whole), "Couldn't save banned words.");
       setTimeout(function () { send(gid, 'getbannedwords', ''); }, 1000);
       return ok;
     },
-    setRateLimit: function (gid, seconds) { return send(gid, 'setratelimit:' + seconds, 'Slow mode could not be saved.'); },
-    setMod: function (gid, name, flags) { return send(gid, 'addmod:' + name + ':' + flags, 'The moderator could not be saved.'); },
-    removeMod: function (gid, name) { return send(gid, 'removemod:' + name, 'The moderator could not be removed.'); },
+    setRateLimit: function (gid, seconds) { return send(gid, 'setratelimit:' + seconds, "Couldn't save slow mode."); },
+    setMod: function (gid, name, flags) { return send(gid, 'addmod:' + name + ':' + flags, "Couldn't save this moderator."); },
+    removeMod: function (gid, name) { return send(gid, 'removemod:' + name, "Couldn't remove this moderator."); },
     /* Private messages */
-    setStatus: function (status) { return send('private_message', 'idle:' + (status === 'idle' ? 0 : 1), 'Your status could not be changed.'); },
+    setStatus: function (status) { return send('private_message', 'idle:' + (status === 'idle' ? 0 : 1), "Couldn't change your status."); },
     addFriend: function (name) {
-      if (!send('private_message', 'wladd:' + name, 'The friend could not be added.')) return false;
+      if (!send('private_message', 'wladd:' + name, "Couldn't add this friend.")) return false;
       awaitReply('wladd:' + lower(name), CONFIRM_TIMEOUT, { op: 'friendTimeout', name: lower(name) });
       return true;
     },
-    removeFriend: function (name) { return send('private_message', 'wldelete:' + name, 'The friend could not be removed.'); },
-    block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', 'The block could not be sent.'); },
-    unblock: function (name) { return send('private_message', 'unblock:' + name, 'The unblock could not be sent.'); },
+    removeFriend: function (name) { return send('private_message', 'wldelete:' + name, "Couldn't remove this friend."); },
+    block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', "The block didn't go through."); },
+    unblock: function (name) { return send('private_message', 'unblock:' + name, "The unblock didn't go through."); },
     /**
      * History archived by BetterChatango in IndexedDB and grouped by correspondent with the read state of each message.
      * @param {number} perTarget Number of entries kept per correspondent, the most recent ones.
@@ -1252,7 +1252,7 @@ var liveBridge = (function () {
       }).then(function (r) { return r.text(); }).then(function (text) {
         if (text.indexOf('h=') === 0) {
           var names = text.slice(2).split(':').map(function (x) { return lower(x.split(';')[0]); }).filter(Boolean);
-          if (names.length) send('private_message', 'getpresence:' + names.join(';'), 'Could not load people.');
+          if (names.length) send('private_message', 'getpresence:' + names.join(';'), "Couldn't load people.");
           return names;
         }
         var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: 'Chatango does not allow this search.', None: '', unauthed: 'Your Chatango session expired. Reload the page and sign in again.' };
@@ -1425,7 +1425,7 @@ var liveBridge = (function () {
         throw new Error(kind === 'unauthed' ? 'Your Chatango session expired. Reload the page and sign in again.'
           : kind === 'error' ? 'Chatango did not accept this picture. Try a smaller JPG or PNG.'
             : 'Chatango sent an unexpected reply. Check your picture on chatango.com.');
-      }, busyOr('Your picture could not be uploaded. Try again.'));
+      }, busyOr("Couldn't upload your picture. Try again."));
     },
     /**
      * Saves the part of the picture that the thumbnail shows like the BetterChatango cropping (inject.js:1390-1406).
@@ -1436,7 +1436,7 @@ var liveBridge = (function () {
         var data = profileReply(resp, ['x0']);
         bumpAvatar();
         return data;
-      }, busyOr('Your crop could not be saved. Try again.'));
+      }, busyOr("Couldn't save your crop. Try again."));
     },
     /**
      * Saves one's Premium background through the BetterChatango background form (inject.js:4900-4916 and client.html:2279-2345).
@@ -1604,7 +1604,7 @@ var liveBridge = (function () {
      * @returns {Promise<string>} Link https://vissle.me/{path}, rejected with the text to show on any other reply.
      */
     uploadFile: function (file) {
-      var failed = 'The file could not be uploaded. Try again.';
+      var failed = "Couldn't upload the file. Try again.";
       // Never progress: this BetterChatango branch posts the link in client.focus itself.
       return post(VISSLE_UPLOAD, { filedata: file }, { key: true }).then(function (resp) {
         var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
@@ -1673,7 +1673,7 @@ var liveBridge = (function () {
       // Empty string sent as is: only a full profile unknown to the page is read again from Chatango.
       var full = p.full != null ? Promise.resolve(p.full) : fetchFullProfile(me).catch(function () { return null; });
       return full.then(function (fullText) {
-        if (fullText === null) throw new Error('Your full profile could not be read. Nothing was saved.');
+        if (fullText === null) throw new Error("Couldn't read your full profile. Nothing was saved.");
         sentFull = fullText;
         var fields = profileForm('update', { age: p.age, gender: p.gender, location: p.location, line: p.about, full_profile: fullText });
         if (p.dir) fields.dir = 'checked';

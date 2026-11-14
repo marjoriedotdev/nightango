@@ -237,7 +237,7 @@ function WhoDialog(p) {
   useEffect(function () {
     liveBridge.fetchWho(p.name).then(function (levels) {
       setRes(levels ? { levels: levels } : { error: "vissle sent an answer Nightango can't read." });
-    }, function () { setRes({ error: 'vissle could not be reached. Try again later.' }); });
+    }, function () { setRes({ error: "Couldn't reach vissle. Try again later." }); });
   }, [p.name]);
   var levels = res && res.levels || [];
   var total = levels.reduce(function (n, x) { return n + x.names.length; }, 0);

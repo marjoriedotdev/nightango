@@ -421,7 +421,7 @@ function useActions(k) {
     var m0 = base.modFlags || {}, m1 = draft.modFlags || {};
     Object.keys(m1).forEach(function (n) { if (m0[n] !== m1[n]) count(liveBridge.setMod(g.id, n, m1[n])); });
     Object.keys(m0).forEach(function (n) { if (!(n in m1)) count(liveBridge.removeMod(g.id, n)); });
-    if (failed) toast(failed + (failed > 1 ? ' changes' : ' change') + " could not be sent. Check the connection to #" + g.id + '.');
+    if (failed) toast(failed + (failed > 1 ? " changes weren't sent" : " change wasn't sent") + '. Check the connection to #' + g.id + '.');
     else toast(sent ? 'Changes sent to Chatango.' : 'Nothing to save.', { icon: sent ? 'check' : 'info' });
     return sent;
   }
@@ -442,7 +442,7 @@ function useActions(k) {
    * @param {string} gid Group or private_message.
    * @param {string} outcome What did not happen, such as Message not sent.
    */
-  function messageFailed(gid, outcome) { toast(outcome + ' ' + (liveBridge.closedHint(gid) || 'BetterChatango rejected it.')); }
+  function messageFailed(gid, outcome) { toast(outcome + ' ' + (liveBridge.closedHint(gid) || 'Try again, or reload the page if it keeps failing.')); }
   /**
    * Sends a group message built by BetterChatango with the own style and keeps its style.
    * @param {string} gid Target group.
@@ -522,7 +522,7 @@ function useActions(k) {
         var sent = to.kind === 'dm' ? actions.sendDm(to.id, body, o) : actions.sendGroup(to.id, body, o);
         setUpload(to, null);
         if (sent) { toast('File sent.', { icon: 'check' }); return null; }
-        toast('The file was uploaded, but the message was not sent.', { action: { label: 'Copy link', run: function () {
+        toast("The file was uploaded, but the message wasn't sent.", { action: { label: 'Copy link', run: function () {
           copyText(link, function (ok) { toast(ok ? 'Link copied.' : 'Copy failed. The link is ' + link); });
         } } });
         return body;
@@ -618,7 +618,7 @@ function useActions(k) {
           d.meet = { results: prev.concat(fresh), next: from + names.length, loading: false, error: null, done: names.length < 40, filters: f, token: token };
         });
       }, function (e) {
-        update(function (d) { if (d.meet.token === token) Object.assign(d.meet, { loading: false, error: e && e.message ? e.message : 'The search failed.' }); });
+        update(function (d) { if (d.meet.token === token) Object.assign(d.meet, { loading: false, error: e && e.message ? e.message : "Search didn't work. Try again." }); });
       });
     };
     /**
@@ -634,7 +634,7 @@ function useActions(k) {
       }, function (e) {
         warn(e);
         update(function (d) { Object.assign(d.dms[name], { loadingOlder: false, olderFailed: true }); });
-        toast('Earlier messages could not be loaded.');
+        toast("Couldn't load earlier messages.");
       });
     };
     actions.loadMore = function (gid) {
@@ -658,7 +658,7 @@ function useActions(k) {
     actions.deleteDm = function (name) { deleteLiveDms([name], 'BetterChatango could not delete this conversation. Try again in a moment.'); };
     actions.removeDmMessage = function (name, m) {
       liveBridge.removePm(name, m).then(function (ok) {
-        if (!ok) { toast('This message could not be removed. Reload the page and try again.'); return; }
+        if (!ok) { toast("Couldn't remove this message. Reload the page and try again."); return; }
         dropDmMessage(name, m.id);
         syncPmUnread(pmArchive.current, update, [name]);
       });

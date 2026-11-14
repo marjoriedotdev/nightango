@@ -133,7 +133,7 @@ function ownLabel(mine) {
 function DmSearchHits(p) {
   var app = useApp(), me = app.state.me, found = p.found, body;
   if (!found) body = h('div', { className: 'list-more' }, h(T.Spinner, { label: 'Searching messages' }));
-  else if (found.failed) body = h('p', { className: 'pal-empty' }, 'Messages could not be searched.');
+  else if (found.failed) body = h('p', { className: 'pal-empty' }, "Search didn't work. Try again.");
   else if (!found.list.length) body = h('p', { className: 'pal-empty' }, 'No message matches.');
   else body = h(Frag, null, found.list.map(function (hit) {
     return h(MessageEntry, {

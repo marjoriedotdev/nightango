@@ -87,7 +87,7 @@ function useVoiceRecorder(key, onFiles) {
         }, function (e) {
           warn(e);
           setRec(null);
-          app.ui.toast('The recording could not be prepared. Try again.');
+          app.ui.toast("Couldn't prepare the recording. Try again.");
         });
       };
       r.timer = setInterval(function () {

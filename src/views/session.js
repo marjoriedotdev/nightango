@@ -4,7 +4,7 @@ var SESSION_COPY = {
   kicked: { title: "You're signed in somewhere else", body: 'Chatango closed your private messages here because your account connected from another window or device.' },
   denied: { title: 'Your session expired', body: 'Reload the page and sign in again on the BetterChatango screen.' },
   offline: { title: "You're offline", body: 'Nightango will reconnect when your connection is back.' },
-  lost: { title: 'Connection lost', body: 'Unable to connect, please try again in a few minutes.' }
+  lost: { title: 'Connection lost', body: "Nightango can't reach Chatango. Try again in a few minutes." }
 };
 
 /**
@@ -23,5 +23,5 @@ function SessionOverlay(p) {
   var footer = s.reason === 'kicked' ? [h(T.Button, { key: 'here', variant: 'ghost', disabled: busy, onClick: function () { app.actions.reconnect('private_message'); } }, 'Reconnect here'), reload('primary')]
     : s.reason === 'lost' && !spent ? [reload('ghost'), h(T.Button, { key: 'retry', variant: 'primary', disabled: busy, onClick: function () { app.actions.reconnectSession(); } }, 'Reconnect')]
     : [reload('primary')];
-  return h(Dialog, { role: 'alertdialog', title: copy.title, description: spent ? 'Unable to connect. Please reload the page.' : copy.body, footer: footer });
+  return h(Dialog, { role: 'alertdialog', title: copy.title, description: spent ? "Still can't connect. Reload the page." : copy.body, footer: footer });
 }

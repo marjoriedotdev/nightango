@@ -56,7 +56,7 @@
     var s = document.createElement('script');
     s.src = BETTER_CHATANGO_START;
     s.onerror = function () {
-      headline('BetterChatango could not be reached. Reload the page to try again.');
+      headline("Couldn't reach BetterChatango. Reload the page to try again.");
       console.error('[torch-skin] could not load ' + BETTER_CHATANGO_START);
     };
     document.body.appendChild(s);

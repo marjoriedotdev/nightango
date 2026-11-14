@@ -46,7 +46,7 @@ function DiagnosticsPage() {
   var r = useState(0), setRev = r[1];
   useEffect(function () { return JOURNAL.subscribe(function () { setRev(function (n) { return n + 1; }); }); }, []);
   var list = JOURNAL.entries(), shown = list.slice(-JOURNAL_SHOWN).reverse();
-  function copy() { copyText(journalText(list), function (ok) { app.ui.toast(ok ? 'Log copied.' : 'The log could not be copied. Download it instead.'); }); }
+  function copy() { copyText(journalText(list), function (ok) { app.ui.toast(ok ? 'Log copied.' : "Couldn't copy the log. Download it instead."); }); }
   function download() { var d = new Date(); downloadFile('torch-skin-log-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.txt', journalText(list), 'text/plain'); }
   function clear() { app.ui.confirm({ title: 'Clear the log?', body: 'Events recorded for this account are deleted from this browser.', confirmLabel: 'Clear log', danger: true, onConfirm: JOURNAL.clear }); }
   return h(Page, { title: 'Diagnostics', lede: 'Connection and page events, to trace why a group or private messages disconnect.' },

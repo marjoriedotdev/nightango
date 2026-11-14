@@ -73,7 +73,7 @@ var MessageRow = React.memo(function MessageRow(p) {
     handle ? { label: 'Mention ' + p.shown, icon: 'at-sign', onSelect: function () { p.onMention(handle); } } : null,
     canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
     copyTextItem(app, m),
-    showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed.'); }); } } : null,
+    showIp ? { label: 'Copy IP ' + m.ip, icon: 'copy', onSelect: function () { copyText(m.ip, function (ok) { app.ui.toast(ok ? 'IP address copied.' : 'Copy failed. The IP is ' + m.ip + '.'); }); } } : null,
     m.author !== me ? viewProfileItem(app, m.author, gid) : null,
     whoItem(app, m.author),
     m.author !== me ? styleItem(app, m.author, p.unstyled, p.shown) : null,
