@@ -514,7 +514,7 @@ var liveBridge = (function () {
       note('Refused a request to ' + url.split(/[?#]/)[0] + ': ' + refused);
       return Promise.reject(new Error('Nightango refused this request to protect your account. Nothing was sent.'));
     }
-    if (typeof C.post !== 'function') return Promise.reject(new Error('BetterChatango is not signed in yet.'));
+    if (typeof C.post !== 'function') return Promise.reject(new Error("BetterChatango isn't logged in yet."));
     var form = new FormData();
     Object.keys(fields).forEach(function (k) { if (fields[k] !== undefined && fields[k] !== null) form.set(k, fields[k]); });
     return C.post(url, form, item).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
@@ -1256,7 +1256,7 @@ var liveBridge = (function () {
           if (names.length) send('private_message', 'getpresence:' + names.join(';'), "Couldn't load people.");
           return names;
         }
-        var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: 'Chatango does not allow this search.', None: '', unauthed: 'Your Chatango session expired. Reload the page and sign in again.' };
+        var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: 'Chatango does not allow this search.', None: '', unauthed: 'Your Chatango session expired. Reload the page and log in again.' };
         if (text.trim() in reason) { if (!reason[text.trim()]) return []; throw new Error(reason[text.trim()]); }
         throw new Error("Chatango sent an answer Nightango can't read. Try the search again.");
       });
@@ -1423,7 +1423,7 @@ var liveBridge = (function () {
         var kind = String(resp).split(':')[0];
         // Only known success reply: the BetterChatango progress branch handles it under this name (inject.js:4788).
         if (kind === 'pix') { bumpAvatar(); return; }
-        throw new Error(kind === 'unauthed' ? 'Your Chatango session expired. Reload the page and sign in again.'
+        throw new Error(kind === 'unauthed' ? 'Your Chatango session expired. Reload the page and log in again.'
           : kind === 'error' ? 'Chatango did not accept this picture. Try a smaller JPG or PNG.'
             : "Chatango sent an answer Nightango can't read. Check your picture on chatango.com.");
       }, busyOr("Couldn't upload your picture. Try again."));
@@ -1569,7 +1569,7 @@ var liveBridge = (function () {
      * @returns {Promise<Array>} Items read by parseVisits, rejected with the text to show.
      */
     visitors: function (q) {
-      return askLoader('vissle', { page: q.page, order: q.order, get: q.get }, 'vissle.me did not answer in time. Reload the page and try again.').then(function (r) {
+      return askLoader('vissle', { page: q.page, order: q.order, get: q.get }, "vissle didn't answer in time. Reload the page and try again.").then(function (r) {
         if (r.data && typeof r.data.error === 'string') throw new Error(r.data.error);
         var items = parseVisits(r.data);
         if (!items) throw new Error("vissle sent an answer Nightango can't read.");
@@ -1610,7 +1610,7 @@ var liveBridge = (function () {
       return post(VISSLE_UPLOAD, { filedata: file }, { key: true }).then(function (resp) {
         var path = /^data:([A-Za-z0-9._\/-]+)$/.exec(resp);
         if (path) return 'https://vissle.me/' + path[1];
-        throw new Error(resp.split(':')[0] === 'unauthed' ? 'vissle did not accept your session. Reload the page and sign in again.' : failed);
+        throw new Error(resp.split(':')[0] === 'unauthed' ? 'vissle did not accept your session. Reload the page and log in again.' : failed);
       }, busyOr(failed));
     },
     createGroup: function (o) {

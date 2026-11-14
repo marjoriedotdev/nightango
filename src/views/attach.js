@@ -68,7 +68,7 @@ function useAttachMedia(to, setDraft) {
     busy: !!name,
     attachment: file ? {
       name: file.name, preview: preview, icon: UPLOAD_ICONS[file.type.split('/')[0]] || 'paperclip',
-      note: name ? null : 'vissle.me hosts it when you send. Anyone with the link can open it.',
+      note: name ? null : 'vissle hosts it when you send. Anyone with the link can open it.',
       onRemove: name ? null : function () { setStaged(null); }
     } : null,
     file: file,

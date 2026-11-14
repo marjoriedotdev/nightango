@@ -86,7 +86,7 @@ function StartupScreen() {
   return h('main', { className: 'main' },
     h('div', { className: 'empty', role: 'status' },
       h(BrandMark, { startup: true }),
-      h('p', { className: 'startup' }, h(T.Spinner, null), 'Signing in')));
+      h('p', { className: 'startup' }, h(T.Spinner, null), 'Logging in')));
 }
 
 function Sidebar(p) {

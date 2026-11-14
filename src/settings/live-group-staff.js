@@ -6,7 +6,7 @@ var MODLOG_TEXT = {
   cntr: 'turned the member counter on or off', chbw: 'changed banned words', enlp: 'changed auto-moderation', annc: 'changed the announcement',
   egrp: 'edited the group', shwi: 'made moderator badges visible', hidi: 'hid moderator badges', chsi: 'let moderators choose their badge visibility', ubna: 'removed all bans'
 };
-var MODLOG_SYSTEM = { acls: 'The group closed automatically: no moderator was online.', aopn: 'The group reopened when a moderator signed in.' };
+var MODLOG_SYSTEM = { acls: 'The group closed automatically: no moderator was online.', aopn: 'The group reopened when a moderator logged in.' };
 
 function GSAuditLive(p) {
   var app = useApp(), g = p.g, log = g.live.modlog, page = g.live.modlogPage;

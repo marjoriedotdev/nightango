@@ -8,8 +8,8 @@ var MENTION_TOKEN = /(?:^|\s)@([A-Za-z0-9_-]{0,20})$/;
 var MENTION_SUGGESTIONS = 8;
 var COMPOSER_MODES = {
   // BetterChatango renders replies and edits too (inject.js:5407, 5514), other Chatango apps show a new message.
-  reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply', note: 'Only visible to Nightango and BetterChatango users.' },
-  edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit', note: 'Only visible to Nightango and BetterChatango users.' },
+  reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply', note: 'Only people on Nightango or BetterChatango see this.' },
+  edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit', note: 'Only people on Nightango or BetterChatango see this.' },
   quote: { icon: 'quote', verb: 'Quoting', cancelLabel: 'Cancel quote' }
 };
 

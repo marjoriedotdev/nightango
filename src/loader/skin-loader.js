@@ -64,7 +64,7 @@
         try { reply('vissle', q.id, { data: JSON.parse(r.responseText) }); } catch (x) { reply('vissle', q.id, { error: "vissle sent an answer Nightango can't read." }); }
       },
       onerror: function () { reply('vissle', q.id, { error: "Couldn't reach vissle. Try again later." }); },
-      ontimeout: function () { reply('vissle', q.id, { error: 'vissle.me did not answer in time.' }); }
+      ontimeout: function () { reply('vissle', q.id, { error: "vissle didn't answer in time." }); }
     });
   });
 

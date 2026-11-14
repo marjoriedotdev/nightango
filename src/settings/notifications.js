@@ -52,7 +52,7 @@ function VolumeControl(p) {
 
 var BETTER_CHATANGO_SOUND_ROWS = [
   ['mention', 'Mention sound', 'When someone mentions you or sends you a private message.', 'Mention volume'],
-  ['online', 'Friend online sound', 'When a friend connects, at most once every 5 minutes per friend.', 'Friend online volume']
+  ['online', 'Friend online sound', 'When a friend comes online, at most once every 5 minutes per friend.', 'Friend online volume']
 ];
 
 function BetterChatangoSoundsSection() {

@@ -28,7 +28,7 @@ function NotesSection() {
 function BrowserTabSection() {
   var pr = usePref();
   return h(T.SettingsSection, { title: 'Browser tab' },
-    h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Tells tabs apart when you use several accounts.', control: pr.sw('privacy.usernameInTitle') }));
+    h(T.SettingRow, { title: 'Show your username in the tab title', description: 'Tells tabs apart when you use several accounts.', control: pr.sw('privacy.usernameInTitle') }));
 }
 
 /**
@@ -55,7 +55,7 @@ function PmHistoryRows() {
     h(T.SettingRow, { asLabel: false, title: 'Import messages', description: 'Adds messages from a BetterChatango history file. Saved messages are kept.', control: h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import') }));
 }
 
-var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
+var STARTUP_ROWS = [['joinOwned', 'Join groups you own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
 
 /**
  * BetterChatango startup settings.
@@ -133,15 +133,15 @@ function SafetyPage() {
       h(T.SettingRow, { title: 'Embed images', description: 'When off, images show as links.', control: pr.sw('safety.embedImages') }),
       h(T.SettingRow, { title: 'Embed videos', description: 'Audio included. Nothing plays until you click. When off, they show as links.', control: pr.sw('safety.embedVideos') }),
       h(T.SettingRow, { title: 'Embed X posts', description: 'When off, posts show as links.', control: pr.sw('safety.embedX') }),
-      h(T.SettingRow, { title: 'Block external media until I click', description: 'Images from other sites load on click, not when the message arrives.', control: pr.sw('safety.proxyMedia') }),
+      h(T.SettingRow, { title: 'Block external media until you click', description: 'Images from other sites load on click, not when the message arrives.', control: pr.sw('safety.proxyMedia') }),
       h(T.SettingRow, { title: 'Warn before opening links', description: 'Shows the full address before you leave Nightango.', control: pr.sw('safety.warnLinks') }),
       prefs.safety.trustedHosts ? h(TrustedSites, { hosts: prefs.safety.trustedHosts }) : null),
     h(T.SettingsSection, { title: 'People' },
       h(T.SettingRow, {
-        asLabel: false, title: 'Messages from ignored users', description: 'Collapse leaves a line you can expand. Hide removes them.',
-        control: h(T.SegmentedControl, { label: 'Messages from ignored users', value: prefs.safety.ignoreMode, onChange: function (v) { pr.set('safety.ignoreMode', v); }, options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }] })
+        asLabel: false, title: 'Messages from people you ignore', description: 'Collapse leaves a line you can expand. Hide removes them.',
+        control: h(T.SegmentedControl, { label: 'Messages from people you ignore', value: prefs.safety.ignoreMode, onChange: function (v) { pr.set('safety.ignoreMode', v); }, options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }] })
       }),
-      h(T.SettingRow, { title: 'Hide blocked users in groups too', description: 'Blocking someone also hides their messages in every group.', control: pr.sw('safety.syncBlocked') }),
+      h(T.SettingRow, { title: 'Hide people you block in groups too', description: 'Blocking someone also hides their messages in every group.', control: pr.sw('safety.syncBlocked') }),
       h(T.SettingRow, { title: 'Show messages from guests', control: pr.sw('safety.guestMessages') }),
       h(T.SettingRow, { title: 'Show guests in member lists', control: pr.sw('safety.showGuests') })),
     h(T.SettingsSection, { title: 'Blocked · ' + blocked.length }, people(blocked, 'blocked', 'Unblock', 'Nobody is blocked.')),

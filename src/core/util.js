@@ -109,7 +109,7 @@ function trimEnd(text) {
   while (end && /\s/.test(text.charAt(end - 1))) end--;
   return text.slice(0, end);
 }
-function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
+function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
 function isGuest(name) { return /^[!#]/.test(name); }
 /**
  * Returns the last element of a list that passes a test.

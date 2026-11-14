@@ -925,7 +925,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* PM restriction of one's own account: requested before the private connection, read from vissle only once after it */
   C.settings.privacy.private_messages = { check_pmr: true };
-  const pmrRow = () => $$('section[aria-label="Private messages"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === 'Check my private message status');
+  const pmrRow = () => $$('section[aria-label="Private messages"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === 'Check your private message status');
   const pmrView = () => { const r = pmrRow(); return r && { on: r.querySelector('[role=switch]').checked, status: (r.querySelector('.tc-row-desc') || {}).textContent || null, asked: fetches.filter(x => /api\.vissle\.me/.test(x.url)).map(x => x.url) }; };
   click($('button[aria-label="Settings"]')); await until(() => !!byText('.tc-nav', 'Privacy'));
   click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow()); await wait(50);
@@ -962,8 +962,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('pm escaped and sent as BetterChatango built it', /^msg:dave:<n3366FF\/><ipm\d{5}\/><m v="1"><g x12s9900cc="4">x &lt; y<\/g><\/m>$/.test(escapedPm) && !calls.some(c => c[0] === 'pm'), escapedPm);
   click(byText('.profile .mrow', 'Add friend')); await wait(30);
   step('add friend frame', frame('wladd:dave').length === 1);
-  pm('wladd', ['nobody', 'invalid']); await until(() => !!byText('.toast', 'No Chatango user named nobody.'));
-  step('unknown friend reported', !!byText('.toast', 'No Chatango user named nobody.'));
+  pm('wladd', ['nobody', 'invalid']); await until(() => !!byText('.toast', 'Nobody on Chatango is named nobody.'));
+  step('unknown friend reported', !!byText('.toast', 'Nobody on Chatango is named nobody.'));
   click(byText('.profile .mrow', 'Block')); await wait(30);
   click(byText('.dialog-foot button', 'Block')); await wait(30);
   step('pm block frame', frame('block:dave:dave:S').length === 1);
@@ -1102,10 +1102,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await toggle('Appearance', 'Message backgrounds');
   await until(() => (bgLook('Rosa first') || [])[0] === ROSA);
   const blockedBg = BG_TEXTS.slice(0, 4).map(bgLook);
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   await until(() => !!(bgLook('Pale says hi') || [])[1]);
   const shownBg = BG_TEXTS.map(bgLook), askedBg = ['rosa', 'trap', 'pale', 'plain', 'nobg'].map(bgAsked).concat(fetches.filter(x => /visitor\/msgbg/.test(x.url)).length), leaked = /evil\.test|onload/.test($('.log').innerHTML);
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   await toggle('Appearance', 'Message backgrounds');
   const bgImg = (n, opacity, position, repeat) => ['url("https://ust.chatango.com/' + n + '/msgbg.jpg")', opacity, position, repeat];
   step('premium message backgrounds', JSON.stringify(askedOff) === '[0,0,0,0]'
@@ -1120,9 +1120,9 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!mediaRow());
   const mediaLook = () => { const r = mediaRow(); return r && { links: [...r.querySelectorAll('.tc-msg-text a')].map(a => a.getAttribute('href')), embeds: [...r.querySelectorAll('.embeds > *')].map(x => x.className + ':' + x.textContent), players: r.querySelectorAll('video, audio, iframe').length }; };
   const mediaBlocked = mediaLook();
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   const mediaOpen = mediaLook();
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   [...mediaRow().querySelectorAll('.embed-video, .embed-reveal')].forEach(click);
   await until(() => mediaRow().querySelectorAll('video, audio, iframe').length === 5);
   const player = el => [el.getAttribute('src'), el.hasAttribute('controls'), el.hasAttribute('autoplay')];
@@ -1147,14 +1147,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const tiktokThumbs = () => [...tiktokRow().querySelectorAll('.embed-tiktok img')].map(x => x.getAttribute('src'));
   const tiktokEmbeds = () => [...tiktokRow().querySelectorAll('.embeds > *')].map(x => x.className + (x.style.display === 'none' ? ':hidden' : ''));
   const tiktokBefore = { asked: tiktokReqs.slice(), links: [...tiktokRow().querySelectorAll('.tc-msg-text a')].map(a => a.getAttribute('href')), embeds: tiktokEmbeds(), thumbs: tiktokThumbs() };
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   await until(() => tiktokRow().querySelectorAll('.embeds img').length === 2);
   const tiktokLoading = tiktokEmbeds();
   // jsdom loads no image: the test fires their load event.
   [...tiktokRow().querySelectorAll('.embeds img')].forEach(x => x.dispatchEvent(new w.Event('load')));
   await until(() => tiktokThumbs().length === 2);
   const tiktokOpen = { asked: tiktokReqs.slice().sort(), thumbs: tiktokThumbs(), embeds: tiktokEmbeds() };
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   const tiktokBlocked = tiktokThumbs();
   const tiktokBlockedEmbeds = tiktokEmbeds();
   [...tiktokRow().querySelectorAll('.embed-reveal')].forEach(click);
@@ -1187,7 +1187,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!xRow());
   const xEmbeds = () => [...xRow().querySelectorAll('.embeds > *')].map(x => x.className);
   const xBefore = { asked: xReqs.slice(), embeds: xEmbeds() };
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   await until(() => xRow().querySelectorAll('.embed-x').length === 2);
   const xOpen = {
     asked: xReqs.slice().sort(), embeds: xEmbeds(),
@@ -1203,7 +1203,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => !!xRow().querySelector('video') && !!xRow().querySelector('a.embed-x-media img'));
   const xVideo = xRow().querySelector('video'), xPhoto = xRow().querySelector('a.embed-x-media');
   const xPlayed = { video: xVideo && [xVideo.getAttribute('src'), xVideo.autoplay, xVideo.controls], photo: xPhoto && [xPhoto.getAttribute('href'), xPhoto.querySelector('img').getAttribute('src')] };
-  await toggle('Safety', 'Block external media until I click');
+  await toggle('Safety', 'Block external media until you click');
   const xBlocked = xEmbeds();
   [...xRow().querySelectorAll('.embed-reveal')].forEach(click);
   await until(() => xRow().querySelectorAll('.embed-x').length === 2 && !!xRow().querySelector('.embeds a.msg-link'));
@@ -1335,8 +1335,8 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const checking = byText('.dialog-foot button', 'Checking');
   const ghostAsk = { frames: sent.slice(sentBeforeGhost), waiting: !!checking && checking.disabled };
   pm('connect', ['ghost', '0', 'invalid']);
-  await until(() => !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'));
-  const ghost = { error: !!$('.dialog') && $('.dialog').textContent.includes('No Chatango user named ghost.'), listed: listed('ghost'), head: ($('.thread .topbar h2 .namebtn') || {}).textContent || '' };
+  await until(() => !!$('.dialog') && $('.dialog').textContent.includes('Nobody on Chatango is named ghost.'));
+  const ghost = { error: !!$('.dialog') && $('.dialog').textContent.includes('Nobody on Chatango is named ghost.'), listed: listed('ghost'), head: ($('.thread .topbar h2 .namebtn') || {}).textContent || '' };
   if ($('.dialog')) { click(byText('.dialog-foot button', 'Cancel')); await wait(30); }
   step('new pm checks the name with Chatango', JSON.stringify(ghostAsk.frames) === JSON.stringify([['private_message', 'connect:ghost']]) && ghostAsk.waiting && ghost.error && !ghost.listed && ghost.head !== 'ghost', { ghostAsk, ghost });
   click($('.convs button[aria-label="New message"]')); await wait(50);
@@ -1591,7 +1591,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   if (giveUp) { w.clearTimeout(giveUp.id); giveUp.fn(); }
   await until(() => !visitorsRefresh().disabled);
   silent.text = visitors().textContent;
-  step('own visitors list: a request without a reply ends on an error', silent.asked === 1 && silent.loading && silent.text.includes('vissle.me did not answer in time.'), silent);
+  step('own visitors list: a request without a reply ends on an error', silent.asked === 1 && silent.loading && silent.text.includes("vissle didn't answer in time."), silent);
   vissleReply = () => ({ action: 'activity', get: [] });
   /* Unreadable full profile (server error): saving another field sends nothing, never an empty full profile */
   const betterChatangoFull = d.querySelector('[data-text-field="full"]'), profileUpdates = () => posts.filter(p => /updateprofile/.test(p.url));
@@ -1909,7 +1909,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const pmQuote = { frame: frame('msg:rex:').pop() || '' };
   step('pm edit carries <e> after the <g> head and changes its original in place, pm quote goes before the text, edit only on own keyed pms',
     pmMenus.otherOld.includes('Quote message') && !pmMenus.otherOld.includes('Edit message') && pmMenus.official.includes('Quote message')
-      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.note === 'Only visible to Nightango and BetterChatango users.'
+      && editShown.value === 'Answer' && editShown.context.includes('Editing') && editShown.note === 'Only people on Nightango or BetterChatango see this.'
       && new RegExp(PM_HEAD + '<e' + rex.answerKey + '\\/>' + PM_TEXT('Answer fixed')).test(pmEdit.frame) && pmEdit.sentOnce
       && JSON.stringify(pmEdit.rows) === JSON.stringify(['Answer fixed']) && pmEdit.edited && pmEdit.draftBack === 'kept draft'
       && quoteShown.context.includes('Quoting') && !quoteShown.note && new RegExp(PM_HEAD + PM_TEXT('@rex: `Old question` Yes')).test(pmQuote.frame),
@@ -2335,7 +2335,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pm('DENIED', []); await wait(50);
   const denied = overlay();
   step('session overlay',
-    !!kicked && kicked.text.includes("You're signed in somewhere else") && kicked.buttons.includes('Reload') && kicked.buttons.includes('Reconnect here') && hereAsked && !afterHere
+    !!kicked && kicked.text.includes("You're logged in somewhere else") && kicked.buttons.includes('Reload') && kicked.buttons.includes('Reconnect here') && hereAsked && !afterHere
       && !!offline && offline.text.includes("You're offline") && onlineReconnects === 1
       && !!lost && lost.text.includes('Connection lost')
       && !!denied && denied.text.includes('Your session expired') && !calls.some(c => c[0] === 'alert'),

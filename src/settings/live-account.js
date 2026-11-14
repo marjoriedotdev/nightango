@@ -91,7 +91,7 @@ function ProfilePageLive() {
     e.target.value = '';
     if (!file) return;
     app.ui.confirm({
-      title: 'Upload ' + file.name + '?', body: 'vissle.me stores the image and your mini profile links to it. Anyone with the link can open it.', confirmLabel: 'Upload',
+      title: 'Upload ' + file.name + '?', body: 'vissle stores the image and your mini profile links to it. Anyone with the link can open it.', confirmLabel: 'Upload',
       onConfirm: function () {
         setUploading('banner');
         liveBridge.uploadFile(file).then(function (url) { setUploading(null); setStyle('image', url); }, function (err) { setUploading(null); app.ui.toast(err.message); });
@@ -201,7 +201,7 @@ function PrivacyPageLive() {
   return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
     h(T.SettingsSection, { title: 'Private messages' },
       pmr ? h(T.SettingRow, {
-        title: 'Check my private message status', description: checking ? PMR_STATUS[app.state.pmrStatus] : null,
+        title: 'Check your private message status', description: checking ? PMR_STATUS[app.state.pmrStatus] : null,
         control: h(T.Switch, { checked: checking, onChange: function (e) { setPmrSetting('pmrCheck', e.target.checked); } })
       }) : null,
       h(PmHistoryRows, null),
@@ -215,7 +215,7 @@ function PrivacyPageLive() {
 }
 
 function AccountPage() {
-  return h(Page, { title: 'Password and email', lede: 'Sign-in details for your Chatango account.' },
+  return h(Page, { title: 'Password and email', lede: 'Login details for your Chatango account.' },
     h(T.Banner, { icon: 'lock', title: 'Managed on chatango.com', action: chatangoLink('Open chatango.com') },
       'Nightango never handles your password, so it cannot change it, change your email or delete your account. Do it on chatango.com.'));
 }
