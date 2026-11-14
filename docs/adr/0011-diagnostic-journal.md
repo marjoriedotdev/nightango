@@ -23,7 +23,7 @@ It records:
 - the page lifecycle: visibility, `pagehide`, `pageshow`, `freeze`, `resume`, network, suspended timers
 - uncaught errors
 - in the console: `[torch-skin]` lines, BetterChatango's connection lines (closed list) and `Error` objects
-- on the bridge side: connection attempts and their outcome, observed state changes, BetterChatango warnings shown, requests refused by its post helper (target without the query string and reason, never the form, #46).
+- on the bridge side: connection attempts and their outcome, observed state changes, BetterChatango warnings shown (without the text of one that carries a linked accounts result or the arguments of a frame), requests refused by its post helper (target without the query string and reason, never the form, #46).
 
 It never records:
 

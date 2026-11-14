@@ -28,10 +28,11 @@ function Discover() {
   }
   return h('main', { className: 'main' },
     pageHeader('Discover groups'),
+    h(SessionBanner, null),
     h('div', { className: 'scroll' },
       h('div', { style: { maxWidth: 1080, margin: '0 auto', padding: '32px 24px 56px', display: 'flex', flexDirection: 'column', gap: 28 } },
         h('div', { className: 'page-head' },
-          h('div', null, h('h2', { style: { margin: '0 0 6px', fontSize: 24, lineHeight: '32px', fontWeight: 600 } }, 'Find a group'), h('p', { className: 'lede', style: { margin: 0 } }, 'Join a group, or open one directly by its name.')),
+          h('div', null, h('h2', { style: { margin: '0 0 6px', fontSize: 'var(--font-size-title-lg)', lineHeight: '32px', fontWeight: 600 } }, 'Find a group'), h('p', { className: 'lede', style: { margin: 0 } }, 'Join a group, or open one directly by its name.')),
           h(T.Button, { variant: 'primary', icon: 'plus', onClick: function () { app.ui.openCreate(''); } }, 'Create a group')),
         h('form', { onSubmit: submit, className: 'tc-section', style: { padding: '16px 20px' }, noValidate: true },
           h(T.TextField, {
@@ -51,7 +52,7 @@ function CreateGroupDialog(p) {
   var f = useState(false), busy = f[0], setBusy = f[1];
   function create() {
     var n = name.trim().toLowerCase(), x = {};
-    if (LIVE ? !/^[a-z0-9_-]{1,20}$/.test(n) : !/^[a-z0-9-]{3,20}$/.test(n)) x.name = LIVE ? 'Use up to 20 letters, numbers, - or _.' : 'Use 3 to 20 lowercase letters, numbers or dashes.';
+    if (LIVE ? !ACCOUNT_NAME.test(n) : !/^[a-z0-9-]{3,20}$/.test(n)) x.name = LIVE ? 'Use up to 20 letters, numbers, - or _.' : 'Use 3 to 20 lowercase letters, numbers or dashes.';
     else if (s.groups[n] || s.users[n]) x.name = 'This name is taken. Try another one.';
     if (title.length > 60) x.title = 'Keep the title under 60 characters.';
     setErr(x);

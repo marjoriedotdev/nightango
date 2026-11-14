@@ -58,7 +58,10 @@ function useVoiceRecorder(key, onFiles) {
   var app = useApp();
   var st = useState(null), rec = st[0], setRec = st[1];
   var live = useRef(null);
+  // Microphone request the browser has not answered yet: reset drops it, and its stream is then released as soon as it comes.
+  var asking = useRef(null);
   function release() {
+    asking.current = null;
     var r = live.current;
     live.current = null;
     if (!r) return;
@@ -73,7 +76,11 @@ function useVoiceRecorder(key, onFiles) {
   }
   useEffect(function () { return reset; }, [key]);
   function start() {
+    if (asking.current || live.current) return;
+    var ask = asking.current = {};
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      if (asking.current !== ask) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
+      asking.current = null;
       var recorder = new MediaRecorder(stream), chunks = [], began = Date.now();
       var r = { recorder: recorder, stream: stream, timer: null };
       recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
@@ -87,7 +94,7 @@ function useVoiceRecorder(key, onFiles) {
         }, function (e) {
           warn(e);
           setRec(null);
-          app.ui.toast('The recording could not be prepared. Try again.');
+          app.ui.toast("Couldn't prepare the recording. Try again.", { tone: 'error' });
         });
       };
       r.timer = setInterval(function () {
@@ -99,8 +106,10 @@ function useVoiceRecorder(key, onFiles) {
       recorder.start();
       setRec({ phase: 'recording', elapsed: 0 });
     }, function (e) {
+      if (asking.current !== ask) return;
+      asking.current = null;
       app.ui.toast(e && e.name === 'NotAllowedError' ? "Nightango can't use your microphone. Allow it for this site in your browser, then try again."
-        : 'No microphone is available. Plug one in, then try again.');
+        : 'No microphone is available. Plug one in, then try again.', { tone: 'error' });
     });
   }
   function stop() {
@@ -142,7 +151,7 @@ function useVoiceRecorder(key, onFiles) {
 function attachMenu(attach, voice) {
   if (!canRecordVoice()) return null;
   return h(MenuButton, {
-    icon: 'plus', label: 'Add to your message', size: 30, iconSize: 16, up: true, align: 'left',
+    icon: 'plus', label: 'Add to your message', up: true, align: 'left',
     items: [
       { label: 'Attach a file', icon: 'paperclip', disabled: !attach.onAttach, onSelect: function () { attach.onAttach(); } },
       { label: 'Record a voice message', icon: 'mic', disabled: !attach.onFiles || voice.busy, onSelect: voice.start }

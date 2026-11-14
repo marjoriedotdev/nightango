@@ -54,7 +54,7 @@ function SpaceBar() {
         it.name, it.count && !on ? h(T.CountBadge, { count: it.count }) : null);
     }),
     h(MenuButton, {
-      icon: 'plus', label: 'Spaces', size: 26, iconSize: 15, align: 'left', items: [
+      icon: 'plus', label: 'Spaces', size: 28, iconSize: 15, align: 'left', items: [
         s.spaces.length < SPACE_MAX ? { label: 'New space…', icon: 'plus', onSelect: function () { app.ui.openSpaceEditor({ id: null }); } } : null,
         sp ? { label: 'Edit ' + sp.name + '…', icon: 'edit', onSelect: function () { app.ui.openSpaceEditor({ id: sp.id }); } } : null
       ]
@@ -91,7 +91,7 @@ function SpaceEditorDialog(p) {
   },
     h('div', { className: 'dialog-body' },
       h(T.TextField, { id: 'space-name', label: 'Name', value: name, maxLength: SPACE_NAME_MAX, error: err, placeholder: 'Friends, Games, Moderation', onChange: function (e) { setName(e.target.value); setErr(''); }, onKeyDown: function (e) { if (e.key === 'Enter') save(); } }),
-      h(T.Checkbox, { checked: quiet, onChange: function (e) { setQuiet(e.target.checked); }, label: 'Mute private messages from outside this space while it is open' })));
+      h(T.Checkbox, { checked: quiet, onChange: function (e) { setQuiet(e.target.checked); }, label: "Mute private messages from outside this space while it's open" })));
 }
 
 /**

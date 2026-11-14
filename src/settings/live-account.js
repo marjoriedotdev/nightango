@@ -1,5 +1,4 @@
 /* ---------- Account settings in live mode ---------- */
-var GENDER_LABEL = { M: 'Male', F: 'Female' };
 var GENDER_CODE = { Male: 'M', Female: 'F' };
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
 
@@ -50,9 +49,9 @@ function ProfilePageLive() {
   }, [me.profileLoaded, me.premium]);
   function reload() { var nb = load(); setBase(nb); setDraft(editable(nb)); if (nb.full === null) fetchFull(); }
   function save() {
-    if (ageErr) { app.ui.toast('Fix the age before saving.'); return; }
-    if (imageErr) { app.ui.toast('Fix the background image link before saving.'); return; }
-    if (!base.loaded) { app.ui.toast('Your profile is not loaded yet. Nothing was saved.'); return; }
+    if (ageErr) { app.ui.toast('Fix the age before saving.', { tone: 'error' }); return; }
+    if (imageErr) { app.ui.toast('Fix the background image link before saving.', { tone: 'error' }); return; }
+    if (!base.loaded) { app.ui.toast("Your profile isn't loaded yet. Nothing was saved.", { tone: 'error' }); return; }
     var sent = draft, profileDirty = JSON.stringify(fields(sent)) !== JSON.stringify(fields(base));
     var styleDirty = !!sent.style && JSON.stringify(sent.style) !== JSON.stringify(base.style);
     setSaving(true);
@@ -68,10 +67,10 @@ function ProfilePageLive() {
       });
     }).then(function () {
       setSaving(false);
-      app.ui.toast('Profile saved to Chatango.', { icon: 'check' });
+      app.ui.toast('Profile saved to Chatango.', { tone: 'success' });
     }, function (e) {
       setSaving(false);
-      app.ui.toast(e && e.message ? e.message : 'Chatango did not save your profile.');
+      app.ui.toast(e && e.message ? e.message : "Chatango didn't save your profile.", { tone: 'error' });
     });
   }
   // Re-renders the whole application: the avatars read again the version the bridge set.
@@ -85,17 +84,17 @@ function ProfilePageLive() {
       setUploading(null);
       avatarsChanged();
       setCrop({ initial: null });
-    }, function (err) { setUploading(null); app.ui.toast(err.message); });
+    }, function (err) { setUploading(null); app.ui.toast(err.message, { tone: 'error' }); });
   }
   function pickBanner(e) {
     var file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
     app.ui.confirm({
-      title: 'Upload ' + file.name + '?', body: 'vissle.me stores the image and your mini profile links to it. Anyone with the link can open it.', confirmLabel: 'Upload',
+      title: 'Upload ' + file.name + '?', body: 'vissle stores the image and your mini profile links to it. Anyone with the link can open it.', confirmLabel: 'Upload',
       onConfirm: function () {
         setUploading('banner');
-        liveBridge.uploadFile(file).then(function (url) { setUploading(null); setStyle('image', url); }, function (err) { setUploading(null); app.ui.toast(err.message); });
+        liveBridge.uploadFile(file).then(function (url) { setUploading(null); setStyle('image', url); }, function (err) { setUploading(null); app.ui.toast(err.message, { tone: 'error' }); });
       }
     });
   }
@@ -130,7 +129,7 @@ function ProfilePageLive() {
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },
             h('div', null, h(T.SegmentedControl, { label: 'Full profile view', value: fullView, options: FULL_PROFILE_VIEWS, onChange: setFullView })),
             draft.full === null ? h('div', { className: 'btnrow', style: { alignItems: 'center' } },
-              h('span', { className: 'tc-hint' }, fullFailed ? 'Chatango did not return your full profile.' : 'Loading your full profile from Chatango.'),
+              h('span', { className: 'tc-hint' }, fullFailed ? "Couldn't load your full profile from Chatango." : 'Loading your full profile from Chatango.'),
               fullFailed ? h(T.Button, { size: 'sm', onClick: fetchFull }, 'Try again') : null) : null,
             fullView === 'edit' ? h(T.TextField, { id: 'pf-full', label: 'HTML', multiline: true, rows: 10, maxLength: 20000, value: draft.full || '', inputRef: fullInput, toolbar: fullMarkup.toolbar, onKeyDown: fullMarkup.onKeyDown, disabled: locked || draft.full === null, labelAside: draft.full === null ? null : h('span', { className: 'tc-msg-time' }, draft.full.length + ' / 20000'), onChange: function (e) { set('full', e.target.value); } })
               : draft.full === null ? null
@@ -141,9 +140,9 @@ function ProfilePageLive() {
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
         h(ProfilePreviewCard, { name: s.me, meta: meta, about: draft.about, mini: preview }),
-        draft.style && !s.prefs.styles.profileBackgrounds ? h('p', { className: 'muted', style: { margin: 0, fontSize: 12.5 } }, 'Profile backgrounds are off in Appearance, so the preview uses your theme.') : null)),
+        draft.style && !s.prefs.styles.profileBackgrounds ? h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-caption)' } }, 'Profile backgrounds are off in Appearance, so the preview uses your theme.') : null)),
     dirty && base.loaded ? h(T.SaveBar, { onDiscard: function () { setDraft(editable(base)); }, onSave: saving ? function () {} : save, saveLabel: saving ? 'Saving' : 'Save profile' }, 'Unsaved changes to your Chatango profile') : null,
-    crop ? h(AvatarCropDialog, { name: s.me, initial: crop.initial, onClose: function () { setCrop(null); }, onSaved: function () { setCrop(null); avatarsChanged(); app.ui.toast('Picture crop saved to Chatango.', { icon: 'check' }); } }) : null);
+    crop ? h(AvatarCropDialog, { name: s.me, initial: crop.initial, onClose: function () { setCrop(null); }, onSaved: function () { setCrop(null); avatarsChanged(); app.ui.toast('Picture crop saved to Chatango.', { tone: 'success' }); } }) : null);
 }
 
 /**
@@ -159,7 +158,7 @@ function ProfilePageLive() {
 function MiniBackgroundSection(p) {
   var st = p.style;
   return h(T.SettingsSection, { title: 'Mini profile background', description: 'Everyone sees them while you have Premium.', padded: true },
-    st === null ? h('span', { className: 'tc-hint' }, p.failed ? 'Chatango did not return your mini profile. Reload the page to try again.' : 'Loading your mini profile from Chatango.')
+    st === null ? h('span', { className: 'tc-hint' }, p.failed ? "Couldn't load your mini profile from Chatango. Reload the page to try again." : 'Loading your mini profile from Chatango.')
       : st === false ? h('p', { className: 'muted', style: { margin: 0 } }, 'Mini profile backgrounds need Chatango Premium.')
         : h('fieldset', { disabled: p.locked, style: { border: 0, margin: 0, padding: 0, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 } },
           h('div', { className: 'grid3' }, [['bg', 'Background'], ['text', 'Text'], ['link', 'Links']].map(function (c) {
@@ -186,9 +185,9 @@ function useBetterChatangoSettings(read, write) {
 }
 
 var PMR_STATUS = {
-  ok: 'vissle reports no restriction on your private messages.',
-  restricted: 'vissle reports that your private messages appear to be restricted.',
-  unknown: 'vissle could not check your private message status.'
+  ok: 'vissle sees no restriction on your private messages.',
+  restricted: 'vissle thinks your private messages are restricted.',
+  unknown: "vissle couldn't check your private message status."
 };
 function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === null ? null : { pmrCheck: v }; }
 
@@ -199,15 +198,16 @@ function PrivacyPageLive() {
   var checking = !!(pmr && pmr.pmrCheck);
   // Also runs when the setting is turned off: pmrStatus then returns null, which removes the status and the PM banner.
   useEffect(function () { app.actions.checkPmr(); }, [checking]);
-  return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
+  return h(Page, { title: 'Privacy', lede: PRIVACY_LEDE },
+    h(ChatangoPmSection, null),
     h(T.SettingsSection, { title: 'Private messages' },
       pmr ? h(T.SettingRow, {
-        title: 'Check my private message status', description: checking ? PMR_STATUS[app.state.pmrStatus] : null,
+        title: 'Check your private message status', description: checking ? PMR_STATUS[app.state.pmrStatus] : null,
         control: h(T.Switch, { checked: checking, onChange: function (e) { setPmrSetting('pmrCheck', e.target.checked); } })
       }) : null,
       h(PmHistoryRows, null),
       h(T.SettingRow, {
-        asLabel: false, title: 'Delete saved conversations', description: 'BetterChatango keeps a copy of your private messages in this browser. Chatango does not store them.',
+        asLabel: false, title: 'Delete saved conversations', description: "BetterChatango keeps a copy of your private messages in this browser. Chatango doesn't store them.",
         control: h(T.Button, { variant: 'danger', size: 'sm', onClick: function () { app.ui.confirm({ title: 'Delete saved conversations?', body: 'Every private message BetterChatango saved in this browser is removed. The people you talked to keep their copy.', confirmLabel: 'Delete all', danger: true, onConfirm: app.actions.deleteAllDms }); } }, 'Delete all')
       })),
     h(NotesSection, null),
@@ -216,9 +216,9 @@ function PrivacyPageLive() {
 }
 
 function AccountPage() {
-  return h(Page, { title: 'Password and email', lede: 'Sign-in details for your Chatango account.' },
+  return h(Page, { title: 'Password and email', lede: 'Login details for your Chatango account.' },
     h(T.Banner, { icon: 'lock', title: 'Managed on chatango.com', action: chatangoLink('Open chatango.com') },
-      'Nightango never handles your password, so it cannot change it, change your email or delete your account. Do it on chatango.com.'));
+      "Nightango never handles your password, so it can't change it, change your email or delete your account. Do it on chatango.com."));
 }
 
 function PremiumPage() {
@@ -230,6 +230,6 @@ function PremiumPage() {
       asLabel: false, title: premiumActive(p, now) ? 'Premium until ' + shortDate(p.until, true) : 'No Premium',
       description: premiumEndsSoon(p, now) ? 'Renew on chatango.com to keep your backgrounds and badges.' : null
     })) : null,
-    h(T.Banner, { icon: 'info', title: 'Not available in Nightango', action: chatangoLink('Open chatango.com') },
-      'Nightango does not take payments. Buy or gift Premium on chatango.com.'));
+    h(T.Banner, { icon: 'info', title: 'Buy or gift Premium on chatango.com', action: chatangoLink('Open chatango.com') },
+      "Nightango doesn't take payments."));
 }

@@ -65,7 +65,7 @@ function fontMarkup(value, start, end, name, val) {
  */
 function applyMarkupEdit(el, edit, toast) {
   var over = el.maxLength > 0 ? el.value.length - (edit.to - edit.from) + edit.text.length - el.maxLength : 0;
-  if (over > 0) { toast('Remove ' + plural(over, 'character', 'characters') + ' to make room for this format.'); return; }
+  if (over > 0) { toast('Remove ' + plural(over, 'character', 'characters') + ' to make room for this format.', { tone: 'error' }); return; }
   el.focus();
   el.setSelectionRange(edit.from, edit.to);
   // insertText keeps Ctrl+Z. execCommand is deprecated: as a fallback, setRangeText inserts without undo history.
@@ -141,10 +141,10 @@ function useMarkupToolbar(inputRef, fieldId, disabled) {
     tag(name);
   }
   function button(icon, label, onClick, keys) {
-    return h(T.IconButton, { icon: icon, label: label, size: 30, iconSize: 16, disabled: disabled, 'aria-keyshortcuts': keys, onClick: onClick });
+    return h(T.IconButton, { icon: icon, label: label, disabled: disabled, 'aria-keyshortcuts': keys, onClick: onClick });
   }
   function menu(icon, label, items) {
-    return h(MenuButton, { label: label, items: items, align: 'left', renderTrigger: function (t) { return h(T.IconButton, Object.assign({ icon: icon, label: label, size: 30, iconSize: 16, disabled: disabled }, t)); } });
+    return h(MenuButton, { label: label, items: items, align: 'left', renderTrigger: function (t) { return h(T.IconButton, Object.assign({ icon: icon, label: label, disabled: disabled }, t)); } });
   }
   var sep = h('span', { className: 'tc-toolbar-sep', role: 'separator', 'aria-orientation': 'vertical' });
   var toolbar = h(T.Toolbar, { label: 'Formatting', controls: fieldId },

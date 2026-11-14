@@ -14,7 +14,7 @@ function GSStaff(p) {
   function setPerms(n, perms) { p.edit(function (d) { d.modFlags[n] = permsToFlags(perms, d.modFlags[n]); d.staff[n] = roleOfFlags(d.modFlags[n]); }); }
   function addMod() {
     var n = add.trim().toLowerCase();
-    if (!/^[a-z0-9_-]{1,20}$/.test(n)) { setErr('Enter a Chatango username.'); return; }
+    if (!ACCOUNT_NAME.test(n)) { setErr('Enter a Chatango username.'); return; }
     if (n === owner) { setErr(shownName(app.state, n) + ' owns the group.'); return; }
     if (draft.modFlags[n] != null) { setErr(shownName(app.state, n) + ' is already on staff.'); return; }
     p.edit(function (d) { d.modFlags[n] = permsToFlags(defaultRoles().mod, 0); d.staff[n] = 'mod'; });
@@ -30,11 +30,11 @@ function GSStaff(p) {
         h('div', { className: 'roles' },
           owner ? h('div', { className: 'role-btn', style: { cursor: 'default' } },
             h('span', { className: 'role-ico' }, h(T.Icon, { name: 'crown', size: 15 })),
-            h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, owner)), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, 'Owner'))) : null,
+            h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, owner)), h('span', { style: { fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, 'Owner'))) : null,
           names.map(function (n) {
             return h('button', { key: n, type: 'button', className: 'role-btn', 'aria-current': String(sel === n), onClick: function () { setSel(n); } },
               h('span', { className: 'role-ico' }, h(T.Icon, { name: 'shield', size: 15 })),
-              h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, n)), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, ROLE_LONG[roleOfFlags(draft.modFlags[n])])),
+              h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, n)), h('span', { style: { fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, ROLE_LONG[roleOfFlags(draft.modFlags[n])])),
               h(T.Icon, { name: 'chevron-right', size: 14, style: { color: 'var(--text-3)' } }));
           })),
         canEdit ? h('div', { style: { padding: '12px 14px 14px', borderTop: '1px solid var(--divider)' } },
@@ -44,7 +44,7 @@ function GSStaff(p) {
           })) : null),
       h('div', { className: 'grow' }, sel ? h(Frag, null,
         h('section', { className: 'tc-section', 'aria-label': sel, style: { padding: '16px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px 16px' } },
-          h('div', { style: { flex: '1 1 240px' } }, h('h2', { style: { margin: '0 0 2px', fontSize: 17, fontWeight: 600 } }, sel), h('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, ROLE_DESC[roleOfFlags(draft.modFlags[sel])])),
+          h('div', { style: { flex: '1 1 240px' } }, h('h2', { style: { margin: '0 0 2px', fontSize: 'var(--font-size-title-md)', fontWeight: 600 } }, sel), h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-body-sm)' } }, ROLE_DESC[roleOfFlags(draft.modFlags[sel])])),
           canEdit ? h('div', { className: 'btnrow' },
             h(T.Button, { size: 'sm', onClick: function () { setPerms(sel, defaultRoles().mod); } }, 'Moderator defaults'),
             h(T.Button, { size: 'sm', onClick: function () { setPerms(sel, defaultRoles().admin); } }, 'Admin defaults'),
@@ -89,9 +89,9 @@ function GSMembers(p) {
 
 function GSInvites(p) {
   var app = useApp(), link = 'https://' + p.g.id + '.chatango.com';
-  return h(Page, { title: 'Invites', lede: 'Anyone with the link can join. Banned members still cannot.' },
+  return h(Page, { title: 'Invites', lede: "Anyone with the link can join. Banned members still can't." },
     h(T.SettingsSection, { title: 'Invite link', padded: true },
       h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },
         h('input', { className: 'tc-input', style: { flex: '1 1 260px' }, readOnly: true, value: link, 'aria-label': 'Invite link', onFocus: function (e) { e.target.select(); } }),
-        h(T.Button, { variant: 'primary', icon: 'link', onClick: function () { copyText(link, function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. Select the link and copy it.'); }); } }, 'Copy link'))));
+        h(T.Button, { variant: 'primary', icon: 'link', onClick: function () { copyText(link, function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. Select the link and copy it.', { tone: ok ? 'success' : 'error' }); }); } }, 'Copy link'))));
 }

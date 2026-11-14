@@ -1,7 +1,8 @@
 function PrivacyPage() {
   if (LIVE) return h(PrivacyPageLive, null);
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
-  return h(Page, { title: 'Privacy', lede: 'What Nightango keeps in this browser.' },
+  return h(Page, { title: 'Privacy', lede: PRIVACY_LEDE },
+    h(ChatangoPmSection, null),
     h(T.SettingsSection, { title: 'Private messages' },
       h(PmHistoryRows, null),
       h(T.SettingRow, {
@@ -25,10 +26,35 @@ function NotesSection() {
     }));
 }
 
+var PRIVACY_LEDE = 'Who can reach you, and what Nightango keeps in this browser.';
+// Labels checked by the owner on a real account before 0.36.0 (#83).
+var CHATANGO_PM_ROWS = [
+  ['hideIdle', 'Hide your idle time', "People don't see how long you've been away."],
+  ['allowAnon', 'Allow anonymous messages', 'People without a Chatango account can message you.'],
+  ['emailOffline', 'Email messages you get while offline', 'Chatango sends them to the email of your account.']
+];
+
+/**
+ * PM settings saved on the Chatango account, each switch showing only what Chatango confirmed.
+ */
+function ChatangoPmSection() {
+  var app = useApp(), values = app.state.pmSettings, save = app.state.pmSettingSave;
+  var pending = !!save && !save.failed;
+  return h(T.SettingsSection, { title: 'Chatango account', description: 'Saved on your Chatango account. They apply wherever you use Chatango.' },
+    values ? CHATANGO_PM_ROWS.map(function (r) {
+      var mine = !!save && save.key === r[0];
+      var desc = mine && pending ? 'Waiting for Chatango to confirm.' : mine ? h('span', { className: 'row-error' }, "Chatango didn't confirm this change. Try again.") : r[2];
+      return h(T.SettingRow, {
+        key: r[0], title: r[1], description: desc,
+        control: h(T.Switch, { checked: values[r[0]], disabled: pending, onChange: function (e) { app.actions.setPmSetting(r[0], e.target.checked); } })
+      });
+    }) : h('p', { className: 'pal-empty' }, 'Loads once private messages are connected.'));
+}
+
 function BrowserTabSection() {
   var pr = usePref();
   return h(T.SettingsSection, { title: 'Browser tab' },
-    h(T.SettingRow, { title: 'Show my username in the tab title', description: 'Tells tabs apart when you use several accounts.', control: pr.sw('privacy.usernameInTitle') }));
+    h(T.SettingRow, { title: 'Show your username in the tab title', description: 'Tells tabs apart when you use several accounts.', control: pr.sw('privacy.usernameInTitle') }));
 }
 
 /**
@@ -39,23 +65,23 @@ function PmHistoryRows() {
   function exportFile() {
     app.actions.exportDms().then(function (records) {
       downloadJson(app.state.me + '_history.json', records);
-    }, function (e) { toast(e.message); });
+    }, function (e) { toast(e.message, { tone: 'error' }); });
   }
   function importFile(file) {
     readJsonArray(file).then(function (records) {
-      if (!records) { toast('This file is not a BetterChatango message history.'); return; }
+      if (!records) { toast("This file isn't a BetterChatango message history.", { tone: 'error' }); return; }
       app.actions.importDms(records).then(function (r) {
-        if (r.foreign) toast("This file holds another account's messages. Nothing was imported.");
-        else toast('Imported ' + plural(r.added, 'message', 'messages') + '. ' + r.saved + ' already saved, ' + r.skipped + ' skipped.', { icon: r.added ? 'check' : 'info' });
-      }, function (e) { toast(e.message); });
+        if (r.foreign) toast("This file holds another account's messages. Nothing was imported.", { tone: 'error' });
+        else toast('Imported ' + plural(r.added, 'message', 'messages') + '. ' + r.saved + ' already saved, ' + r.skipped + ' skipped.', { tone: r.added ? 'success' : 'info' });
+      }, function (e) { toast(e.message, { tone: 'error' }); });
     });
   }
   return h(Frag, null,
-    h(T.SettingRow, { asLabel: false, title: 'Export messages', description: 'The file is not encrypted.', control: h(T.Button, { size: 'sm', onClick: exportFile }, 'Export') }),
+    h(T.SettingRow, { asLabel: false, title: 'Export messages', description: "The file isn't encrypted.", control: h(T.Button, { size: 'sm', onClick: exportFile }, 'Export') }),
     h(T.SettingRow, { asLabel: false, title: 'Import messages', description: 'Adds messages from a BetterChatango history file. Saved messages are kept.', control: h(JsonFileButton, { size: 'sm', onFile: importFile }, 'Import') }));
 }
 
-var STARTUP_ROWS = [['joinOwned', 'Join groups I own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
+var STARTUP_ROWS = [['joinOwned', 'Join groups you own'], ['joinRecent', 'Join recent groups'], ['joinFavorites', 'Join favorite groups']];
 
 /**
  * BetterChatango startup settings.
@@ -133,15 +159,15 @@ function SafetyPage() {
       h(T.SettingRow, { title: 'Embed images', description: 'When off, images show as links.', control: pr.sw('safety.embedImages') }),
       h(T.SettingRow, { title: 'Embed videos', description: 'Audio included. Nothing plays until you click. When off, they show as links.', control: pr.sw('safety.embedVideos') }),
       h(T.SettingRow, { title: 'Embed X posts', description: 'When off, posts show as links.', control: pr.sw('safety.embedX') }),
-      h(T.SettingRow, { title: 'Block external media until I click', description: 'Images from other sites load on click, not when the message arrives.', control: pr.sw('safety.proxyMedia') }),
+      h(T.SettingRow, { title: 'Block external media until you click', description: 'Images from other sites load on click, not when the message arrives.', control: pr.sw('safety.proxyMedia') }),
       h(T.SettingRow, { title: 'Warn before opening links', description: 'Shows the full address before you leave Nightango.', control: pr.sw('safety.warnLinks') }),
       prefs.safety.trustedHosts ? h(TrustedSites, { hosts: prefs.safety.trustedHosts }) : null),
     h(T.SettingsSection, { title: 'People' },
       h(T.SettingRow, {
-        asLabel: false, title: 'Messages from ignored users', description: 'Collapse leaves a line you can expand. Hide removes them.',
-        control: h(T.SegmentedControl, { label: 'Messages from ignored users', value: prefs.safety.ignoreMode, onChange: function (v) { pr.set('safety.ignoreMode', v); }, options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }] })
+        asLabel: false, title: 'Messages from people you ignore', description: 'Collapse leaves a line you can expand. Hide removes them.',
+        control: h(T.SegmentedControl, { label: 'Messages from people you ignore', value: prefs.safety.ignoreMode, onChange: function (v) { pr.set('safety.ignoreMode', v); }, options: [{ value: 'collapse', label: 'Collapse' }, { value: 'hide', label: 'Hide' }] })
       }),
-      h(T.SettingRow, { title: 'Hide blocked users in groups too', description: 'Blocking someone also hides their messages in every group.', control: pr.sw('safety.syncBlocked') }),
+      h(T.SettingRow, { title: 'Hide people you block in groups too', description: 'Blocking someone also hides their messages in every group.', control: pr.sw('safety.syncBlocked') }),
       h(T.SettingRow, { title: 'Show messages from guests', control: pr.sw('safety.guestMessages') }),
       h(T.SettingRow, { title: 'Show guests in member lists', control: pr.sw('safety.showGuests') })),
     h(T.SettingsSection, { title: 'Blocked · ' + blocked.length }, people(blocked, 'blocked', 'Unblock', 'Nobody is blocked.')),

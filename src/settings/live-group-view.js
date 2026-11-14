@@ -35,7 +35,7 @@ function GroupSettingsViewLive(p) {
       saving.current = false;
       base.current = synced.current;
       setDraft(JSON.parse(synced.current));
-      app.ui.toast("Chatango didn't confirm every change. The page shows the group's current settings.");
+      app.ui.toast("Chatango didn't confirm every change. The page shows the group's current settings.", { tone: 'error' });
     }, CONFIRM_TIMEOUT);
     return function () { clearTimeout(t); };
   }, [pending]);
@@ -51,7 +51,7 @@ function GroupSettingsViewLive(p) {
   var dirty = JSON.stringify(draft) !== sig;
   function edit(fn) { setDraft(function (d0) { var d1 = JSON.parse(JSON.stringify(d0)); fn(d1); return d1; }); }
   function leave() {
-    if (dirty && !pending) app.ui.confirm({ title: 'Discard unsaved changes?', body: 'Your changes to #' + g.id + ' are not saved yet.', confirmLabel: 'Discard', danger: true, onConfirm: function () { app.nav({ view: 'group', id: g.id }); } });
+    if (dirty && !pending) app.ui.confirm({ title: 'Discard unsaved changes?', body: 'Your changes to #' + g.id + " aren't saved yet.", confirmLabel: 'Discard', danger: true, onConfirm: function () { app.nav({ view: 'group', id: g.id }); } });
     else app.nav({ view: 'group', id: g.id });
   }
   var props = { g: g, draft: draft, edit: edit, myRole: myRole, perms: perms, manage: owner || perms.manageMods, scrollRef: scrollRef };
@@ -61,7 +61,7 @@ function GroupSettingsViewLive(p) {
     onPage: function (pg) { app.nav({ view: 'gsettings', id: g.id, page: pg }); },
     header: h('div', { className: 'snav-head' },
       h(T.Avatar, { name: g.id, square: true, size: 32 }),
-      h('span', { style: { display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 } }, h('span', { style: { fontWeight: 600 } }, g.id), h('span', { style: { fontSize: 12, color: 'var(--text-3)' } }, 'Group settings · ' + (ROLE_LONG[myRole] || 'Member')))),
+      h('span', { style: { display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 } }, h('span', { style: { fontWeight: 600 } }, g.id), h('span', { style: { fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, 'Group settings · ' + (ROLE_LONG[myRole] || 'Member')))),
     footer: perms.closeGroup ? h(T.NavItem, {
       icon: 'lock', label: g.closed ? 'Reopen group' : 'Close group',
       onClick: function () { if (g.closed) app.actions.setClosed(g.id, false); else app.ui.confirm({ title: 'Close #' + g.id + '?', body: 'Nobody can post until staff reopen it. Members stay in the group.', confirmLabel: 'Close group', danger: true, onConfirm: function () { app.actions.setClosed(g.id, true); } }); }

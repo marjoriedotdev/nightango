@@ -218,7 +218,7 @@ function useUpdateCheck(loggedIn, toast) {
     if (!LIVE || !loggedIn || updateChecked.current) return;
     updateChecked.current = true;
     fetchLatestRelease().then(function (latest) {
-      if (latest && isNewerVersion(latest.version, APP_VERSION)) toast('Nightango ' + latest.version + ' is available.', { icon: 'info', action: { label: 'Download', run: function () { window.open(latest.url, '_blank', 'noopener'); } } });
+      if (latest && isNewerVersion(latest.version, APP_VERSION)) toast('Nightango ' + latest.version + ' is available.', { action: { label: 'Download', run: function () { window.open(latest.url, '_blank', 'noopener'); } } });
     });
   }, [loggedIn]);
 }
@@ -268,6 +268,6 @@ function Root(props) {
     state.auth.loggedIn && o.spacesFor ? h(ConversationSpacesDialog, { route: o.spacesFor, onClose: function () { o.setSpacesFor(null); } }) : null,
     state.auth.loggedIn && o.spaceEditor ? h(SpaceEditorDialog, { id: o.spaceEditor.id, add: o.spaceEditor.add || null, onClose: function () { o.setSpaceEditor(null); } }) : null,
     o.confirmCfg ? h(ConfirmDialog, { confirm: o.confirmCfg, onClose: function () { o.setConfirm(null); } }) : null,
-    state.auth.loggedIn && state.session ? h(SessionOverlay, { session: state.session }) : null,
-    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast })))));
+    sessionBlocks(state) ? h(SessionOverlay, { session: state.session }) : null,
+    h(Toasts, { toasts: o.toasts, dismiss: o.dismissToast, under: sessionBlocks(state) })))));
 }

@@ -20,7 +20,7 @@ function groupRights(group, name) {
 function canBanMember(group, me, name) { return isStaffRole(roleOf(group, me)) && name !== me && roleOf(group, name) !== 'owner'; }
 // One object for every unknown member: the rows that take its style as a prop keep the same props.
 var UNKNOWN_USER = { status: 'offline', about: '', style: {} };
-function userOf(state, name) { return state.users[name] || UNKNOWN_USER; }
+function userOf(state, name) { return ownOf(state.users, name) || UNKNOWN_USER; }
 /**
  * Returns a member's name as they spell it, in lowercase until a message of theirs carries its capitals.
  * @param {Object} state Application state.
@@ -200,6 +200,7 @@ function pmShownIndex(list, x) {
   return i >= 0 ? i : list.findIndex(function (y) { return !y.archiveTs && (key && y.key ? y.key === key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000); });
 }
 function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
+var GENDER_LABEL = { M: 'Male', F: 'Female' };
 /**
  * Abbreviates the gender of a profile.
  * @param {string} g Gender in full.

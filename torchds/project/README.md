@@ -5,9 +5,13 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Write interface copy in English, sentence case: "Save changes", "Private messages", "Discover groups". Capitals only for `label-caps` section labels (FAVORITES, STAFF · 3).
 - Buttons start with a verb and say what happens: "Join", "Send reset link", "Create account". Never "OK" or "Submit".
 - A menu entry that opens a dialog to confirm or complete the action ends with an ellipsis (…, not three dots): "Block…", "Leave group…", "Create a group…". Entries that act at once or only show something ("Copy text", "View profile") have none, and neither do buttons, even one that asks for confirmation ("Clear all").
-- Address the reader as "you", the product as "Nightango". BetterChatango is named when BetterChatango does the work: sign-in, the private message history, the media library, its own settings. Chatango is named when an action goes to Chatango: "Your Chatango profile. Everyone on Chatango sees it."
-- Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read."
-- Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input".
+- Address the reader as "you", the product as "Nightango". A setting does not speak as the reader: "Join groups you own", not "Join groups I own". The one exception is the set phrase "Don't warn me again".
+- Other people are "people", "members" inside a group and "friends" on the friends list, never "users". They come online and go offline, they do not connect.
+- Buttons say "Log in" and "Log out", and sentences follow them: "Reload the page and log in again."
+- BetterChatango is named when BetterChatango does the work: logging in, the private message history, the media library, its own settings. vissle is "vissle" when it does the work, "vissle.me" only as an address. Chatango is named when an action goes to Chatango: "Your Chatango profile. Everyone on Chatango sees it."
+- Settings are statements of what happens, followed by one line of consequence: "Mark new messages" / "Draws a line above the first message you haven't read." The line is optional: leave it out when it would only repeat the label ("Friend comes online" needs none).
+- Write the way people talk: contractions ("can't", "didn't", "you're"), the active voice, everyday words. "Couldn't save the announcement.", not "The announcement could not be saved." The legal notice in About keeps the full form, and the two texts of a connection that stays lost keep the wording of the official client.
+- Errors say what to do next: "Use letters, numbers and dashes only." Not "Invalid input". A status code, a file name or a protocol word never reaches the reader: it goes to the diagnostic log.
 - No emoji in the interface, no exclamation marks, no filler ("Oops", "Awesome").
 - Be honest about trade-offs where they affect trust. The login screen states that credentials are stored encrypted on BetterChatango servers.
 - Roles: next to a name, the short role is a `Badge` with its icon: Owner with a crown in the `moon` tone, Mod and Admin with a shield in the `moon-quiet` tone. The long role (Moderator) belongs in a sentence or a title. The viewer's own row carries a `You` badge, never "(you)" in text.
@@ -22,6 +26,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - An unread count is a `CountBadge` on the navigation item that leads to the list. A filter inside the list does not repeat it.
 - When the accent is text or an icon (mentions, links, the announcement pin), use `accent-text`, which is darkened in light for contrast. A message that mentions the viewer is lit from the left: the accent fades through `accent-soft` to the surface.
 - Use `danger` as text only, on destructive actions that also say what they do (Block, Log out, Close group). Use `warning` for the icon of a warning banner; the sentence carries the meaning.
+- A favorite is a star filled with `favorite`, at the end of the name line of its list row, never right after the name, where it would read as part of it.
 - Presence is a moon phase: full moon (`status-online`), crescent (`status-idle`), new moon outline (`status-offline`). The shape carries the state, so a list reads in grayscale. Where one person is shown (a conversation header, a profile), a text label sits next to the dot (Online, Idle, Last online …). In a list, the phase may stand alone on screen; the row's accessible name then states the status.
 - Focus: a 2px solid `focus-ring` outline offset by 2px on every interactive element. It holds 3:1 on every surface.
 
@@ -40,6 +45,8 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Instrument Serif comes in one weight. Never bold it: a name in a header stays at 400.
 - Numbers that stack or update in place (times, counters, sliders) use tabular figures, so their digits line up.
 - Default text is `body` (14/20). Author names and unread rows use `body-strong`. Descriptions use `caption`.
+- A control takes its text size from its height: `control` (13.5px) at `size-control-md`, `caption` at `size-control-sm`, `body` at `size-control-lg`. A button and the field next to it share one size.
+- In CSS a font size is the variable of its style, `--font-size-<style>` (`--font-size-body`, `--font-size-control`), never a pixel value.
 - Page titles use `display-lg`, profile names and empty state titles `display-md`, conversation header names `display-sm`. Section titles stay `title-sm`, dialog titles `title-md`.
 - Timestamps are `meta-sm` in `text-3`: `12:42`, never "12:42 PM" unless the reader turns off 24-hour time.
 
@@ -64,9 +71,12 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Hover: `hover` on rows, `hover-2` on buttons. Current item: `selected`. Pressed toggles: `selected` plus `aria-pressed`.
 - Local preferences (theme, notifications, density) save on change and say so in the page description. Changes that go to Chatango (profile, group settings, roles) collect in a `SaveBar` and are saved together.
 - Destructive actions ask for confirmation in a dialog that repeats the consequence.
+- A toast carries its tone as an icon in a tinted disc: a check for something done, the info icon on `accent-soft` for a notice, the alert icon in `warning` for a failure. Its action is a text button, and its close button shows on hover or focus, always on touch. It stays 4.5 to 10 seconds with the length of its text, 8 seconds at least for a failure, and waits while it is hovered or focused and while the page is hidden. The same text shown again starts the delay over instead of stacking.
+- A lost connection never blocks the app: a banner says it, above the message box or at the top of the page, with a ring that empties until the next automatic attempt, then the attempt in progress. Reconnect now stays secondary while Nightango tries on its own and turns `accent` once it has stopped trying, next to Reload. Back online, the banner says Reconnected and folds away.
+- Signed in somewhere else, an expired session and being offline block the app with a centered dialog, one icon per reason.
 - A row in Chats or Friends opens the conversation. A row in Meet people or a member list opens the profile. A row about a person whose main action is not the profile offers View profile in its menu.
 - Loading: a list with no rows yet shows skeleton rows shaped like its rows. A list loading its next page keeps its rows and shows a `Spinner` below them. A single block (a form, a profile, one control) says what is loading in one line of text.
-- Interface motion uses the motion tokens, all on `ease-out`: `duration-fast` for buttons, `duration-base` for colors, opacity and short moves, `duration-surface` for surfaces that travel (the navigation drawer, a swiped row, pull to refresh). Hover feedback fades on every interactive element; keyboard selection in a list (menus, the palette, suggestions) moves at once. Menus, popovers and dialogs fade in as they open and close at once; a dialog also grows from 98%. Nothing bounces.
+- Interface motion uses the motion tokens, all on `ease-out`: `duration-fast` for buttons, `duration-base` for colors, opacity and short moves, `duration-surface` for surfaces that travel (the navigation drawer, a swiped row, pull to refresh). Hover feedback fades on every interactive element; keyboard selection in a list (menus, the palette, suggestions) moves at once. Menus, popovers and dialogs fade in as they open and close at once; a dialog also grows from 98%. A toast fades out and folds, so the stack closes up instead of jumping. Nothing bounces.
 - Ambient motion: one cloud drifts across the sky band over 150s. Calm sky (Appearance) and reduced motion stop it.
 - The moon is the real one: `Moon` draws the phase of the moment, computed on the device. Southern hemisphere (Appearance) turns it half a turn, as seen south of the equator.
 
@@ -82,4 +92,4 @@ Chatango lets members choose name colors, fonts, text colors and message backgro
 
 ## Logo
 
-The mark is tonight's moon: a 30px `Moon` with its phase name as accessible label, in its moonlight colors whatever the accent. The word Nightango follows in `font-display` at 28px. The mark changes with the moon; do not freeze it into a fixed full moon.
+The mark is tonight's moon: a 30px `Moon` with its phase name as accessible label, in its moonlight colors whatever the accent. The word Nightango follows in `font-display` at `wordmark` (28px). The mark changes with the moon; do not freeze it into a fixed full moon.

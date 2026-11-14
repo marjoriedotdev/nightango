@@ -77,17 +77,17 @@ function MediaPanel(p) {
   useEffect(function () { load(null); }, [sort, text, rev]);
   useInfiniteScroll(p.scrollRef, sentinelRef, lib.more && !lib.loading, function () { load(lib.list[lib.list.length - 1]); }, LOAD_BELOW_MARGIN);
   function exportFile() {
-    app.actions.exportMedia().then(function (entries) { downloadJson(app.state.me + '_media.json', entries); }, function (e) { toast(e.message); });
+    app.actions.exportMedia().then(function (entries) { downloadJson(app.state.me + '_media.json', entries); }, function (e) { toast(e.message, { tone: 'error' }); });
   }
   function importFile(file) {
     readJsonArray(file).then(function (entries) {
-      if (!entries) { toast('This file is not a BetterChatango media file.'); return; }
+      if (!entries) { toast("This file isn't a BetterChatango media file.", { tone: 'error' }); return; }
       app.actions.importMedia(entries).then(function (res) {
-        toast('Imported ' + plural(res.added, 'image', 'images') + '. ' + res.skipped + ' skipped.', { icon: res.added ? 'check' : 'info' });
-      }, function (e) { toast(e.message); });
+        toast('Imported ' + plural(res.added, 'image', 'images') + '. ' + res.skipped + ' skipped.', { tone: res.added ? 'success' : 'info' });
+      }, function (e) { toast(e.message, { tone: 'error' }); });
     });
   }
-  if (lib.failed) return h('p', { className: 'media-note' }, 'BetterChatango could not open your media library. Reload the page and try again.');
+  if (lib.failed) return h('p', { className: 'media-note' }, "BetterChatango couldn't open your media library. Reload the page and try again.");
   var grid = safety.embedImages, held = lib.list.some(function (e) { return !mediaThumbShown(safety, revealed, e.url); });
   var note = !lib.list.length ? (lib.loading ? h(T.Spinner, { label: 'Loading media' })
     : h('p', { className: 'media-note' }, text ? 'No media matches your search.' : 'No media yet. Star an image in a message to add it here.')) : null;

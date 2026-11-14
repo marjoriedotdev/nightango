@@ -176,7 +176,7 @@ function personActionGroups(actions) {
  * @param {?string} gid Group the profile is opened from.
  */
 function useProfileActions(name, gid) {
-  var app = useApp(), s = app.state, u = userOf(s, name), busy = !!s.friendAdds[name];
+  var app = useApp(), s = app.state, u = userOf(s, name), busy = !!ownOf(s.friendAdds, name);
   var g = gid ? s.groups[gid] : null;
   var inDm = isPaneOpen(s, 'dm', name);
   var friendLabel = busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend';
@@ -220,7 +220,7 @@ function ProfileDialog(p) {
     h(ProfileSummary, { name: name, gid: p.gid, heading: 'h2', focusHeading: true, size: 96, ring: 'var(--raised)', skin: mini, guest: guest, nav: go }),
     h('div', { className: 'dialog-foot', style: { justifyContent: 'flex-start', paddingTop: 14, borderTop: '1px solid var(--border)' } },
       isMe ? h(T.Button, { variant: 'primary', icon: 'edit', onClick: function () { go({ view: 'settings', page: 'profile' }); } }, 'Edit profile')
-      : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 13 } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
+      : LIVE && guest ? h('span', { className: 'muted', style: { fontSize: 'var(--font-size-body-sm)' } }, 'Guests have no Chatango account: no messages, friends or blocks.') : h(Frag, null,
         buttons.map(function (it) { return h(T.Button, { key: it.id, variant: it.id === 'message' ? 'primary' : undefined, icon: it.icon, disabled: it.disabled, onClick: it.onSelect }, it.buttonLabel || it.label); }),
         h(MenuButton, { label: 'More profile actions', items: menuGroups(personActionGroups(actions.filter(function (it) { return buttons.indexOf(it) < 0; }))) }))));
 }
@@ -237,7 +237,7 @@ function WhoDialog(p) {
   useEffect(function () {
     liveBridge.fetchWho(p.name).then(function (levels) {
       setRes(levels ? { levels: levels } : { error: "vissle sent an answer Nightango can't read." });
-    }, function () { setRes({ error: 'vissle could not be reached. Try again later.' }); });
+    }, function () { setRes({ error: "Couldn't reach vissle. Try again later." }); });
   }, [p.name]);
   var levels = res && res.levels || [];
   var total = levels.reduce(function (n, x) { return n + x.names.length; }, 0);
@@ -265,12 +265,12 @@ function BanDialog(p) {
   var dl = useState(false), wipe = dl[0], setWipe = dl[1];
   if (LIVE) {
     return h(Dialog, {
-      title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: 'Chatango bans the account and the IP of their last message. They cannot rejoin until unbanned.', onClose: p.onClose,
+      title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: "Chatango bans the account and the IP of their last message. They can't rejoin until unbanned.", onClose: p.onClose,
       footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { if (app.actions.ban(p.gid, p.name, null, { deleteAll: wipe, msg: p.msg }) !== false) p.onClose(); } }, 'Ban')]
     }, h('div', { className: 'dialog-body' }, h(T.Checkbox, { label: 'Also delete their recent messages', checked: wipe, onChange: function (e) { setWipe(e.target.checked); } })));
   }
   return h(Dialog, {
-    title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: 'They are removed from the group and cannot rejoin from this IP until unbanned.', onClose: p.onClose,
+    title: 'Ban ' + shownName(app.state, p.name) + ' from #' + p.gid + '?', description: "They're removed from the group and can't rejoin from this IP until unbanned.", onClose: p.onClose,
     footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'b', variant: 'danger', icon: 'ban', onClick: function () { app.actions.ban(p.gid, p.name); p.onClose(); } }, 'Ban')]
   });
 }
@@ -289,7 +289,7 @@ function openLinkButton(url, variant, onClose) {
  * @param {string} url Link address.
  */
 function linkAddress(url) {
-  return h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 12.5, overflowWrap: 'anywhere', color: 'var(--text-body)' } }, url);
+  return h('p', { style: { margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-lg)', background: 'var(--subtle)', border: '1px solid var(--border)', fontSize: 'var(--font-size-caption)', overflowWrap: 'anywhere', color: 'var(--text-body)' } }, url);
 }
 
 /**
@@ -304,7 +304,7 @@ function LinkDialog(p) {
   var choice = !hosts ? h(T.Checkbox, { label: "Don't warn me again", onChange: function (e) { var v = e.target.checked; app.update(function (d) { d.prefs.safety.warnLinks = !v; }); } })
     : host ? h(T.Checkbox, { label: 'Trust ' + host, checked: trust, onChange: function (e) { setTrust(e.target.checked); } }) : null;
   return h(Dialog, {
-    title: 'This link leaves Nightango', description: 'Check the address before you continue. Nightango does not check external sites.', onClose: p.onClose,
+    title: 'This link leaves Nightango', description: "Check the address before you continue. Nightango doesn't check external sites.", onClose: p.onClose,
     footer: [
       h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'),
       openLinkButton(p.url, 'primary', function () { if (trust) app.actions.setTrustedHost(host, true); p.onClose(); })

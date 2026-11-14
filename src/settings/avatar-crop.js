@@ -97,7 +97,7 @@ function AvatarCropDialog(p) {
     setSaving(true);
     liveBridge.saveAvatarCrop(box).then(p.onSaved, function (e) {
       setSaving(false);
-      app.ui.toast(e.message);
+      app.ui.toast(e.message, { tone: 'error' });
     });
   }
   var pct = natural && box ? { left: box.x0 / natural.w * 100 + '%', top: box.y0 / natural.h * 100 + '%', width: box.ts / natural.w * 100 + '%', height: box.ts / natural.h * 100 + '%' } : null;
@@ -109,7 +109,7 @@ function AvatarCropDialog(p) {
     ]
   },
     h('div', { className: 'dialog-body crop-body' },
-      failed ? h('p', { className: 'muted', style: { margin: 0 } }, 'Chatango did not return your picture. Try again later.')
+      failed ? h('p', { className: 'muted', style: { margin: 0 } }, "Couldn't load your picture from Chatango. Try again later.")
         : h(Frag, null,
           h('div', { className: 'crop-stage' },
             h('img', { src: src, alt: 'Your profile picture', referrerPolicy: 'no-referrer', draggable: false, onLoad: loaded, onError: function () { setFailed(true); } }),

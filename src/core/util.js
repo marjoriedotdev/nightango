@@ -1,7 +1,7 @@
 /* ---------- Utilities ---------- */
 var MIN = 60000;
 var CONFIRM_TIMEOUT = 8000;
-// The same code lives in both repositories, pushed by hand: GitHub first, GitLab while GitHub is down.
+// The same code lives in both repositories, pushed by hand: GitHub first, GitLab kept in step.
 var REPO_URLS = { github: 'https://github.com/marjoriedotdev/nightango', gitlab: 'https://gitlab.com/marjoriedotdev/nightango' };
 var CHATANGO_URL = 'https://chatango.com';
 function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
@@ -109,7 +109,9 @@ function trimEnd(text) {
   while (end && /\s/.test(text.charAt(end - 1))) end--;
   return text.slice(0, end);
 }
-function unknownUserText(name) { return 'No Chatango user named ' + name + '.'; }
+function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
+// Own key only: a name such as constructor is also a key of every object.
+function ownOf(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
 function isGuest(name) { return /^[!#]/.test(name); }
 /**
  * Returns the last element of a list that passes a test.

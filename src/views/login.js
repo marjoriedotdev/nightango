@@ -22,8 +22,8 @@ function Login() {
         h('div', null, h('h2', null, 'Welcome back'), h('p', { className: 'muted' }, 'Log in with your Chatango account.')),
         h(T.TextField, { id: 'lg-user', label: 'Username', autoComplete: 'username', value: user, error: errors.user, onChange: function (e) { setUser(e.target.value); } }),
         h(T.TextField, { id: 'lg-pass', label: 'Password', type: 'password', autoComplete: 'current-password', value: pass, error: errors.pass, hint: 'Demo account. Any password works.', onChange: function (e) { setPass(e.target.value); } }),
-        h(T.Button, { type: 'submit', variant: 'primary', size: 'lg', block: true, disabled: busy }, busy ? 'Signing in' : 'Log in'),
-        h(T.Banner, { icon: 'lock' }, 'BetterChatango signs in to Chatango on your behalf. To keep you signed in, your credentials are stored encrypted on BetterChatango servers.')),
+        h(T.Button, { type: 'submit', variant: 'primary', size: 'lg', block: true, disabled: busy }, busy ? 'Logging in' : 'Log in'),
+        h(T.Banner, { icon: 'lock' }, 'BetterChatango logs in to Chatango on your behalf. To keep you logged in, your credentials are stored encrypted on BetterChatango servers.')),
       h('div', { className: 'login-foot' },
         h('span', { className: 'mono' }, 'v' + APP_VERSION), h('span', null, 'Prototype with simulated data'))));
 }

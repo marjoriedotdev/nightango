@@ -23,8 +23,8 @@ function AppearancePage() {
       var name = (file.name || 'Theme').replace(/\.json$/i, '');
       var colors = [src.backdrop, src.primary, src.secondary, accent].filter(hexToRgb);
       app.update(function (d) { d.prefs.customThemes = (d.prefs.customThemes || []).concat([{ id: uid(), name: name, accent: accent, colors: colors, at: Date.now() }]); });
-      app.ui.toast('Imported ' + name + '.', { icon: 'check' });
-    }).catch(function () { app.ui.toast('This file is not a BetterChatango theme. Export one from the old theme editor and try again.'); });
+      app.ui.toast('Imported ' + name + '.', { tone: 'success' });
+    }).catch(function () { app.ui.toast("This file isn't a BetterChatango theme. Export one from the old theme editor and try again.", { tone: 'error' }); });
   }
   var custom = prefs.customThemes || [];
   return h(Page, { title: 'Appearance', lede: 'Saved on this device.' },
@@ -33,9 +33,9 @@ function AppearancePage() {
         return h('button', { key: t[0], type: 'button', role: 'radio', className: 'pick', 'aria-checked': String(prefs.theme === t[0]), onClick: function () { pr.set('theme', t[0]); } },
           thumb(t[2]), h('span', { className: 'pick-title' }, t[1]));
       }))),
-    h(T.SettingsSection, { title: 'Accent color', description: 'Buttons, mentions and unread markers. Text on it is adjusted for contrast.', padded: true },
+    h(T.SettingsSection, { title: 'Accent color', description: 'Buttons, mentions and unread markers. Text on it stays readable.', padded: true },
       h(AccentSwatches, { label: 'Accent color', value: prefs.accent, fallback: prefs.accent, onChange: function (v) { pr.set('accent', v); } })),
-    h(T.SettingsSection, { title: 'Sky', description: 'Computed on this device, without a network request.' },
+    h(T.SettingsSection, { title: 'Sky', description: 'Drawn on your device. Nothing is downloaded.' },
       h(T.SettingRow, {
         title: 'Moon', description: "Next to the Nightango name. Day dividers show each night's moon.",
         control: h('select', { className: 'tc-input', style: { width: 'auto' }, value: String(prefs.sky.moon), onChange: function (e) { pr.set('sky.moon', e.target.value === 'auto' ? 'auto' : +e.target.value); } },
@@ -52,7 +52,7 @@ function AppearancePage() {
           h('span', { 'aria-hidden': 'true', style: { fontSize: 12, color: 'var(--text-3)' } }, 'A'),
           h('input', { type: 'range', min: 12, max: 18, step: 1, value: prefs.textSize, 'aria-label': 'Text size', onChange: function (e) { pr.set('textSize', +e.target.value); } }),
           h('span', { 'aria-hidden': 'true', style: { fontSize: 18, color: 'var(--text-3)' } }, 'A'),
-          h('span', { className: 'tnum', style: { width: 38, textAlign: 'right', fontSize: 12.5, color: 'var(--text-2)' } }, prefs.textSize + 'px'))
+          h('span', { className: 'tnum', style: { width: 38, textAlign: 'right', fontSize: 'var(--font-size-caption)', color: 'var(--text-2)' } }, prefs.textSize + 'px'))
       }),
       h(T.SettingRow, { title: '24-hour time', description: 'Shows 14:05 instead of 2:05 PM.', control: pr.sw('h24') }),
       h(T.SettingRow, { title: 'Show group announcements', description: 'Timed staff announcements and the banner at the top of a group.', control: pr.sw('announcements') }),
@@ -61,7 +61,7 @@ function AppearancePage() {
         control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveBetterChatangoSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
       })),
     h(T.SettingsSection, { title: 'Chatango styles', description: 'Styles members set on Chatango. Hard-to-read colors are corrected.' },
-      h(T.SettingRow, { title: 'Name colors', description: 'The color each member picked for their username.', control: pr.sw('styles.names') }),
+      h(T.SettingRow, { title: 'Name colors', control: pr.sw('styles.names') }),
       h(T.SettingRow, { title: 'Fonts and text colors', description: 'Custom typefaces, text sizes and text colors in messages.', control: pr.sw('styles.fonts') }),
       h(T.SettingRow, { title: 'Same text size for everyone', description: 'Messages use your text size. Mini profiles keep theirs.', control: pr.sw('styles.sameSize') }),
       h(T.SettingRow, { title: 'Message backgrounds', description: 'Background colors and images set by Premium members.', control: pr.sw('styles.backgrounds') }),
