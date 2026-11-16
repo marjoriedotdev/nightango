@@ -547,6 +547,32 @@ var liveBridge = (function () {
     Object.keys(fields).forEach(function (k) { if (fields[k] !== undefined && fields[k] !== null) form.set(k, fields[k]); });
     return C.post(url, form, item).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
   }
+  var MEET_PAGE_SIZE = 40;
+  /**
+   * Member search as BetterChatango sends it (inject.js:9344-9365).
+   * Filters: sex M, F or both, real photo (1), character (2) or both (0).
+   * @returns {Promise<string[]>} Lowercase names of the page, empty when Chatango finds no one.
+   */
+  function postSearch(o) {
+    return Promise.resolve().then(function () {
+      var form = new FormData();
+      form.set('ami', o.ageMin || 13);
+      form.set('ama', o.ageMax || 99);
+      form.set('imc', o.avatar || 0);
+      form.set('s', o.sex || 'B');
+      if (o.query) form.set('ss', o.query);
+      if (o.online) form.set('o', 1);
+      form.set('h5', 1);
+      form.set('f', o.from || 0);
+      form.set('t', o.to || MEET_PAGE_SIZE);
+      return fetch(CH.path('search'), { method: 'POST', body: form, credentials: 'include' });
+    }).then(function (r) { return r.text(); }).then(function (text) {
+      if (text.indexOf('h=') === 0) return text.slice(2).split(':').map(function (x) { return lower(x.split(';')[0]); }).filter(Boolean);
+      var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: "Chatango doesn't allow this search.", None: '', unauthed: 'Your Chatango session expired. Reload the page and log in again.' };
+      if (text.trim() in reason) { if (!reason[text.trim()]) return []; throw new Error(reason[text.trim()]); }
+      throw new Error("Chatango sent an answer Nightango can't read. Try the search again.");
+    });
+  }
   var pmrCheck = null, pmrConnected = null;
   /**
    * Reads the PM restriction of one's own account from vissle like BetterChatango (inject.js:10631-10643).
@@ -1281,32 +1307,11 @@ var liveBridge = (function () {
       return mediaWrite(function (store) { screened.valid.forEach(function (e) { store.put(e); }); }, "BetterChatango couldn't save these images. Nothing was imported. Reload the page and try again.")
         .then(function () { return { added: screened.valid.length, skipped: screened.skipped }; });
     },
-    /**
-     * Member search as BetterChatango does it followed by a presence request on the private connection.
-     * Filters: sex M, F or both, real photo (1), character (2) or both (0).
-     */
+    /** Member search followed by a presence request on the private connection. */
     searchPeople: function (o) {
-      return Promise.resolve().then(function () {
-        var form = new FormData();
-        form.set('ami', o.ageMin || 13);
-        form.set('ama', o.ageMax || 99);
-        form.set('imc', o.avatar || 0);
-        form.set('s', o.sex || 'B');
-        if (o.query) form.set('ss', o.query);
-        if (o.online) form.set('o', 1);
-        form.set('h5', 1);
-        form.set('f', o.from || 0);
-        form.set('t', o.to || 40);
-        return fetch(CH.path('search'), { method: 'POST', body: form, credentials: 'include' });
-      }).then(function (r) { return r.text(); }).then(function (text) {
-        if (text.indexOf('h=') === 0) {
-          var names = text.slice(2).split(':').map(function (x) { return lower(x.split(';')[0]); }).filter(Boolean);
-          if (names.length) send('private_message', 'getpresence:' + names.join(';'), "Couldn't load people.");
-          return names;
-        }
-        var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: "Chatango doesn't allow this search.", None: '', unauthed: 'Your Chatango session expired. Reload the page and log in again.' };
-        if (text.trim() in reason) { if (!reason[text.trim()]) return []; throw new Error(reason[text.trim()]); }
-        throw new Error("Chatango sent an answer Nightango can't read. Try the search again.");
+      return postSearch(o).then(function (names) {
+        if (names.length) send('private_message', 'getpresence:' + names.join(';'), "Couldn't load people.");
+        return names;
       });
     },
     /**
