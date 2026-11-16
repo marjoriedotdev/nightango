@@ -396,6 +396,43 @@ function parseProfileReply(resp) {
   String(resp).split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) data[kv.slice(0, i)] = kv.slice(i + 1); });
   return data;
 }
+/**
+ * Splits saved profile texts into the words Chatango can refuse, HTML tags and links included.
+ * @param {string[]} texts Location, bio and full profile as saved.
+ * @returns {string[]} Lowercase words without duplicates, in their first order.
+ */
+function profileWords(texts) {
+  var seen = Object.create(null), out = [];
+  texts.forEach(function (t) {
+    String(t || '').toLowerCase().split(/[\s!-\/:-@\[-`{-~]+/).forEach(function (w) { if (w && !seen[w]) { seen[w] = true; out.push(w); } });
+  });
+  return out;
+}
+/**
+ * Finds the words a search refuses by asking for whole groups of words and splitting each refused group in two.
+ * @param {string[]} words Words to check.
+ * @param {Function} ask Receives a query of words joined by spaces, resolves true when Chatango refuses it.
+ * @param {number} maxChars Longest query sent, a longer single word goes alone.
+ * @returns {Promise<string[]>} Refused words in their order, rejected on the first failed request.
+ */
+function findFlagged(words, ask, maxChars) {
+  var groups = [], cur = [], len = 0, found = [];
+  words.forEach(function (w) {
+    if (cur.length && len + 1 + w.length > maxChars) { groups.push(cur); cur = []; len = 0; }
+    len += (cur.length ? 1 : 0) + w.length;
+    cur.push(w);
+  });
+  if (cur.length) groups.push(cur);
+  function probe(group) {
+    return ask(group.join(' ')).then(function (refused) {
+      if (!refused) return;
+      if (group.length === 1) { found.push(group[0]); return; }
+      var half = Math.ceil(group.length / 2);
+      return probe(group.slice(0, half)).then(function () { return probe(group.slice(half)); });
+    });
+  }
+  return groups.reduce(function (p, g) { return p.then(function () { return probe(g); }); }, Promise.resolve()).then(function () { return found; });
+}
 
 // -- Message background -------------------------------------------------------
 

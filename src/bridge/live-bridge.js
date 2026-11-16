@@ -548,10 +548,12 @@ var liveBridge = (function () {
     return C.post(url, form, item).then(function (r) { return typeof r === 'string' ? r : JSON.stringify(r); });
   }
   var MEET_PAGE_SIZE = 40;
+  // Longest query checked by hand: Chatango still refused a word at the end of about 300 characters.
+  var MEET_QUERY_MAX = 300;
   /**
    * Member search as BetterChatango sends it (inject.js:9344-9365).
    * Filters: sex M, F or both, real photo (1), character (2) or both (0).
-   * @returns {Promise<string[]>} Lowercase names of the page, empty when Chatango finds no one.
+   * @returns {Promise<string[]>} Lowercase names of the page, empty when Chatango finds no one, rejected with the Chatango reply in reply.
    */
   function postSearch(o) {
     return Promise.resolve().then(function () {
@@ -568,9 +570,12 @@ var liveBridge = (function () {
       return fetch(CH.path('search'), { method: 'POST', body: form, credentials: 'include' });
     }).then(function (r) { return r.text(); }).then(function (text) {
       if (text.indexOf('h=') === 0) return text.slice(2).split(':').map(function (x) { return lower(x.split(';')[0]); }).filter(Boolean);
-      var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: "Chatango doesn't allow this search.", None: '', unauthed: 'Your Chatango session expired. Reload the page and log in again.' };
-      if (text.trim() in reason) { if (!reason[text.trim()]) return []; throw new Error(reason[text.trim()]); }
-      throw new Error("Chatango sent an answer Nightango can't read. Try the search again.");
+      var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: "Chatango doesn't allow this search.", unauthed: 'Your Chatango session expired. Reload the page and log in again.' };
+      var reply = text.trim();
+      if (reply === 'None') return [];
+      var err = new Error(Object.prototype.hasOwnProperty.call(reason, reply) ? reason[reply] : "Chatango sent an answer Nightango can't read. Try the search again.");
+      err.reply = reply;
+      throw err;
     });
   }
   var pmrCheck = null, pmrConnected = null;
@@ -1326,6 +1331,16 @@ var liveBridge = (function () {
         // A full page without the name proves nothing: the search may match other names first.
         return names.length < MEET_PAGE_SIZE ? 'hidden' : 'unknown';
       }, function (e) { warn(e); return 'unknown'; });
+    },
+    /**
+     * Finds the words of one's saved profile that Chatango refuses in a Meet people search.
+     * @param {string[]} texts Location, bio and full profile as saved.
+     * @returns {Promise<string[]>} Refused words, rejected with a message to show on overload, expiry or failure.
+     */
+    findFlaggedWords: function (texts) {
+      return findFlagged(profileWords(texts), function (query) {
+        return postSearch({ query: query }).then(function () { return false; }, function (e) { if (e.reply === 'unsafe') return true; throw e; });
+      }, MEET_QUERY_MAX);
     },
     /**
      * Public mini profile (mod1.xml) read like BetterChatango.

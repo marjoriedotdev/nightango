@@ -36,12 +36,32 @@ function ProfilePage() {
 }
 
 /**
+ * Banner of a profile that Chatango leaves out of Meet people, with the search for the words it refuses.
+ * @param {Object} p Props of VisibilitySection.
+ */
+function hiddenBanner(p) {
+  var c = p.wordCheck || {}, skipped = p.fullRead ? '' : " Your full profile isn't loaded, so it wasn't checked.";
+  var result = c.busy ? 'Checking the words of your profile.'
+    : c.error ? c.error
+      : c.words && c.words.length ? 'It flags these words: ' + c.words.join(', ') + '.' + skipped
+        : c.words ? (p.fullRead ? "It didn't flag any word. Your picture may be the cause." : "It didn't flag any word in your location and bio." + skipped)
+          : '';
+  var action = c.words ? null : h(T.Button, { size: 'sm', disabled: !!c.busy, onClick: p.onFindWords }, c.busy ? 'Checking' : c.error ? 'Try again' : 'Find the word');
+  return h(T.Banner, { tone: 'warning', icon: 'info', action: p.onFindWords ? action : null }, 'Chatango is hiding your profile from Meet people.' + (result ? ' ' + result : ''));
+}
+/**
  * Visibility of the user's own profile in Meet people.
- * @param {{meet: boolean, hidden: boolean, disabled: boolean, onChange: Function}} p Profile listed in Meet people, left out of the search by Chatango, switch locked, receives the new value.
+ * @param {boolean} p.meet Profile listed in Meet people.
+ * @param {boolean} p.hidden Chatango leaves the profile out of the search.
+ * @param {?Object} p.wordCheck Search for the refused words: {busy}, {words} or {error}, null before it.
+ * @param {boolean} p.fullRead Full profile read, so part of the search.
+ * @param {Function} p.onFindWords Starts the search for the refused words.
+ * @param {boolean} p.disabled Switch locked.
+ * @param {Function} p.onChange Receives the new value of the switch.
  */
 function VisibilitySection(p) {
   return h(T.SettingsSection, { title: 'Visibility' },
-    p.hidden ? h('div', { className: 'tc-section-pad' }, h(T.Banner, { tone: 'warning', icon: 'info' }, 'Chatango is hiding your profile from Meet people.')) : null,
+    p.hidden ? h('div', { className: 'tc-section-pad' }, hiddenBanner(p)) : null,
     h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other people on Chatango find you by age and location.', control: h(T.Switch, { checked: !!p.meet, disabled: p.disabled, onChange: function (e) { p.onChange(e.target.checked); } }) }));
 }
 

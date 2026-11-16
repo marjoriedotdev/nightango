@@ -10,7 +10,7 @@ const w = dom.window;
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
 w.eval(fs.readFileSync(ROOT + '/torchds/project/components/bundle.js', 'utf8'));
-w.eval(concatSources(ROOT, layerSources('core').concat(layerSources('bridge'))) + '; window.mod = { parseMiniCss: parseMiniCss, parseContent: parseContent, shownParts: shownParts };');
+w.eval(concatSources(ROOT, layerSources('core').concat(layerSources('bridge'))) + '; window.mod = { parseMiniCss: parseMiniCss, parseContent: parseContent, shownParts: shownParts, profileWords: profileWords, findFlagged: findFlagged };');
 const m = w.mod;
 
 const log = [];
@@ -24,6 +24,7 @@ const NO_STYLE = { bg: null, text: null, link: null, image: null, repeat: null }
  */
 function timed(parse) { const start = Date.now(), out = parse(); return { ms: Date.now() - start, out }; }
 
+(async () => {
 try {
   /* Premium background: results of valid and malformed files, guards included (ADR-0004) */
   const GODDESS = 'body { background-color: #9e9ffc; background-image: url(https://cdn.donmai.us/a.png); background-repeat: no-repeat; color: #666564; }\n.profile_text { color: #666564; }\na, a:visited, a:active { color: #5c8a8a; text-decoration: none; }\na:hover { color: #5c8a8a; text-decoration: underline; }\n';
@@ -101,6 +102,33 @@ try {
     JSON.stringify(tags) === JSON.stringify(TAGS_WANT) && emoticon[0].indexOf('sm://') < 0 && emoticon[0] !== 'a  b' && !emoticon[1].length && unclosed.ms <= BUDGET_MS,
     { tags, emoticon, ms: unclosed.ms });
 
+  /* Profile words refused by Chatango: the search splits refused groups until the words remain */
+  const words = m.profileWords(['Paris', null, 'Twinkle, twinkle! <a href="https://x.example/twink">Star</a>', 'paris\nSTAR']);
+  step('profile words: lowercase, split on spaces and punctuation, tags kept, no duplicates',
+    JSON.stringify([...words]) === JSON.stringify(['paris', 'twinkle', 'a', 'href', 'https', 'x', 'example', 'twink', 'star']), [...words]);
+  const filler = Array.from({ length: 120 }, (_, i) => 'word' + i);
+  const pool = filler.slice(0, 40).concat('twinkle', filler.slice(40, 90), 'sexy', filler.slice(90), 'w'.repeat(80));
+  const run = async (list, refuses, failAt) => {
+    const asked = [];
+    const ask = q => { asked.push(q); if (asked.length === failAt) return Promise.reject(new Error('overload')); return Promise.resolve(refuses.some(r => q.includes(r))); };
+    try { return { found: [...await m.findFlagged(list, ask, 60)], asked }; } catch (e) { return { error: e.message, asked }; }
+  };
+  const two = await run(pool, ['twink', 'sex']);
+  const clean = await run(pool, []);
+  const none = await run([], ['twink']);
+  const failed = await run(pool, ['twink'], 3);
+  const cases = {
+    found: JSON.stringify(two.found) === JSON.stringify(['twinkle', 'sexy']),
+    fewQueries: two.asked.length < 40,
+    maxChars: two.asked.concat(clean.asked).every(q => q.length <= 60 || q === 'w'.repeat(80)),
+    everyWordAsked: pool.every(w => clean.asked.some(q => q.split(' ').includes(w))),
+    cleanOnePass: clean.found.length === 0 && clean.asked.length === new Set(clean.asked).size,
+    empty: none.found.length === 0 && none.asked.length === 0,
+    stopsOnFailure: failed.error === 'overload' && failed.asked.length === 3
+  };
+  step('refused words: found by splitting refused groups, queries capped, stops on the first failure', Object.keys(cases).every(k => cases[k]),
+    { cases, asked: two.asked.length, found: two.found });
+
   console.log(log.join('\n'));
   process.exit(0);
 } catch (e) {
@@ -108,3 +136,4 @@ try {
   console.log('CRASH', e.stack);
   process.exit(1);
 }
+})();

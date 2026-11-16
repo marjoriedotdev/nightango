@@ -26,6 +26,7 @@ function ProfilePageLive() {
   var cr = useState(null), crop = cr[0], setCrop = cr[1];
   var up = useState(null), uploading = up[0], setUploading = up[1];
   var ml = useState(null), listing = ml[0], setListing = ml[1];
+  var wc = useState(null), wordCheck = wc[0], setWordCheck = wc[1];
   var avatarInput = useRef(null), bannerInput = useRef(null), bioInput = useRef(null), fullInput = useRef(null);
   var media = useFullProfileMedia();
   var dirty = JSON.stringify(draft) !== JSON.stringify(editable(base));
@@ -46,10 +47,17 @@ function ProfilePageLive() {
   useEffect(function () { if (base.loaded && listable(base)) liveBridge.meetListing().then(setListing); }, [base.loaded]);
   function recheckListing(sent) {
     var before = listing;
+    setWordCheck(null);
     if (!listable(sent)) { setListing(null); return; }
     liveBridge.meetListing().then(function (now) {
       if (before === 'listed' && now === 'hidden') app.ui.toast('Chatango hid your profile from Meet people after this save.', { tone: 'error' });
       setListing(now);
+    });
+  }
+  function findWords() {
+    setWordCheck({ busy: true });
+    liveBridge.findFlaggedWords([base.location, base.about, base.full]).then(function (words) { setWordCheck({ words: words }); }, function (e) {
+      setWordCheck({ error: e && e.reply ? e.message : "Couldn't reach Chatango. Try again." });
     });
   }
   // The Premium background arrives with mod1.xml, after the page opens.
@@ -148,7 +156,7 @@ function ProfilePageLive() {
               : draft.full === null ? null
                 : draft.full ? h(Frag, null, h(FullProfileFrame, { name: s.me, html: draft.full, media: media.on }), media.button ? h('div', null, media.button) : null)
                   : h('p', { className: 'muted', style: { margin: 0 } }, "You haven't written a full profile."))),
-        h(VisibilitySection, { meet: draft.dir, hidden: listing === 'hidden' && base.dir, disabled: locked, onChange: function (v) { set('dir', v); } }),
+        h(VisibilitySection, { meet: draft.dir, hidden: listing === 'hidden' && base.dir, wordCheck: wordCheck, fullRead: base.full !== null, onFindWords: findWords, disabled: locked, onChange: function (v) { set('dir', v); } }),
         h(VisitorsSection, { bio: base.about, draft: draft.about, onDraft: function (v) { set('about', v); }, disabled: locked })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),
