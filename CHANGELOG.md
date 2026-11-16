@@ -2,6 +2,18 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.37.0] - 2026-11-16
+
+### Added
+
+- Christmas decorations from December 18 to 26: a string of lights and a fir branch in the sky band, a star beside the moon, and avatars in a Santa hat, antlers or an elf hat. Snow falls under the northern sky only.
+
+### Changed
+
+- The sky follows the time of day: first light before sunrise and dusk in the evening in the dark theme, full daylight and golden hour in the light theme.
+- The stars of the sky band slowly turn around the pole star, or around the Southern Cross under the southern sky.
+- Calm sky also keeps the sky the same at every hour and stops the stars.
+
 ## [0.36.0] - 2026-11-14
 
 ### Added
