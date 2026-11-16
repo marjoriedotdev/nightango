@@ -223,6 +223,48 @@ function useUpdateCheck(loggedIn, toast) {
   }, [loggedIn]);
 }
 
+function skyHour() { var d = new Date(); return d.getHours() + d.getMinutes() / 60; }
+/*PROTOTYPE*/
+// Review of the hosted prototype: holds the sky at an hour of the day, minutes as its fraction, until the page reloads.
+window.showSkyAt = function (hour) {
+  skyHour = function () { return hour; };
+  window.dispatchEvent(new Event('torch-sky'));
+};
+/*END PROTOTYPE*/
+
+/**
+ * Keeps the sky on the device hour: sets on the root the shares of the early and late skies (skyAt), which the stylesheet mixes into the base sky.
+ * @param {{subscribe: function(Function): Function}} clock Minute clock of the application.
+ * @param {string} theme dark or light.
+ * @param {boolean} calm Calm sky: the sky keeps its base colors.
+ */
+function useSkyHour(clock, theme, calm) {
+  useEffect(function () {
+    var root = ROOT_EL;
+    if (calm) {
+      root.style.removeProperty('--sky-early');
+      root.style.removeProperty('--sky-late');
+      return;
+    }
+    function paint() {
+      var sky = skyAt(theme, skyHour());
+      root.style.setProperty('--sky-early', sky.early.toFixed(2) + '%');
+      root.style.setProperty('--sky-late', sky.late.toFixed(2) + '%');
+    }
+    paint();
+    var stop = clock.subscribe(paint);
+    /*PROTOTYPE*/
+    window.addEventListener('torch-sky', paint);
+    /*END PROTOTYPE*/
+    return function () {
+      stop();
+      /*PROTOTYPE*/
+      window.removeEventListener('torch-sky', paint);
+      /*END PROTOTYPE*/
+    };
+  }, [theme, calm]);
+}
+
 /**
  * Interface root: composes the hooks of the application and renders the shell, the dialogs and the toasts.
  * @param {{boot: ?Object}} props State handed by the prototype hook.
@@ -251,6 +293,7 @@ function Root(props) {
     return { store: store.store, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, drafts: drafts, clock: minuteClock(), keepUsers: keepUsers, get state() { return store.store.shown(); } };
   }, []);
   var theme = resolvedTheme(state.prefs, VIEWER_THEME);
+  useSkyHour(api.clock, theme, state.prefs.sky.calm);
   var app = useMemo(function () {
     return { state: state, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: theme, season: season };
   }, [state, o.navOpen, act.uploads, theme, season]);
