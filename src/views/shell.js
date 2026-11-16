@@ -78,8 +78,9 @@ function favoriteItem(app, route, on) {
 
 // Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames). The startup screen leaves New Year out.
 function BrandMark(p) {
-  var moon = useApp().state.prefs.sky.moon;
+  var app = useApp(), moon = app.state.prefs.sky.moon;
   return h('span', { className: 'brand-mark' }, h(T.Moon, { size: 30, label: true, phase: moon === 'auto' ? undefined : moon / 8 }),
+    app.season === 'christmas' ? h(SeasonStar) : null,
     p.startup ? null : h(NewYearMark, null));
 }
 
@@ -135,7 +136,7 @@ function Sidebar(p) {
   var onlineFriends = Object.keys(s.users).filter(function (n) { return n !== s.me && s.users[n].friend && s.users[n].status !== 'offline'; }).length;
   return h('nav', { className: 'sidebar', 'aria-label': 'Groups and messages' },
     h('div', { className: 'brand' },
-      app.season ? h(SeasonSky, { season: app.season }) : null,
+      app.season ? h(SeasonSky, { season: app.season, south: s.prefs.sky.south }) : null,
       h(BrandMark),
       h('span', { className: 'brand-name' }, 'Nightango'),
       h(MenuButton, {

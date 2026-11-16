@@ -56,16 +56,18 @@ function daySpan(days) {
   if (months < 12) return { n: months, unit: 'month' };
   return { n: Math.round(days / 365.25), unit: 'year' };
 }
-var SEASONS = ['halloween', 'winter', 'valentine'];
+var SEASONS = ['halloween', 'winter', 'christmas', 'valentine'];
 /**
  * Returns the season of a local date, or null outside every season: Halloween from October 24 to November 2,
- * winter from December 1 to January 6 (June 1 to July 6 in the southern hemisphere), Valentine's Day from February 10 to 14.
+ * winter from December 1 to January 6 (June 1 to July 6 in the southern hemisphere), Christmas from December 18 to 26
+ * in place of winter, Valentine's Day from February 10 to 14.
  * @param {Date} d Date read on the device.
  * @param {boolean} south Sky seen from the southern hemisphere.
  */
 function seasonOf(d, south) {
   var m = d.getMonth(), day = d.getDate(), winter = south ? 5 : 11;
   if ((m === 9 && day >= 24) || (m === 10 && day <= 2)) return 'halloween';
+  if (m === 11 && day >= 18 && day <= 26) return 'christmas';
   if (m === winter || (m === (winter + 1) % 12 && day <= 6)) return 'winter';
   if (m === 1 && day >= 10 && day <= 14) return 'valentine';
   return null;
