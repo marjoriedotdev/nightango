@@ -1315,6 +1315,19 @@ var liveBridge = (function () {
       });
     },
     /**
+     * Searches Meet people for one's own name to tell whether Chatango still lists the profile.
+     * @returns {Promise<string>} listed, hidden, or unknown if the reply does not establish it.
+     */
+    meetListing: function () {
+      var me = lower(C.user && C.user.name);
+      if (!ACCOUNT_NAME.test(me)) return Promise.resolve('unknown');
+      return postSearch({ query: me }).then(function (names) {
+        if (names.indexOf(me) >= 0) return 'listed';
+        // A full page without the name proves nothing: the search may match other names first.
+        return names.length < MEET_PAGE_SIZE ? 'hidden' : 'unknown';
+      }, function (e) { warn(e); return 'unknown'; });
+    },
+    /**
      * Public mini profile (mod1.xml) read like BetterChatango.
      * Fields: age from the birth date, gender, location and text.
      */

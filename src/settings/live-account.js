@@ -25,6 +25,7 @@ function ProfilePageLive() {
   var ph = useState(false), hasPhoto = ph[0], setHasPhoto = ph[1];
   var cr = useState(null), crop = cr[0], setCrop = cr[1];
   var up = useState(null), uploading = up[0], setUploading = up[1];
+  var ml = useState(null), listing = ml[0], setListing = ml[1];
   var avatarInput = useRef(null), bannerInput = useRef(null), bioInput = useRef(null), fullInput = useRef(null);
   var media = useFullProfileMedia();
   var dirty = JSON.stringify(draft) !== JSON.stringify(editable(base));
@@ -40,6 +41,9 @@ function ProfilePageLive() {
     }, function () { setFullFailed(true); });
   }
   useEffect(function () { if (base.full === null) fetchFull(); app.actions.loadProfile(s.me); }, []);
+  // Saved values only, within the age range the search sends: an account outside it would read as hidden.
+  var listable = base.loaded && base.dir && +base.age >= 13 && +base.age <= 99;
+  useEffect(function () { if (listable && listing === null) liveBridge.meetListing().then(setListing); }, [listable]);
   // The Premium background arrives with mod1.xml, after the page opens.
   var knownStyle = ownMiniStyle(me);
   useEffect(function () {
@@ -135,7 +139,7 @@ function ProfilePageLive() {
               : draft.full === null ? null
                 : draft.full ? h(Frag, null, h(FullProfileFrame, { name: s.me, html: draft.full, media: media.on }), media.button ? h('div', null, media.button) : null)
                   : h('p', { className: 'muted', style: { margin: 0 } }, "You haven't written a full profile."))),
-        h(VisibilitySection, { meet: draft.dir, disabled: locked, onChange: function (v) { set('dir', v); } }),
+        h(VisibilitySection, { meet: draft.dir, hidden: listing === 'hidden' && base.dir, disabled: locked, onChange: function (v) { set('dir', v); } }),
         h(VisitorsSection, { bio: base.about, draft: draft.about, onDraft: function (v) { set('about', v); }, disabled: locked })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
         h('h2', { id: 'pv-h', className: 'side-label' }, 'Preview'),

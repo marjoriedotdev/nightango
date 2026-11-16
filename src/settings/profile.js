@@ -37,10 +37,11 @@ function ProfilePage() {
 
 /**
  * Visibility of the user's own profile in Meet people.
- * @param {{meet: boolean, disabled: boolean, onChange: Function}} p Profile listed in Meet people, switch locked, receives the new value.
+ * @param {{meet: boolean, hidden: boolean, disabled: boolean, onChange: Function}} p Profile listed in Meet people, left out of the search by Chatango, switch locked, receives the new value.
  */
 function VisibilitySection(p) {
   return h(T.SettingsSection, { title: 'Visibility' },
+    p.hidden ? h('div', { className: 'tc-section-pad' }, h(T.Banner, { tone: 'warning', icon: 'info' }, 'Chatango is hiding your profile from Meet people.')) : null,
     h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other people on Chatango find you by age and location.', control: h(T.Switch, { checked: !!p.meet, disabled: p.disabled, onChange: function (e) { p.onChange(e.target.checked); } }) }));
 }
 
