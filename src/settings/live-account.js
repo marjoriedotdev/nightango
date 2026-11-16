@@ -42,8 +42,16 @@ function ProfilePageLive() {
   }
   useEffect(function () { if (base.full === null) fetchFull(); app.actions.loadProfile(s.me); }, []);
   // Saved values only, within the age range the search sends: an account outside it would read as hidden.
-  var listable = base.loaded && base.dir && +base.age >= 13 && +base.age <= 99;
-  useEffect(function () { if (listable && listing === null) liveBridge.meetListing().then(setListing); }, [listable]);
+  function listable(x) { return x.dir && +x.age >= 13 && +x.age <= 99; }
+  useEffect(function () { if (base.loaded && listable(base)) liveBridge.meetListing().then(setListing); }, [base.loaded]);
+  function recheckListing(sent) {
+    var before = listing;
+    if (!listable(sent)) { setListing(null); return; }
+    liveBridge.meetListing().then(function (now) {
+      if (before === 'listed' && now === 'hidden') app.ui.toast('Chatango hid your profile from Meet people after this save.', { tone: 'error' });
+      setListing(now);
+    });
+  }
   // The Premium background arrives with mod1.xml, after the page opens.
   var knownStyle = ownMiniStyle(me);
   useEffect(function () {
@@ -72,6 +80,7 @@ function ProfilePageLive() {
     }).then(function () {
       setSaving(false);
       app.ui.toast('Profile saved to Chatango.', { tone: 'success' });
+      recheckListing(sent);
     }, function (e) {
       setSaving(false);
       app.ui.toast(e && e.message ? e.message : "Chatango didn't save your profile.", { tone: 'error' });
