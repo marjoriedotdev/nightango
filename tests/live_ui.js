@@ -44,8 +44,6 @@ w.CSS = { supports: () => false };
 w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
 // The bridge polls BetterChatango's sockets every 2 s: the sign-in also runs a poll at a chosen moment.
 let pollSockets = null;
-const nativeSetInterval = w.setInterval;
-w.setInterval = (fn, ms) => { if (ms === 2000 && !pollSockets) pollSockets = fn; return nativeSetInterval.call(w, fn, ms); };
 
 /* ---------- Fake BetterChatango client ---------- */
 const sent = [], posts = [], calls = [];
@@ -60,7 +58,7 @@ w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
 // Diagnostic journal of the page code: the bridge gives it the account at sign-in and notes its connections there.
 const journal = [];
-w.__TORCH_JOURNAL__ = { limit: 1000, add: (k, m) => { journal.push({ t: Date.now(), k, m: String(m) }); }, signIn: noop, entries: () => journal.slice(), clear: () => { journal.length = 0; }, subscribe: () => noop };
+w.__TORCH_JOURNAL__ = { limit: 1000, add: (k, m) => { journal.push({ t: clock(), k, m: String(m) }); }, signIn: noop, entries: () => journal.slice(), clear: () => { journal.length = 0; }, subscribe: () => noop };
 // Like a browser WebSocket: a frame reaches onmessage only while the socket is open.
 const sockets = [];
 w.WebSocket = function (url) { this.url = url; this.readyState = 0; sockets.push(this); };
@@ -297,6 +295,53 @@ w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true
 
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
+
+/* ---------- Clock ---------- */
+// The app timers and Date.now follow real time on a clock that skip moves forward. React, loaded above, keeps the real timers.
+// A time the test hands to the app is read on this clock too: Node's own Date.now falls behind it at each skip.
+const nativeSetTimeout = w.setTimeout.bind(w), nativeClearTimeout = w.clearTimeout.bind(w);
+const timers = new Map();
+let ahead = 0, nextTimer = 1;
+const clock = () => Date.now() + ahead;
+/**
+ * Hands a timer to the page for the time left until it is due.
+ * @param {number} id Timer id.
+ */
+function arm(id) {
+  const t = timers.get(id);
+  t.native = nativeSetTimeout(() => {
+    if (t.every === undefined) timers.delete(id); else { t.at = clock() + t.every; arm(id); }
+    t.fn.apply(w, t.args);
+  }, Math.max(0, t.at - clock()));
+}
+/**
+ * Adds an app timer to the clock.
+ * @param {Function} fn Callback of the app.
+ * @param {number} ms Delay asked by the app.
+ * @param {Array} args Arguments passed to the callback.
+ * @param {number} [every] Period of an interval.
+ * @returns {number} Timer id.
+ */
+function addTimer(fn, ms, args, every) {
+  const id = nextTimer++;
+  timers.set(id, { at: clock() + (+ms || 0), fn, args, every });
+  arm(id);
+  return id;
+}
+/**
+ * Moves the clock forward to a time and hands the timers to the page again.
+ * @param {number} to Clock time to reach.
+ */
+function jump(to) {
+  if (to <= clock()) return;
+  ahead += to - clock();
+  [...timers.entries()].sort((a, b) => a[1].at - b[1].at || a[0] - b[0]).forEach(([id, t]) => { nativeClearTimeout(t.native); arm(id); });
+}
+w.Date.now = clock;
+w.setTimeout = (fn, ms, ...args) => addTimer(fn, ms, args);
+w.setInterval = (fn, ms, ...args) => { if (ms === 2000 && !pollSockets) pollSockets = fn; return addTimer(fn, ms, args, +ms || 0); };
+w.clearTimeout = w.clearInterval = id => { const t = timers.get(id); if (t) { nativeClearTimeout(t.native); timers.delete(id); } };
+
 w.eval(fs.readFileSync(S + '/torchds/project/components/bundle.js', 'utf8'));
 w.eval(fs.readFileSync(S + '/dist/app.js', 'utf8'));
 
@@ -304,6 +349,32 @@ w.eval(fs.readFileSync(S + '/dist/app.js', 'utf8'));
 const wait = ms => new Promise(r => setTimeout(r, ms));
 // At the limit, returns without an error: the next step judges and gives its detail.
 const until = async (cond, ms = 5000) => { for (const end = Date.now() + ms; !cond() && Date.now() < end;) await wait(10); };
+// Real time left to the page after a timer: an animation frame for the bridge operations, then the render and its effects.
+const SETTLE = 50;
+/**
+ * Moves the clock to the next app timer due by a time and lets the page run it.
+ * @param {number} end Clock time not to pass.
+ * @returns {Promise<boolean>} False when no timer is due by then.
+ */
+async function runNextTimer(end) {
+  const due = Math.min(...[...timers.values()].map(t => t.at));
+  if (!(due <= end)) return false;
+  jump(due);
+  await wait(SETTLE);
+  return true;
+}
+/**
+ * Moves the clock forward and lets the page run the app timers due on the way.
+ * @param {number} ms Time to skip.
+ */
+async function skip(ms) {
+  const end = clock() + ms;
+  while (await runNextTimer(end));
+  jump(end);
+  await wait(SETTLE);
+}
+// Like until on the clock: each app timer runs as soon as the one before has settled.
+const skipUntil = async (cond, ms = 5000) => { for (const end = clock() + ms; !cond() && clock() < end;) if (!await runNextTimer(end)) await wait(10); };
 const $ = s => d.querySelector(s), $$ = s => [...d.querySelectorAll(s)];
 function click(el) { if (!el) throw new Error('missing element'); el.dispatchEvent(new w.MouseEvent('click', { bubbles: true })); }
 function byText(sel, txt) { return $$(sel).find(e => e.textContent.trim() === txt) || $$(sel).find(e => e.textContent.includes(txt)); }
@@ -727,19 +798,19 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('a mention received in the group in front while the tab is hidden counts in the title, and is read when the tab comes back',
     tabAway === tabBefore + 1 && tabCount() === tabBefore, { tabBefore, tabAway, back: tabCount(), title: d.title });
   const connBanner = () => { const el = $('.conn-banner'); return el ? { phase: el.dataset.phase, text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
-  C.groups.test.socket.readyState = 3; await wait(2300);
+  C.groups.test.socket.readyState = 3; await skip(2300);
   const lostBanner = connBanner();
   // The bridge sees the socket at its next 2 s poll, and Reconnected only stays 2 s: a fixed delay can read it already gone.
-  C.groups.test.socket.readyState = 1; await until(() => (connBanner() || {}).phase === 'done');
+  C.groups.test.socket.readyState = 1; await skipUntil(() => (connBanner() || {}).phase === 'done');
   const backBanner = connBanner();
-  await until(() => !connBanner());
+  await skipUntil(() => !connBanner());
   step('connection banner goes from reconnecting to reconnected, then away',
     lostBanner && lostBanner.phase === 'trying' && lostBanner.text.includes('Reconnecting to #test') && !lostBanner.buttons.length
       && backBanner && backBanner.phase === 'done' && backBanner.text.includes('Reconnected to #test') && !connBanner(),
     { lostBanner, backBanner, after: connBanner() });
   // A loss while the page is hidden starts no attempt: the same state as a spent sequence, which takes 40 s.
   Object.defineProperty(d, 'visibilityState', { configurable: true, get: () => 'hidden' });
-  C.groups.test.socket.readyState = 3; await wait(2300);
+  C.groups.test.socket.readyState = 3; await skip(2300);
   delete d.visibilityState;
   const failedBanner = connBanner();
   const testConnects = calls.filter(c => c[0] === 'connect' && c[1] === 'test').length;
@@ -749,7 +820,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     failedBanner && failedBanner.phase === 'failed' && failedBanner.text.includes("Couldn't reconnect to #test") && JSON.stringify(failedBanner.buttons) === '["Try again","Reload"]'
       && retried.connects === 1 && !retried.cached && retried.banner && retried.banner.phase === 'trying',
     { failedBanner, retried });
-  C.groups.test.socket.readyState = 1; await wait(2300);
+  C.groups.test.socket.readyState = 1; await skip(2300);
 
   /* History */
   const historyWatcher = () => observers.find(x => x.targets.some(t => t.closest('.log')));
@@ -1431,7 +1502,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const zoeRow = $$('.convs .conv').find(x => x.querySelector('.conv-name') && x.querySelector('.conv-name').textContent === 'zoe');
   const zoeText = zoeRow ? zoeRow.textContent : '';
   step('friends rows show ASL and last message', zoeText.includes(ZOE_ASL) && zoeText.includes('See you at 8') && !zoeText.includes('Bold'), zoeText);
-  const nowS = Date.now() / 1000;
+  const nowS = clock() / 1000;
   pm('wl', ['zoe', String(nowS), 'on', '0', 'erin', String(nowS - 3 * 86400), 'off', '0', 'frank', String(nowS - 600), 'off', '0', 'abe', 'None', 'off', '0']); await until(() => !!convRow('frank') && !!convRow('abe'));
   const friendMeta = () => $$('.convs .conv').map(x => [x.querySelector('.conv-name').textContent, x.querySelector('.conv-meta').textContent, (x.querySelector('.conv-time') || {}).textContent || '']);
   const seen = friendMeta(), metaOf = n => (seen.find(x => x[0] === n) || [])[1] || '', timeOf = n => (seen.find(x => x[0] === n) || [])[2] || '';
@@ -1591,7 +1662,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('idle status frame', frame('idle:0').length === 1);
 
   /* Profile */
-  const NOW = Date.now() / 1000, KINDS = ['log', 'like', 'dislike', 'msg', 'refer'];
+  const NOW = clock() / 1000, KINDS = ['log', 'like', 'dislike', 'msg', 'refer'];
   const firstPage = Array.from({ length: 16 }, (_, i) => ({ user: i === 15 ? 'sentinel' : i === 5 ? '!anon5681' : 'visitor' + i, action: KINDS[i % 5], time: NOW - 600 * i - 0.25, msg: i % 5 === 3 ? 'Nice page' : undefined }));
   vissleReply = q => ({ action: 'activity', get: q.page === 1 ? firstPage : firstPage.slice(0, 3).map((x, i) => ({ user: 'older' + i, action: 'log', time: NOW - 86400 - i })) });
   const visitors = () => $('section[aria-label="Visitors"]') || d.createElement('section'), visitorRows = () => [...visitors().querySelectorAll('.lrow')].map(x => x.textContent);
@@ -1693,7 +1764,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Chatango Premium')); await wait(50);
   step('premium page has no purchase form', !!byText('.tc-banner', "doesn't take payments"));
   /* Premium expiry: premium frame of the private connection, reminder at most once per day per account */
-  const DAY = 86400000, later = Date.now() + 40 * DAY, soon = Date.now() + 2 * DAY;
+  const DAY = 86400000, later = clock() + 40 * DAY, soon = clock() + 2 * DAY;
   const reminders = () => $$('.toast').map(x => x.textContent).filter(t => t.indexOf('Your Chatango Premium ends on') === 0);
   const premiumView = () => ({
     status: ($$('.tc-row-title').find(x => /^(Premium until|No Premium)/.test(x.textContent)) || {}).textContent || null,
@@ -1917,7 +1988,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   /* Media of a sent PM: shown as soon as it is sent, without a duplicate when OK replays the BetterChatango archive */
   type($('.thread .tc-composer textarea'), 'Watch https://youtu.be/PLe_UgXBBCU'); key($('.thread .tc-composer textarea'), 'Enter'); await wait(50);
   const sentVideo = $$('.thread .embed-video').length;
-  pmRecords.push(pmRecord('kim', 'msg:marjorie:marjorie:unknown:' + (Date.now() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', 0));
+  pmRecords.push(pmRecord('kim', 'msg:marjorie:marjorie:unknown:' + (clock() / 1000 + 20).toFixed(1) + ':0:<n3366FF/><m v="1"><g x12s9900cc="4">Watch <i s="vid://yt:PLe_UgXBBCU" w="126" h="93"/></g></m>', 0));
   pm('OK', []); await wait(150);
   const watch = { sentVideo, videos: $$('.thread .embed-video').length, texts: $$('.thread .tc-msg-text').filter(x => x.textContent.indexOf('Watch') === 0).length };
   step('own pm media shows at once and is not duplicated by history', watch.sentVideo === 1 && watch.videos === 1 && watch.texts === 1, watch);
@@ -2002,7 +2073,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     pmRecord('gus', 'msg:gus:marjorie:unknown:1700000405.5:0:<n000/>ok', 1),
     pmRecord('gus', 'msg:gus:marjorie:unknown:1700000415.5:0:<n000/>ok', 1));
   C.database.pm = false;
-  C.private.socket.readyState = 3; await wait(2300);
+  C.private.socket.readyState = 3; await skip(2300);
   w.dispatchEvent(new w.Event('online')); await wait(50);
   pm('OK', []);
   pm('msgoff', ['gus', 'marjorie', 'unknown', '1700000420.5', '0', '<n000/>Missed you']); await wait(150);
@@ -2023,7 +2094,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   step('opening a conversation marks its history read', gusUnreadRecords() === 0, pmRecords.filter(r => r.target === 'gus'));
   const oks = $$('.thread .tc-msg-text').filter(x => x.textContent === 'ok').length;
   step('offline messages archived', !!pmConnect && pmConnect[2] === true && archived.length === 1 && archived[0][1] === true && oks === 2, { pmConnect, archived, oks });
-  C.private.socket.readyState = 1; await wait(2300);
+  C.private.socket.readyState = 1; await skip(2300);
 
   /* Private history in pages: the last 100 entries at OK, the 30 older ones on scroll, then the start of the history */
   for (let i = 1; i <= 130; i++) pmRecords.push(pmRecord('rhea', 'msg:rhea:marjorie:unknown:' + (1700001000 + i * 10) + '.5:0:<n000/>Page ' + i, 0));
@@ -2315,11 +2386,11 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const focusesOf = gid => calls.filter(c => c[0] === 'focus' && c[1] === gid).length;
   click(byText('.tc-nav', 'Private messages')); await wait(50);
   const auto0 = { test: connectsOf('test'), pm: connectsOf('private_message'), focus: focusesOf('test') };
-  C.groups.test.socket.readyState = 3; C.private.socket.readyState = 3; await wait(5500);
+  C.groups.test.socket.readyState = 3; C.private.socket.readyState = 3; await skip(5500);
   const auto1 = { test: connectsOf('test') - auto0.test, pm: connectsOf('private_message') - auto0.pm, focus: focusesOf('test') - auto0.focus };
-  C.private.socket.readyState = 1; await wait(13500);
+  C.private.socket.readyState = 1; await skip(13500);
   const auto2 = { test: connectsOf('test') - auto0.test, pm: connectsOf('private_message') - auto0.pm };
-  C.groups.test.socket.readyState = 1; await wait(2300);
+  C.groups.test.socket.readyState = 1; await skip(2300);
   step('automatic reconnect after a server drop, then after a failed attempt',
     auto1.test === 1 && auto1.pm === 1 && auto1.focus === 0 && auto2.test === 2 && auto2.pm === 1, { auto1, auto2 });
 
@@ -2331,16 +2402,16 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(50);
   connectHeld = true;
   hidePage();
-  C.groups.test.socket.readyState = 3; await until(failedPhase, 3000);
+  C.groups.test.socket.readyState = 3; await skipUntil(failedPhase, 3000);
   showPage();
   const slowFrom = { connects: connectsOf('test'), sockets: sockets.length, notes: journal.length };
   const slowNotes = () => journal.slice(slowFrom.notes).map(e => e.m);
   click(byText('.conn-banner button', 'Try again')); await wait(30);
   const slowSocket = sockets[slowFrom.sockets];
   if (slowSocket) { slowSocket.readyState = 1; slowSocket.receive('ok:marjorie::::1700000000:::0'); }
-  await until(() => slowNotes().some(m => m.startsWith('Could not connect to #test')), 15000);
+  await skipUntil(() => slowNotes().some(m => m.startsWith('Could not connect to #test')), 15000);
   // Past the next 2 s poll, which would start an immediate automatic attempt.
-  await wait(5500);
+  await skip(5500);
   const slow = { connects: connectsOf('test') - slowFrom.connects, socket: slowSocket ? slowSocket.readyState : null, cached: C.cache.connect.includes('test'), notes: slowNotes(), banner: connBanner() };
   connectHeld = false;
   step('a socket registered on ok stays open when its inited misses the bridge timeout, and no new attempt starts',
@@ -2351,20 +2422,20 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'test')); await wait(50);
   connectHeld = true;
   hidePage();
-  C.groups.test.socket.readyState = 3; await until(failedPhase, 3000);
+  C.groups.test.socket.readyState = 3; await skipUntil(failedPhase, 3000);
   showPage();
   const hungFrom = { connects: connectsOf('test'), sockets: sockets.length, notes: journal.length };
   click(byText('.conn-banner button', 'Try again')); await wait(30);
   const hungSocket = sockets[hungFrom.sockets];
   hidePage();
-  await until(failedPhase, 15000);
+  await skipUntil(failedPhase, 15000);
   showPage();
   const hung = { connects: connectsOf('test') - hungFrom.connects, socket: hungSocket ? hungSocket.readyState : null, cached: C.cache.connect.includes('test'), notes: journal.slice(hungFrom.notes).map(e => e.m), banner: connBanner() };
   connectHeld = false;
   const tryAgain = byText('.conn-banner button', 'Try again');
   if (tryAgain) { click(tryAgain); await wait(30); }
   hung.retried = connectsOf('test') - hungFrom.connects;
-  C.groups.test.socket.readyState = 1; await until(() => !connBanner());
+  C.groups.test.socket.readyState = 1; await skipUntil(() => !connBanner());
   step('an attempt without an answer fails after the bridge timeout, closes its socket and is noted, then Try again starts a new one',
     hung.connects === 1 && hung.socket === 3 && !hung.cached && hung.notes.includes('Could not connect to #test: no answer after 10 s') && hung.banner && hung.banner.phase === 'failed' && hung.retried === 2,
     hung);
@@ -2373,7 +2444,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'newroom')); await wait(50);
   connectHeld = true;
   hidePage();
-  C.groups.newroom.socket.readyState = 3; await until(failedPhase, 3000);
+  C.groups.newroom.socket.readyState = 3; await skipUntil(failedPhase, 3000);
   showPage();
   const leaveFrom = { sockets: sockets.length, calls: calls.length };
   click(byText('.conn-banner button', 'Try again')); await wait(30);
@@ -2397,7 +2468,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* A group BetterChatango never connects at startup: disconnected once the connection delay has passed, with Try again and no automatic attempt */
   SB.renderGroup({ group: 'lagroom', header: 'Lagroom' });
-  await wait(12500);
+  await skip(12500);
   click(byText('.tc-nav', 'lagroom')); await wait(50);
   const neverUp = { banner: connBanner(), connects: calls.filter(c => c[0] === 'connect' && c[1] === 'lagroom').length };
   step('a group whose startup connection never opens shows as disconnected with Try again, without an automatic attempt',
@@ -2432,24 +2503,24 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const overlay = () => { const el = $('#layer [role="alertdialog"]'); return el ? { text: el.textContent, buttons: [...el.querySelectorAll('button')].map(b => b.textContent) } : null; };
   const connects = gid => calls.filter(c => c[0] === 'connect' && c[1] === gid).length;
   C.private.socket.readyState = 3;
-  pm('kickingoff', []); await wait(2300);
+  pm('kickingoff', []); await skip(2300);
   const kicked = overlay();
   const pmConnects = connects('private_message');
   if (kicked) { click(byText('[role="alertdialog"] button', 'Reconnect here')); await wait(30); }
   const hereAsked = connects('private_message') === pmConnects + 1;
-  C.private.socket.readyState = 1; await wait(2300);
+  C.private.socket.readyState = 1; await skip(2300);
   const afterHere = overlay();
   w.dispatchEvent(new w.Event('offline')); await wait(50);
   const offline = overlay();
-  C.groups.test.socket.readyState = 3; await wait(2300);
+  C.groups.test.socket.readyState = 3; await skip(2300);
   const testConnects2 = connects('test');
   w.dispatchEvent(new w.Event('online')); await wait(50);
   const onlineReconnects = connects('test') - testConnects2;
-  Object.keys(C.groups).forEach(k => { C.groups[k].socket.readyState = 3; }); C.private.socket.readyState = 3; await wait(2300);
+  Object.keys(C.groups).forEach(k => { C.groups[k].socket.readyState = 3; }); C.private.socket.readyState = 3; await skip(2300);
   const banner = () => { const el = $('.session-banner'); return el ? el.textContent : null; };
   const lost = { dialog: overlay(), banner: banner(), inert: d.getElementById('app').hasAttribute('inert') };
   // The first attempt starts right away and fails on the closed sockets: the banner then counts down to the second one.
-  await until(() => /Reconnecting in \d+ s/.test(banner() || ''), 5000);
+  await skipUntil(() => /Reconnecting in \d+ s/.test(banner() || ''), 5000);
   const lostWaiting = banner();
   pm('DENIED', []); await wait(50);
   const denied = overlay();
