@@ -76,6 +76,7 @@ function GroupView(p) {
   var a8 = useState(false), infoOpen = a8[0], setInfoOpen = a8[1];
   var a10 = useState(false), colorOpen = a10[0], setColorOpen = a10[1];
   var a11 = useState(false), sharedOpen = a11[0], setSharedOpen = a11[1];
+  var a12 = useState(false), badgeOpen = a12[0], setBadgeOpen = a12[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
   // Side by side, the members open as a sheet: a right column would leave no room for the messages.
   if (p.compact) column = { open: false, pressed: null, toggle: function () { setInfoOpen(true); } };
@@ -255,6 +256,7 @@ function GroupView(p) {
             popOutItem(app, { view: 'group', id: g.id }),
             spacesItem(app, { view: 'group', id: g.id }),
             { label: 'Group color…', icon: 'palette', onSelect: function () { setColorOpen(true); } },
+            LIVE && staff ? { label: 'Your badge…', icon: 'shield', onSelect: function () { setBadgeOpen(true); } } : null,
             { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com', { tone: ok ? 'success' : 'error' }); }); } },
             { divider: true },
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
@@ -277,6 +279,7 @@ function GroupView(p) {
     column.open ? h(MembersPanel, { g: g }) : null,
     infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null,
     colorOpen ? h(GroupColorDialog, { g: g, onClose: function () { setColorOpen(false); } }) : null,
+    badgeOpen ? h(OwnBadgeDialog, { g: g, onClose: function () { setBadgeOpen(false); } }) : null,
     sharedOpen ? h(SharedMediaDialog, {
       where: '#' + g.id, messages: g.messages.filter(function (m) { return m.kind === 'msg' && shown(m) && !hiddenByChannel(m) && !(isHiddenAuthor(s, m.author) && !revealed[m.id]); }),
       authorOf: groupAuthorOf, onJump: function (id) { var o = findMsg(g, id); if (o) jumpTo(o); }, onClose: function () { setSharedOpen(false); }
@@ -295,6 +298,23 @@ function GroupColorDialog(p) {
       h(T.Button, { key: 'd', variant: 'primary', onClick: p.onClose }, 'Done')
     ]
   }, h('div', { className: 'dialog-body' }, h(AccentSwatches, { label: 'Group color', value: g.accent, fallback: app.state.prefs.accent, onChange: set })));
+}
+
+/**
+ * Picks the badge sent with the user's messages in a live group, or says why the group offers none.
+ * @param {{g: Object, onClose: Function}} p Live group and closing of the dialog.
+ */
+function OwnBadgeDialog(p) {
+  var app = useApp(), g = p.g, choices = badgeChoices(g, app.state.me);
+  return h(Dialog, {
+    title: 'Your badge', onClose: p.onClose,
+    description: choices.length ? 'It shows next to your name on the messages you send in #' + g.id + ' from now on. Messages already sent keep theirs.'
+      : '#' + g.id + " doesn't let moderators pick their badge. This is set in the group's settings on Chatango.",
+    footer: [h(T.Button, { key: 'd', variant: 'primary', onClick: p.onClose }, 'Done')]
+  }, choices.length ? h('div', { className: 'dialog-body' }, h(T.SegmentedControl, {
+    label: 'Your badge', value: sentBadge(g, app.state.me), onChange: function (b) { app.actions.setOwnBadge(g.id, b); },
+    options: choices.map(function (b) { return { value: b, label: b === 'none' ? 'Hidden' : ROLE_LONG[b] }; })
+  })) : null);
 }
 
 /**

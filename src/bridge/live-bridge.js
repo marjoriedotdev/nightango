@@ -954,7 +954,7 @@ var liveBridge = (function () {
      * Sends a group message or the edit of a message.
      * @param {string} gid Target group.
      * @param {string} text Typed text.
-     * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string, style: ?Object}} opts Reply, edited original or plain-text quote, channel and own style.
+     * @param {{replyId: ?string, editId: ?string, quote: ?string, channel: ?string, badge: ?string, style: ?Object}} opts Reply, edited original or plain-text quote, channel, own badge and own style.
      * @returns {?Object} The message's own style read from the body built by BetterChatango, null if nothing was sent.
      */
     send: function (gid, text, opts) {
@@ -965,8 +965,8 @@ var liveBridge = (function () {
       try { built = groupBody(gid, text, opts); } catch (e) { warn(e); return null; }
       if (!built) return null;
       var failure = opts.editId ? "Your message wasn't edited." : opts.replyId ? "Your reply wasn't sent." : opts.quote ? "Your quote wasn't sent." : "Your message wasn't sent.";
-      var user = (C.groups[gid] && C.groups[gid].user) || {};
-      var flag = (CHANNEL_FLAG[opts.channel] || 0) + (parseInt(user.badge, 10) || 0);
+      // BetterChatango adds the badge of its own picker (inject.js:5175), which Nightango replaces.
+      var flag = (CHANNEL_FLAG[opts.channel] || 0) + (BADGE_FLAG[opts.badge] || 0);
       if (!send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure)) return null;
       lastSent[gid] = text;
       return built.style;

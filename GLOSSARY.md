@@ -102,6 +102,10 @@ Group message republished at a regular interval.
 Member to whom a group owner gave moderation rights, chosen one by one.
 _Avoid_: mod (in prose), staff
 
+**Badge**:
+Moderator, Administrator or Owner mark carried by a group message in its flag, which every member sees. A moderator picks theirs when the group lets moderators choose. Members who are not staff learn roles only from badges.
+_Avoid_: role (the rights held in the group, which staff read from the moderator list)
+
 **Slow mode**:
 Minimum delay enforced between two messages from the same member in a group.
 _Avoid_: rate limit (in prose)

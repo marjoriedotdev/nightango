@@ -57,9 +57,13 @@ function visitorPage(items, get) {
 }
 
 /* Chatango bits, read in the BetterChatango client (chatango.flags) and cross-checked with chadango and chatango-lib. */
-var GROUP_FLAG = { NOANONS: 4, NOCOUNTER: 16, NOIMAGES: 32, NOLINKS: 64, NOVIDEOS: 128, CHANNELSDISABLED: 8192, NLP_SINGLEMSG: 16384, NLP_MSGQUEUE: 32768, BROADCAST_MODE: 65536, IS_CLOSED: 262144, NLP_NGRAM: 2097152, NO_PROXIES: 4194304 };
+var GROUP_FLAG = { NOANONS: 4, NOCOUNTER: 16, NOIMAGES: 32, NOLINKS: 64, NOVIDEOS: 128, CHANNELSDISABLED: 8192, NLP_SINGLEMSG: 16384, NLP_MSGQUEUE: 32768, BROADCAST_MODE: 65536, IS_CLOSED: 262144, MODS_CHOOSE_VISIBILITY: 1048576, NLP_NGRAM: 2097152, NO_PROXIES: 4194304 };
 var CHANNEL_FLAG = { red: 256, blue: 2048, mod: 32768 };
 var MSG_FLAG = { PREMIUM: 4, BG_ON: 8, MOD_ICON: 64, STAFF_ICON: 128 };
+// Badges of the BetterChatango picker, sent in the flag of each group message (client.html:261-272).
+var BADGE_FLAG = { mod: MSG_FLAG.MOD_ICON, admin: MSG_FLAG.STAFF_ICON, owner: MSG_FLAG.MOD_ICON | MSG_FLAG.STAFF_ICON };
+// IS_STAFF moderator right: BetterChatango offers the administrator badge to a moderator who has it.
+var IS_STAFF_RIGHT = 262144;
 // Chatango fonts under their Chatango name, in the order of their number (0 to 8), the one used in the <f x…="n"> and <g x…="n"> tags.
 var FONT_FACES = ['Arial', 'Comic', 'Georgia', 'Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times', 'Typewriter'];
 

@@ -458,7 +458,7 @@ function useActions(k) {
    * @returns {boolean} True if the bridge emitted the frame.
    */
   function sendStyled(gid, text, opts, outcome) {
-    var style = liveBridge.send(gid, text, Object.assign({ style: stateRef.current.ownStyle }, opts));
+    var s = stateRef.current, style = liveBridge.send(gid, text, Object.assign({ style: s.ownStyle, badge: sentBadge(s.groups[gid], s.me) }, opts));
     if (style) setOwnStyle(style); else if (outcome) messageFailed(gid, outcome);
     if (style) update(function (d) { var L = d.groups[gid].live; L.cooldown = L.rate > 0 ? { until: Date.now() + L.rate * 1000, refused: false } : null; });
     return !!style;
@@ -710,6 +710,7 @@ function useActions(k) {
       liveBridge.unban(gid, b);
     };
     actions.unbanEntry = function (gid, b) { liveBridge.unban(gid, b); };
+    actions.setOwnBadge = function (gid, badge) { groupUpdate(update, gid, function (g) { g.live.ownBadge = badge; }); };
     actions.unbanAll = function (gid) { liveBridge.unbanAll(gid); };
     actions.setClosed = function (gid, closed) { liveBridge.setFlags(gid, closed ? GROUP_FLAG.IS_CLOSED : 0, closed ? 0 : GROUP_FLAG.IS_CLOSED); };
     actions.clearGroup = function (gid) { liveBridge.clearAll(gid); };

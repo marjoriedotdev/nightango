@@ -2186,6 +2186,29 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
       && JSON.stringify(hidden.rows) === JSON.stringify({ oldest: 'Admin', hidden: '', hello: 'Mod' }),
     hidden);
 
+  /* Own badge: picked where the group lets moderators choose, sent in the flag of each message */
+  C.groups.mybadge = fakeGroup();
+  SB.renderGroup({ group: 'mybadge', header: 'My badge' });
+  g('ok', 'mybadge', ['dana', '', '', '', '1700000000', '', 'marjorie,' + MOD, String(1 << 20)]);
+  g('inited', 'mybadge', []);
+  await until(() => !!byText('.tc-nav', 'mybadge'));
+  click(byText('.tc-nav', 'mybadge')); await wait(50);
+  click($('button[aria-label="Group options"]')); await wait(30);
+  click(menuItem('Your badge')); await wait(50);
+  const badgePicks = $$('.dialog .tc-seg button').map(b => b.textContent);
+  click(byText('.dialog .tc-seg button', 'Moderator')); await wait(30);
+  click(byText('.dialog button', 'Done')); await wait(30);
+  const badgeTa = $('.tc-composer textarea');
+  type(badgeTa, 'With badge'); key(badgeTa, 'Enter'); await wait(30);
+  const withBadge = frame('bm:').pop() || '';
+  const keptBadge = (JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').ownBadges || {}).mybadge;
+  g('groupflagsupdate', 'mybadge', ['0']); await wait(30);
+  type(badgeTa, 'No choice'); key(badgeTa, 'Enter'); await wait(30);
+  const noChoice = frame('bm:').pop() || '';
+  step('a moderator picks a badge the group lets them carry, kept in this browser, and it rides on the flag of each message until the group stops letting moderators choose',
+    JSON.stringify(badgePicks) === JSON.stringify(['Hidden', 'Moderator']) && /^bm:[a-z0-9]+:64:.*With badge$/.test(withBadge) && keptBadge === 'mod' && /^bm:[a-z0-9]+:0:.*No choice$/.test(noChoice),
+    { badgePicks, withBadge, keptBadge, noChoice });
+
   /* Posting limits: slow mode read on join, a message refused as too fast, a temporary ban, the bypass right */
   C.groups.slow = fakeGroup();
   SB.renderGroup({ group: 'slow', header: 'Slow' });
