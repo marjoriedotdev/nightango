@@ -237,7 +237,9 @@ function GroupView(p) {
         // A pane beside or a floating window has no navigation of its own.
         p.onClose ? null : h(MobileNavButton, null),
         h(p.onClose ? 'h2' : 'h1', { className: 'pane-title' }, g.id),
-        g.topic ? h(Frag, null, h('span', { className: 'vsep' }), h('p', { className: 'topic' }, g.topic)) : null,
+        // The member column shows the full description: once open, the cut one in the header has nothing left to open.
+        g.topic ? h(Frag, null, h('span', { className: 'vsep' }), column.open ? h('p', { className: 'topic' }, g.topic)
+          : h('button', { type: 'button', className: 'topic topic-btn', 'aria-label': 'Show the full description of #' + g.id, onClick: column.toggle }, g.topic)) : null,
         // The topic pushes the buttons to the right on desktop: without one, this spacer does it.
         h('span', { className: g.topic ? 'grow only-mobile' : 'grow' }),
         // On mobile only the number stays visible: the accessible name keeps "online".

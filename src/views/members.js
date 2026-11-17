@@ -48,7 +48,15 @@ var MemberRow = React.memo(function MemberRow(p) {
 });
 
 /**
- * Member column of a group.
+ * Full description of a group, which its header cuts to one line.
+ * @param {{g: Object}} p Shown group.
+ */
+function GroupDescription(p) {
+  return p.g.topic ? h('div', { className: 'kv' }, h('h3', null, 'Description'), h('p', { className: 'about', dir: 'auto' }, bidiText(p.g.topic))) : null;
+}
+
+/**
+ * Member column of a group, under the group's description.
  * @param {{g: Object}} p Shown group.
  */
 function MembersPanel(p) {
@@ -56,7 +64,7 @@ function MembersPanel(p) {
   return h('aside', { className: 'col members', 'aria-label': 'Members of ' + p.g.id },
     useApp().season === 'halloween' ? h(SeasonWeb) : null,
     columnHeader('Members'),
-    h('div', { ref: scrollRef, className: 'scroll' }, h(MembersList, { g: p.g, scrollRef: scrollRef })));
+    h('div', { ref: scrollRef, className: 'scroll' }, h(GroupDescription, { g: p.g }), h(MembersList, { g: p.g, scrollRef: scrollRef })));
 }
 
 /**
@@ -70,7 +78,7 @@ function GroupInfoSheet(p) {
       h('h2', { className: 'grow' }, g.id),
       h(T.IconButton, { icon: 'x', label: 'Close', onClick: p.onClose })),
     h('div', { ref: scrollRef, className: 'scroll' },
-      g.topic ? h('div', { className: 'kv' }, h('h3', null, 'Description'), h('p', { className: 'about', dir: 'auto' }, bidiText(g.topic))) : null,
+      h(GroupDescription, { g: g }),
       h('div', { className: 'kv' }, h('h3', null, 'Members')),
       h(MembersList, { g: g, scrollRef: scrollRef })));
 }
