@@ -52,16 +52,16 @@ function VisibilitySection(p) {
  * @param {?Object} p.mini Background as miniStyleOf returns it.
  */
 function ProfilePreviewCard(p) {
-  var mini = p.mini, cover = useMiniCover(mini), bg = mini ? mini.bg : 'var(--subtle)';
-  return h('div', { style: Object.assign(mini ? miniSkin(mini) : {}, { border: '1px solid var(--border)', borderRadius: 12, background: bg, overflow: 'hidden', overflowWrap: 'anywhere' }) },
-    h('div', { style: { height: 64, background: mini ? 'var(--hover-2)' : 'var(--selected)' } },
-      cover.shown ? h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer', style: { display: 'block', width: '100%', height: '100%', objectFit: 'cover' } }) : null),
-    h('div', { style: { padding: '0 18px 18px', marginTop: -32 } },
-      h(T.Avatar, { name: p.name, size: 64, style: { border: '4px solid ' + bg, boxSizing: 'content-box' } }),
-      h('p', { style: { margin: '8px 0 0', fontSize: 'var(--font-size-title-md)', fontWeight: 600 } }, p.name),
-      p.meta ? h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-body-sm)' } }, p.meta) : null,
-      p.about ? h('div', { style: { marginTop: 12 } }, h(RichText, { html: p.about, bg: mini ? mini.bg : null, link: mini ? mini.link : null })) : h('p', { className: 'about', style: { marginTop: 12 } }, 'No bio yet.'),
-      mini ? coverReveal(cover, mini) : null));
+  var mini = p.mini, cover = useMiniCover(mini);
+  // Same markup as ProfileSummary: the preview has to look like the card other members open.
+  return h('div', { className: 'profile-preview', style: mini ? miniSkin(mini) : null },
+    cover.shown ? h('div', { className: 'profile-cover' }, h('img', { src: cover.image, alt: '', referrerPolicy: 'no-referrer' })) : null,
+    h('div', { className: 'profile-card' },
+      h(T.Avatar, { name: p.name, size: 72 }),
+      h('p', { className: 'profile-name' }, p.name),
+      p.meta ? h('span', { className: 'muted profile-line' }, p.meta) : null,
+      mini ? coverReveal(cover, mini) : null),
+    h('div', { className: 'kv' }, p.about ? h(RichText, { html: p.about, bg: mini ? mini.bg : null, link: mini ? mini.link : null }) : h('p', { className: 'about muted' }, 'No bio yet.')));
 }
 
 // BetterChatango patterns copied as is, including the unescaped dot of vissle.me (inject.js:1472, 1490).
