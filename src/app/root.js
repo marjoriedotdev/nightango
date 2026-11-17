@@ -131,12 +131,13 @@ function useDisplayPrefs(prefs) {
   var rerender = useState(0)[1];
   // Read on each render: a page left open past the last day of a season loses its decorations without a reload.
   var season = prefs.sky.season ? seasonOf(new Date(), prefs.sky.south) : null;
+  var theme = resolvedTheme(prefs, VIEWER_THEME);
   useEffect(function () {
     var root = ROOT_EL;
     if (prefs.theme === 'dark' || prefs.theme === 'light') root.setAttribute('data-theme', prefs.theme);
     else if (VIEWER_THEME) root.setAttribute('data-theme', VIEWER_THEME);
     else root.removeAttribute('data-theme');
-    var acc = accentTokens(prefs.accent);
+    var acc = accentTokens(accentOf(prefs, theme));
     root.style.setProperty('--accent', acc.accent);
     root.style.setProperty('--on-accent', acc.onAccent);
     root.style.setProperty('--accent-text-d', acc.text.dark);
@@ -150,7 +151,7 @@ function useDisplayPrefs(prefs) {
     root.classList.toggle('moon-south', !!prefs.sky.south);
     SEASONS.forEach(function (id) { root.classList.toggle('season-' + id, season === id); });
     storageSet(PREFS_KEY, prefs);
-  }, [prefs, season]);
+  }, [prefs, season, theme]);
   useEffect(function () {
     var mq; try { mq = window.matchMedia('(prefers-color-scheme: light)'); } catch (e) { return; }
     function onChange() { rerender(function (n) { return n + 1; }); }

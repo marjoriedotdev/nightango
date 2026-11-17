@@ -1,5 +1,5 @@
 function AppearancePage() {
-  var app = useApp(), pr = usePref(), prefs = app.state.prefs;
+  var app = useApp(), pr = usePref(), prefs = app.state.prefs, accent = accentOf(prefs, app.theme);
   var md = useState(function () { return LIVE ? liveBridge.setting('markdown') : null; }), markdown = md[0], setMarkdown = md[1];
   var themes = [
     ['dark', 'Dark', ['#0e1629', '#080d1b', '#34446a', '#2b3a5f', '#1b2747']],
@@ -34,7 +34,7 @@ function AppearancePage() {
           thumb(t[2]), h('span', { className: 'pick-title' }, t[1]));
       }))),
     h(T.SettingsSection, { title: 'Accent color', description: 'Buttons, mentions and unread markers. Text on it stays readable.', padded: true },
-      h(AccentSwatches, { label: 'Accent color', value: prefs.accent, fallback: prefs.accent, onChange: function (v) { pr.set('accent', v); } })),
+      h(AccentSwatches, { label: 'Accent color', value: accent, fallback: accent, onChange: function (v) { pr.set('accent', v); } })),
     h(T.SettingsSection, { title: 'Sky', description: 'Drawn on your device. Nothing is downloaded.' },
       h(T.SettingRow, {
         title: 'Moon', description: "Next to the Nightango name. Day dividers show each night's moon.",
