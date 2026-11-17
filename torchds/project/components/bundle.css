@@ -174,3 +174,5 @@ label.tc-row{cursor:pointer}
 .tc-fade-in{animation:tc-fade-in var(--duration-base) var(--ease-out)}
 @keyframes tc-fade-in{from{opacity:0}}
 @media (prefers-reduced-motion: reduce){.tc-skeleton,.tc-spinner,.tc-fade-in{animation:none}.tc-skeleton{background-image:none}}
+/* Touch: the main targets reach size-touch. */
+@media (pointer:coarse){.tc-btn{min-height:var(--size-touch)}.tc-ib{min-width:var(--size-touch);min-height:var(--size-touch)}.tc-nav{height:var(--size-touch)}.tc-send{width:var(--size-touch);height:var(--size-touch)}.tc-seg button{height:36px}.tc-msg-actions .tc-ib{min-width:36px;min-height:36px}.tc-ib-count{top:2px;right:0}}

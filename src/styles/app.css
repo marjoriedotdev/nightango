@@ -450,7 +450,16 @@ h1,h2,h3{text-wrap:balance}
   .conv-row:hover .conv-more,.conv-row:focus-within .conv-more,.conv-row.menu-open .conv-more{opacity:1}
   .conv-row:hover :is(.conv-time,.conv-fav),.conv-row:focus-within :is(.conv-time,.conv-fav),.conv-row.menu-open :is(.conv-time,.conv-fav){opacity:0}
 }
-@media (pointer:coarse){.tc-input,.tc-composer textarea,.pal-input{font-size:16px}}
+@media (pointer:coarse){
+  .tc-input,.tc-composer textarea,.pal-input{font-size:16px}
+  .mrow,.searchbtn,.pillbtn,.pal-item,.navlist .skel-row,.members-list .skel-row{height:var(--size-touch)}
+  .menu button,.suggest-item{min-height:var(--size-touch)}
+  .sec-label{min-height:36px}
+  .tab,.space-chip{height:36px}
+  .chan-trigger{min-width:var(--size-touch)}
+  /* A star over a thumbnail keeps its size: at size-touch it would cover the picture. */
+  .media-star{min-width:0;min-height:0}
+}
 .tc-seg button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 24px;text-align:center;color:var(--text-3)}
 .empty h2,.recovery h1{margin:0;color:var(--text);font-family:var(--font-display);font-size:var(--font-size-display-md);line-height:30px;font-weight:400}
