@@ -230,13 +230,9 @@ h1,h2,h3{text-wrap:balance}
 .chan-msg,.chan-msg:hover,.cmsg.chan-msg{background:linear-gradient(90deg,color-mix(in srgb,var(--chan) 22%,transparent),color-mix(in srgb,var(--chan) 12%,transparent) 45%,transparent)}
 /* A channel message that mentions the viewer: the channel color on the left, then the mention light. */
 .chan-msg.tc-msg-mention,.chan-msg.tc-msg-mention:hover{background:linear-gradient(90deg,color-mix(in srgb,var(--chan) 26%,transparent),var(--accent-soft) 50%,transparent)}
-/* It keeps the channel's rounded band instead of the mention's full width, so that it sits inside the channel's block. */
-.chan-msg.tc-msg-mention{margin:0 var(--space-2);padding-left:var(--space-3);padding-right:var(--space-3);border-radius:var(--radius-xl)}
-.cmsg.chan-msg.tc-msg-mention{border-radius:var(--radius-md)}
-.chan-msg.tc-msg-mention .tc-msg-actions{right:var(--space-3)}
-/* Rows whose background continues into a neighbour: the selectors match the specificity of the channel mention band above. */
-.msg-join-prev,.chan-msg.msg-join-prev,.cmsg.chan-msg.msg-join-prev{border-top-left-radius:0;border-top-right-radius:0}
-.msg-join-next,.chan-msg.msg-join-next,.cmsg.chan-msg.msg-join-next{border-bottom-left-radius:0;border-bottom-right-radius:0}
+/* Rows whose background continues into a neighbour. */
+.msg-join-prev{border-top-left-radius:0;border-top-right-radius:0}
+.msg-join-next{border-bottom-left-radius:0;border-bottom-right-radius:0}
 .chan-trigger{background:var(--hover-2)}
 .ignored-row{display:flex;align-items:center;gap:8px;padding:4px 20px 4px 68px;color:var(--text-3);font-size:var(--font-size-caption)}
 .jump{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:5;display:inline-flex;align-items:center;gap:6px;height:var(--size-control-md);padding:0 14px;border:0;border-radius:var(--radius-full);background:var(--raised);color:var(--text);font-size:var(--font-size-control);font-weight:500;box-shadow:var(--shadow-floating);cursor:pointer;animation:tc-fade-in var(--duration-base) var(--ease-out)}
@@ -621,8 +617,6 @@ h1,h2,h3{text-wrap:balance}
   .suggest{left:var(--space-3);right:var(--space-3)}
   .chan-trigger{width:var(--size-control-md);padding:0;justify-content:center}
   .tc-msg,.cmsg{margin:0 var(--space-1);padding-left:var(--space-3);padding-right:var(--space-3)}
-  .tc-msg-mention,.cmsg.tc-msg-mention{margin:0;padding-left:var(--space-4);padding-right:var(--space-4)}
-  .chan-msg.tc-msg-mention,.cmsg.chan-msg.tc-msg-mention{margin:0 var(--space-1);padding-left:var(--space-3);padding-right:var(--space-3)}
 }
 @media (max-width:640px){.grid3,.grid2{grid-template-columns:1fr}}
 

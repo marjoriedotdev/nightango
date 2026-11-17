@@ -72,7 +72,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 
 ## States and behavior
 
-- Hover: `hover` on rows, `hover-2` on buttons. A message under the pointer is a rounded `subtle` band inside the panel, while a mention keeps the full width for its light. Both are veils, so they show on every surface, a menu on `raised` included. Current item: moonlight (`moon-soft`). Pressed toggles: `selected` plus `aria-pressed`. A secondary button is a tonal fill, `hover-2` at rest and `selected` under the pointer, never an outline.
+- Hover: `hover` on rows, `hover-2` on buttons. A message under the pointer is a rounded `subtle` band inside the panel, and a mention lights the same band. Neighbour rows lit the same way join into one block. Both are veils, so they show on every surface, a menu on `raised` included. Current item: moonlight (`moon-soft`). Pressed toggles: `selected` plus `aria-pressed`. A secondary button is a tonal fill, `hover-2` at rest and `selected` under the pointer, never an outline.
 - A filter that stays on screen is a chip with `aria-pressed` (All and Unread, the spaces). Views that replace one another use a `SegmentedControl`. A chosen option among pictures (theme, accent color) carries a 2px ring in `text`, never the accent.
 - Local preferences (theme, notifications, density) save on change and say so in the page description. Changes that go to Chatango (profile, group settings, roles) collect in a `SaveBar` and are saved together.
 - Destructive actions ask for confirmation in a dialog that repeats the consequence.
