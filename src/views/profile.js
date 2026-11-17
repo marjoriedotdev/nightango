@@ -40,7 +40,7 @@ function miniSkin(mini) {
   var soft = ensureContrast(rgbToHex(mix(hexToRgb(mini.text), hexToRgb(mini.bg), 0.3)), mini.bg, 4.5);
   return {
     backgroundColor: mini.bg, color: mini.text, '--raised': mini.bg, '--text': mini.text, '--text-body': mini.text, '--text-2': soft, '--text-3': soft,
-    '--border': rgba(mini.text, 0.16), '--border-strong': rgba(mini.text, 0.24), '--control': rgba(mini.text, 0.4), '--control-strong': rgba(mini.text, 0.6), '--hover': rgba(mini.text, 0.08), '--hover-2': rgba(mini.text, 0.1), '--subtle': rgba(mini.text, 0.06)
+    '--border': rgba(mini.text, 0.16), '--border-strong': rgba(mini.text, 0.24), '--control': rgba(mini.text, 0.4), '--control-strong': rgba(mini.text, 0.6), '--hover': rgba(mini.text, 0.08), '--hover-2': rgba(mini.text, 0.1), '--selected': rgba(mini.text, 0.16), '--subtle': rgba(mini.text, 0.06)
   };
 }
 
