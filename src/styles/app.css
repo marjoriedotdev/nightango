@@ -345,6 +345,8 @@ h1,h2,h3{text-wrap:balance}
 .dialog-head p{margin:6px 0 0;color:var(--text-2);font-size:var(--font-size-body-sm)}
 .dialog-body{padding:14px 20px;display:flex;flex-direction:column;gap:14px}
 .dialog-foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;padding:6px 20px 18px}
+/* The actions of a profile stay in view while the card scrolls. The background is inherited: a Premium background colors the dialog. */
+.profile-dialog .dialog-foot{position:sticky;bottom:0;padding:var(--space-3) var(--space-5);border-top:1px solid var(--border);background:inherit}
 .overlay.center{align-items:center;padding-top:16px}
 .dialog.session{max-width:380px;text-align:center}
 .session-head{display:flex;flex-direction:column;align-items:center;padding:var(--space-6) var(--space-5) 0}
