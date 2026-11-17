@@ -91,8 +91,9 @@ Chatango lets members choose name colors, fonts, text colors and message backgro
 
 ## Iconography
 
-- Stroke icons on a 24px grid at 2px, round caps and joins, drawn at 14 to 18px through `Torch.Icon`. The set follows Lucide's geometry (ISC license).
+- Stroke icons on a 24px grid at 2px, round caps and joins, drawn at 12, 14, 16 or 18px through `Torch.Icon`, and at 22 or 28px in an empty state. The set follows Lucide's geometry (ISC license).
 - Icons inherit the text color of their parent. Icon-only buttons always have a label (`IconButton`).
+- Avatars come in seven sizes: 16 inline, 22 in the navigation, 28 in lists and conversation headers, 36 in messages, cards and the account row, 44 in Meet people, 72 for an identity (profile panel, account, group overview) and 96 in the profile dialog.
 - No emoji as icons. Group icons and avatars are initials on the eight avatar tones, 45° apart in hue at one lightness, so two neighbors in a list rarely look alike and none competes with the accent; real images replace them when the member has one.
 
 ## Logo

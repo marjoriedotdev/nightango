@@ -158,7 +158,7 @@ function Sidebar(p) {
       })),
     h('div', { style: { padding: '0 10px 8px' } },
       h('button', { type: 'button', className: 'searchbtn', onClick: app.ui.openPalette },
-        h(T.Icon, { name: 'search', size: 15 }), h('span', { className: 'grow', style: { textAlign: 'left' } }, 'Search or jump to'), h('kbd', { className: 'kbd hide-mobile' }, 'Ctrl K'))),
+        h(T.Icon, { name: 'search', size: 16 }), h('span', { className: 'grow', style: { textAlign: 'left' } }, 'Search or jump to'), h('kbd', { className: 'kbd hide-mobile' }, 'Ctrl K'))),
     h(SpaceBar, null),
     h('div', { className: 'navlist' },
       h(T.NavItem, { icon: 'compass', label: 'Discover groups', active: r.view === 'discover', onClick: function () { app.nav({ view: 'discover' }); } }),
@@ -182,7 +182,7 @@ function Sidebar(p) {
         ],
         renderTrigger: function (tp) {
           return h('button', Object.assign({ type: 'button', className: 'me-btn', 'aria-label': 'Your status: ' + statusLabel(s.meStatus) }, tp),
-            h(T.Avatar, { name: s.me, size: 32, status: s.meStatus, ring: 'var(--sidebar)' }),
+            h(T.Avatar, { name: s.me, size: 36, status: s.meStatus, ring: 'var(--sidebar)' }),
             h('span', { className: 'me-text' }, h('span', { style: { fontWeight: 600, fontSize: 'var(--font-size-body-sm)' } }, shownName(s, s.me)), h('span', { style: { fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, statusLabel(s.meStatus))));
         }
       }),

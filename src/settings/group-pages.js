@@ -5,7 +5,7 @@ function GSOverview(p) {
     h(T.SettingsSection, { title: 'Information', padded: true },
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
         h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 } },
-          h(T.Avatar, { name: g.id, square: true, size: 56 }),
+          h(T.Avatar, { name: g.id, square: true, size: 72 }),
           h('span', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { style: { fontWeight: 600 } }, o.title || g.id), h('span', { className: 'muted', style: { fontSize: 'var(--font-size-body-sm)' } }, g.id + '.chatango.com'))),
         o.description ? h('p', { style: { margin: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } }, o.description) : h('p', { className: 'muted', style: { margin: 0 } }, 'No description.'),
         h('p', { className: 'tc-hint', style: { margin: 0 } }, 'Edit the title, description and icon on chatango.com.'))),

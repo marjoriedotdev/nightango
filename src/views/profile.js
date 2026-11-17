@@ -255,6 +255,6 @@ function ProfilePanel(p) {
       h('div', { style: { padding: '12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderTop: '1px solid var(--border)' } },
         actions.map(function (it) {
           return h('button', { key: it.id, type: 'button', className: 'mrow', disabled: it.disabled, 'aria-pressed': it.pressed == null ? undefined : String(it.pressed), style: it.danger ? { color: 'var(--danger)' } : null, onClick: it.onSelect },
-            h(T.Icon, { name: it.icon, size: 15 }), h('span', { className: 'grow' }, it.label), it.pressed ? h(T.Icon, { name: 'check', size: 14 }) : null);
+            h(T.Icon, { name: it.icon, size: 16 }), h('span', { className: 'grow' }, it.label), it.pressed ? h(T.Icon, { name: 'check', size: 14 }) : null);
         }))));
 }

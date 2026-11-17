@@ -219,7 +219,7 @@ function DmThread(p) {
   return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
       p.onClose ? null : h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', count: unreadTotal(s), onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
-      h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
+      h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 28, status: u.status, ring: 'var(--bg)' })),
       h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),

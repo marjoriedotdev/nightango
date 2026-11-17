@@ -84,6 +84,6 @@ function SharedMediaDialog(p) {
               h('span', { className: 'shared-text' },
                 h('span', { className: 'shared-title', dir: 'auto' }, sharedTitle(it)),
                 h('span', { className: 'shared-meta' }, meta(it)))),
-            mediaLink(app, it.url, 'tc-ib shared-open', h(T.Icon, { name: 'external', size: 15, label: 'Open ' + sharedTitle(it) })));
+            mediaLink(app, it.url, 'tc-ib shared-open', h(T.Icon, { name: 'external', size: 16, label: 'Open ' + sharedTitle(it) })));
         }))));
 }

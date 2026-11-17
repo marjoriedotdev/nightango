@@ -39,7 +39,7 @@ function Palette(p) {
         return h(Frag, { key: e.group + e.label },
           head,
           h('button', { type: 'button', id: 'pal-' + i, role: 'option', 'aria-selected': String(i === cur), className: 'pal-item', tabIndex: -1, onMouseEnter: function () { setSel(i); }, onClick: function (ev) { run(e, ev.shiftKey); } },
-            h(T.Icon, { name: e.icon, size: 15 }), h('span', null, e.label), e.hint ? h('span', { className: 'muted' }, e.hint) : null));
+            h(T.Icon, { name: e.icon, size: 16 }), h('span', null, e.label), e.hint ? h('span', { className: 'muted' }, e.hint) : null));
       }) : h('p', { className: 'pal-empty' }, 'Nothing matches ' + q + '.')),
     wide ? h('p', { className: 'pal-hint' }, h('kbd', { className: 'kbd' }, 'Shift Enter'), ' opens a group or a person side by side.') : null);
 }

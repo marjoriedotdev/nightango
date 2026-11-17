@@ -306,7 +306,7 @@ function XPostCard(p) {
   var when = post.time ? fmtTime(post.time, h24) + ' \u00b7 ' + new Date(post.time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : post.date;
   return h('div', { className: 'embed-x' },
     h('div', { className: 'embed-x-head' },
-      h(T.Avatar, { name: post.handle, src: post.avatar, size: 40, referrerPolicy: 'no-referrer' }),
+      h(T.Avatar, { name: post.handle, src: post.avatar, size: 36, referrerPolicy: 'no-referrer' }),
       h('div', { className: 'embed-x-who' }, h('span', { className: 'embed-x-author' }, post.author), h('span', { className: 'embed-x-handle' }, '@' + post.handle)),
       mediaLink(app, post.link, 'embed-x-logo', h(T.Icon, { name: 'x-logo', size: 18, label: 'Open on X' }))),
     post.text ? h('p', { className: 'embed-x-text' }, post.text) : null,
