@@ -152,7 +152,7 @@ h1,h2,h3{text-wrap:balance}
 .searchbtn:hover{border-color:var(--border-strong)}
 .kbd{font:400 var(--font-size-meta-sm) var(--font-sans);color:var(--text-3);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 5px}
 .navlist{flex:1;overflow-y:auto;min-height:0;padding:4px 10px 12px;display:flex;flex-direction:column;gap:2px}
-.sec-label{display:flex;align-items:center;gap:4px;width:100%;margin-top:12px;padding:4px 10px;border:0;background:none;color:var(--text-3);font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.04em;text-transform:uppercase;text-align:left;cursor:pointer}
+.sec-label{display:flex;align-items:center;gap:4px;width:100%;margin-top:12px;padding:4px 10px;border:0;background:none;color:var(--text-3);font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.06em;text-transform:uppercase;text-align:left;cursor:pointer}
 .sec-label:hover{color:var(--text)}
 .sec-label svg{transition:transform var(--duration-base) var(--ease-out)}
 .sec-label[aria-expanded="false"] svg{transform:rotate(-90deg)}
@@ -162,7 +162,7 @@ h1,h2,h3{text-wrap:balance}
 .me-text{display:flex;flex-direction:column;line-height:1.25;min-width:0}
 .me-text span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.topbar{height:60px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px 0 20px;border-bottom:1px solid var(--border)}
+.topbar{height:54px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px 0 20px;border-bottom:1px solid var(--border)}
 .topbar h1,.topbar h2{margin:0;font-family:var(--font-display);font-size:var(--font-size-display-sm);line-height:28px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar .namebtn{font-weight:400}
 /* The title does not clip: the focus outline of the profile button overflows it, only the name gets an ellipsis. */
@@ -358,7 +358,7 @@ h1,h2,h3{text-wrap:balance}
 .dialog.session .dialog-foot .tc-btn{flex:1 1 0}
 .pal-input{width:100%;height:52px;padding:0 18px;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--text);font-size:var(--font-size-title-sm);outline:none}
 .pal-list{max-height:360px;overflow-y:auto;padding:6px}
-.pal-group{margin:8px 10px 4px;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)}
+.pal-group{margin:8px 10px 4px;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
 .pal-item{display:flex;align-items:center;gap:10px;width:100%;height:38px;padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-body);text-align:left;cursor:pointer}
 .pal-item[aria-selected="true"]{background:var(--hover);color:var(--text)}
 .pal-item .muted{margin-left:auto;font-size:var(--font-size-caption)}
@@ -378,7 +378,7 @@ h1,h2,h3{text-wrap:balance}
 .profile-full{padding:0 var(--space-5) var(--space-2)}
 .about{margin:0;color:var(--text-body);font-size:var(--font-size-body);white-space:pre-wrap;overflow-wrap:anywhere}
 .kv{display:flex;flex-direction:column;gap:6px;padding:14px 20px;border-top:1px solid var(--border)}
-.kv h3,.profile-links h3{margin:0 0 2px;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)}
+.kv h3,.profile-links h3{margin:0 0 2px;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
 .who-level{gap:0;padding-left:10px;padding-right:10px}
 .who-level h3{padding:0 10px 4px}
 .who-text{padding:6px 10px;overflow-wrap:anywhere}
@@ -403,7 +403,7 @@ h1,h2,h3{text-wrap:balance}
 .mrow:disabled,.menu button:disabled{opacity:.5;cursor:not-allowed;background:none}
 .mrow .grow{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .common-row{height:32px;padding:0 var(--space-1)}
-.mlabel{margin:12px 8px 6px;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)}
+.mlabel{margin:12px 8px 6px;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
 
 .convs{width:300px;flex:none;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--border);min-height:0;min-width:0}
 .thread{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
@@ -468,7 +468,7 @@ h1,h2,h3{text-wrap:balance}
 
 .settings{display:flex;gap:10px;height:100%;min-height:0;padding:10px max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px))}
 .snav{width:248px;flex:none;overflow-y:auto;padding:16px 12px;padding-bottom:max(16px,env(safe-area-inset-bottom,0px));background:var(--sidebar);border:1px solid var(--border);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel);display:flex;flex-direction:column;gap:2px}
-.snav h3{margin:14px 10px 4px;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)}
+.snav h3{margin:14px 10px 4px;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
 .snav-head{display:flex;align-items:center;gap:10px;padding:12px 10px 4px}
 .snav-select{display:none}
 .spage{flex:1;min-width:0;overflow-y:auto;padding:40px 48px 0;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-panel);box-shadow:var(--shadow-panel)}
@@ -481,7 +481,7 @@ h1,h2,h3{text-wrap:balance}
 .split{display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px}
 .split>.grow{flex:999 1 460px;min-width:0;display:flex;flex-direction:column;gap:24px}
 .split>.side{flex:1 1 280px;min-width:0;position:sticky;top:24px;display:flex;flex-direction:column;gap:10px}
-.side-label{margin:0;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)}
+.side-label{margin:0;font-size:var(--font-size-label-caps);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
 .matrix-wrap{overflow-x:auto}
 .matrix{width:100%;min-width:560px;border-collapse:collapse}
 .matrix th,.matrix td{padding:12px 8px;border-bottom:1px solid var(--divider)}
