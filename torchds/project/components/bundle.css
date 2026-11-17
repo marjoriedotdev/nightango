@@ -6,11 +6,12 @@
 .tc-btn:focus-visible,.tc-ib:focus-visible,.tc-nav:focus-visible,.tc-seg button:focus-visible,.tc-send:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .tc-btn-primary{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--shadow-glow)}
 .tc-btn-primary:hover{filter:brightness(1.06)}
-.tc-btn-secondary{border-color:var(--control)}
-.tc-btn-secondary:hover,.tc-btn-ghost:hover,.tc-btn-danger:hover{background:var(--hover-2)}
+.tc-btn-secondary,.tc-btn-danger{background:var(--hover-2)}
+.tc-btn-secondary:hover,.tc-btn-danger:hover{background:var(--selected)}
+.tc-btn-ghost:hover{background:var(--hover-2)}
 .tc-btn-ghost{color:var(--text-2)}
 .tc-btn-ghost:hover{color:var(--text)}
-.tc-btn-danger{color:var(--danger);border-color:var(--control)}
+.tc-btn-danger{color:var(--danger)}
 .tc-btn-sm{height:var(--size-control-sm);padding:0 12px;font-size:var(--font-size-caption)}
 .tc-btn-lg{height:var(--size-control-lg);padding:0 18px;font-size:var(--font-size-body)}
 .tc-btn-block{width:100%}
