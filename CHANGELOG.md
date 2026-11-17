@@ -2,6 +2,33 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.38.0] - 2026-11-17
+
+### Changed
+
+- Panels, menus and dialogs no longer have an outline: a soft light on their upper edge and a deeper shadow set them apart from the sky.
+- The group, conversation or page you're on is lit in moonlight instead of blue.
+- Banners, the message box, settings sections and cards are plain surfaces without a border, and corners are a little rounder.
+- Buttons such as Join, Add and Save note are filled instead of outlined.
+- In a private conversation the profile is a panel of its own, like the member list of a group.
+- Settings, Mentions and Discover are centered in their panel, and Discover keeps a single title.
+- Text is set on fewer sizes: menus, captions and times line up.
+- Unread counts no longer glow. The glow stays on the send button and the main buttons.
+- Text fields have a more visible lower edge.
+- On a touch screen, rows, menu entries and buttons are taller and easier to tap.
+- The All and Unread filter of Chats looks like the spaces bar, and a chosen theme or accent color has the same white or dark ring.
+- The message under the pointer is a rounded band.
+- Group cards in Discover are wider, so long names are no longer cut.
+- The column opened from Friends or Meet people carries that name.
+- The profile preview in Settings looks like the profile other people open.
+- A send button with nothing to send looks switched off instead of dimmed.
+
+### Fixed
+
+- The Meet people tab no longer sticks out of its control in Private messages.
+- Message and Add friend stay in view in a profile, even in a short window.
+- The presence dot no longer covers a large profile picture.
+
 ## [0.37.0] - 2026-11-16
 
 ### Added
