@@ -163,7 +163,6 @@ h1,h2,h3{text-wrap:balance}
 .me-text span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .topbar{height:60px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px 0 20px;border-bottom:1px solid var(--border)}
-.main>.topbar{background:linear-gradient(180deg,color-mix(in srgb,var(--sky-top-now) 70%,var(--bg)),var(--bg))}
 .topbar h1,.topbar h2{margin:0;font-family:var(--font-display);font-size:var(--font-size-display-sm);line-height:28px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar .namebtn{font-weight:400}
 /* The title does not clip: the focus outline of the profile button overflows it, only the name gets an ellipsis. */
