@@ -32,9 +32,9 @@ function useBridgeOps(handle, loggedIn) {
  * @returns {boolean} True if the message joined the message log, false for a message already there or an edit applied to its original.
  */
 function addHistory(d, op, local) {
-  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style; delete hm.badge; delete hm.spelling;
+  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style; delete hm.spelling;
   var g = ensureLiveGroup(d, op.gid, local), u = ensureLiveUser(d, hm.author, local);
-  noteBadge(g, hm.author, op.msg.badge);
+  noteBadge(g, hm.author, hm.badge, hm.ts);
   mergeStyle(u, hs, hm.ts);
   mergeSpelling(u, op.msg.spelling, hm.ts);
   if (plainOf(g.messages).some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return false;
@@ -119,7 +119,7 @@ function useLiveOps(k) {
         break;
       }
       case 'msg': {
-        var m = Object.assign({}, op.msg), style = m.style; delete m.style; delete m.badge; delete m.spelling;
+        var m = Object.assign({}, op.msg), style = m.style; delete m.style; delete m.spelling;
         if (m.editId) {
           // Edit: applied to the original if it is loaded, otherwise shown as an edited message that keeps its reference.
           update(function (d) {
@@ -127,7 +127,7 @@ function useLiveOps(k) {
             var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, m.author, localRef.current), o = editTarget(g, m);
             mergeStyle(u, style, m.ts);
             mergeSpelling(u, op.msg.spelling, m.ts);
-            noteBadge(g, m.author, op.msg.badge);
+            noteBadge(g, m.author, m.badge, m.ts);
             if (o) { applyGroupEdit(o, m); return; }
             m.edited = true;
             g.messages.push(withReply(g, m));
@@ -140,7 +140,7 @@ function useLiveOps(k) {
           var mg = ensureLiveGroup(d, op.gid, localRef.current);
           // The duration unit of a temporary ban is unconfirmed: a message of the user that gets through ends it.
           if (m.author === d.me && mg.live.tempBan) mg.live.tempBan = null;
-          noteBadge(mg, m.author, op.msg.badge);
+          noteBadge(mg, m.author, m.badge, m.ts);
           var mu = ensureLiveUser(d, m.author, localRef.current);
           mergeStyle(mu, style, m.ts);
           mergeSpelling(mu, op.msg.spelling, m.ts);

@@ -342,23 +342,29 @@ function pmAuthor(d, local) {
   return function (x) { var u = ensureLiveUser(d, x.from, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
 }
 /**
- * Records the role shown by the badge of a group message, the highest seen during the session.
+ * Records the role shown by the badge of a member's latest group message, a message without a badge included.
  * @param {Object} g Group being modified.
  * @param {string} name Message author.
  * @param {?string} badge Role of the badge, as returned by badgeRoleOf.
+ * @param {number} ts Message timestamp.
  */
-function noteBadge(g, name, badge) {
+function noteBadge(g, name, badge, ts) {
   var seen = g.live.badges[name];
-  if (!badge || seen === badge || seen === 'admin') return;
-  g.live.badges[name] = badge;
-  deriveLive(g);
+  // History pages arrive from newest to oldest: an older message never overrides a newer badge.
+  if (seen && seen.ts >= ts) return;
+  // The owner role comes from the ok frame: anyone else with both badges counts as an administrator.
+  var role = badge === 'owner' ? 'admin' : badge || null, before = seen ? seen.role : g.live.knownBadges[name] || null;
+  g.live.badges[name] = { role: role, ts: ts };
+  if (role !== before) deriveLive(g);
 }
 /**
  * Returns the role of each staff member of a live group.
  * @param {Object} L Chatango state of the group.
  */
 function staffOf(L) {
-  var staff = {}, badges = Object.assign({}, L.knownBadges, L.badges);
+  var staff = {}, badges = Object.assign({}, L.knownBadges);
+  // A message without a badge in this session drops the role an earlier one gave.
+  Object.keys(L.badges).forEach(function (n) { if (L.badges[n].role) badges[n] = L.badges[n].role; else delete badges[n]; });
   if (L.owner) staff[L.owner] = 'owner';
   Object.keys(L.mods).forEach(function (n) { if (n !== L.owner) staff[n] = roleOfFlags(L.mods[n]); });
   // Chatango sends the moderator list to staff only: other members learn roles from the badges on messages, those of earlier sessions included.

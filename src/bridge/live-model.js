@@ -136,6 +136,9 @@ var EMOTICONS = [
 // No prototype: the name comes from the member, constructor or __proto__ must find nothing.
 var EMOTICON_BY_NAME = EMOTICONS.reduce(function (o, e) { o[e.name] = e; return o; }, Object.create(null));
 
-// The owner carries both badges and keeps the owner role read from the ok frame.
-function badgeRoleOf(flags) { return flags & MSG_FLAG.STAFF_ICON ? 'admin' : flags & MSG_FLAG.MOD_ICON ? 'mod' : null; }
+// Both badges are the owner badge of BetterChatango (data-flag 192), shown as such on the owner's messages only (inject.js:8006-8012).
+function badgeRoleOf(flags) {
+  var mod = flags & MSG_FLAG.MOD_ICON, staff = flags & MSG_FLAG.STAFF_ICON;
+  return mod && staff ? 'owner' : staff ? 'admin' : mod ? 'mod' : null;
+}
 function channelOf(flags) { return flags & CHANNEL_FLAG.mod ? 'mod' : flags & CHANNEL_FLAG.blue ? 'blue' : flags & CHANNEL_FLAG.red ? 'red' : 'none'; }
