@@ -2,6 +2,14 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.38.3] - 2026-11-17
+
+### Fixed
+
+- On a member's profile with a Premium background, a secondary button under the pointer takes a shade of that background.
+- A channel message that mentions you keeps its channel color, and a mention has the same rounded band as other messages.
+- Neighbour messages with the same background, from a member, a channel or a mention, join into one block.
+
 ## [0.38.2] - 2026-11-17
 
 ### Added
