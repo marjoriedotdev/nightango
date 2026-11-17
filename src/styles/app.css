@@ -413,7 +413,8 @@ h1,h2,h3{text-wrap:balance}
 .tab[aria-pressed="true"]{background:var(--selected);color:var(--text)}
 .conv{display:flex;align-items:center;gap:12px;width:100%;padding:10px;border:0;border-radius:var(--radius-lg);background:none;text-align:left;color:var(--text-2);cursor:pointer}
 .conv:hover{background:var(--hover)}
-.conv[aria-current="page"]{background:var(--selected)}
+/* On the current row secondary text takes moon-text: text-2 and text-3 fall under 4.5:1 on moon-soft. */
+.conv[aria-current="page"]{--text-2:var(--moon-text);--text-3:var(--moon-text);background:var(--moon-soft)}
 .conv-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .conv-top{display:flex;align-items:baseline;gap:8px}
 .conv-name{flex:1;min-width:0;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -433,7 +434,7 @@ h1,h2,h3{text-wrap:balance}
 .conv-grid .tc-count{grid-area:count;justify-self:end;align-self:center;margin-left:var(--space-2)}
 .conv-row{position:relative;touch-action:pan-y pinch-zoom}
 .conv-row:hover .conv{background:var(--hover)}
-.conv-row .conv[aria-current="page"]{background:var(--selected)}
+.conv-row .conv[aria-current="page"]{background:var(--moon-soft)}
 .conv-row>.conv{position:relative;z-index:1;transform:translateX(var(--swipe,0px));transition:transform var(--duration-surface) var(--ease-out),background-color var(--duration-base) var(--ease-out)}
 .conv-row.dragging,.conv-row.swiped{overflow:hidden;border-radius:var(--radius-lg)}
 .conv-row.dragging>.conv,.conv-row.swiped>.conv{background:var(--panel)}
@@ -566,7 +567,7 @@ h1,h2,h3{text-wrap:balance}
 .roles{display:flex;flex-direction:column;padding:6px}
 .role-btn{display:flex;align-items:center;gap:12px;width:100%;padding:10px;border:0;border-radius:var(--radius-md);background:none;text-align:left;color:var(--text-2);cursor:pointer}
 .role-btn:hover{background:var(--hover)}
-.role-btn[aria-current="true"]{background:var(--selected)}
+.role-btn[aria-current="true"]{--text-2:var(--moon-text);--text-3:var(--moon-text);background:var(--moon-soft);color:var(--moon-text)}
 .role-ico{width:28px;height:28px;border-radius:var(--radius-md);background:var(--selected);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;flex:none}
 .role-btn[aria-current="true"] .role-ico{background:var(--raised)}
 
