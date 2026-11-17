@@ -2,13 +2,13 @@ function AppearancePage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
   var md = useState(function () { return LIVE ? liveBridge.setting('markdown') : null; }), markdown = md[0], setMarkdown = md[1];
   var themes = [
-    ['dark', 'Dark', ['#0d1427', '#0a1020', '#34446a', '#283657', '#142039']],
-    ['light', 'Light', ['#fdfcfa', '#f2f0f7', '#c6c2d1', '#d6d2df', '#ffffff']],
+    ['dark', 'Dark', ['#0e1629', '#080d1b', '#34446a', '#2b3a5f', '#1b2747']],
+    ['light', 'Light', ['#fdfcfa', '#eceaf4', '#c6c2d1', '#d6d2df', '#ffffff']],
     ['system', 'Match system', null]
   ];
   function thumb(c) {
     if (!c) return h('span', { className: 'thumb', 'aria-hidden': 'true', style: { border: '1px solid var(--border-strong)' } },
-      h('span', { style: { flex: 1, background: '#f2f0f7' } }), h('span', { style: { flex: 1, background: '#0d1427' } }));
+      h('span', { style: { flex: 1, background: '#eceaf4' } }), h('span', { style: { flex: 1, background: '#0e1629' } }));
     return h('span', { className: 'thumb', 'aria-hidden': 'true', style: { background: c[0], border: '1px solid ' + c[3] } },
       h('span', { style: { width: '28%', background: c[1], borderRight: '1px solid ' + c[3], padding: '8px 6px', display: 'flex', flexDirection: 'column', gap: 5 } },
         h('span', { style: { height: 5, width: '70%', borderRadius: 3, background: c[2] } }), h('span', { style: { height: 5, width: '90%', borderRadius: 3, background: c[3] } })),

@@ -393,7 +393,7 @@ function useMentionCompletion(g, inputRef, value, setValue) {
       // The field keeps focus: the click replaces the text without leaving it.
       onMouseDown: function (ev) { ev.preventDefault(); }, onClick: function () { accept(cand); },
       onMouseMove: function () { if (i !== index) setSel({ key: key, index: i }); }
-    }, h(T.Avatar, { name: cand.name, size: 24, status: status, ring: 'var(--raised)' }), h('span', { className: 'suggest-name' }, cand.handle), presenceSr(status), roleBadge(roleOf(g, cand.name)));
+    }, h(T.Avatar, { name: cand.name, size: 28, status: status, ring: 'var(--raised)' }), h('span', { className: 'suggest-name' }, cand.handle), presenceSr(status), roleBadge(roleOf(g, cand.name)));
   })) : null;
   var said = open ? list[index].handle + ', ' + (index + 1) + ' of ' + list.length + '. Press Tab or Enter to insert it.' : '';
   return {

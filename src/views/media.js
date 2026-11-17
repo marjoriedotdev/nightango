@@ -30,7 +30,7 @@ function MediaThumb(p) {
 function MediaStarButton(p) {
   var app = useAppApi();
   return h(T.IconButton, {
-    icon: 'star', label: p.saved ? 'Remove from media' : 'Add to media', size: 28, iconSize: 15, className: cx('media-star', p.saved && 'media-star-saved'),
+    icon: 'star', label: p.saved ? 'Remove from media' : 'Add to media', size: 28, iconSize: 16, className: cx('media-star', p.saved && 'media-star-saved'),
     onClick: function () { app.actions.toggleMedia(p.url, p.saved); }
   });
 }

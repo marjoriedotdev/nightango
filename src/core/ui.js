@@ -355,7 +355,7 @@ function MenuButton(p) {
           className: it.danger ? 'danger' : undefined, disabled: it.disabled,
           onClick: function () { close(); it.onSelect(); }
         },
-          it.presence ? h('span', { className: 'tc-presence tc-presence-' + it.presence + ' menu-presence' }) : it.swatch ? h('span', { className: 'swatch', style: { background: it.swatch } }) : it.icon ? h(T.Icon, { name: it.icon, size: 15 }) : null,
+          it.presence ? h('span', { className: 'tc-presence tc-presence-' + it.presence + ' menu-presence' }) : it.swatch ? h('span', { className: 'swatch', style: { background: it.swatch } }) : it.icon ? h(T.Icon, { name: it.icon, size: 16 }) : null,
           h('span', { className: 'grow' }, it.label),
           it.checked ? h(T.Icon, { name: 'check', size: 14 }) : null);
       }))) : null);
@@ -563,10 +563,10 @@ function Toast(p) {
     // The focus moving from one of its buttons to the other keeps the toast held.
     onBlur: function (ev) { if (!ev.currentTarget.contains(ev.relatedTarget)) setFocused(false); }
   },
-    h('span', { key: t.rev || 0, className: 'toast-icon' }, h(T.Icon, { name: t.icon || TOAST_ICON[tone], size: 15 })),
+    h('span', { key: t.rev || 0, className: 'toast-icon' }, h(T.Icon, { name: t.icon || TOAST_ICON[tone], size: 16 })),
     h('span', { className: cx('grow', t.clamp && 'toast-clamp') }, t.text),
     t.action ? h(T.Button, { size: 'sm', variant: 'ghost', className: 'toast-action', onClick: function () { setLeaving(true); t.action.run(); } }, t.action.label) : null,
-    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 28, iconSize: 13, className: 'toast-close', onClick: function () { setLeaving(true); } }));
+    h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 28, iconSize: 14, className: 'toast-close', onClick: function () { setLeaving(true); } }));
 }
 
 var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;

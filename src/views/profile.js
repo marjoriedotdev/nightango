@@ -40,7 +40,7 @@ function miniSkin(mini) {
   var soft = ensureContrast(rgbToHex(mix(hexToRgb(mini.text), hexToRgb(mini.bg), 0.3)), mini.bg, 4.5);
   return {
     backgroundColor: mini.bg, color: mini.text, '--raised': mini.bg, '--text': mini.text, '--text-body': mini.text, '--text-2': soft, '--text-3': soft,
-    '--border': rgba(mini.text, 0.16), '--border-strong': rgba(mini.text, 0.24), '--control': rgba(mini.text, 0.4), '--hover': rgba(mini.text, 0.08), '--hover-2': rgba(mini.text, 0.1), '--subtle': rgba(mini.text, 0.06)
+    '--border': rgba(mini.text, 0.16), '--border-strong': rgba(mini.text, 0.24), '--control': rgba(mini.text, 0.4), '--control-strong': rgba(mini.text, 0.6), '--hover': rgba(mini.text, 0.08), '--hover-2': rgba(mini.text, 0.1), '--subtle': rgba(mini.text, 0.06)
   };
 }
 
@@ -255,6 +255,6 @@ function ProfilePanel(p) {
       h('div', { style: { padding: '12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderTop: '1px solid var(--border)' } },
         actions.map(function (it) {
           return h('button', { key: it.id, type: 'button', className: 'mrow', disabled: it.disabled, 'aria-pressed': it.pressed == null ? undefined : String(it.pressed), style: it.danger ? { color: 'var(--danger)' } : null, onClick: it.onSelect },
-            h(T.Icon, { name: it.icon, size: 15 }), h('span', { className: 'grow' }, it.label), it.pressed ? h(T.Icon, { name: 'check', size: 14 }) : null);
+            h(T.Icon, { name: it.icon, size: 16 }), h('span', { className: 'grow' }, it.label), it.pressed ? h(T.Icon, { name: 'check', size: 14 }) : null);
         }))));
 }

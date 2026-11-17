@@ -1,4 +1,6 @@
 /* ---------- Private messages ---------- */
+// The heading follows the entry of the sidebar that opened the column.
+var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };
 function DMView(p) {
   var app = useApp(), s = app.state, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
@@ -22,7 +24,7 @@ function DMView(p) {
   var scrollRef = useRef(null), loading = LIVE && !s.pmLoaded;
   var batch = useRowBatches(scrollRef, section === 'chats' && !loading ? shown : [], section + ':' + tab + ':' + q);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
-    h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
+    h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, DM_SECTION_TITLES[section]),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
     LIVE && s.pmrStatus === 'restricted' && !s.pmrDismissed ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: 'Your private messages are restricted', onDismiss: app.actions.dismissPmr },
       'People might not receive your messages.')) : null,
@@ -39,7 +41,7 @@ function DMView(p) {
       h('input', { id: 'pm-search', className: 'tc-input', type: 'search', placeholder: 'Search conversations', value: q, onChange: function (e) { setQ(e.target.value); } }),
       h('div', { className: 'tabs', role: 'group', 'aria-label': 'Filter conversations' },
         filters.map(function (t) {
-          return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
+          return h('button', { key: t[0], type: 'button', className: 'chip', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
     h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
       loading ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,
@@ -54,8 +56,8 @@ function DMView(p) {
       h(T.Button, { variant: 'primary', icon: 'edit', onClick: app.ui.openNewDm }, 'New message')));
   // Side by side, an open conversation shows alone: the list and the profile would leave no room for it.
   if (p.compact && convo) return h('div', { className: 'main', style: { flexDirection: 'row' } }, thread);
-  return h('div', { className: 'main', style: { flexDirection: 'row' } },
-    h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
+  return h(Frag, null,
+    h('div', { className: 'main', style: { flexDirection: 'row' } }, h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread)),
     convo && column.open ? h(ProfilePanel, { name: id }) : null);
 }
 
@@ -217,7 +219,7 @@ function DmThread(p) {
   return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
       p.onClose ? null : h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', count: unreadTotal(s), onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
-      h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 30, status: u.status, ring: 'var(--bg)' })),
+      h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 28, status: u.status, ring: 'var(--bg)' })),
       h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
       h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),

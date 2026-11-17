@@ -29,11 +29,11 @@ function GSStaff(p) {
       h('section', { 'aria-label': 'Staff', className: 'tc-section', style: { flex: '1 1 240px', alignSelf: 'flex-start' } },
         h('div', { className: 'roles' },
           owner ? h('div', { className: 'role-btn', style: { cursor: 'default' } },
-            h('span', { className: 'role-ico' }, h(T.Icon, { name: 'crown', size: 15 })),
+            h('span', { className: 'role-ico' }, h(T.Icon, { name: 'crown', size: 16 })),
             h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, owner)), h('span', { style: { fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, 'Owner'))) : null,
           names.map(function (n) {
             return h('button', { key: n, type: 'button', className: 'role-btn', 'aria-current': String(sel === n), onClick: function () { setSel(n); } },
-              h('span', { className: 'role-ico' }, h(T.Icon, { name: 'shield', size: 15 })),
+              h('span', { className: 'role-ico' }, h(T.Icon, { name: 'shield', size: 16 })),
               h('span', { className: 'grow', style: colStyle }, h('span', { style: { fontWeight: 500, color: 'var(--text)' } }, shownName(app.state, n)), h('span', { style: { fontSize: 'var(--font-size-caption)', color: 'var(--text-3)' } }, ROLE_LONG[roleOfFlags(draft.modFlags[n])])),
               h(T.Icon, { name: 'chevron-right', size: 14, style: { color: 'var(--text-3)' } }));
           })),
