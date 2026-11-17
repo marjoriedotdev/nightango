@@ -56,8 +56,8 @@ function DMView(p) {
       h(T.Button, { variant: 'primary', icon: 'edit', onClick: app.ui.openNewDm }, 'New message')));
   // Side by side, an open conversation shows alone: the list and the profile would leave no room for it.
   if (p.compact && convo) return h('div', { className: 'main', style: { flexDirection: 'row' } }, thread);
-  return h('div', { className: 'main', style: { flexDirection: 'row' } },
-    h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread),
+  return h(Frag, null,
+    h('div', { className: 'main', style: { flexDirection: 'row' } }, h('div', { className: cx('dm-split', id && 'has-thread') }, list, thread)),
     convo && column.open ? h(ProfilePanel, { name: id }) : null);
 }
 
