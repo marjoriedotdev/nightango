@@ -297,7 +297,7 @@ function GroupColorDialog(p) {
       h(T.Button, { key: 'r', variant: 'ghost', disabled: !g.accent, onClick: function () { set(null); } }, 'Use the app accent'),
       h(T.Button, { key: 'd', variant: 'primary', onClick: p.onClose }, 'Done')
     ]
-  }, h('div', { className: 'dialog-body' }, h(AccentSwatches, { label: 'Group color', value: g.accent, fallback: app.state.prefs.accent, onChange: set })));
+  }, h('div', { className: 'dialog-body' }, h(AccentSwatches, { label: 'Group color', value: g.accent, fallback: accentOf(app.state.prefs, app.theme), onChange: set })));
 }
 
 /**

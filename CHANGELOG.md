@@ -2,6 +2,16 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.38.2] - 2026-11-17
+
+### Added
+
+- Moonlight, a pale cream, joins the accent colors in Settings, Appearance.
+
+### Changed
+
+- Until you pick an accent color, it follows the theme: Moonlight in the dark theme, Ember in the light theme. If you used Nightango before, your accent stays as it was.
+
 ## [0.38.1] - 2026-11-17
 
 ### Fixed

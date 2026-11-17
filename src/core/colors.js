@@ -55,8 +55,16 @@ function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToH
 
 // Copy of the bg, text-body and selected tokens from tokens.json: selected is the surface where the accent as text has the lowest contrast.
 var SURFACE = { dark: { bg: '#0e1629', body: '#d0d7e6', selected: '#202e52' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
-var DEFAULT_ACCENT = '#f27a3f';
-var ACCENTS = [['Ember', DEFAULT_ACCENT], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
+var EMBER = '#f27a3f', MOONLIGHT = '#fbf6df';
+var ACCENTS = [['Moonlight', MOONLIGHT], ['Ember', EMBER], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
+// Not one default for both themes: a Moonlight fill disappears on the light surfaces, where it holds 1.06:1.
+var DEFAULT_ACCENTS = { dark: MOONLIGHT, light: EMBER };
+/**
+ * Returns the accent of the interface: the chosen color, or the default of the theme until one is chosen.
+ * @param {Object} prefs Preferences, whose accent is a hex color or 'auto'.
+ * @param {string} theme Resolved theme, dark or light.
+ */
+function accentOf(prefs, theme) { return hexToRgb(prefs.accent) ? prefs.accent : DEFAULT_ACCENTS[theme]; }
 /**
  * Returns the text color that holds 4.5:1 on an accent fill.
  * @param {string} hex Accent color.
@@ -64,11 +72,11 @@ var ACCENTS = [['Ember', DEFAULT_ACCENT], ['Blue', '#5b8def'], ['Green', '#3fb27
 function onAccentOf(hex) { return contrast(hexToRgb(hex), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff'; }
 /**
  * Returns the accent tokens of a color, with the accent as text corrected for contrast in each theme.
- * @param {string} hex Accent color, the default accent if it is not a hex color.
+ * @param {string} hex Accent color, Ember if it is not a hex color.
  * @returns {{accent: string, onAccent: string, text: {dark: string, light: string}, soft: {dark: string, light: string}}} Fill, text on the fill, accent as text and soft fill by theme.
  */
 function accentTokens(hex) {
-  var acc = hexToRgb(hex) ? hex : DEFAULT_ACCENT;
+  var acc = hexToRgb(hex) ? hex : EMBER;
   return {
     accent: acc, onAccent: onAccentOf(acc),
     text: { dark: ensureContrast(acc, SURFACE.dark.selected, 4.5), light: ensureContrast(acc, SURFACE.light.selected, 4.5) },

@@ -27,7 +27,7 @@ To update, open the file of the new release the same way: Tampermonkey shows its
 
 ![A Premium member's profile card](docs/readme/profile.webp)
 
-![The navigation in the six accent colors](docs/readme/customisation.webp)
+![The navigation in the seven accent colors](docs/readme/customisation.webp)
 
 ## Privacy
 

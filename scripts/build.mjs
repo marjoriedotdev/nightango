@@ -112,8 +112,8 @@ function redeclared(code) {
 // -- Design system tokens -----------------------------------------------------
 
 const OVERRIDE = new Set(['accent-text', 'accent-soft', 'focus-ring']);
-const ACCENT_DEFAULTS = '--accent-text-d: #f27a3f; --accent-text-l: #964c27; ' +
-  '--accent-soft-d: rgba(242, 122, 63, 0.12); --accent-soft-l: rgba(242, 122, 63, 0.14);';
+const ACCENT_DEFAULTS = '--accent-text-d: #fbf6df; --accent-text-l: #964c27; ' +
+  '--accent-soft-d: rgba(251, 246, 223, 0.12); --accent-soft-l: rgba(242, 122, 63, 0.14);';
 
 /**
  * Declares the variables of a theme.
