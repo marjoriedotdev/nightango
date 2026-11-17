@@ -54,7 +54,7 @@ function rgba(hex, a) { var c = hexToRgb(hex) || [242, 122, 63]; return 'rgba(' 
 function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToHex(c.map(function (v) { return v * f; })); }
 
 // Copy of the bg, text-body and selected tokens from tokens.json: selected is the surface where the accent as text has the lowest contrast.
-var SURFACE = { dark: { bg: '#0d1427', body: '#d0d7e6', selected: '#1b2846' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
+var SURFACE = { dark: { bg: '#0e1629', body: '#d0d7e6', selected: '#202e52' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
 var DEFAULT_ACCENT = '#f27a3f';
 var ACCENTS = [['Ember', DEFAULT_ACCENT], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
 /**

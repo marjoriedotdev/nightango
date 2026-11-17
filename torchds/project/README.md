@@ -69,7 +69,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 
 ## States and behavior
 
-- Hover: `hover` on rows, `hover-2` on buttons. Current item: `selected`. Pressed toggles: `selected` plus `aria-pressed`.
+- Hover: `hover` on rows, `hover-2` on buttons. Both are veils, so they show on every surface, a menu on `raised` included. Current item: `selected`. Pressed toggles: `selected` plus `aria-pressed`.
 - Local preferences (theme, notifications, density) save on change and say so in the page description. Changes that go to Chatango (profile, group settings, roles) collect in a `SaveBar` and are saved together.
 - Destructive actions ask for confirmation in a dialog that repeats the consequence.
 - A toast carries its tone as an icon in a tinted disc: a check for something done, the info icon on `accent-soft` for a notice, the alert icon in `warning` for a failure. Its action is a text button, and its close button shows on hover or focus, always on touch. It stays 4.5 to 10 seconds with the length of its text, 8 seconds at least for a failure, and waits while it is hovered or focused and while the page is hidden. The same text shown again starts the delay over instead of stacking.
