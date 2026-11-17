@@ -29,7 +29,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - A favorite is a star filled with `favorite`, at the end of the name line of its list row, never right after the name, where it would read as part of it.
 - Presence is a moon phase: full moon (`status-online`), crescent (`status-idle`), new moon outline (`status-offline`). The shape carries the state, so a list reads in grayscale. Where one person is shown (a conversation header, a profile), a text label sits next to the dot (Online, Idle, Last online …). In a list, the phase may stand alone on screen; the row's accessible name then states the status.
 - Focus: a 2px solid `focus-ring` outline offset by 2px on every interactive element. It holds 3:1 on every surface.
-- A text field and the composer keep a quiet `border-strong` outline and take `control-strong` on their lower edge, which holds 3:1 on `bg`, `panel` and `raised`.
+- A text field keeps a quiet `border-strong` outline and takes `control-strong` on its lower edge, which holds 3:1 on `bg`, `panel` and `raised`. The composer is a `raised` surface without an outline, ringed with `control-strong` while it holds the focus.
 
 ## Seasons
 
