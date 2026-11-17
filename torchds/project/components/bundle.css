@@ -60,7 +60,7 @@ select.tc-input{appearance:none;-webkit-appearance:none;padding:0 28px 0 10px;ba
 .tc-badge-moon{background:var(--moon-soft);color:var(--moon-text);font-weight:600}
 .tc-badge-moon-quiet svg{color:var(--moon-text)}
 .tc-badge-icon{width:18px;padding:0;justify-content:center}
-.tc-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:20px;height:18px;padding:0 6px;border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);font-size:var(--font-size-meta-sm);font-weight:600;box-shadow:var(--shadow-glow)}
+.tc-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:20px;height:18px;padding:0 6px;border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);font-size:var(--font-size-meta-sm);font-weight:600}
 .tc-dot{flex:none;width:11px;height:11px;background:var(--moon-ink);clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
 
 .tc-avatar{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;border-radius:50%;color:#e8eaee;font-weight:600;line-height:1;user-select:none}
@@ -164,7 +164,7 @@ label.tc-row{cursor:pointer}
 .tc-composer-file-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--font-size-body-sm);font-weight:500;color:var(--text)}
 .tc-composer-file-note{font-size:var(--font-size-caption);color:var(--text-3)}
 .tc-send{display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;margin-left:6px;border:0;border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-glow);cursor:pointer}
-.tc-send:disabled{opacity:.4;box-shadow:none;cursor:not-allowed}
+.tc-send:disabled{background:var(--selected);color:var(--text-3);box-shadow:none;cursor:not-allowed}
 
 .tc-skeleton{display:inline-block;flex:none;max-width:100%;vertical-align:middle;border-radius:var(--radius-sm);background:var(--selected) linear-gradient(90deg,transparent 25%,var(--thumb) 50%,transparent 75%) no-repeat;background-size:200% 100%;background-position:150% 0;animation:tc-shimmer 1.6s ease-in-out infinite}
 .tc-skeleton-circle{border-radius:var(--radius-full)}
