@@ -42,6 +42,14 @@ function canEditGroupMessage(m, me) {
 }
 
 /**
+ * Color of the Chatango channel a group message is posted on, null without one.
+ * @param {Object} m Group message.
+ */
+function channelColorOf(m) {
+  return m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
+}
+
+/**
  * Group message row with its toolbar and its action menu.
  * It reads the state only through its props: a change that leaves them alone, a presence for example, does not render it again.
  * @param {{m: Object, shown: string, gid: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, ignored: boolean, msgBg: (Object|null|undefined), avatarV: (number|undefined),
@@ -54,9 +62,8 @@ var MessageRow = React.memo(function MessageRow(p) {
   var app = useAppApi(), prefs = p.prefs, m = p.m, me = p.me, gid = p.gid;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var mention = m.author !== me && mentionsMe(me, m.text);
-  var chanColor = m.channel && m.channel !== 'none' && CHANNELS[m.channel] ? CHANNELS[m.channel].color : null;
-  var chanRow = !!chanColor && !mention;
-  var ms = memberStyles({ style: p.style, unstyled: p.unstyled }, prefs.styles, p.theme, mention || chanRow, m.bg ? p.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
+  var chanColor = channelColorOf(m);
+  var ms = memberStyles({ style: p.style, unstyled: p.unstyled }, prefs.styles, p.theme, mention || !!chanColor, m.bg ? p.msgBg : null), nameStyle = ms.name, textStyle = ms.text, rowStyle = ms.row;
   var bgUnknown = p.msgBg === undefined;
   useEffect(function () { if (m.bg && prefs.styles.backgrounds && !p.unstyled && bgUnknown) app.actions.loadMsgBg(m.author); }, [m.bg, prefs.styles.backgrounds, p.unstyled, bgUnknown]);
   var bgImage = ms.image && prefs.safety.embedImages && !prefs.safety.proxyMedia ? h(MessageBgImage, ms.image) : null;
@@ -90,7 +97,7 @@ var MessageRow = React.memo(function MessageRow(p) {
     ? h('p', { className: 'tc-msg-text deleted' }, m.deleted.by === m.author ? 'Message deleted' : 'Message deleted by ' + m.deleted.by)
     : h(MessageContent, { m: m, style: textStyle, plain: ms.plain, gid: gid });
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
-  if (chanRow) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
+  if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
   var original = p.original;
   var reply = original ? { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
     : m.replyTo ? { text: 'Original message not loaded' } : null;
@@ -100,7 +107,7 @@ var MessageRow = React.memo(function MessageRow(p) {
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, mention: mention, time: fmtTime(m.ts, prefs.h24),
     avatar: h(Person, { name: m.author, gid: gid, avatarOnly: true }), author: authorBtn, meta: h(Frag, null, roleBadge(p.role), developerBadge(m.author), chan), reply: reply, actions: actions,
-    msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanRow && 'chan-msg'), style: rowStyle, background: bgImage
+    msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', chanColor && 'chan-msg'), style: rowStyle, background: bgImage
   }, body);
 });
 
