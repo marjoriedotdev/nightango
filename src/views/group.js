@@ -161,7 +161,7 @@ function GroupView(p) {
     log.jumpTo(o.id);
   }
 
-  var items = [], prev = null, lastDay = null, marker = false, findOriginal = msgFinder(g), markerTs = p.markerTs;
+  var items = [], prev = null, lastRow = null, lastDay = null, marker = false, findOriginal = msgFinder(g), markerTs = p.markerTs;
   var msgs = g.messages.filter(function (m) { return shown(m) && !hiddenByChannel(m) && (!q || m.kind === 'msg' && !m.deleted && (m.text.toLowerCase().indexOf(q) >= 0 || m.author.indexOf(q) >= 0)); });
   for (var i = 0; i < msgs.length; i++) {
     var m = msgs[i], dk = dayKey(m.ts);
@@ -179,14 +179,17 @@ function GroupView(p) {
       }
     }
     var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted), a = userOf(s, m.author);
-    items.push(h(MessageRow, {
+    lastRow = joinRow(prev && lastRow, {
       key: m.id, m: m, shown: shownName(s, m.author), gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg, avatarV: a.avatarV,
       role: LIVE ? messageBadge(g, m) : roleOf(g, m.author), staff: staff, canBan: canBanMember(g, me, m.author), seeIps: !!rights.seeIps,
-      original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, highlight: log.targetId === m.id,
+      original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, joinPrev: false, joinNext: false, highlight: log.targetId === m.id,
       onReply: calls.reply, onQuote: calls.quote, onEdit: calls.edit, onMention: calls.mention, onJump: calls.jump
-    }));
+    }, groupRowFill(m, me, a, prefs, app.theme));
+    items.push(lastRow);
     prev = m;
   }
+  // A row knows it joins the next one only once that one is read.
+  items = items.map(function (it) { return it.row ? h(MessageRow, it.row) : it; });
   var older = !LIVE || q ? null
     : !g.inited && !g.messages.length ? { status: 'pending' }
     : g.historyDone ? { status: 'start', text: 'This is the beginning of the history Chatango keeps for #' + g.id + '.' }
