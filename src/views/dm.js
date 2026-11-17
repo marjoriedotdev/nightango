@@ -41,7 +41,7 @@ function DMView(p) {
       h('input', { id: 'pm-search', className: 'tc-input', type: 'search', placeholder: 'Search conversations', value: q, onChange: function (e) { setQ(e.target.value); } }),
       h('div', { className: 'tabs', role: 'group', 'aria-label': 'Filter conversations' },
         filters.map(function (t) {
-          return h('button', { key: t[0], type: 'button', className: 'tab', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
+          return h('button', { key: t[0], type: 'button', className: 'chip', 'aria-pressed': String(tab === t[0]), onClick: function () { setTab(t[0]); } }, t[1]);
         }))),
     h('div', { ref: scrollRef, className: 'scroll', style: { padding: '0 8px 12px' } },
       loading ? h(SkeletonRows, { count: 5, avatar: 28, twoLines: true, label: 'Loading conversations' }) : h(Frag, null,

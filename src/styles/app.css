@@ -23,7 +23,7 @@ h1,h2,h3{text-wrap:balance}
 .mono{font-family:var(--font-mono)}
 .tnum{font-variant-numeric:tabular-nums}
 /* Hover fades. Keyboard selection in menus, the palette and composer suggestions stays instant: a fade there lags behind the arrow keys. */
-.searchbtn,.sec-label,.me-btn,.pillbtn,.linkbtn,.embed-play,.embed-reveal,.mrow,.tab,.conv,.card,.pick,.role-btn,.media-pick,.filter-chip button{transition:background-color var(--duration-base) var(--ease-out),border-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
+.searchbtn,.sec-label,.me-btn,.pillbtn,.linkbtn,.embed-play,.embed-reveal,.mrow,.chip,.conv,.card,.pick,.role-btn,.media-pick,.filter-chip button{transition:background-color var(--duration-base) var(--ease-out),border-color var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
 
 .shell{display:flex;gap:var(--space-3);height:100%;min-height:0;padding:var(--space-3) max(var(--space-3),env(safe-area-inset-right,0px)) var(--space-3) max(var(--space-3),env(safe-area-inset-left,0px))}
 /* Sky behind the panels: text always stays on a solid surface. */
@@ -364,9 +364,9 @@ h1,h2,h3{text-wrap:balance}
 .pip{display:flex;height:100%;min-height:0;background:var(--bg)}
 .pip>.main{border:0;border-radius:0;box-shadow:none}
 .space-bar{display:flex;align-items:center;gap:var(--space-1);padding:0 10px 8px;overflow-x:auto;scrollbar-width:none}
-.space-chip{display:inline-flex;flex:none;align-items:center;gap:6px;height:var(--size-control-sm);padding:0 10px;border:0;border-radius:var(--radius-full);background:var(--hover);color:var(--text-2);font:inherit;font-size:var(--font-size-caption);cursor:pointer}
-.space-chip:hover{background:var(--hover-2);color:var(--text)}
-.space-chip[aria-pressed="true"]{background:var(--selected);color:var(--text);font-weight:600}
+.chip{display:inline-flex;flex:none;align-items:center;gap:6px;height:var(--size-control-sm);padding:0 10px;border:0;border-radius:var(--radius-full);background:var(--hover);color:var(--text-2);font:inherit;font-size:var(--font-size-caption);cursor:pointer}
+.chip:hover{background:var(--hover-2);color:var(--text)}
+.chip[aria-pressed="true"]{background:var(--selected);color:var(--text);font-weight:600}
 .pal-hint{margin:0;padding:8px 16px 12px;border-top:1px solid var(--border);color:var(--text-3);font-size:var(--font-size-caption)}
 .pal-empty{padding:24px 16px;text-align:center;color:var(--text-3)}
 .navlist .pal-empty{margin:4px 10px;padding:0;font-size:var(--font-size-body-sm);text-align:left}
@@ -408,9 +408,6 @@ h1,h2,h3{text-wrap:balance}
 .thread{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
 .dm-split{flex:1;display:flex;min-height:0;min-width:0}
 .tabs{display:flex;gap:4px;flex-wrap:wrap}
-.tab{height:var(--size-control-sm);padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);font-size:var(--font-size-caption);font-weight:500;cursor:pointer}
-.tab:hover{color:var(--text)}
-.tab[aria-pressed="true"]{background:var(--selected);color:var(--text)}
 .conv{display:flex;align-items:center;gap:12px;width:100%;padding:10px;border:0;border-radius:var(--radius-lg);background:none;text-align:left;color:var(--text-2);cursor:pointer}
 .conv:hover{background:var(--hover)}
 /* On the current row secondary text takes moon-text: text-2 and text-3 fall under 4.5:1 on moon-soft. */
@@ -455,7 +452,7 @@ h1,h2,h3{text-wrap:balance}
   .mrow,.searchbtn,.pillbtn,.pal-item,.navlist .skel-row,.members-list .skel-row{height:var(--size-touch)}
   .menu button,.suggest-item{min-height:var(--size-touch)}
   .sec-label{min-height:36px}
-  .tab,.space-chip{height:36px}
+  .chip{height:36px}
   .chan-trigger{min-width:var(--size-touch)}
   /* A star over a thumbnail keeps its size: at size-touch it would cover the picture. */
   .media-star{min-width:0;min-height:0}
@@ -515,14 +512,16 @@ h1,h2,h3{text-wrap:balance}
 }
 .pick{display:block;padding:10px;border:1px solid var(--border-strong);border-radius:var(--radius-xl);background:none;text-align:left;cursor:pointer;width:100%}
 .pick:hover{border-color:var(--control-strong)}
-.pick[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.pick[aria-checked="true"]{border-color:var(--text);box-shadow:0 0 0 1px var(--text)}
 .pick-title{display:block;margin-top:10px;font-size:var(--font-size-body-sm);font-weight:500;color:var(--text)}
 .pick-desc{display:block;font-size:var(--font-size-caption);color:var(--text-3)}
 .thumb{display:flex;height:84px;border-radius:var(--radius-md);overflow:hidden}
 .thumb span{display:block}
 .swatches{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
 .sw-dot{width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);display:inline-flex;align-items:center;justify-content:center;color:var(--on-accent)}
-.sw-dot[aria-checked="true"]{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
+/* An outline, not a ring of the surface color: the swatches sit on a section and in a dialog. */
+.sw-dot[aria-checked="true"]{outline:2px solid var(--text);outline-offset:2px}
+.sw-dot[aria-checked="true"]:focus-visible{outline-color:var(--focus-ring)}
 .color-in{width:32px;height:32px;padding:0;border:1px solid var(--control);border-radius:50%;background:none;cursor:pointer}
 .range-row{display:flex;align-items:center;gap:12px;flex:0 1 280px}
 .range-row input[type="range"]{flex:1;accent-color:var(--accent)}

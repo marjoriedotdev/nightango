@@ -50,11 +50,11 @@ function SpaceBar() {
   return h('div', { className: 'space-bar', role: 'group', 'aria-label': 'Spaces' },
     items.map(function (it) {
       var on = (s.space || null) === it.id;
-      return h('button', { key: it.id || 'all', type: 'button', className: 'space-chip', 'aria-pressed': String(on), onClick: function () { app.actions.setSpace(it.id); } },
+      return h('button', { key: it.id || 'all', type: 'button', className: 'chip', 'aria-pressed': String(on), onClick: function () { app.actions.setSpace(it.id); } },
         it.name, it.count && !on ? h(T.CountBadge, { count: it.count }) : null);
     }),
     h(MenuButton, {
-      icon: 'plus', label: 'Spaces', size: 28, iconSize: 15, align: 'left', items: [
+      icon: 'plus', label: 'Spaces', size: 28, iconSize: 16, align: 'left', items: [
         s.spaces.length < SPACE_MAX ? { label: 'New space…', icon: 'plus', onSelect: function () { app.ui.openSpaceEditor({ id: null }); } } : null,
         sp ? { label: 'Edit ' + sp.name + '…', icon: 'edit', onSelect: function () { app.ui.openSpaceEditor({ id: sp.id }); } } : null
       ]

@@ -2395,10 +2395,10 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   await until(() => $$('.convs .conv-prev').some(x => x.textContent === 'Still here'));
   batches.afterMessage = batchRows();
   await until(() => $$('.convs .conv-row .tc-count').length >= 200);
-  click(byText('.convs .tab', 'Unread')); await wait(50);
+  click(byText('.convs .chip', 'Unread')); await wait(50);
   batches.unread = batchRows();
   // Back to All: the observer can predate this filter, its batch must still apply.
-  click(byText('.convs .tab', 'All')); await wait(50);
+  click(byText('.convs .chip', 'All')); await wait(50);
   batches.backToAll = batchRows();
   reachEnd(batchWatcher()); await until(() => batchRows() > 100);
   batches.backToAllNext = batchRows();
