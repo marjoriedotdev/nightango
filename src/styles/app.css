@@ -604,7 +604,8 @@ h1,h2,h3{text-wrap:balance}
   .composer-wrap{padding-left:12px;padding-right:12px}
   .suggest{left:var(--space-3);right:var(--space-3)}
   .chan-trigger{width:var(--size-control-md);padding:0;justify-content:center}
-  .tc-msg{padding-left:16px;padding-right:16px}
+  .tc-msg,.cmsg{margin:0 var(--space-1);padding-left:var(--space-3);padding-right:var(--space-3)}
+  .tc-msg-mention,.cmsg.tc-msg-mention{margin:0;padding-left:var(--space-4);padding-right:var(--space-4)}
 }
 @media (max-width:640px){.grid3,.grid2{grid-template-columns:1fr}}
 
