@@ -1,4 +1,6 @@
 /* ---------- Private messages ---------- */
+// The heading follows the entry of the sidebar that opened the column.
+var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };
 function DMView(p) {
   var app = useApp(), s = app.state, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
@@ -22,7 +24,7 @@ function DMView(p) {
   var scrollRef = useRef(null), loading = LIVE && !s.pmLoaded;
   var batch = useRowBatches(scrollRef, section === 'chats' && !loading ? shown : [], section + ':' + tab + ':' + q);
   var list = h('section', { className: 'convs', 'aria-label': 'Conversations' },
-    h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, 'Private messages'),
+    h('header', { className: 'topbar col-head' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, DM_SECTION_TITLES[section]),
       h(T.IconButton, { icon: 'edit', label: 'New message', onClick: app.ui.openNewDm })),
     LIVE && s.pmrStatus === 'restricted' && !s.pmrDismissed ? h('div', { style: { padding: '12px 12px 0' } }, h(T.Banner, { tone: 'warning', title: 'Your private messages are restricted', onDismiss: app.actions.dismissPmr },
       'People might not receive your messages.')) : null,
