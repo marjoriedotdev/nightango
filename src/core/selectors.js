@@ -1,4 +1,27 @@
 function roleOf(group, name) { return group && group.settings && group.settings.staff ? group.settings.staff[name] || null : null; }
+/**
+ * Returns the role shown by the badge a live group message carries, as BetterChatango shows it.
+ * @param {Object} group Live group of the message.
+ * @param {Object} m Group message.
+ */
+function messageBadge(group, m) { return m.badge === 'owner' && m.author !== group.live.owner ? 'admin' : m.badge || null; }
+/**
+ * Returns the badges the signed-in user can pick in a live group, none while the group does not let moderators choose.
+ * @param {Object} group Live group.
+ * @param {string} me Signed-in user.
+ * @returns {Array<string>} none, then mod, admin and owner as the BetterChatango picker offers them.
+ */
+function badgeChoices(group, me) {
+  var role = roleOf(group, me), owner = role === 'owner';
+  if (!isStaffRole(role) || !(group.live.flags & GROUP_FLAG.MODS_CHOOSE_VISIBILITY)) return [];
+  return ['none', 'mod'].concat(owner || group.live.mods[me] & IS_STAFF_RIGHT ? ['admin'] : [], owner ? ['owner'] : []);
+}
+/**
+ * Returns the badge sent with the signed-in user's messages in a live group: the one picked, while the group still offers it.
+ * @param {Object} group Live group.
+ * @param {string} me Signed-in user.
+ */
+function sentBadge(group, me) { return badgeChoices(group, me).indexOf(group.live.ownBadge) > 0 ? group.live.ownBadge : 'none'; }
 function isStaffRole(r) { return r === 'owner' || r === 'admin' || r === 'mod'; }
 /**
  * Returns the permissions of a member in a group in live as in the prototype: the owner has every permission and a moderator those of their Chatango bits.

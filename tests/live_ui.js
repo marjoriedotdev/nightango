@@ -2165,8 +2165,14 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   const fromBadges = { kim: roleRow('Kim'), lee: roleRow('Lee'), dana: roleRow('Dana'), ola: roleRow('Ola') };
   const storedRoles = () => (JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').badges || {}).badges;
   const rolesKept = storedRoles();
-  g('mods', 'badges', ['lee,' + MOD]);
+  const msgBadge = t => { const r = $$('.tc-msg').find(x => x.textContent.includes(t)); return r ? [...r.querySelectorAll('.tc-badge')].map(b => b.textContent).join(',') : null; };
+  // Kim hides the badge: the newest message carries none, an older one arriving later changes nothing.
+  g('b', 'badges', ['1700040004.1', 'Kim', '', 'u9', 'UNID9', 'tmp601', '9.9.9.9', '0', '', '<n000/><f x11000="0">Hidden']);
+  g('i', 'badges', ['1700039999.1', 'Kim', '', 'u9', 'UNID9', 'K0=', '9.9.9.9', '128', '', '<n000/><f x11000="0">Oldest']);
   await until(() => !roleRow('Kim').includes('Admin'));
+  const hidden = { kim: roleRow('Kim'), stored: storedRoles(), rows: { oldest: msgBadge('Oldest'), hidden: msgBadge('Hidden'), hello: msgBadge('Hello') } };
+  g('mods', 'badges', ['lee,' + MOD]);
+  await until(() => !roleRow('Ola').includes('Admin'));
   const fromList = { kim: roleRow('Kim'), lee: roleRow('Lee'), ola: roleRow('Ola') };
   step("roles come from message badges without a moderator list, the highest one stays, and Chatango's list replaces them",
     fromBadges.kim.includes('Admin') && fromBadges.lee.includes('Mod') && fromBadges.dana.includes('Owner') && !/Admin|Mod/.test(fromList.kim) && fromList.lee.includes('Mod'),
@@ -2175,6 +2181,33 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     fromBadges.ola.includes('Admin') && JSON.stringify(rolesKept) === JSON.stringify({ ola: 'admin', kim: 'admin', lee: 'mod' })
       && !/Admin|Mod/.test(fromList.ola) && JSON.stringify(storedRoles()) === JSON.stringify({ lee: 'mod' }),
     { ola: fromBadges.ola, rolesKept, afterList: storedRoles() });
+  step('a member whose latest message carries no badge loses the role, in this browser too, and each message shows the badge it carries',
+    !/Admin|Mod/.test(hidden.kim) && JSON.stringify(hidden.stored) === JSON.stringify({ ola: 'admin', lee: 'mod' })
+      && JSON.stringify(hidden.rows) === JSON.stringify({ oldest: 'Admin', hidden: '', hello: 'Mod' }),
+    hidden);
+
+  /* Own badge: picked where the group lets moderators choose, sent in the flag of each message */
+  C.groups.mybadge = fakeGroup();
+  SB.renderGroup({ group: 'mybadge', header: 'My badge' });
+  g('ok', 'mybadge', ['dana', '', '', '', '1700000000', '', 'marjorie,' + MOD, String(1 << 20)]);
+  g('inited', 'mybadge', []);
+  await until(() => !!byText('.tc-nav', 'mybadge'));
+  click(byText('.tc-nav', 'mybadge')); await wait(50);
+  click($('button[aria-label="Group options"]')); await wait(30);
+  click(menuItem('Your badge')); await wait(50);
+  const badgePicks = $$('.dialog .tc-seg button').map(b => b.textContent);
+  click(byText('.dialog .tc-seg button', 'Moderator')); await wait(30);
+  click(byText('.dialog button', 'Done')); await wait(30);
+  const badgeTa = $('.tc-composer textarea');
+  type(badgeTa, 'With badge'); key(badgeTa, 'Enter'); await wait(30);
+  const withBadge = frame('bm:').pop() || '';
+  const keptBadge = (JSON.parse(w.localStorage.getItem('torch-skin:marjorie') || '{}').ownBadges || {}).mybadge;
+  g('groupflagsupdate', 'mybadge', ['0']); await wait(30);
+  type(badgeTa, 'No choice'); key(badgeTa, 'Enter'); await wait(30);
+  const noChoice = frame('bm:').pop() || '';
+  step('a moderator picks a badge the group lets them carry, kept in this browser, and it rides on the flag of each message until the group stops letting moderators choose',
+    JSON.stringify(badgePicks) === JSON.stringify(['Hidden', 'Moderator']) && /^bm:[a-z0-9]+:64:.*With badge$/.test(withBadge) && keptBadge === 'mod' && /^bm:[a-z0-9]+:0:.*No choice$/.test(noChoice),
+    { badgePicks, withBadge, keptBadge, noChoice });
 
   /* Posting limits: slow mode read on join, a message refused as too fast, a temporary ban, the bypass right */
   C.groups.slow = fakeGroup();

@@ -30,7 +30,7 @@ function liveWorld(me) {
   };
 }
 // Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', favoritePeople: 'array', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
+var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', favoritePeople: 'array', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', ownBadges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
 // The read position of the group in view moves with each message: its writes wait and go out together.
 var READ_SAVE_MS = 2000;
 var READ_POSITIONS_MAX = 100;
@@ -78,7 +78,7 @@ function storedSpaces(stored) {
     return { id: x.id, name: x.name.trim().slice(0, SPACE_NAME_MAX), quiet: x.quiet === true, members: x.members.filter(function (m) { return typeof m === 'string' && SPACE_MEMBER.test(m); }) };
   });
 }
-function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, favoritePeople: [], spaces: [], space: '', readTs: {}, badges: {}, unstyled: [], style: null }; }
+function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, favoritePeople: [], spaces: [], space: '', readTs: {}, badges: {}, ownBadges: {}, unstyled: [], style: null }; }
 /**
  * Returns the most recent read positions of a map of read positions.
  * @param {Object} reads Server time of the newest read message by group.
@@ -148,6 +148,8 @@ function useLocalStore(state) {
     Object.keys(prev.readTs).forEach(function (k) { if (!state.groups[k]) o.readTs[k] = prev.readTs[k]; });
     Object.keys(state.groups).forEach(function (k) { if (state.groups[k].lastReadTs != null) o.readTs[k] = state.groups[k].lastReadTs; });
     o.readTs = newestReads(o.readTs);
+    Object.keys(prev.ownBadges).forEach(function (k) { if (!state.groups[k]) o.ownBadges[k] = prev.ownBadges[k]; });
+    Object.keys(state.groups).forEach(function (k) { var b = state.groups[k].live && state.groups[k].live.ownBadge; if (b && b !== 'none') o.ownBadges[k] = b; });
     Object.keys(prev.badges).forEach(function (k) { if (!state.groups[k]) o.badges[k] = prev.badges[k]; });
     Object.keys(state.groups).forEach(function (k) { var r = groupRoles(state.groups[k]); if (Object.keys(r).length) o.badges[k] = r; });
     prev.unstyled.forEach(function (n) { if (!state.users[n]) o.unstyled.push(n); });
@@ -178,7 +180,7 @@ function liveGroup(id, title) {
     id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: null,
     members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
     conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
-    live: { flags: 0, mods: {}, badges: {}, knownBadges: {}, owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
+    live: { flags: 0, mods: {}, badges: {}, knownBadges: {}, ownBadge: 'none', owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
     settings: mkSettings({ overview: { title: t, description: '' }, staff: {} })
   };
 }
@@ -208,6 +210,7 @@ function ensureLiveGroup(d, gid, local) {
     g.accent = hexToRgb(local.accents[gid]) ? local.accents[gid] : null;
     g.lastReadTs = local.readTs[gid] || null;
     g.live.knownBadges = local.badges[gid] || {};
+    g.live.ownBadge = BADGE_FLAG[local.ownBadges[gid]] ? local.ownBadges[gid] : 'none';
     g.settings.staff = staffOf(g.live);
   }
   return g;
@@ -342,23 +345,29 @@ function pmAuthor(d, local) {
   return function (x) { var u = ensureLiveUser(d, x.from, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
 }
 /**
- * Records the role shown by the badge of a group message, the highest seen during the session.
+ * Records the role shown by the badge of a member's latest group message, a message without a badge included.
  * @param {Object} g Group being modified.
  * @param {string} name Message author.
  * @param {?string} badge Role of the badge, as returned by badgeRoleOf.
+ * @param {number} ts Message timestamp.
  */
-function noteBadge(g, name, badge) {
+function noteBadge(g, name, badge, ts) {
   var seen = g.live.badges[name];
-  if (!badge || seen === badge || seen === 'admin') return;
-  g.live.badges[name] = badge;
-  deriveLive(g);
+  // History pages arrive from newest to oldest: an older message never overrides a newer badge.
+  if (seen && seen.ts >= ts) return;
+  // The owner role comes from the ok frame: anyone else with both badges counts as an administrator.
+  var role = badge === 'owner' ? 'admin' : badge || null, before = seen ? seen.role : g.live.knownBadges[name] || null;
+  g.live.badges[name] = { role: role, ts: ts };
+  if (role !== before) deriveLive(g);
 }
 /**
  * Returns the role of each staff member of a live group.
  * @param {Object} L Chatango state of the group.
  */
 function staffOf(L) {
-  var staff = {}, badges = Object.assign({}, L.knownBadges, L.badges);
+  var staff = {}, badges = Object.assign({}, L.knownBadges);
+  // A message without a badge in this session drops the role an earlier one gave.
+  Object.keys(L.badges).forEach(function (n) { if (L.badges[n].role) badges[n] = L.badges[n].role; else delete badges[n]; });
   if (L.owner) staff[L.owner] = 'owner';
   Object.keys(L.mods).forEach(function (n) { if (n !== L.owner) staff[n] = roleOfFlags(L.mods[n]); });
   // Chatango sends the moderator list to staff only: other members learn roles from the badges on messages, those of earlier sessions included.

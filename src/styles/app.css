@@ -163,7 +163,6 @@ h1,h2,h3{text-wrap:balance}
 .me-text span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .topbar{height:60px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px 0 20px;border-bottom:1px solid var(--border)}
-.main>.topbar{background:linear-gradient(180deg,color-mix(in srgb,var(--sky-top-now) 70%,var(--bg)),var(--bg))}
 .topbar h1,.topbar h2{margin:0;font-family:var(--font-display);font-size:var(--font-size-display-sm);line-height:28px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar .namebtn{font-weight:400}
 /* The title does not clip: the focus outline of the profile button overflows it, only the name gets an ellipsis. */
@@ -172,6 +171,8 @@ h1,h2,h3{text-wrap:balance}
 .dm-title .namebtn{overflow:hidden;text-overflow:ellipsis}
 .col-head{padding-left:var(--space-4)}
 .topic{flex:1;min-width:0;margin:0;color:var(--text-3);font-size:var(--font-size-body-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topic-btn{display:block;padding:0;border:0;background:none;font-family:inherit;text-align:start;cursor:pointer}
+.topic-btn:hover{color:var(--text-2)}
 .vsep{width:1px;height:18px;background:var(--border-strong);flex:none}
 .pillbtn{display:inline-flex;align-items:center;gap:6px;height:var(--size-control-md);padding:0 10px;border:0;border-radius:var(--radius-md);background:none;color:var(--text-2);font-size:var(--font-size-control);cursor:pointer;white-space:nowrap}
 .pillbtn:hover{background:var(--hover-2);color:var(--text)}
@@ -338,7 +339,7 @@ h1,h2,h3{text-wrap:balance}
 .dialog.sheet{max-width:none;max-height:none;display:flex;flex-direction:column;border:0;border-radius:0;background:var(--panel);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);animation:none}
 .dialog.sheet .topbar{padding:0 6px 0 16px}
 .dialog.sheet .kv{padding:14px 16px 0}
-.dialog.sheet .kv:first-child{border-top:0}
+.dialog.sheet .kv:first-child,.members .scroll>.kv:first-child{border-top:0}
 .dialog-head{padding:18px 20px 2px}
 .dialog-head h2{margin:0;font-size:var(--font-size-title-md);line-height:24px;font-weight:600}
 .dialog-head p{margin:6px 0 0;color:var(--text-2);font-size:var(--font-size-body-sm)}

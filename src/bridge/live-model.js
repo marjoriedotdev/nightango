@@ -57,9 +57,13 @@ function visitorPage(items, get) {
 }
 
 /* Chatango bits, read in the BetterChatango client (chatango.flags) and cross-checked with chadango and chatango-lib. */
-var GROUP_FLAG = { NOANONS: 4, NOCOUNTER: 16, NOIMAGES: 32, NOLINKS: 64, NOVIDEOS: 128, CHANNELSDISABLED: 8192, NLP_SINGLEMSG: 16384, NLP_MSGQUEUE: 32768, BROADCAST_MODE: 65536, IS_CLOSED: 262144, NLP_NGRAM: 2097152, NO_PROXIES: 4194304 };
+var GROUP_FLAG = { NOANONS: 4, NOCOUNTER: 16, NOIMAGES: 32, NOLINKS: 64, NOVIDEOS: 128, CHANNELSDISABLED: 8192, NLP_SINGLEMSG: 16384, NLP_MSGQUEUE: 32768, BROADCAST_MODE: 65536, IS_CLOSED: 262144, MODS_CHOOSE_VISIBILITY: 1048576, NLP_NGRAM: 2097152, NO_PROXIES: 4194304 };
 var CHANNEL_FLAG = { red: 256, blue: 2048, mod: 32768 };
 var MSG_FLAG = { PREMIUM: 4, BG_ON: 8, MOD_ICON: 64, STAFF_ICON: 128 };
+// Badges of the BetterChatango picker, sent in the flag of each group message (client.html:261-272).
+var BADGE_FLAG = { mod: MSG_FLAG.MOD_ICON, admin: MSG_FLAG.STAFF_ICON, owner: MSG_FLAG.MOD_ICON | MSG_FLAG.STAFF_ICON };
+// IS_STAFF moderator right: BetterChatango offers the administrator badge to a moderator who has it.
+var IS_STAFF_RIGHT = 262144;
 // Chatango fonts under their Chatango name, in the order of their number (0 to 8), the one used in the <f x…="n"> and <g x…="n"> tags.
 var FONT_FACES = ['Arial', 'Comic', 'Georgia', 'Handwriting', 'Impact', 'Palatino', 'Papyrus', 'Times', 'Typewriter'];
 
@@ -136,6 +140,9 @@ var EMOTICONS = [
 // No prototype: the name comes from the member, constructor or __proto__ must find nothing.
 var EMOTICON_BY_NAME = EMOTICONS.reduce(function (o, e) { o[e.name] = e; return o; }, Object.create(null));
 
-// The owner carries both badges and keeps the owner role read from the ok frame.
-function badgeRoleOf(flags) { return flags & MSG_FLAG.STAFF_ICON ? 'admin' : flags & MSG_FLAG.MOD_ICON ? 'mod' : null; }
+// Both badges are the owner badge of BetterChatango (data-flag 192), shown as such on the owner's messages only (inject.js:8006-8012).
+function badgeRoleOf(flags) {
+  var mod = flags & MSG_FLAG.MOD_ICON, staff = flags & MSG_FLAG.STAFF_ICON;
+  return mod && staff ? 'owner' : staff ? 'admin' : mod ? 'mod' : null;
+}
 function channelOf(flags) { return flags & CHANNEL_FLAG.mod ? 'mod' : flags & CHANNEL_FLAG.blue ? 'blue' : flags & CHANNEL_FLAG.red ? 'red' : 'none'; }

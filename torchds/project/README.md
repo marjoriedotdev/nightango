@@ -63,7 +63,7 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 - Panels (navigation, main, members, settings) float over the sky with a `border` hairline and `shadow-panel`. Inside a panel, separate areas with `border` hairlines, not shadows. Rows inside a section use `divider`.
 - Floating elements get a shadow: `shadow-popover` for the message toolbar and menus, `shadow-floating` for the save bar and dialogs.
 - Dialogs and the open navigation drawer sit on a `scrim` veil.
-- Gradients belong to the sky only: the sky itself and its afterglow, the sky band at the top of the navigation, the dusk at the top of the main panel, the mention light, hairlines that fade at their ends. Text sits on a solid surface, never on a cloud. Two texts sit on the sky: the name on the sky band and the conversation header on the dusk of the main panel. Both keep 4.5:1 at every hour, so an early or late sky stays as far from `text`, `text-2` and `text-3` as these do.
+- Gradients belong to the sky only: the sky itself and its afterglow, the sky band at the top of the navigation, the mention light, hairlines that fade at their ends. Panel headers sit on their panel's solid surface, the same on every page. Text sits on a solid surface, never on a cloud. One text sits on the sky: the name on the sky band. It keeps 4.5:1 at every hour, so an early or late sky stays as far from `text`, `text-2` and `text-3` as these do.
 - No glass effects, no colored left borders. One exception: a message posted on a Chatango channel carries a 3px stripe and a light tint in the channel color, and the message head still names the channel.
 
 ## States and behavior
