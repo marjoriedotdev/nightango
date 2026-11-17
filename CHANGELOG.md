@@ -4,6 +4,11 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 
 ## [0.38.0] - 2026-11-17
 
+### Added
+
+- Group options has Your badge for staff: show your Moderator, Administrator or Owner badge on your own messages, or none, when the group lets its moderators choose.
+- On a wide window the member column opens on the full description of the group, and the shortened description in the header opens it.
+
 ### Changed
 
 - Panels, menus and dialogs no longer have an outline: a soft light on their upper edge and a deeper shadow set them apart from the sky.
@@ -22,9 +27,11 @@ Changes in Nightango that you can see, newest first. The format follows [Keep a 
 - The column opened from Friends or Meet people carries that name.
 - The profile preview in Settings looks like the profile other people open.
 - A send button with nothing to send looks switched off instead of dimmed.
+- Group, Discover and Mentions headers sit on the surface of their panel, like the headers of Private messages.
 
 ### Fixed
 
+- A badge next to a name follows the member's latest message: a moderator who hides their badge no longer keeps it.
 - The Meet people tab no longer sticks out of its control in Private messages.
 - Message and Add friend stay in view in a profile, even in a short window.
 - The presence dot no longer covers a large profile picture.
