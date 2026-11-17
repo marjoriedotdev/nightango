@@ -193,19 +193,22 @@ function DmThread(p) {
     return !!last;
   }
   var calls = useLatestCalls({ jump: function (o) { log.jumpTo(o.id); }, reply: cm.enter('reply'), quote: cm.enter('quote'), edit: edit });
-  var rows = [], prev = null, lastDay = null, byKey = Object.create(null);
+  var rows = [], prev = null, lastRow = null, lastDay = null, byKey = Object.create(null);
   convo.messages.forEach(function (m) { if (m.key && !byKey[m.key]) byKey[m.key] = m; });
   convo.messages.forEach(function (m) {
     var dk = dayKey(m.ts), a = userOf(s, m.from);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
     var original = m.replyTo ? byKey[m.replyTo.key] || null : null;
-    rows.push(h(DmMessageRow, {
+    lastRow = joinRow(prev && lastRow, {
       key: m.id, m: m, shown: shownName(s, m.from), peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, avatarV: a.avatarV,
-      continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, highlight: log.targetId === m.id,
+      continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, joinPrev: false, joinNext: false, highlight: log.targetId === m.id,
       original: original, onJump: calls.jump, onReply: u.blocked ? null : calls.reply, onQuote: u.blocked ? null : calls.quote, onEdit: u.blocked ? null : calls.edit
-    }));
+    }, dmRowFill(m, a, s.prefs, app.theme));
+    rows.push(lastRow);
     prev = m;
   });
+  // A row knows it joins the next one only once that one is read.
+  rows = rows.map(function (it) { return it.row ? h(DmMessageRow, it.row) : it; });
   var older = !LIVE || !s.pmLoaded || convo.historyCapped ? null
     : !convo.olderMore ? { status: 'start', text: 'This is the start of the messages saved in this browser.' }
     : {
@@ -256,15 +259,17 @@ function canEditPm(m, me) { return m.from === me && !!m.key; }
 /**
  * Private message row with its Reply button and its action menu, rendered again only when its props change.
  * A message without a PM key, sent by the official Chatango client, has neither Reply nor Edit: they could not point to it.
- * @param {{m: Object, shown: string, peer: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, avatarV: (number|undefined), continued: boolean, highlight: boolean, original: ?Object,
- *   onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message, author's name as they spell it, conversation correspondent, signed-in user, preferences, resolved theme,
- *   author's style, hidden style and picture version, follow-up of the previous message from the same author, highlight, loaded original of a reply, jump to it,
+ * @param {{m: Object, shown: string, peer: string, me: string, prefs: Object, theme: string, style: Object, unstyled: boolean, avatarV: (number|undefined), continued: boolean,
+ *   joinPrev: boolean, joinNext: boolean, highlight: boolean, original: ?Object, onJump: Function, onReply: ?Function, onQuote: ?Function, onEdit: ?Function}} p Message,
+ *   author's name as they spell it, conversation correspondent, signed-in user, preferences, resolved theme, author's style, hidden style and picture version,
+ *   follow-up of the previous message from the same author, background joined to the previous and next rows, highlight, loaded original of a reply, jump to it,
  *   and reply to, quote and edit the message (null when sending is not possible).
  */
 var DmMessageRow = React.memo(function DmMessageRow(p) {
   var app = useAppApi(), m = p.m, me = p.me, prefs = p.prefs;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var ms = memberStyles({ style: p.style, unstyled: p.unstyled }, prefs.styles, p.theme, false);
+  var joined = joinedRow(p, prefs.density === 'compact', ms.row);
   // A sent PM gets its archive key only at the next OK: its remove entry appears only after that.
   var canRemove = !LIVE || !!m.archiveTs;
   var canEdit = !!p.onEdit && canEditPm(m, me), canQuote = !!p.onQuote && !!m.text && !!mentionHandle(m.from);
@@ -283,8 +288,8 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
     moreActionsButton(items, setMenuOpen));
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, prefs.h24),
-    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(p.shown, ms.name), style: ms.row, reply: reply,
-    actions: actions, msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open')
+    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(p.shown, ms.name), style: joined.style, reply: reply,
+    actions: actions, msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', joined.className)
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
 });
 
