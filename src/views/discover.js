@@ -30,11 +30,11 @@ function Discover() {
     pageHeader('Discover groups'),
     h(SessionBanner, null),
     h('div', { className: 'scroll' },
-      h('div', { style: { maxWidth: 1080, margin: '0 auto', padding: '32px 24px 56px', display: 'flex', flexDirection: 'column', gap: 28 } },
+      h('div', { className: 'discover' },
         h('div', { className: 'page-head' },
-          h('div', null, h('h2', { style: { margin: '0 0 6px', fontSize: 'var(--font-size-title-lg)', lineHeight: '32px', fontWeight: 600 } }, 'Find a group'), h('p', { className: 'lede', style: { margin: 0 } }, 'Join a group, or open one directly by its name.')),
+          h('div', null, h('p', { className: 'lede' }, 'Join a group, or open one directly by its name.')),
           h(T.Button, { variant: 'primary', icon: 'plus', onClick: function () { app.ui.openCreate(''); } }, 'Create a group')),
-        h('form', { onSubmit: submit, className: 'tc-section', style: { padding: '16px 20px' }, noValidate: true },
+        h('form', { onSubmit: submit, className: 'tc-section join-form', noValidate: true },
           h(T.TextField, {
             id: 'join', label: 'Join by name or link', placeholder: 'community, community.chatango.com or a full link', value: joinName, error: err || undefined, onChange: function (e) { setJoinName(e.target.value); setErr(''); },
             action: h(T.Button, { type: 'submit' }, 'Join')
