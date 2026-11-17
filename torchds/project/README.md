@@ -62,8 +62,9 @@ Nightango is a calm, readable skin for BetterChatango, a web client for Chatango
 
 ## Elevation and borders
 
-- Panels (navigation, main, members, settings) float over the sky with a `border` hairline and `shadow-panel`. Inside a panel, separate areas with `border` hairlines, not shadows. Rows inside a section use `divider`.
-- Floating elements get a shadow: `shadow-popover` for the message toolbar and menus, `shadow-floating` for the save bar and dialogs.
+- Panels (navigation, main, members and profile, settings) float over the sky with `shadow-panel` and no outline: the shadow carries a moonlit upper edge (`lit`). Inside a panel, separate areas by tone first (`panel` beside `bg`), then with `border` hairlines, not shadows. Rows inside a section use `divider`.
+- Depth comes from tone, not from boxes: banners, the composer, sections and cards are surfaces without an outline, sections and cards with the `lit` edge. Text fields and media frames keep their outline.
+- Floating elements get a shadow and no outline: `shadow-popover` for the message toolbar and the composer, `shadow-floating` for menus, popovers, toasts, the save bar and dialogs. Both carry the `lit` edge.
 - Dialogs and the open navigation drawer sit on a `scrim` veil.
 - Gradients belong to the sky only: the sky itself and its afterglow, the sky band at the top of the navigation, the mention light, hairlines that fade at their ends. Panel headers sit on their panel's solid surface, the same on every page. Text sits on a solid surface, never on a cloud. One text sits on the sky: the name on the sky band. It keeps 4.5:1 at every hour, so an early or late sky stays as far from `text`, `text-2` and `text-3` as these do.
 - No glass effects, no colored left borders. One exception: a message posted on a Chatango channel carries a 3px stripe and a light tint in the channel color, and the message head still names the channel.
