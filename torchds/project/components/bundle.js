@@ -217,7 +217,9 @@
 
   function Avatar(props) {
     var size = props.size || 36;
-    var dot = Math.max(11, Math.round(size * 0.34));
+    // Capped: past 22px the dot outweighs the face, and it moves in to stay on the edge of the disc.
+    var dot = Math.min(22, Math.max(11, Math.round(size * 0.34)));
+    var inset = size * 0.34 > 22 ? Math.round(size * 0.146 - dot / 2) : -2;
     var failed = React.useState(0)[1];
     var fade = React.useState(null), fadedSrc = fade[0], setFadedSrc = fade[1];
     var src = props.src && !brokenAvatars[props.src] ? props.src : null;
@@ -228,7 +230,7 @@
         onLoad: function (e) { loadedAvatars[src] = true; if (e.currentTarget.classList.contains('tc-avatar-img-wait')) setFadedSrc(src); if (props.onLoad) props.onLoad(); },
         onError: function () { brokenAvatars[src] = true; failed(function (n) { return n + 1; }); } }) : null,
       props.decor || null,
-      props.status ? h('span', { className: 'tc-presence tc-presence-' + props.status, style: { width: dot, height: dot } }) : null);
+      props.status ? h('span', { className: 'tc-presence tc-presence-' + props.status, style: { width: dot, height: dot, right: inset, bottom: inset } }) : null);
   }
 
   function NavItem(props) {
