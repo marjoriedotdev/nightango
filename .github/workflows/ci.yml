@@ -25,12 +25,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Every user is told about a release from main: a beta must not reach it, even through a pull request.
       - name: Refuse a beta @version on main
-        if: (github.base_ref || github.ref_name) == 'main'
-        run: |
-          if grep -Eq '^// @version[[:space:]]+[^[:space:]]*-' src/loader/skin-loader.js; then
-            echo "::error::main publishes stable releases only: set @version to X.Y.Z in src/loader/skin-loader.js."
-            exit 1
-          fi
+        env:
+          TARGET: ${{ github.base_ref || github.ref_name }}
+        run: node scripts/release.mjs check "$TARGET"
       - run: pnpm test
       # The release job publishes the userscripts only if they match these checksums, taken from the files tested here.
       - name: Checksum the tested userscripts
@@ -72,28 +69,27 @@ jobs:
           sha256sum --check --strict SHA256SUMS
       # One release per @version: a push without a version bump publishes nothing.
       # The beta branch publishes prereleases only, which releases/latest skips (update check, ADR-0013).
+      - name: Plan the release of @version
+        id: plan
+        run: node scripts/release.mjs plan "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
       - name: Create release for @version
+        if: steps.plan.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          PRERELEASE: ${{ steps.plan.outputs.prerelease }}
         run: |
-          version=$(sed -n 's|^// @version[[:space:]]*||p' src/loader/skin-loader.js)
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$'; then
-            echo "::error::Invalid @version '$version' in src/loader/skin-loader.js"
-            exit 1
-          fi
-          flags=
-          case "$GITHUB_REF_NAME/$version" in
-            beta/*-beta.*) flags='--prerelease --latest=false' ;;
-            beta/*) echo "@version $version is not a beta, nothing to publish from beta."; exit 0 ;;
-          esac
-          tag="v$version"
-          if gh release view "$tag" > /dev/null 2> view.err; then
-            echo "Release $tag already exists, nothing to publish."
+          if gh release view "$TAG" > /dev/null 2> view.err; then
+            echo "Release $TAG already exists, nothing to publish."
             exit 0
           fi
           if ! grep -q 'release not found' view.err; then
             cat view.err
             exit 1
           fi
-          gh release create "$tag" dist/nightango.min.user.js dist/nightango.user.js dist/SHA256SUMS --target "$GITHUB_SHA" --title "$tag" --generate-notes $flags
+          flags=
+          if [ "$PRERELEASE" = true ]; then flags='--prerelease --latest=false'; fi
+          # Same notes as the GitLab release: the section of @version in CHANGELOG.md.
+          node scripts/release.mjs notes > notes.md
+          gh release create "$TAG" dist/nightango.min.user.js dist/nightango.user.js dist/SHA256SUMS --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md $flags

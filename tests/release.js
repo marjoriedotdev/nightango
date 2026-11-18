@@ -21,6 +21,8 @@ const PLANS = [
 ];
 const plans = PLANS.map(([version, branch]) => [version, branch, releasePlan(version, branch).publish]);
 check(JSON.stringify(plans) === JSON.stringify(PLANS), 'a stable version publishes from main, a beta from beta, a stable version on beta publishes nothing', plans);
+const tags = ['0.34.1', '0.35.0-beta.2'].map((v) => releasePlan(v, v.includes('beta') ? 'beta' : 'main')).map((p) => [p.tag, p.prerelease]);
+check(JSON.stringify(tags) === JSON.stringify([['v0.34.1', false], ['v0.35.0-beta.2', true]]), 'a release is tagged v and its version, a beta as a prerelease', tags);
 check(/not a beta/.test(releasePlan('0.35.0', 'beta').why), 'a stable version on beta says why nothing is published');
 check(/stable releases only/.test(thrown(() => releasePlan('0.35.0-beta.1', 'main')) || ''), 'a beta version on main is refused');
 const BAD = ['', '0.34', 'v0.34.1', '0.34.1-rc.1', '0.34.1-beta', '0.34.1-beta.x', '1.2.3.4'];

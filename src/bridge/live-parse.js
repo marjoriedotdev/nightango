@@ -1,157 +1,49 @@
+import { MIN, lower, unquote } from '../core/util.js';
+import { cssColor, hexToRgb, rgbToHex } from '../core/colors.js';
+import { BACKGROUND_REPEAT } from '../core/rich-text.js';
+import { ACCOUNT_NAME } from '../core/chatango.js';
+import { parsePm } from '../core/message-content.js';
 // -- Text and references ------------------------------------------------------
 
-function warn(e) { try { console.warn('[torch-skin]', e); } catch (x) { /* console unavailable */ } }
-function lower(v) { return String(v == null ? '' : v).toLowerCase(); }
 /**
  * Returns the spelling of a member's name when a frame or BetterChatango carries it with capitals.
  * @param {string} name Member name in lowercase.
  * @param {?string} written Name as carried.
  * @returns {?string} Spelling to show, null without capitals or if written names someone else.
  */
-function spellingOf(name, written) { return written !== name && lower(written) === name ? written : null; }
-// Like urllib.parse.unquote (chatango-lib) and BetterChatango: "+" stays a "+".
-function unquote(v) { try { return decodeURIComponent(String(v || '')); } catch (e) { return String(v || ''); } }
-/** Escapes the typed text since client.sendMessage expects HTML like the BetterChatango input field. */
-function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-// Message references in <r…/> and <e…/>: BetterChatango drops the trailing "=" and protects - and _.
-function decodeRef(v) { return String(v).replace(/hypheN/g, '-').replace(/underS/g, '_') + '='; }
-function encodeRef(id) { var s = String(id); if (s.slice(-1) === '=') s = s.slice(0, -1); return s.replace(/-/g, 'hypheN').replace(/_/g, 'underS'); }
+export function spellingOf(name, written) { return written !== name && lower(written) === name ? written : null; }
 
-// -- Message content ----------------------------------------------------------
+// -- Private history ----------------------------------------------------------
 
-// Face 0: default that BetterChatango sends without a user style - the empty string clears the font merged from a previous message.
-var FACES = [''].concat(FONT_FACES.slice(1));
-var decoder = document.createElement('textarea');
-
-function decodeHtml(html) { decoder.innerHTML = html; return decoder.value; }
-function fileUrlPattern(extensions) { return new RegExp('^https:\\/\\/\\S+\\.(?:' + extensions + ')(?:[?#]\\S*)?$', 'i'); }
-var IMAGE_URL = fileUrlPattern('png|apng|jpe?g|gif|bmp|webp'), GIF_URL = fileUrlPattern('gif'), VIDEO_URL = fileUrlPattern('mp4|webm'), AUDIO_URL = fileUrlPattern('mp3|ogg|wav');
-// BetterChatango regex (inject.js:8256) applied to a single link: case-sensitive and open to http, only the id is kept.
-var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|\/\w+\/|\/)([\w-]{11})/;
-// TikTok post or short link: the embed player needs the post id, which only the redirect of a short link gives.
-var TIKTOK_POST = /^https?:\/\/(?:www\.|m\.)?tiktok\.com\/@[\w.-]+\/(?:video|photo)\/(\d+)/;
-var TIKTOK_SHORT = /^https?:\/\/((?:vm|vt)\.tiktok\.com|(?:www\.)?tiktok\.com\/t)\/([\w-]+)/;
-// X post link, on X or a mirror that the loader turns back into an X link.
-var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter|fxtwitter|vxtwitter|fixupx|fixvx)\.com\/\w{1,15}\/status\/(\d{1,20})/;
-// Like BetterChatango renderMessage: only a ▓…▒ pair becomes a strikethrough, a lone marker stays text.
-var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
-// Like BetterChatango crawl (inject.js:1112): an http media loads over https, one on fp.chatango.com loads from ust.chatango.com.
-function secureMediaUrl(url) { return url.replace(/^http:\/\//i, 'https://').replace(/^https:\/\/fp\.chatango\.com\//i, 'https://ust.chatango.com/'); }
-// BetterChatango opens the l_ full size of an image uploaded to Chatango (inject.js:8317): the t_ thumbnail is sized for Chatango's chat and shows blurry here.
-function fullImageUrl(url) { return url.replace(/^(https:\/\/ust\.chatango\.com\/um\/[^\/?#]+\/[^\/?#]+\/[^\/?#]+\/img\/)t_/i, '$1l_'); }
-function embedOf(src) {
-  var yt = /^vid:\/\/yt:([\w-]{11})/.exec(src), img = /^img:\/\/(?:cam|lib):([^"&?\/\s]+)/.exec(src);
-  if (yt) return { kind: 'youtube', id: yt[1] };
-  if (img) return { kind: 'photo', url: 'https://chatango.com/pmmessageimg?i=' + encodeURIComponent(img[1]) };
-  var url = fullImageUrl(secureMediaUrl(src));
-  return IMAGE_URL.test(url) ? { kind: 'image', url: url } : null;
-}
-/**
- * Recognizes the media of a link typed in the text.
- * @param {string} url Link found in the text: YouTube video, TikTok or X post, image, video or audio file.
- */
-function linkEmbedOf(url) {
-  var yt = YOUTUBE_LINK.exec(url), tt = TIKTOK_POST.exec(url), short = TIKTOK_SHORT.exec(url), xp = X_POST.exec(url);
-  if (yt) return { kind: 'youtube', id: yt[1] };
-  if (xp) return { kind: 'x', id: xp[1], url: xp[0] };
-  // Like YouTube, the link may run into text without a space ("…/t/ZPLy/....."): only the post or short link part is kept.
-  if (tt) return { kind: 'tiktok', id: tt[1], url: tt[0] };
-  if (short) return { kind: 'tiktok', url: 'https://' + short[1] + '/' + short[2] + '/' };
-  var file = secureMediaUrl(url);
-  return VIDEO_URL.test(file) ? { kind: 'video', url: file } : AUDIO_URL.test(file) ? { kind: 'audio', url: file } : embedOf(url);
-}
-function textLinks(text) { return text.match(/https?:\/\/\S+/g) || []; }
-function sameEmbed(a, b) { return a.kind === b.kind && a.id === b.id && a.url === b.url; }
-/**
- * Lists the links of a message text that the message already shows as a media.
- * @param {{text: string, embeds: ?Array}} m Message read by parseContent.
- */
-function mediaLinks(m) {
-  if (!m.text || !m.embeds || !m.embeds.length) return [];
-  return textLinks(m.text).filter(function (url) {
-    var e = linkEmbedOf(url);
-    return !!e && m.embeds.some(function (x) { return sameEmbed(x, e); });
-  });
-}
-/**
- * Renders an sm:// emoticon as text.
- * @param {string} name Name read in the tag. Gives its emoji, its first shortcut if it is Premium without the flag, or the bare name if the table does not know it and it is made of [a-z0-9_-].
- * @param {boolean} premium The message carries the Premium flag.
- */
-function emoticonText(name, premium) {
-  var e = EMOTICON_BY_NAME[name];
-  if (!e) return /^[a-z0-9_-]{1,32}$/.test(name) ? name : '';
-  return e.emoji && (premium || !e.premium) ? e.emoji : e.keys[0].split('?')[0];
-}
-/**
- * Reads raw Chatango content.
- * @param {string} raw Message body: style tags, replies, edits, media, emoticons, entities.
- * @param {boolean} [keepMedia] Keeps the source of media and emoticons in the text.
- * @param {boolean} [premium] The message carries the Premium flag.
- */
-function parseContent(raw, keepMedia, premium) {
-  var style = {}, embeds = [], s = String(raw);
-  var n = /<n([a-f0-9]{3}|[a-f0-9]{6})\/>/i.exec(s);
-  if (n) style.nameColor = '#' + n[1];
-  // Font read from <f x…> or <g x…s…> only: the w and h attributes of an <i> tag are not a font.
-  var f = /<f x(\d{2})?([a-f0-9]{3}|[a-f0-9]{6})?=["']([^"']*)["']>/i.exec(s) || /<g x(\d{2})?s([a-f0-9]{3}|[a-f0-9]{6})?="([^"]*)">/i.exec(s);
-  if (f) {
-    if (f[2]) style.textColor = '#' + f[2];
-    // Missing size: explicit 100%, otherwise the size merged from a previous message would stay.
-    style.fontSize = f[1] ? fontPercent(+f[1]) : 100;
-    if (f[3] !== '' && FACES[+f[3]] !== undefined) style.font = FACES[+f[3]];
-    else if (f[3] && isNaN(+f[3])) style.font = f[3];
-  }
-  var r = /<r([^\s<>"\/]+)\/>/.exec(s), e = /<e([^\s<>"\/]+)\/>/.exec(s), k = /<i([a-z0-9]{7,8})\/>/.exec(s);
-  // BetterChatango writes the name as typed at sign-in in its PMs (inject.js:5176), which Chatango delivers under a lowercase name.
-  var w = /<u([a-z0-9]{1,20})\/>/i.exec(s);
-  var body = s
-    .replace(/<br\s*\/?>/gi, '\n')
-    // Two steps, the tag then its s attribute: a single pattern for both backtracks for seconds on a body of unclosed tags.
-    .replace(/<i\s[^>]*>/gi, function (tag) {
-      // An s attribute further in the tag wins over the one right after <i, as the single pattern did.
-      var rest = tag.slice(3), at = /\ss=["']?([^"'\s>]+)/i.exec(rest) || /^s=["']?([^"'\s>]+)/i.exec(rest);
-      if (!at) return tag;
-      var src = at[1], m = embedOf(decodeHtml(src)), sm = /^sm:\/\/(.*)/i.exec(src);
-      if (m) embeds.push(m);
-      if (keepMedia) return ' ' + src + ' ';
-      return sm ? emoticonText(sm[1], premium) : m ? ' ' : ' ' + src + ' ';
-    })
-    .replace(STRIKE_PAIR, '<s>$1</s>');
-  var text = decodeHtml(body.replace(/<[^>]+>/g, '')).replace(/\r/g, '').trim();
-  textLinks(text).forEach(function (url) {
-    var m = linkEmbedOf(url);
-    if (m && !embeds.some(function (x) { return sameEmbed(x, m); })) embeds.push(m);
-  });
-  return { text: text, parts: emphasisParts(body), style: style, embeds: embeds, replyId: r ? decodeRef(r[1]) : null, editId: e ? decodeRef(e[1]) : null, key: k ? decodeRef(k[1]) : null, written: w ? w[1] : null };
-}
-/**
- * Reads the body of a received or archived PM with its Premium flag.
- * @param {Array} data Fields of the msg or msgoff frame, flags at 4 and body from 5.
- */
-function parsePm(data) { return parseContent(data.slice(5).join(':'), false, !!(parseInt(data[4], 10) & MSG_FLAG.PREMIUM)); }
 /**
  * Reads a record of the BetterChatango private history.
  * @param {{ts: number, data: string, unread: number}} v Record (saveMessage), data being the full msg frame.
  * @returns {?Object} Archived message with its archiveTs key, null if the frame lacks some fields.
  */
-function pmRecordEntry(v) {
+export function pmRecordEntry(v) {
   var parts = String(v.data || '').split(':').slice(1);
   if (parts.length <= 5) return null;
-  var body = parsePm(parts), from = lower(parts[0]);
-  return { from: from, spelling: spellingOf(from, body.written), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
+  return Object.assign(pmFrame(parts), { archiveTs: v.ts, unread: !!v.unread });
 }
-var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
+/**
+ * Reads a msg or msgoff frame of the private connection, as received or as kept in the private history.
+ * @param {Array<string>} parts Frame split on :, from the author on.
+ * @returns {Object} Message: author, spelling, sent time (0 if unreadable), body read by parsePm, PM key and references.
+ */
+export function pmFrame(parts) {
+  var body = parsePm(parts), author = lower(parts[0]);
+  return { author: author, spelling: spellingOf(author, body.written), ts: epochMs(parts[3]), text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId };
+}
 /**
  * Screens the records of an imported private history before any write.
  * @param {Array} records File content, untrusted.
  * @param {string} me Signed-in account.
  * @returns {{valid: Array, skipped: number, foreign: boolean}} Records to write, target in lowercase and marked read, the number skipped, and true for another account's file, of which nothing is written.
  */
-function screenPmRecords(records, me) {
+export function screenPmRecords(records, me) {
   var valid = [], skipped = 0, foreign = 0;
   records.forEach(function (r) {
-    var ok = !!r && typeof r.target === 'string' && PM_TARGET.test(r.target) && typeof r.ts === 'number' && isFinite(r.ts) && r.ts > 0
+    var ok = !!r && typeof r.target === 'string' && ACCOUNT_NAME.test(r.target.toLowerCase()) && typeof r.ts === 'number' && isFinite(r.ts) && r.ts > 0
       && typeof r.data === 'string' && r.data.indexOf('msg:') === 0;
     var fields = ok ? r.data.split(':') : [];
     if (fields.length < 7) { skipped++; return; }
@@ -163,14 +55,17 @@ function screenPmRecords(records, me) {
   if (skipped && foreign === skipped) return { valid: [], skipped: skipped, foreign: true };
   return { valid: valid, skipped: skipped, foreign: false };
 }
+
+// -- Private settings ---------------------------------------------------------
+
 // Chatango name of each PM setting of the account (chadango GetSettings and SetSettings).
-var PM_SETTING_NAMES = { hideIdle: 'disable_idle_time', allowAnon: 'allow_anon', emailOffline: 'email_offline_msg' };
+export var PM_SETTING_NAMES = { hideIdle: 'disable_idle_time', allowAnon: 'allow_anon', emailOffline: 'email_offline_msg' };
 /**
  * Reads the settings reply of the private connection.
  * @param {Array<string>} data Frame split on :, name and on or off for each setting.
  * @returns {?Object} hideIdle, allowAnon and emailOffline as booleans, null if one of them is missing.
  */
-function parsePmSettings(data) {
+export function parsePmSettings(data) {
   var read = {}, out = {};
   for (var i = 0; i + 1 < data.length; i += 2) read[data[i]] = data[i + 1];
   return Object.keys(PM_SETTING_NAMES).every(function (k) {
@@ -179,41 +74,17 @@ function parsePmSettings(data) {
     return v === 'on' || v === 'off';
   }) ? out : null;
 }
-/**
- * Splits a message body into emphasis segments.
- * BetterChatango allowlist (renderMessage): b, i without attributes, u, s and strike.
- * @param {string} body Body whose br tags, media and ▓…▒ pairs are already converted.
- * @returns {?Array} Segments {text, b, i, u, s} trimmed like the text, null if none is marked.
- */
-function emphasisParts(body) {
-  var depth = { b: 0, i: 0, u: 0, s: 0 }, parts = [];
-  body.split(/(<[^>]+>)/).forEach(function (t, k) {
-    if (k % 2) {
-      var tag = /^<(\/?)(b|i|u|s|strike)>$/i.exec(t);
-      var mark = tag && lower(tag[2]).charAt(0);
-      if (mark && !tag[1]) depth[mark] += 1;
-      else if (mark && depth[mark]) depth[mark] -= 1;
-      return;
-    }
-    var part = { text: decodeHtml(t).replace(/\r/g, '') };
-    EMPHASIS.forEach(function (m) { if (depth[m]) part[m] = true; });
-    if (part.text) parts.push(part);
-  });
-  while (parts.length && !(parts[0].text = parts[0].text.replace(/^\s+/, ''))) parts.shift();
-  while (parts.length && !(parts[parts.length - 1].text = trimEnd(parts[parts.length - 1].text))) parts.pop();
-  return parts.some(function (x) { return EMPHASIS.some(function (m) { return x[m]; }); }) ? parts : null;
-}
 
 // -- Group frames -------------------------------------------------------------
 
-function notNone(v) { return !!v && v !== 'None'; }
+export function notNone(v) { return !!v && v !== 'None'; }
 // Guest named in lowercase, like the author of its messages: the card and the ban find them.
-function sessionOf(account, guest) {
+export function sessionOf(account, guest) {
   if (notNone(account)) return { account: lower(account), spelling: spellingOf(lower(account), account) };
   if (notNone(guest)) return { guest: '#' + lower(guest), spelling: spellingOf('#' + lower(guest), '#' + guest) };
   return { anon: true };
 }
-function parseParticipants(list) {
+export function parseParticipants(list) {
   var names = [], sessions = {}, spellings = {};
   list.forEach(function (x) {
     var t = x.split(':');
@@ -225,7 +96,7 @@ function parseParticipants(list) {
   });
   return { names: names, sessions: sessions, spellings: spellings };
 }
-function parseMods(entries) {
+export function parseMods(entries) {
   var mods = {};
   entries.forEach(function (x) { var p = String(x).split(','); if (p[0]) mods[lower(p[0])] = parseInt(p[1], 10) || 0; });
   return mods;
@@ -235,40 +106,49 @@ function parseMods(entries) {
  * @param {Array<string>} data Frame split on :, entries unid:ip:name:timestamp:author separated by semicolons.
  * @returns {Array<Object>} Entries, with the raw timestamp (ts) that serves as the cursor for the next page.
  */
-function parseBans(data) {
+export function parseBans(data) {
   var raw = data.join(':');
   if (!raw) return [];
   return raw.split(';').map(function (x) {
     var t = x.split(':');
     // Cursor converted like BetterChatango, which reads the timestamp with + before sending it back.
-    return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], ts: String(+t[3]), at: Math.round(parseFloat(t[3]) * 1000) || Date.now(), by: lower(t[4]) };
+    return Object.assign(banEntry(t, t[4], epochMs(t[3]) || Date.now()), { ts: String(+t[3]) });
   }).filter(function (b) { return b.unid; });
 }
+/**
+ * Builds a ban from the fields unid:ip:name that every ban frame starts with. A ban without a name bans a guest.
+ * @param {Array<string>} t Fields unid, IP and name.
+ * @param {string} by Author of the ban.
+ * @param {number} at Ban time in ms.
+ */
+function banEntry(t, by, at) { return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], by: lower(by), at: at }; }
+/**
+ * Reads the blocked frame: the ban of a member, dated at reception.
+ * @param {Array<string>} data Frame split on :, unid, IP, name and author.
+ */
+export function parseBlocked(data) { return banEntry(data, data[3], Date.now()); }
 /**
  * Reads the unblocked frame like BetterChatango.
  * @param {Array<string>} data Frame split on :, entries unid:ip:name separated by semicolons, author in the second-to-last field.
  * @returns {Array<Object>} Unbans, dated at reception like in BetterChatango.
  */
-function parseUnbanned(data) {
+export function parseUnbanned(data) {
   var by = lower(data.slice(-2)[0]), at = Date.now();
-  return data.join(':').split(';').map(function (x) {
-    var t = x.split(':');
-    return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], by: by, at: at };
-  }).filter(function (b) { return b.unid; });
+  return data.join(':').split(';').map(function (x) { return banEntry(x.split(':'), by, at); }).filter(function (b) { return b.unid; });
 }
 /**
  * Reads the BetterChatango bansearchresult reply.
  * @param {Array<string>} data Frame split on :, date included: other names, name, IP, unid, author and date.
  * @returns {?Object} Ban found, null if none.
  */
-function parseBanSearch(data) {
+export function parseBanSearch(data) {
   // BetterChatango only looks at the name and would report a guest searched by IP as not found.
   if (!data[1] && !data[3]) return null;
   // Like BetterChatango, the date is read in fixed Pacific time. On its own, GMT-0800 passes for a year: the date is validated without it.
   var date = data.slice(5).join(':'), at = isNaN(new Date(date).getTime()) ? 0 : new Date(date + ' GMT-0800').getTime();
-  return { unid: data[3], ip: data[2], name: lower(data[1]) || '!anon', guest: !data[1], by: lower(data[4]), at: at, includes: data[0] ? data[0].split(';').filter(Boolean).map(lower) : [] };
+  return Object.assign(banEntry([data[3], data[2], data[1]], data[4], at), { includes: data[0] ? data[0].split(';').filter(Boolean).map(lower) : [] });
 }
-function parseModLog(data) {
+export function parseModLog(data) {
   var raw = data.join(':');
   if (!raw) return [];
   return raw.split(';').map(function (x) {
@@ -280,7 +160,7 @@ function parseModLog(data) {
 // -- Premium background -------------------------------------------------------
 
 /**
- * Converts a CSS background color to hex.
+ * Converts a CSS background color to hex, null for a fully transparent one.
  * @param {string} value CSS color read in custom_profile.css.
  */
 function opaqueColor(value) {
@@ -288,7 +168,7 @@ function opaqueColor(value) {
   return p.length > 3 && parseFloat(p[3]) === 0 ? null : cssColor(v);
 }
 // The BetterChatango background form writes well under 1 KB: a larger custom_profile.css is read as absent.
-var MINI_CSS_MAX_LENGTH = 4096;
+export var MINI_CSS_MAX_LENGTH = 4096;
 /**
  * Removes the comments of a style sheet and keeps an unclosed one as text.
  * @param {string} css Style sheet.
@@ -305,7 +185,7 @@ function cssWithoutComments(css) {
  * Reads the Premium background of a mini profile without ever injecting its CSS.
  * @param {string} css Content of custom_profile.css.
  */
-function parseMiniCss(css) {
+export function parseMiniCss(css) {
   var rules = Object.create(null), unsafe = /^(?:__proto__|constructor|prototype)$/, at = 0;
   // Scanned with indexOf, not a pattern: the cost stays linear in the size of the file, braces and comments closed or not.
   css = cssWithoutComments(String(css));
@@ -347,7 +227,7 @@ var MINI_STYLE_DEFAULT = { bg: '#ffffff', text: '#222222', link: '#0084ef' };
  * @param {?Object} mini Background read, null without custom_profile.css.
  * @returns {{bg: string, text: string, link: string, image: string, tileDown: boolean, tileAcross: boolean}} Colors as #rrggbb, empty image when there is none.
  */
-function miniStyleForm(mini) {
+export function miniStyleForm(mini) {
   var m = mini || {}, repeat = m.repeat || '';
   function hex(v, fallback) { var c = hexToRgb(v); return c ? rgbToHex(c) : fallback; }
   return {
@@ -360,7 +240,7 @@ function miniStyleForm(mini) {
  * Rebuilds the background as parseMiniCss would read it after a form is saved.
  * @param {Object} form Form as returned by miniStyleForm.
  */
-function miniStyleOfForm(form) {
+export function miniStyleOfForm(form) {
   var repeat = form.tileDown ? (form.tileAcross ? 'repeat' : 'repeat-y') : form.tileAcross ? 'repeat-x' : 'no-repeat';
   return { bg: form.bg, text: form.text, link: form.link, image: form.image || null, repeat: repeat };
 }
@@ -368,14 +248,14 @@ function miniStyleOfForm(form) {
 // -- Allowed requests ---------------------------------------------------------
 
 var CHATANGO_POST = /^https:\/\/chatango\.com\//;
-var VISSLE_UPLOAD = 'https://vissle.me/chatango/upload';
+export var VISSLE_UPLOAD = 'https://vissle.me/chatango/upload';
 /**
  * Checks a client.post call against the allowed HTTP calls (docs/betterchatango-protocol.md).
  * @param {string} url Target URL.
  * @param {Object} item client.post options.
  * @returns {string} Why the call is refused, empty if it is allowed.
  */
-function postRefusal(url, item) {
+export function postRefusal(url, item) {
   var keys = Object.keys(item);
   // Without an option, BetterChatango adds the Chatango token for every host of its list, vissle included.
   if (!keys.length) return CHATANGO_POST.test(url) ? '' : 'a request without an option goes to chatango.com only';
@@ -391,7 +271,7 @@ function postRefusal(url, item) {
  * @param {string} resp Text returned by Chatango, key=value pairs separated by &.
  * @returns {Object} Values still encoded, error included.
  */
-function parseProfileReply(resp) {
+export function parseProfileReply(resp) {
   var data = {};
   String(resp).split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) data[kv.slice(0, i)] = kv.slice(i + 1); });
   return data;
@@ -399,13 +279,13 @@ function parseProfileReply(resp) {
 
 // -- Message background -------------------------------------------------------
 
-var MSG_BG_ALIGN = { tl: 'left top', tr: 'right top', bl: 'left bottom', br: 'right bottom' };
+export var MSG_BG_ALIGN = { tl: 'left top', tr: 'right top', bl: 'left bottom', br: 'right bottom' };
 /**
  * Reads the Premium message background of a member without taking anything else from msgbg.xml.
  * @param {string} xml Content of msgbg.xml.
  * @param {string} image URL of msgbg.jpg built from the member name, never read from the file.
  */
-function parseMsgBg(xml, image) {
+export function parseMsgBg(xml, image) {
   var doc = new DOMParser().parseFromString(String(xml), 'text/xml'), root = doc.documentElement;
   if (doc.querySelector('parsererror')) return null;
   function percent(name) { var v = root.getAttribute(name); return v === null ? 100 : Math.min(100, Math.max(0, parseFloat(v) || 0)); }
@@ -428,7 +308,7 @@ function parseMsgBg(xml, image) {
  * @param {*} data JSON reply of track1/activity, forwarded by the loader.
  * @returns {?Array} Items, null if the reply or one of its items has another shape.
  */
-function parseVisits(data) {
+export function parseVisits(data) {
   var items = data && data.get;
   if (!Array.isArray(items)) return null;
   return items.every(function (x) {
@@ -445,7 +325,7 @@ var WHO_LEVELS = ['definite', 'linked', 'strong', 'medium', 'weak'];
  * @param {*} data JSON reply of /api/v1/who.
  * @returns {?Array<{level: string, names: Array<string>}>} Non-empty levels in BetterChatango order, null without target.
  */
-function parseWho(data) {
+export function parseWho(data) {
   if (!data || !data.target) return null;
   return WHO_LEVELS.map(function (level) {
     var list = Array.isArray(data[level]) ? data[level] : [];
@@ -457,7 +337,7 @@ function parseWho(data) {
 
 function presenceOf(state, idle) { return state === 'on' ? (+idle ? 'idle' : 'online') : state === 'app' ? 'online' : 'offline'; }
 // Chatango sends "None" or 0 when it does not know the last online time.
-function epochMs(v) { return Math.round(parseFloat(v) * 1000) || 0; }
+export function epochMs(v) { return Math.round(parseFloat(v) * 1000) || 0; }
 /**
  * Reads the presence of a correspondent in a wl or wladd or connect frame.
  * @param {string} name Correspondent name.
@@ -465,44 +345,27 @@ function epochMs(v) { return Math.round(parseFloat(v) * 1000) || 0; }
  * @param {string} ts Last online time in seconds.
  * @param {string} minutes Idle minutes.
  */
-function friendPresence(name, state, ts, minutes) {
+export function friendPresence(name, state, ts, minutes) {
   var status = presenceOf(state, minutes);
   return { name: lower(name), status: status, lastOn: state === 'off' ? epochMs(ts) : 0, idleSince: status === 'idle' ? Date.now() - minutes * MIN : 0 };
 }
-function stateOf(sock) { return !sock ? 'closed' : sock.readyState === 1 ? 'open' : sock.readyState === 0 ? 'connecting' : 'closed'; }
-
-// -- BetterChatango media library ---------------------------------------------
-
-// Page size of the media library, like BetterChatango viewMedia and loadMedia.
-var MEDIA_PAGE = 21;
-var PHOTO_URL = /^https:\/\/chatango\.com\/pmmessageimg\?i=[^"&?\/\s]+$/;
 /**
- * Tells whether a media library entry can be shown and written.
- * @param {*} e Entry {url, name} read from the BetterChatango database or from a file, untrusted.
- * @returns {boolean} True for an https image or a pmmessageimg with a text name.
+ * Reads the title and description of a group, Chatango's No description placeholder read as no description.
+ * @param {string} title Title.
+ * @param {string} description Description.
  */
-function mediaEntryOk(e) { return !!e && typeof e.url === 'string' && (IMAGE_URL.test(e.url) || PHOTO_URL.test(e.url)) && typeof e.name === 'string'; }
+export function groupInfo(title, description) { return { title: title, description: description === 'No description' ? '' : description }; }
 /**
- * Keeps an entry read by pages when it comes after the last one of the previous page in index order and its name contains the search.
- * @param {string} index BetterChatango index, url or name, whose order follows the key then the url.
- * @param {{url: string, name: string}} e Entry read.
- * @param {?{url: string, name: string}} after Last entry of the previous page, null for the first page.
- * @param {string} text Search, case-insensitive, empty to keep everything.
+ * Reads the presence frame: name, minutes and state of each person.
+ * When offline, the minutes are not idle time: they serve as an approximate last online time.
+ * @param {Array<string>} data Frame split on :, three fields per person.
  */
-function mediaMatch(index, e, after, text) {
-  return (!after || e[index] > after[index] || e[index] === after[index] && e.url > after.url) && lower(e.name).indexOf(lower(text)) >= 0;
+export function parsePresence(data) {
+  var people = [], now = Date.now();
+  for (var j = 0; j + 2 < data.length; j += 3) if (data[j]) {
+    var on = data[j + 2] === 'online' || data[j + 2] === 'app', idle = on && +data[j + 1] > 0, since = now - data[j + 1] * MIN;
+    people.push({ name: lower(data[j]), status: idle ? 'idle' : on ? 'online' : 'offline', lastOn: !on && +data[j + 1] ? since : 0, idleSince: idle ? since : 0 });
+  }
+  return people;
 }
-/**
- * Names a media item like BetterChatango (favoriteMedia).
- * @param {string} url Image address, whose last segment becomes the name.
- */
-function mediaName(url) { return url.split('/').slice(-1)[0]; }
-/**
- * Screens the entries of an imported media library before any write.
- * @param {Array} entries File content, untrusted.
- * @returns {{valid: Array, skipped: number}} Entries {url, name} to write, and the number skipped.
- */
-function screenMediaEntries(entries) {
-  var valid = entries.filter(mediaEntryOk).map(function (e) { return { url: e.url, name: e.name }; });
-  return { valid: valid, skipped: entries.length - valid.length };
-}
+export function stateOf(sock) { return !sock ? 'closed' : sock.readyState === 1 ? 'open' : sock.readyState === 0 ? 'connecting' : 'closed'; }

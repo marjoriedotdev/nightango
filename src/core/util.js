@@ -1,26 +1,26 @@
-/* ---------- Utilities ---------- */
-var MIN = 60000;
-var CONFIRM_TIMEOUT = 8000;
+// -- Utilities ----------------------------------------------------------------
+export var MIN = 60000;
+export var CONFIRM_TIMEOUT = 8000;
 // The same code lives in both repositories, pushed by hand: GitHub first, GitLab kept in step.
-var REPO_URLS = { github: 'https://github.com/marjoriedotdev/nightango', gitlab: 'https://gitlab.com/marjoriedotdev/nightango' };
-var CHATANGO_URL = 'https://chatango.com';
-function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
-function uid() { return Math.random().toString(36).slice(2, 10); }
-function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
-function pad(n) { return n < 10 ? '0' + n : String(n); }
-function fmtTime(ts, h24) {
+export var REPO_URLS = { github: 'https://github.com/marjoriedotdev/nightango', gitlab: 'https://gitlab.com/marjoriedotdev/nightango' };
+export var CHATANGO_URL = 'https://chatango.com';
+export function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
+export function uid() { return Math.random().toString(36).slice(2, 10); }
+export function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+export function pad(n) { return n < 10 ? '0' + n : String(n); }
+export function fmtTime(ts, h24) {
   var d = new Date(ts), H = d.getHours(), M = d.getMinutes();
   if (h24) return pad(H) + ':' + pad(M);
   return (H % 12 || 12) + ':' + pad(M) + ' ' + (H >= 12 ? 'PM' : 'AM');
 }
-function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+export function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
 /**
  * Returns a date as 12 Dec, or 12 Dec 2026 with its year.
  * @param {number} ts Time in milliseconds.
  * @param {boolean} [withYear] Adds the year.
  */
-function shortDate(ts, withYear) { return new Date(ts).toLocaleDateString('en-GB', withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); }
-function dayLabel(ts) {
+export function shortDate(ts, withYear) { return new Date(ts).toLocaleDateString('en-GB', withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); }
+export function dayLabel(ts) {
   var d = new Date(ts), n = new Date();
   var a = new Date(d.getFullYear(), d.getMonth(), d.getDate()), b = new Date(n.getFullYear(), n.getMonth(), n.getDate());
   var diff = Math.round((b - a) / 86400000);
@@ -28,7 +28,7 @@ function dayLabel(ts) {
   if (diff === 1) return 'Yesterday';
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
-function ago(ts) {
+export function ago(ts) {
   var m = Math.round((Date.now() - ts) / MIN);
   if (m < 1) return 'just now';
   if (m < 60) return m + ' min ago';
@@ -37,7 +37,7 @@ function ago(ts) {
   var span = daySpan(Math.round(hrs / 24));
   return plural(span.n, span.unit, span.unit + 's') + ' ago';
 }
-function elapsedShort(ts) {
+export function elapsedShort(ts) {
   var m = Math.floor((Date.now() - ts) / MIN);
   if (m < 60) return Math.max(m, 1) + ' min';
   if (m < 1440) return Math.floor(m / 60) + ' h';
@@ -56,109 +56,45 @@ function daySpan(days) {
   if (months < 12) return { n: months, unit: 'month' };
   return { n: Math.round(days / 365.25), unit: 'year' };
 }
-var SEASONS = ['halloween', 'winter', 'christmas', 'valentine'];
-/**
- * Returns the season of a local date, or null outside every season: Halloween from October 24 to November 2,
- * winter from December 1 to January 6 (June 1 to July 6 in the southern hemisphere), Christmas from December 18 to 26
- * in place of winter, Valentine's Day from February 10 to 14.
- * @param {Date} d Date read on the device.
- * @param {boolean} south Sky seen from the southern hemisphere.
- */
-function seasonOf(d, south) {
-  var m = d.getMonth(), day = d.getDate(), winter = south ? 5 : 11;
-  if ((m === 9 && day >= 24) || (m === 10 && day <= 2)) return 'halloween';
-  if (m === 11 && day >= 18 && day <= 26) return 'christmas';
-  if (m === winter || (m === (winter + 1) % 12 && day <= 6)) return 'winter';
-  if (m === 1 && day >= 10 && day <= 14) return 'valentine';
-  return null;
-}
-// Sky keyframes as [local hour, early sky, late sky]: a sky holds between two equal keyframes and blends between different ones.
-var SKY_HOURS = {
-  dark: [[0, 0, 0], [4, 0, 0], [5.5, 1, 0], [7.5, 0, 0], [17, 0, 0], [19.5, 0, 1], [22.5, 0, 0], [24, 0, 0]],
-  light: [[0, 0, 0], [8, 0, 0], [12, 1, 0], [16, 1, 0], [19, 0, 1], [21.5, 0, 0], [24, 0, 0]]
-};
-/**
- * Returns the sky of a theme at a local hour, as the two shares the stylesheet mixes into the base sky: first light and dusk
- * in the dark theme, full daylight and golden hour in the light theme. Outside their hours both are zero and the base sky shows.
- * @param {string} theme dark or light.
- * @param {number} hour Local hour from 0 to 24, minutes as its fraction.
- * @returns {{early: number, late: number}} Percent of the late sky, and percent of the early sky in what the late sky leaves.
- */
-function skyAt(theme, hour) {
-  var keys = SKY_HOURS[theme], i = 1;
-  while (keys[i][0] < hour) i++;
-  var a = keys[i - 1], b = keys[i], t = (hour - a[0]) / (b[0] - a[0]);
-  t = t * t * (3 - 2 * t);
-  var early = a[1] + (b[1] - a[1]) * t, late = a[2] + (b[2] - a[2]) * t;
-  // Under a whole late sky nothing is left to share: the early share is then free, and zero.
-  return { early: late < 1 ? early / (1 - late) * 100 : 0, late: late * 100 };
-}
 /**
  * Tells whether a version number X.Y.Z comes after another, which may be a beta X.Y.Z-beta.N.
  * @param {string} a Compared version.
  * @param {string} b Reference version.
  */
-function isNewerVersion(a, b) {
+export function isNewerVersion(a, b) {
   var x = a.split('.'), y = b.split('-')[0].split('.');
   for (var i = 0; i < 3; i++) if (+x[i] !== +y[i]) return +x[i] > +y[i];
   // A release comes after its own betas.
   return b.indexOf('-') !== -1;
 }
-function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many); }
-/**
- * Returns where a local time stands around New Year's midnight: the countdown in the last minute of December 31,
- * the fireworks in the first minute of January 1, or nothing.
- * @param {number} ts Time read on the device.
- * @returns {{phase: ?string, seconds: (number|undefined), next: number}} Phase, seconds left in the countdown,
- *   and the delay until what is shown changes.
- */
-function newYearAt(ts) {
-  var year = new Date(ts).getFullYear(), midnight = new Date(year + 1, 0, 1).getTime(), started = new Date(year, 0, 1).getTime();
-  var left = midnight - ts;
-  if (left <= MIN) {
-    var seconds = Math.ceil(left / 1000);
-    return { phase: 'countdown', seconds: seconds, next: left - (seconds - 1) * 1000 };
-  }
-  if (ts - started < MIN) return { phase: 'fireworks', next: started + MIN - ts };
-  return { phase: null, next: left - MIN };
-}
-/**
- * Returns a text without its trailing white space.
- * @param {string} text Text to trim.
- */
-function trimEnd(text) {
+export function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many); }
+export function trimEnd(text) {
   var end = text.length;
   // A loop rather than replace(/\s+$/, ''): that pattern starts again from each space of a long run.
   while (end && /\s/.test(text.charAt(end - 1))) end--;
   return text.slice(0, end);
 }
-function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
+export function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
 // Own key only: a name such as constructor is also a key of every object.
-function ownOf(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
-function isGuest(name) { return /^[!#]/.test(name); }
-/**
- * Returns the last element of a list that passes a test.
- * @param {Array} list List searched from its end.
- * @param {function(*): boolean} test Test of an element.
- */
-function lastMatch(list, test) {
+export function ownOf(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
+export function lastMatch(list, test) {
   for (var i = list.length - 1; i >= 0; i--) if (test(list[i])) return list[i];
   return null;
 }
-function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
-function storageMerge(key, patch) { return storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
+export function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+export function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
+export function storageMerge(key, patch) { return storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
 /**
  * Returns the kind of a stored JSON value: null, array, object, string, number or boolean.
  * @param {*} v Value read from the storage.
  */
-function kindOf(v) { return v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
+export function kindOf(v) { return v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
 /**
  * Reads a JSON file chosen by the user.
  * @param {File} file Chosen file.
  * @returns {Promise} Parsed content, rejected if the file is unreadable or is not JSON.
  */
-function readJsonFile(file) {
+export function readJsonFile(file) {
   return new Promise(function (resolve, reject) {
     var reader = new FileReader();
     reader.onload = function () { try { resolve(JSON.parse(reader.result)); } catch (e) { reject(e); } };
@@ -171,14 +107,14 @@ function readJsonFile(file) {
  * @param {File} file Chosen file.
  * @returns {Promise<?Array>} Array read, null if the file is unreadable or holds no array.
  */
-function readJsonArray(file) { return readJsonFile(file).then(function (v) { return Array.isArray(v) ? v : null; }, function () { return null; }); }
+export function readJsonArray(file) { return readJsonFile(file).then(function (v) { return Array.isArray(v) ? v : null; }, function () { return null; }); }
 /**
  * Downloads a text as a file.
  * @param {string} name File name.
  * @param {string} text File content.
  * @param {string} type MIME type of the file.
  */
-function downloadFile(name, text, type) {
+export function downloadFile(name, text, type) {
   var link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([text], { type: type }));
   link.download = name;
@@ -191,8 +127,8 @@ function downloadFile(name, text, type) {
  * @param {string} name File name.
  * @param {*} value Value written by JSON.stringify.
  */
-function downloadJson(name, value) { downloadFile(name, JSON.stringify(value), 'text/json'); }
-function copyText(text, onDone) {
+export function downloadJson(name, value) { downloadFile(name, JSON.stringify(value), 'text/json'); }
+export function copyText(text, onDone) {
   function fallback() {
     var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select();
@@ -201,3 +137,10 @@ function copyText(text, onDone) {
   }
   try { navigator.clipboard.writeText(text).then(function () { onDone(true); }, fallback); } catch (e) { fallback(); }
 }
+
+export function warn(e) { console.warn('[torch-skin]', e); }
+export function lower(v) { return String(v == null ? '' : v).toLowerCase(); }
+// Like urllib.parse.unquote (chatango-lib) and BetterChatango: "+" stays a "+".
+export function unquote(v) { try { return decodeURIComponent(String(v || '')); } catch (e) { return String(v || ''); } }
+/** Escapes the typed text since client.sendMessage expects HTML like the BetterChatango input field. */
+export function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }

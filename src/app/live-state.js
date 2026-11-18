@@ -1,15 +1,25 @@
-/* ---------- Live state: session, world and groups built for Root ---------- */
+import { useCallback, useEffect, useRef } from '../core/globals.js';
+import { MIN, ownOf } from '../core/util.js';
+import { plainOf } from '../core/draft.js';
+import { roleOfFlags } from '../core/roles.js';
+import { banKey, favoritePeople, findMsg } from '../core/selectors.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { LIVE } from '../core/env.js';
+import { GROUP_FLAG, PM_CONNECTION } from '../core/chatango.js';
+import { blankMirror, cleanAccount, readMirror, writeMirror } from '../core/account-store.js';
+import { newGroup, newUser } from './state.js';
+// -- Live state: session, world and groups built for Root ---------------------
 // A session loss only gives way to a reason of equal or higher rank.
-var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
+export var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
 /**
  * Tracks the session loss after a connection state change.
  * @param {Object} d Application state.
  * @param {{gid: string, state: string}} op Connection and its new state.
  */
-function sessionAfterConn(d, op) {
+export function sessionAfterConn(d, op) {
   var s = d.session;
   if (op.state === 'open') {
-    if (s && s.reason === 'kicked') return op.gid === 'private_message' ? null : s;
+    if (s && s.reason === 'kicked') return op.gid === PM_CONNECTION ? null : s;
     return s && s.reason !== 'denied' && navigator.onLine ? null : s;
   }
   // Network back: if the reconnections started on its return all fail, "offline" gives way to "lost".
@@ -20,65 +30,9 @@ function sessionAfterConn(d, op) {
   return down ? { reason: 'lost', attempts: 0 } : s;
 }
 
-function liveWorld(me) {
-  var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
-  return {
-    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
-    route: { view: 'discover' }, split: null, pip: null, lastChat: { view: 'discover' },
-    sections: { favorites: true, groups: true, dms: true },
-    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, pmSettings: null, pmSettingSave: null, premium: null, retrying: {}
-  };
-}
-// Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', favoritePeople: 'array', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', ownBadges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
 // The read position of the group in view moves with each message: its writes wait and go out together.
 var READ_SAVE_MS = 2000;
 var READ_POSITIONS_MAX = 100;
-/**
- * Returns the account data stored in this browser without the values of another kind left by an older version or corrupted.
- * @param {*} stored Content of skinKey.
- */
-function storedLocal(stored) {
-  var out = {};
-  if (kindOf(stored) !== 'object') return out;
-  Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
-  return out;
-}
-var NOTE_LABEL_MAX = 24, NOTE_TEXT_MAX = 500;
-/**
- * Returns the private notes kept in this browser without the entries of another shape.
- * @param {Object} stored Notes by member name, untrusted.
- */
-function storedNotes(stored) {
-  var out = {};
-  Object.keys(stored).forEach(function (n) {
-    var x = stored[n];
-    if (ACCOUNT_NAME.test(n) && kindOf(x) === 'object' && typeof x.label === 'string' && typeof x.note === 'string' && (x.label || x.note)) {
-      out[n] = { label: x.label.slice(0, NOTE_LABEL_MAX), note: x.note.slice(0, NOTE_TEXT_MAX) };
-    }
-  });
-  return out;
-}
-/**
- * Returns the favorite people kept in this browser without the entries that are not an account name.
- * @param {Array} stored Member names, untrusted.
- */
-function storedFavoritePeople(stored) {
-  return stored.filter(function (n) { return typeof n === 'string' && ACCOUNT_NAME.test(n); });
-}
-var SPACE_MEMBER = /^(group|dm):[a-z0-9_-]{1,20}$/;
-/**
- * Returns the spaces kept in this browser without the entries of another shape.
- * @param {Array} stored Spaces, untrusted.
- */
-function storedSpaces(stored) {
-  return stored.filter(function (x) {
-    return kindOf(x) === 'object' && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim() && kindOf(x.members) === 'array';
-  }).slice(0, SPACE_MAX).map(function (x) {
-    return { id: x.id, name: x.name.trim().slice(0, SPACE_NAME_MAX), quiet: x.quiet === true, members: x.members.filter(function (m) { return typeof m === 'string' && SPACE_MEMBER.test(m); }) };
-  });
-}
-function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, favoritePeople: [], spaces: [], space: '', readTs: {}, badges: {}, ownBadges: {}, unstyled: [], style: null }; }
 /**
  * Returns the most recent read positions of a map of read positions.
  * @param {Object} reads Server time of the newest read message by group.
@@ -94,14 +48,14 @@ function newestReads(reads) {
  * @param {Object} state Application state.
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
-function useLocalStore(state) {
-  var localRef = useRef(blankLocal()), pending = useRef(null);
+export function useLocalStore(state) {
+  var localRef = useRef(blankMirror()), pending = useRef(null);
   function flush() {
     var p = pending.current;
     if (!p) return;
     pending.current = null;
     clearTimeout(p.timer);
-    storageMerge(skinKey(p.me), p.o);
+    writeMirror(p.me, p.o);
   }
   // A reload is also how live signs out: the read position waiting to be written goes out before the page leaves or is hidden, which a phone may end without pagehide.
   useEffect(function () {
@@ -115,19 +69,18 @@ function useLocalStore(state) {
    * @param {string} me Signed-in account.
    */
   function restore(me) {
-    var stored = storageGet(skinKey(me)) || {}, raw = JSON.stringify(stored);
-    stored = storedLocal(stored);
-    var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
+    var mirror = readMirror(me), lists = { fav: 'favorite', muted: 'muted', ignored: 'ignored' };
     // Lists from before the sync with BetterChatango: moved into its own lists, removed from local storage once all are accepted.
-    Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
-    if (JSON.stringify(stored) !== raw) storageSet(skinKey(me), stored);
-    localRef.current = Object.assign(blankLocal(), stored);
+    var accepted = Object.keys(lists).filter(function (k) { return mirror[k] && mirror[k].map(function (x) { return liveBridge.setListed(lists[k], x, true); }).every(Boolean); });
+    accepted.forEach(function (k) { mirror[k] = undefined; });
+    cleanAccount(me, accepted);
+    localRef.current = mirror;
   }
   var me = LIVE && state.auth.loggedIn ? state.me : null;
   // Runs again only when what it keeps can change: the own style, the conversations, the groups or the members.
   useEffect(function () {
     if (!me) return;
-    var prev = localRef.current, o = blankLocal();
+    var prev = localRef.current, o = blankMirror();
     o.style = state.ownStyle;
     o.notes = state.notes;
     o.favoritePeople = favoritePeople(state);
@@ -164,25 +117,12 @@ function useLocalStore(state) {
   }, [me, state.ownStyle, state.notes, state.spaces, state.space, state.dms, state.groups, state.users]);
   return { ref: localRef, restore: restore };
 }
-/** Key of a ban list entry: unid and IP, like removeblock. */
-function banKey(b) { return b.unid + ':' + b.ip; }
-function blankBanPage() { return { loaded: false, more: false, loading: false }; }
-/**
- * Returns a BetterChatango list loaded by pages: bans (block) or unbans (unblock).
- * @param {Object} g Live group.
- * @param {string} kind block or unblock.
- * @returns {{rows: Array, page: {loaded: boolean, more: boolean, loading: boolean}}} Loaded rows and list state.
- */
-function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.live.banPage } : { rows: g.live.unbans, page: g.live.unbanPage }; }
-function liveGroup(id, title) {
-  var t = title || id;
-  return {
-    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: null,
-    members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
-    conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
-    live: { flags: 0, mods: {}, badges: {}, knownBadges: {}, ownBadge: 'none', owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
-    settings: mkSettings({ overview: { title: t, description: '' }, staff: {} })
-  };
+export function blankBanPage() { return { loaded: false, more: false, loading: false }; }
+function liveGroup(id) {
+  return newGroup(id, {
+    joined: true, conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
+    live: { flags: 0, mods: {}, badges: {}, knownBadges: {}, ownBadge: 'none', owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() }
+  });
 }
 
 // -- Members, groups and messages of the live state ---------------------------
@@ -192,25 +132,25 @@ function liveGroup(id, title) {
  * @param {string} gid Target group.
  * @param {function(Object, Object)} fn Change of the group, with the state being modified.
  */
-function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
+export function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
 /**
  * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels, color, read position and member roles kept in this browser.
  * @param {Object} d State being modified.
  * @param {string} gid Target group.
  * @param {Object} local Account data kept in this browser.
  */
-function ensureLiveGroup(d, gid, local) {
+export function ensureLiveGroup(d, gid, local) {
   var g = d.groups[gid];
   if (!g) {
-    g = d.groups[gid] = liveGroup(gid, gid);
-    g.favorite = (liveBridge.favoriteGroups() || []).indexOf(gid) >= 0;
-    g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
+    g = d.groups[gid] = liveGroup(gid);
+    g.favorite = (liveBridge.list('favorite') || []).indexOf(gid) >= 0;
+    g.muted = (liveBridge.list('muted') || []).indexOf(gid) >= 0;
     g.hiddenChannels = local.channels[gid] || [];
     g.sendChannel = local.sendChannels[gid] || 'none';
-    g.accent = hexToRgb(local.accents[gid]) ? local.accents[gid] : null;
+    g.accent = local.accents[gid] || null;
     g.lastReadTs = local.readTs[gid] || null;
     g.live.knownBadges = local.badges[gid] || {};
-    g.live.ownBadge = BADGE_FLAG[local.ownBadges[gid]] ? local.ownBadges[gid] : 'none';
+    g.live.ownBadge = local.ownBadges[gid] || 'none';
     g.settings.staff = staffOf(g.live);
   }
   return g;
@@ -221,13 +161,13 @@ function ensureLiveGroup(d, gid, local) {
  * @param {string} name Target member.
  * @param {Object} local Account data kept in this browser.
  */
-function ensureLiveUser(d, name, local) {
+export function ensureLiveUser(d, name, local) {
   // Assigning __proto__ would replace the prototype of the map: this name gets a member that is never kept.
-  if (name === '__proto__') return { status: 'offline', about: '', style: {} };
+  if (name === '__proto__') return newUser({ status: 'offline' });
   var u = ownOf(d.users, name);
   if (!u) {
-    u = d.users[name] = { status: 'online', about: '', style: {} };
-    if ((liveBridge.ignoredUsers() || []).indexOf(name) >= 0) u.ignored = true;
+    u = d.users[name] = newUser();
+    if ((liveBridge.list('ignored') || []).indexOf(name) >= 0) u.ignored = true;
     if (local.unstyled.indexOf(name) >= 0) u.unstyled = true;
   }
   return u;
@@ -238,7 +178,7 @@ function ensureLiveUser(d, name, local) {
  * @param {string} name Target member.
  * @param {Object} local Account data kept in this browser.
  */
-function ensureUnseenUser(d, name, local) {
+export function ensureUnseenUser(d, name, local) {
   if (!d.users[name]) ensureLiveUser(d, name, local).status = 'offline';
 }
 /**
@@ -247,7 +187,7 @@ function ensureUnseenUser(d, name, local) {
  * @param {string} name Target member.
  * @param {Object} local Account data kept in this browser.
  */
-function ensurePresentUser(d, name, local) {
+export function ensurePresentUser(d, name, local) {
   var u = ensureLiveUser(d, name, local);
   if (u.status === 'offline' && !u.friend) u.status = 'online';
 }
@@ -281,7 +221,7 @@ function referencedUsers(s, shown) {
  * @param {boolean} loggedIn Signed in.
  * @returns {function(string[]): Function} Keeps members while a view shows them, and returns their release (useShownUsers).
  */
-function usePrunedUsers(store, loggedIn) {
+export function usePrunedUsers(store, loggedIn) {
   // Number of views showing each member: two views can show the same one, the first to close must not release it.
   var shown = useRef(null);
   if (!shown.current) shown.current = Object.create(null);
@@ -305,7 +245,7 @@ function usePrunedUsers(store, loggedIn) {
  * @param {Object} u Member in the state.
  * @param {{status: string, lastOn: number, idleSince: number}} x Received presence.
  */
-function applyPresence(u, x) {
+export function applyPresence(u, x) {
   // Before IDLE_DELAY, an idle member stays shown as online: only idleSince keeps the inactivity.
   u.idleSince = x.status === 'idle' ? x.idleSince || u.idleSince || Date.now() : 0;
   u.status = x.status === 'idle' && Date.now() - u.idleSince < IDLE_DELAY ? 'online' : x.status;
@@ -317,7 +257,7 @@ function applyPresence(u, x) {
  * @param {?Object} style Style read in the message.
  * @param {number} ts Message timestamp in milliseconds.
  */
-function mergeStyle(u, style, ts) {
+export function mergeStyle(u, style, ts) {
   if (!style || ts <= u.styleTs) return;
   // The time moves with the style only: a message that keeps the style leaves the member, and the users map, as they are.
   if (Object.keys(style).every(function (k) { return u.style[k] === style[k]; })) return;
@@ -330,7 +270,7 @@ function mergeStyle(u, style, ts) {
  * @param {?string} spelling Name with its capitals, null for a message that carries none.
  * @param {number} ts Message timestamp.
  */
-function mergeSpelling(u, spelling, ts) {
+export function mergeSpelling(u, spelling, ts) {
   // Like the style, the time moves with the spelling only: a message that keeps it leaves the member as they are.
   if (!spelling || ts <= u.spellingTs || spelling === u.spelling) return;
   u.spelling = spelling;
@@ -341,8 +281,8 @@ function mergeSpelling(u, spelling, ts) {
  * @param {Object} d State being modified.
  * @param {Object} local Account data kept in this browser.
  */
-function pmAuthor(d, local) {
-  return function (x) { var u = ensureLiveUser(d, x.from, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
+export function pmAuthor(d, local) {
+  return function (x) { var u = ensureLiveUser(d, x.author, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
 }
 /**
  * Records the role shown by the badge of a member's latest group message, a message without a badge included.
@@ -351,7 +291,7 @@ function pmAuthor(d, local) {
  * @param {?string} badge Role of the badge, as returned by badgeRoleOf.
  * @param {number} ts Message timestamp.
  */
-function noteBadge(g, name, badge, ts) {
+export function noteBadge(g, name, badge, ts) {
   var seen = g.live.badges[name];
   // History pages arrive from newest to oldest: an older message never overrides a newer badge.
   if (seen && seen.ts >= ts) return;
@@ -384,7 +324,7 @@ function groupRoles(g) {
   return r;
 }
 /** Translates the Chatango state of a group (flags, moderators, announcement) into the interface model. */
-function deriveLive(g) {
+export function deriveLive(g) {
   var L = g.live, F = GROUP_FLAG, f = L.flags, s = g.settings;
   s.staff = staffOf(L);
   s.modFlags = Object.assign({}, L.mods);
@@ -400,19 +340,19 @@ function deriveLive(g) {
     L.annc ? { enabled: L.annc.enabled, text: L.annc.text, displayText: L.annc.displayText, embeds: L.annc.embeds, interval: Math.round(L.annc.interval / 60), intervalSec: L.annc.interval } : null);
   g.closed = !!(f & F.IS_CLOSED);
 }
-function withReply(g, m) {
+export function withReply(g, m) {
   if (m.replyId) { var o = findMsg(g, m.replyId); m.replyTo = { id: o ? o.id : m.replyId }; }
   delete m.replyId;
   return m;
 }
-function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
+export function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
 /**
  * Applies a group edit to the original while keeping its count and its ids.
  * @param {Object} o Original message.
  * @param {{id: string, text: string, parts: ?Array, embeds: ?Array}} m Edit message.
  * @param {boolean=} keepText True to count the edit without replacing the text.
  */
-function applyGroupEdit(o, m, keepText) {
+export function applyGroupEdit(o, m, keepText) {
   o.editCount = (o.editCount || 0) + 1;
   o.editIds = (o.editIds || []).concat([m.id]);
   if (!keepText) applyEdit(o, m);
@@ -422,7 +362,7 @@ function applyGroupEdit(o, m, keepText) {
  * @param {Object} g Group in the state.
  * @param {Object} o Original message, not in the message log yet.
  */
-function mergeEdits(g, o) {
+export function mergeEdits(g, o) {
   function isEdit(x) { return x.editId === o.id && x.author === o.author; }
   var edits = plainOf(g.messages).filter(isEdit);
   if (!edits.length) return;
@@ -434,7 +374,7 @@ function mergeEdits(g, o) {
  * @param {{rows: Array, page: Object}} list List read by banListOf, updated in place.
  * @param {{list: Array, more: boolean}} op Page received from the bridge.
  */
-function receiveBanPage(list, op) {
+export function receiveBanPage(list, op) {
   // Only the next page requested by Nightango is appended: a BetterChatango reload starts again from the first page.
   var next = list.page.loading, known = {};
   if (!next) list.rows.splice(0);
@@ -445,3 +385,5 @@ function receiveBanPage(list, op) {
   list.page.loaded = true;
   list.page.loading = false;
 }
+export var IDLE_DELAY = 3 * MIN;
+export function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }

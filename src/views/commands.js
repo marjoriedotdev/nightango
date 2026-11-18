@@ -1,4 +1,7 @@
-/* ---------- Composer commands ---------- */
+import { dmNameError } from './new-dm.js';
+import { unknownGroupError } from './discover.js';
+import { parseGroupName } from '../core/chatango.js';
+// -- Composer commands --------------------------------------------------------
 // BetterChatango's /background and /style stay plain messages until #70 and #71 give them an equivalent.
 var COMMANDS = {
   '/join': { usage: '/join <group>', text: 'Joins a group by its name.' },
@@ -16,7 +19,7 @@ function commandList() { return 'Commands: ' + Object.keys(COMMANDS).map(functio
  * @param {?string} gid Open group, null in a PM.
  * @returns {boolean} True if the text was a command, which is then not sent.
  */
-function runCommand(app, text, gid) {
+export function runCommand(app, text, gid) {
   var words = text.split(/\s+/), cmd = words[0].toLowerCase(), arg = (words[1] || '').toLowerCase();
   // Own properties only: otherwise a "constructor" message would find the one on Object.
   if (!Object.prototype.hasOwnProperty.call(COMMANDS, cmd)) return false;
@@ -43,4 +46,13 @@ function runCommand(app, text, gid) {
     else toast('No command named ' + asked + '. ' + commandList());
   }
   return true;
+}
+
+/**
+ * Asks for confirmation before leaving a group.
+ * @param {Object} app Application context.
+ * @param {string} gid Group to leave.
+ */
+export function confirmLeave(app, gid) {
+  app.ui.confirm({ title: 'Leave #' + gid + '?', body: 'You can join again from Discover at any time.', confirmLabel: 'Leave group', danger: true, onConfirm: function () { app.actions.leaveGroup(gid); } });
 }

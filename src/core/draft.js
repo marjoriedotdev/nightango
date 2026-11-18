@@ -1,6 +1,6 @@
-/* ---------- State drafts: copy on write ---------- */
+// -- State drafts: copy on write ----------------------------------------------
 // Key under which a draft proxy gives its node: a symbol never collides with a state key.
-var DRAFT = Symbol('draft');
+export var DRAFT = Symbol('draft');
 // Array methods that only move elements: they run on the copy itself, without a draft for each element.
 var ARRAY_MOVES = { push: true, unshift: true, splice: true, sort: true, reverse: true };
 function isObj(v) { return v !== null && typeof v === 'object'; }
@@ -153,7 +153,7 @@ function settleGiven(v, scope) {
  * A scan that only reads goes through it: a draft for each element would cost more than the scan. Its elements are changed through the draft only.
  * @param {*} v Draft or value.
  */
-function plainOf(v) {
+export function plainOf(v) {
   var n = isObj(v) && v[DRAFT];
   if (!n) return v;
   var src = n.copy || n.base, out = src, k, c;
@@ -169,7 +169,7 @@ function plainOf(v) {
  * @param {Object} base State the draft starts from, never changed.
  * @returns {{root: Object, finish: function(): Object}} Draft of the root, and the next state, which shares every object the changes left alone.
  */
-function openDraft(base) {
+export function openDraft(base) {
   var scope = { open: true, fresh: new Set() }, root = draftNode(base, null, scope);
   return { root: root.proxy, finish: function () { scope.open = false; return settleNode(root); } };
 }

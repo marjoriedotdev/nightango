@@ -1,5 +1,19 @@
-/* ---------- Account settings in live mode ---------- */
-var GENDER_CODE = { Male: 'M', Female: 'F' };
+import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { shortDate } from '../core/util.js';
+import { ColorField, useApp } from '../core/ui.js';
+import { SAFE_IMAGE_URL } from '../core/rich-text.js';
+import { miniStyleOf, premiumActive, premiumEndsSoon, userOf } from '../core/selectors.js';
+import { miniStyleForm, miniStyleOfForm } from '../bridge/live-parse.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { FullProfileFrame, useFullProfileMedia } from '../views/profile.js';
+import { useMarkupToolbar } from './markup-toolbar.js';
+import { AboutYouFields, ProfilePreviewCard, VisibilitySection, VisitorsSection, ageError } from './profile.js';
+import { BrowserTabSection, ChatangoPmSection, NotesSection, PRIVACY_LEDE, PmHistoryRows, StartupSection } from './privacy.js';
+import { AvatarCropDialog } from './avatar-crop.js';
+import { LIVE } from '../core/env.js';
+import { GENDER_LABEL, genderCode } from '../core/chatango.js';
+import { Page, chatangoLink, useBetterChatangoSettings } from './kit.js';
+// -- Profile, privacy, account and Premium pages of live ----------------------
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
 
 var AVATAR_TYPES = 'image/jpeg,image/png,image/gif';
@@ -11,7 +25,7 @@ var BANNER_TYPES = '.png, .apng, .jpg, .jpeg, .gif, .bmp, .webp';
  */
 function ownMiniStyle(u) { return !u.profileLoaded ? null : u.premium ? miniStyleForm(u.miniStyle) : false; }
 
-function ProfilePageLive() {
+export function ProfilePageLive() {
   var app = useApp(), s = app.state, me = userOf(s, s.me);
   // Empty field: full profile empty or not yet read back by BetterChatango, null until mod2.xml is read.
   function load() { var r = liveBridge.readProfile(); return { loaded: r.loaded, age: r.age, gender: GENDER_LABEL[r.gender] || 'Not specified', location: r.location, about: r.about, dir: r.dir, full: r.full || null, style: ownMiniStyle(me) }; }
@@ -28,7 +42,7 @@ function ProfilePageLive() {
   var avatarInput = useRef(null), bannerInput = useRef(null), bioInput = useRef(null), fullInput = useRef(null);
   var media = useFullProfileMedia();
   var dirty = JSON.stringify(draft) !== JSON.stringify(editable(base));
-  var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
+  var ageErr = ageError(draft.age);
   var imageErr = draft.style && draft.style.image && !SAFE_IMAGE_URL.test(draft.style.image) ? 'Enter an image link that starts with https:// and has no spaces, quotes or parentheses.' : '';
   function set(k, v) { setDraft(function (d) { var n = Object.assign({}, d); n[k] = v; return n; }); }
   function setStyle(k, v) { setDraft(function (d) { var n = Object.assign({}, d, { style: Object.assign({}, d.style) }); n.style[k] = v; return n; }); }
@@ -56,7 +70,7 @@ function ProfilePageLive() {
     var styleDirty = !!sent.style && JSON.stringify(sent.style) !== JSON.stringify(base.style);
     setSaving(true);
     // BetterChatango accepts only one request at a time: the background is sent after the profile.
-    (profileDirty ? liveBridge.saveProfile({ age: sent.age, gender: GENDER_CODE[sent.gender] || '?', location: sent.location, about: sent.about, dir: sent.dir, full: sent.full }).then(function () {
+    (profileDirty ? liveBridge.saveProfile({ age: sent.age, gender: genderCode(sent.gender) || '?', location: sent.location, about: sent.about, dir: sent.dir, full: sent.full }).then(function () {
       setBase(function (x) { return Object.assign({}, x, fields(sent)); });
       app.update(function (d) { var u = d.users[d.me]; if (u) { u.age = sent.age === '' ? '' : +sent.age; u.location = sent.location; u.about = sent.about; u.aboutHtml = sent.about; u.gender = sent.gender; } });
     }) : Promise.resolve()).then(function () {
@@ -98,7 +112,7 @@ function ProfilePageLive() {
       }
     });
   }
-  var meta = [draft.age, genderShort(draft.gender), draft.location].filter(Boolean).join(' · ');
+  var meta = [draft.age, genderCode(draft.gender), draft.location].filter(Boolean).join(' · ');
   var preview = draft.style ? miniStyleOf(s.prefs, { miniStyle: miniStyleOfForm(draft.style) }, app.theme) : miniStyleOf(s.prefs, me, app.theme);
   var locked = !base.loaded || saving;
   var bioMarkup = useMarkupToolbar(bioInput, 'pf-bio'), fullMarkup = useMarkupToolbar(fullInput, 'pf-full', locked || draft.full === null);
@@ -117,12 +131,7 @@ function ProfilePageLive() {
               h('input', { ref: avatarInput, type: 'file', accept: AVATAR_TYPES, hidden: true, onChange: pickAvatar })))),
         h(T.SettingsSection, { title: 'About you', padded: true },
           h('fieldset', { disabled: locked, style: { border: 0, margin: 0, padding: 0, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 } },
-            h('div', { className: 'grid3' },
-              h(T.TextField, { id: 'pf-age', label: 'Age', type: 'number', min: 13, max: 120, value: draft.age, error: ageErr || undefined, onChange: function (e) { set('age', e.target.value); } }),
-              h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'pf-gender' }, 'Gender'),
-                h('select', { id: 'pf-gender', className: 'tc-input', value: draft.gender, onChange: function (e) { set('gender', e.target.value); } }, [['Not specified', 'Not specified'], ['Male', 'M'], ['Female', 'F']].map(function (g) { return h('option', { key: g[0], value: g[0] }, g[1]); }))),
-              h(T.TextField, { id: 'pf-loc', label: 'Location', value: draft.location, onChange: function (e) { set('location', e.target.value); } })),
-            h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, inputRef: bioInput, toolbar: bioMarkup.toolbar, onKeyDown: bioMarkup.onKeyDown, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }))),
+            h(AboutYouFields, { draft: draft, set: set, ageErr: ageErr, bioInput: bioInput, bioMarkup: bioMarkup }))),
         h(MiniBackgroundSection, { style: draft.style, failed: me.profileFailed, locked: locked, uploading: uploading, imageErr: imageErr, onChange: setStyle, onUpload: function () { bannerInput.current.click(); } }),
         h('input', { ref: bannerInput, type: 'file', accept: BANNER_TYPES, hidden: true, onChange: pickBanner }),
         h(T.SettingsSection, { title: 'Full profile', description: 'HTML page on chatango.com, opened from your mini profile.', padded: true },
@@ -173,28 +182,16 @@ function MiniBackgroundSection(p) {
             h(T.Checkbox, { label: 'Tile across', checked: st.tileAcross, onChange: function (e) { p.onChange('tileAcross', e.target.checked); } }))));
 }
 
-// The interface changes only if BetterChatango saved the value, otherwise a toast says so.
-function useBetterChatangoSettings(read, write) {
-  var app = useApp();
-  var st = useState(read), value = st[0], setValue = st[1];
-  function set(key, v) {
-    if (!saveBetterChatangoSetting(app, write, key, v)) return;
-    setValue(function (x) { var n = Object.assign({}, x); n[key] = v; return n; });
-  }
-  return [value, set];
-}
-
 var PMR_STATUS = {
   ok: 'vissle sees no restriction on your private messages.',
   restricted: 'vissle thinks your private messages are restricted.',
   unknown: "vissle couldn't check your private message status."
 };
-function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === null ? null : { pmrCheck: v }; }
 
-function PrivacyPageLive() {
+export function PrivacyPageLive() {
   var app = useApp();
-  var st = useBetterChatangoSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
-  var pc = useBetterChatangoSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
+  var st = useBetterChatangoSettings(['joinOwned', 'joinRecent', 'joinFavorites']), startup = st[0], setStartupSetting = st[1];
+  var pc = useBetterChatangoSettings(['pmrCheck']), pmr = pc[0], setPmrSetting = pc[1];
   var checking = !!(pmr && pmr.pmrCheck);
   // Also runs when the setting is turned off: pmrStatus then returns null, which removes the status and the PM banner.
   useEffect(function () { app.actions.checkPmr(); }, [checking]);
@@ -215,13 +212,13 @@ function PrivacyPageLive() {
     startup ? h(StartupSection, { value: startup, onChange: setStartupSetting }) : null);
 }
 
-function AccountPage() {
+export function AccountPage() {
   return h(Page, { title: 'Password and email', lede: 'Login details for your Chatango account.' },
     h(T.Banner, { icon: 'lock', title: 'Managed on chatango.com', action: chatangoLink('Open chatango.com') },
       "Nightango never handles your password, so it can't change it, change your email or delete your account. Do it on chatango.com."));
 }
 
-function PremiumPage() {
+export function PremiumPage() {
   var s = useApp().state, p = s.premium, now = Date.now();
   // Read from the premium frame of the private connection: nothing shows before it or while that connection is down.
   var known = !!p && (!LIVE || s.pmConn === 'open');

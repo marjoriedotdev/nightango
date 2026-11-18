@@ -1,13 +1,19 @@
+import { T, h, useEffect, useState } from '../core/globals.js';
+import { unknownUserText } from '../core/util.js';
+import { useApp } from '../core/ui.js';
+import { LIVE } from '../core/env.js';
+import { ACCOUNT_NAME } from '../core/chatango.js';
+import { Dialog } from '../core/layers.js';
 /**
  * Rejects a name no conversation can be opened with.
  * @param {Object} s Application state.
  * @param {string} name Lowercase name, not empty.
  */
-function dmNameError(s, name) {
+export function dmNameError(s, name) {
   if (LIVE ? !ACCOUNT_NAME.test(name) : !s.users[name]) return LIVE ? 'Usernames use letters, numbers, - and _ only.' : unknownUserText(name);
   return name === s.me ? "You can't message yourself." : '';
 }
-function NewDmDialog(p) {
+export function NewDmDialog(p) {
   var app = useApp(), s = app.state;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];

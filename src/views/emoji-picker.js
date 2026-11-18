@@ -1,4 +1,13 @@
-/* ---------- Composer emoticon and media picker ---------- */
+import { Frag, T, h, useLayoutEffect, useRef, useState } from '../core/globals.js';
+import { useStatePart } from '../core/ui.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { MediaPanel } from './media.js';
+import { GifPanel } from './gif.js';
+import { LIVE } from '../core/env.js';
+import { EMOTICONS, EMOTICON_BY_NAME } from '../core/emoticons.js';
+import { readOwn, writeOwn } from '../core/account-store.js';
+import { Portal, useFloating } from '../core/layers.js';
+// -- Composer emoticon and media picker ---------------------------------------
 var EMOJI_SECTIONS = [{ title: 'Classic', premium: false }, { title: 'Premium', premium: true }];
 var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'gif', label: 'GIF' }, { value: 'media', label: 'Media' }];
 var RECENT_EMOJI_MAX = 16;
@@ -7,10 +16,7 @@ var RECENT_EMOJI_MAX = 16;
  * Returns the names of the emoticons last picked by an account.
  * @param {string} me Signed-in account.
  */
-function recentEmoji(me) {
-  var list = (storageGet(skinKey(me)) || {}).recentEmoji;
-  return kindOf(list) === 'array' ? list : [];
-}
+function recentEmoji(me) { return readOwn(me, 'recentEmoji'); }
 /**
  * Moves an emoticon to the front of the ones last picked by an account.
  * @param {string} me Signed-in account.
@@ -18,7 +24,7 @@ function recentEmoji(me) {
  */
 function keepRecentEmoji(me, name) {
   var list = recentEmoji(me).filter(function (n) { return n !== name; });
-  storageMerge(skinKey(me), { recentEmoji: [name].concat(list).slice(0, RECENT_EMOJI_MAX) });
+  writeOwn(me, 'recentEmoji', [name].concat(list).slice(0, RECENT_EMOJI_MAX));
 }
 
 /**
@@ -28,7 +34,7 @@ function keepRecentEmoji(me, name) {
  * @param {function(string)} setValue Writes the field text.
  * @returns {{onEmoji: Function, picker: ?Object}} Emoji button action and picker to render next to the composer.
  */
-function useEmojiPicker(inputRef, setValue) {
+export function useEmojiPicker(inputRef, setValue) {
   var st = useState(false), open = st[0], setOpen = st[1];
   var tb = useState('emoji'), tab = tb[0], setTab = tb[1];
   var anchorRef = useRef(null), caret = useRef(null);

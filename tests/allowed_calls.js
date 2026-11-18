@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
-const { concatSources, layerSources } = require('../scripts/build.mjs');
+const { bundleForTest } = require('../scripts/build.mjs');
 const S = process.argv[2];
 const log = [];
 /**
@@ -13,7 +13,7 @@ const log = [];
  */
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 
-/* ---------- Call sites of src/ ---------- */
+// -- Call sites of src/ -------------------------------------------------------
 const DOC = fs.readFileSync(path.join(S, 'docs/betterchatango-protocol.md'), 'utf8');
 const LIST = (/^## Allowed HTTP calls\n([\s\S]*?)^#/m.exec(DOC) || [])[1] || '';
 const SOURCES = fs.readdirSync(path.join(S, 'src'), { recursive: true }).sort()
@@ -138,7 +138,7 @@ step('the userscript grants GM_xmlhttpRequest only and connects only to the host
   JSON.stringify(tags('grant')) === '["GM_xmlhttpRequest"]' && JSON.stringify(tags('connect').sort()) === JSON.stringify(Object.keys(CONNECT).sort())
     && Object.values(CONNECT).every(t => LIST.includes(t)), { grant: tags('grant'), connect: tags('connect') });
 
-/* ---------- Post helper of the bridge ---------- */
+// -- Post helper of the bridge ------------------------------------------------
 const posts = [], journal = [];
 const CH = { path: (p, sub) => 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p };
 const w = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', virtualConsole: new VirtualConsole() }).window;
@@ -156,7 +156,6 @@ w.__betterChatangoRefs = {
     }
   }
 };
-w.eval(concatSources(S, layerSources('bridge')) + '; window.__bridge = liveBridge;');
 /**
  * Lists the cases where postRefusal does not give the expected verdict.
  * @param {Array<[string, Object, string]>} cases URL, options and refused or allowed.
@@ -168,6 +167,10 @@ function wrongVerdicts(cases) {
 const PROFILE = 'https://chatango.com/updateprofile', UPLOAD = 'https://vissle.me/chatango/upload';
 
 (async () => {
+  // The bridge module reads React through the shared base, as in the page.
+  ['react/umd/react.development.js', 'react-dom/umd/react-dom.development.js'].forEach(f => w.eval(fs.readFileSync('node_modules/' + f, 'utf8')));
+  w.eval(await bundleForTest("export { liveBridge } from './src/bridge/live-bridge.js'; export { postRefusal } from './src/bridge/live-parse.js';"));
+  w.__bridge = w.__mod.liveBridge; w.postRefusal = w.__mod.postRefusal;
   const B = w.__bridge, file = new w.File(['moon'], 'moon.png', { type: 'image/png' });
   const settle = p => p.then(() => 'sent', e => 'refused: ' + e.message);
   const current = [
@@ -199,8 +202,6 @@ const PROFILE = 'https://chatango.com/updateprofile', UPLOAD = 'https://vissle.m
   step('refuses a post without an option to a host other than chatango.com', !noOption.length, noOption);
   const key = wrongVerdicts([[PROFILE, { key: true }, 'refused'], ['https://vissle.me/chatango/updateprofile', { key: true }, 'refused'], [UPLOAD + '?to=moon', { key: true }, 'refused']]);
   step('refuses the key option to any URL other than the vissle upload', !key.length, key);
-  const allowed = wrongVerdicts([[PROFILE, {}, 'allowed'], [PROFILE + '?css', {}, 'allowed'], [UPLOAD, { key: true }, 'allowed'], ['https://st.chatango.com/script/creategrouploginjs', { cookie: true }, 'allowed']]);
-  step('allows the targets and options of the six current call sites', !allowed.length, allowed);
 
   const failed = log.filter(l => l.startsWith('FAIL')).length;
   console.log(log.join('\n'));

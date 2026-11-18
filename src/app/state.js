@@ -1,3 +1,6 @@
+import { kindOf, storageGet } from '../core/util.js';
+import { defaultPrefs } from '../core/prefs.js';
+import { mkSettings } from '../core/roles.js';
 /**
  * Merges stored values into the defaults: a value of another kind than its default is dropped, a key without a default is kept.
  * @param {Object} base Defaults.
@@ -24,7 +27,51 @@ function loadPrefs(stored) {
   if (stored && stored.sky && typeof stored.sky.moon === 'number') prefs.sky.moon = stored.sky.moon;
   return prefs;
 }
-var PREFS_KEY = 'torch-prototype-prefs';
-var ROOT_EL = window.__TORCH_ROOT__ || document.documentElement;
-var VIEWER_THEME = ROOT_EL.getAttribute('data-theme');
-function initialState() { return { auth: { loggedIn: false }, prefs: loadPrefs(storageGet(PREFS_KEY)) }; }
+// -- Shapes of the state ------------------------------------------------------
+// Live and the prototype build their state from the same shapes: a view reads the same fields in both modes.
+
+/**
+ * Creates the world of a signed-in account, over which the given fields apply.
+ * @param {string} me Signed-in account.
+ * @param {Object=} fields Fields that replace the defaults.
+ */
+export function newWorld(me, fields) {
+  var users = {}; users[me] = newUser({ self: true });
+  return Object.assign({
+    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
+    route: { view: 'discover' }, split: null, pip: null, lastChat: { view: 'discover' },
+    sections: { favorites: true, groups: true, dms: true },
+    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, pmSettings: null, pmSettingSave: null, premium: null, retrying: {}
+  }, fields);
+}
+/**
+ * Creates a group, titled with its name until Chatango or the sample world gives a title, over which the given fields apply.
+ * @param {string} id Group name.
+ * @param {Object=} fields Fields that replace the defaults.
+ */
+export function newGroup(id, fields) {
+  return Object.assign({
+    id: id, title: id, topic: id, joined: false, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: null,
+    members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
+    settings: mkSettings({ overview: { title: id, description: '' }, staff: {} })
+  }, fields);
+}
+/**
+ * Creates a member, online until a frame or the sample world says otherwise, over which the given fields apply.
+ * @param {Object=} fields Fields that replace the defaults.
+ */
+export function newUser(fields) { return Object.assign({ status: 'online', about: '', style: {} }, fields); }
+
+/**
+ * Brings a state the hosted page saved with an earlier version to the current shapes.
+ * @param {Object} s Saved state, changed in place.
+ * @returns {Object} The same state.
+ */
+export function upgradeSavedState(s) {
+  // PM messages named their author from before they took the field of group messages.
+  Object.keys(s.dms || {}).forEach(function (n) { s.dms[n].messages.forEach(function (m) { if (!m.author && m.from) { m.author = m.from; delete m.from; } }); });
+  return s;
+}
+
+export var PREFS_KEY = 'torch-prototype-prefs';
+export function initialState() { return { auth: { loggedIn: false }, prefs: loadPrefs(storageGet(PREFS_KEY)) }; }

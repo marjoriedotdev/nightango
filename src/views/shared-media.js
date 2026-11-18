@@ -1,4 +1,12 @@
-/* ---------- Media and links of a conversation ---------- */
+import { T, h, useMemo, useState } from '../core/globals.js';
+import { ago } from '../core/util.js';
+import { useApp } from '../core/ui.js';
+import { shownName } from '../core/selectors.js';
+import { mediaLink } from './message.js';
+import { MediaThumb, mediaThumbShown } from './media.js';
+import { mediaLinks, textLinks } from '../core/message-content.js';
+import { Dialog } from '../core/layers.js';
+// -- Media and links of a conversation ----------------------------------------
 // Embed kinds by filter: YouTube and TikTok are videos as much as a video file.
 var SHARED_KINDS = { image: 'images', video: 'videos', youtube: 'videos', tiktok: 'videos', audio: 'audio', x: 'posts', link: 'links' };
 var SHARED_FILTERS = [['all', 'All'], ['images', 'Images'], ['videos', 'Videos'], ['audio', 'Audio'], ['posts', 'Posts'], ['links', 'Links']];
@@ -8,15 +16,14 @@ var SHARED_ICONS = { image: 'image', video: 'play', youtube: 'play', tiktok: 'pl
  * Lists what the loaded messages of a conversation shared, newest first.
  * A link the message shows as a media counts once, as that media.
  * @param {Array} messages Messages of the conversation, oldest first.
- * @param {function(Object): string} authorOf Author of a message.
  * @returns {Array<{key: string, kind: string, url: ?string, msgId: string, author: string, ts: number}>} Shared items.
  */
-function sharedItems(messages, authorOf) {
+function sharedItems(messages) {
   var out = [];
   for (var i = messages.length - 1; i >= 0; i--) {
     var m = messages[i];
     if (m.deleted || !m.text && !(m.embeds && m.embeds.length)) continue;
-    var base = { msgId: m.id, author: authorOf(m), ts: m.ts }, shown = mediaLinks(m);
+    var base = { msgId: m.id, author: m.author, ts: m.ts }, shown = mediaLinks(m);
     (m.embeds || []).forEach(function (e, j) {
       out.push(Object.assign({ key: m.id + ':e' + j, kind: e.kind, url: e.kind === 'youtube' ? 'https://www.youtube.com/watch?v=' + e.id : e.url }, base));
     });
@@ -45,13 +52,13 @@ function sharedTitle(it) {
 /**
  * Media and links shared in the loaded messages of a group or a PM.
  * A click on an item closes the dialog and jumps to its message.
- * @param {{where: string, messages: Array, authorOf: Function, onJump: function(string), onClose: Function}} p Conversation name as shown, its visible messages, author of a message, jump to a message and close.
+ * @param {{where: string, messages: Array, onJump: function(string), onClose: Function}} p Conversation name as shown, its visible messages, jump to a message and close.
  */
-function SharedMediaDialog(p) {
+export function SharedMediaDialog(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var a = useState('all'), filter = a[0], setFilter = a[1];
   var r = useState(false), revealed = r[0], setRevealed = r[1];
-  var items = useMemo(function () { return sharedItems(p.messages, p.authorOf); }, [p.messages]);
+  var items = useMemo(function () { return sharedItems(p.messages); }, [p.messages]);
   var counts = {};
   items.forEach(function (it) { var k = SHARED_KINDS[it.kind]; counts[k] = (counts[k] || 0) + 1; });
   var options = SHARED_FILTERS.filter(function (f) { return f[0] === 'all' || counts[f[0]]; }).map(function (f) { return { value: f[0], label: f[1] }; });

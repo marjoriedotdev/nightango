@@ -1,3 +1,17 @@
+import { Frag, React, T, h, useEffect, useState } from '../core/globals.js';
+import { MIN, copyText, cx, fmtTime } from '../core/util.js';
+import { SURFACE, ensureContrast, hexToRgb, mix, rgbToHex } from '../core/colors.js';
+import { useAppApi, useStatePart } from '../core/ui.js';
+import { MessageText, httpsHost, waitsForClick, warnOnLink } from '../core/rich-text.js';
+import { mentionsMe } from '../core/selectors.js';
+import { MSG_BG_ALIGN } from '../bridge/live-parse.js';
+import { MediaStar } from './media.js';
+import { LIVE } from '../core/env.js';
+import { CHANNELS, FONT_STACKS, isDelivered } from '../core/chatango.js';
+import { EMBED_LABEL, messagePreview, shownParts } from '../core/message-content.js';
+import { banItem, ignoreItem, styleItem, viewProfileItem, whoItem } from './people.js';
+import { MenuButton } from '../core/layers.js';
+import { Person, developerBadge, roleBadge } from '../core/people-ui.js';
 var UNSTYLED = { names: false, fonts: false, backgrounds: false };
 
 /**
@@ -9,7 +23,7 @@ var UNSTYLED = { names: false, fonts: false, backgrounds: false };
  * @param {boolean} highlighted Row highlighted as a mention or a channel message, whose highlight replaces the member background.
  * @param {?Object} [msgBg] Premium message background read by parseMsgBg, in live.
  */
-function memberStyles(u, styles, theme, highlighted, msgBg) {
+export function memberStyles(u, styles, theme, highlighted, msgBg) {
   var style = u.style || {};
   if (u.unstyled) styles = UNSTYLED;
   var surf = SURFACE[theme], bg = surf.bg, out = { name: null, text: null, row: null, image: null, plain: !!u.unstyled };
@@ -36,9 +50,9 @@ function memberStyles(u, styles, theme, highlighted, msgBg) {
  * @param {Object} m Group message.
  * @param {string} me Signed-in user.
  */
-function canEditGroupMessage(m, me) {
+export function canEditGroupMessage(m, me) {
   // Like a reply, an edit waits for the message's final id.
-  return m.author === me && (!LIVE || liveBridge.delivered(m.id));
+  return m.author === me && isDelivered(m.id);
 }
 
 /**
@@ -57,7 +71,7 @@ function channelColorOf(m) {
  * @param {Object} prefs Preferences.
  * @param {string} theme Resolved theme.
  */
-function groupRowFill(m, me, u, prefs, theme) {
+export function groupRowFill(m, me, u, prefs, theme) {
   // A mention on a channel keeps the channel's band: it joins the channel's block.
   if (channelColorOf(m)) return 'chan:' + m.channel;
   if (m.author !== me && mentionsMe(me, m.text)) return 'mention';
@@ -72,8 +86,30 @@ function groupRowFill(m, me, u, prefs, theme) {
  * @param {Object} prefs Preferences.
  * @param {string} theme Resolved theme.
  */
-function dmRowFill(m, u, prefs, theme) {
-  return memberStyles(u, prefs.styles, theme, false).row ? 'member:' + m.from : null;
+export function dmRowFill(m, u, prefs, theme) {
+  return memberStyles(u, prefs.styles, theme, false).row ? 'member:' + m.author : null;
+}
+
+/**
+ * Preview of the message a reply answers, shown above it.
+ * @param {Object} m Message.
+ * @param {?Object} original Loaded original, null if it is not loaded.
+ * @param {?string} gid Group of a group message, null for a PM.
+ * @param {function(Object)} onJump Jumps to the original.
+ * @returns {?Object} Reply of T.Message, null for a message that answers none.
+ */
+export function replyPreview(m, original, gid, onJump) {
+  if (original) return { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: messagePreview(original), onJump: function () { onJump(original); } };
+  return m.replyTo ? { text: 'Original message not loaded' } : null;
+}
+
+/**
+ * Tells whether a message shows as the follow-up of the previous one: same author within five minutes, neither a reply nor next to a deleted message.
+ * @param {?Object} prev Previous message of the log, null after a divider or another kind of row.
+ * @param {Object} m Message.
+ */
+export function continues(prev, m) {
+  return !!prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted;
 }
 
 /**
@@ -82,7 +118,7 @@ function dmRowFill(m, u, prefs, theme) {
  * @param {Object} props Props of the row.
  * @param {?string} fill Background of the row, as returned by groupRowFill or dmRowFill.
  */
-function joinRow(last, props, fill) {
+export function joinRow(last, props, fill) {
   if (last && fill && last.fill === fill) { props.joinPrev = true; last.row.joinNext = true; }
   return { row: props, fill: fill };
 }
@@ -94,7 +130,7 @@ function joinRow(last, props, fill) {
  * @param {boolean} compact Compact density, whose rows have no gap.
  * @param {?Object} style Row style.
  */
-function joinedRow(p, compact, style) {
+export function joinedRow(p, compact, style) {
   var gap = p.joinPrev && !p.continued && !compact ? { marginTop: 0, paddingTop: 12 } : null;
   return { className: cx(p.joinPrev && 'msg-join-prev', p.joinNext && 'msg-join-next'), style: gap ? Object.assign({}, style, gap) : style };
 }
@@ -109,7 +145,7 @@ function joinedRow(p, compact, style) {
  *   ban right on the author and IP right, loaded original of a reply, follow-up of the previous message from the same author, background joined to the previous and next rows,
  *   highlight, and actions.
  */
-var MessageRow = React.memo(function MessageRow(p) {
+export var MessageRow = React.memo(function MessageRow(p) {
   var app = useAppApi(), prefs = p.prefs, m = p.m, me = p.me, gid = p.gid;
   var st = useState(false), menuOpen = st[0], setMenuOpen = st[1];
   var mention = m.author !== me && mentionsMe(me, m.text);
@@ -150,9 +186,7 @@ var MessageRow = React.memo(function MessageRow(p) {
     : h(MessageContent, { m: m, style: textStyle, plain: ms.plain, gid: gid });
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
-  var original = p.original;
-  var reply = original ? { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
-    : m.replyTo ? { text: 'Original message not loaded' } : null;
+  var reply = replyPreview(m, p.original, gid, p.onJump);
   var authorBtn = handle
     ? h('button', { type: 'button', className: 'tc-msg-author namebtn namebtn-mention', title: 'Mention ' + p.shown, style: nameStyle, onClick: function () { p.onMention(handle); } }, p.shown)
     : authorName(p.shown, nameStyle);
@@ -168,7 +202,7 @@ var MessageRow = React.memo(function MessageRow(p) {
  * @param {Object} app Application context.
  * @param {Object} m Message.
  */
-function copyTextItem(app, m) {
+export function copyTextItem(app, m) {
   return { label: 'Copy text', icon: 'copy', onSelect: function () { copyText(m.text || messagePreview(m), function (ok) { app.ui.toast(ok ? 'Message copied.' : 'Copy failed. Select the text and copy it.', { tone: ok ? 'success' : 'error' }); }); } };
 }
 
@@ -177,7 +211,7 @@ function copyTextItem(app, m) {
  * @param {Array} items Menu entries.
  * @param {function(boolean)} onOpenChange Open state tracking, which keeps the toolbar shown.
  */
-function moreActionsButton(items, onOpenChange) {
+export function moreActionsButton(items, onOpenChange) {
   return h(MenuButton, { label: 'More actions', size: 28, iconSize: 16, items: items, onOpenChange: onOpenChange });
 }
 
@@ -197,7 +231,7 @@ function MessageBgImage(p) {
  * Returns the name to write after @ to mention a member, or null for an anon.
  * @param {string} name Shown member name.
  */
-function mentionHandle(name) {
+export function mentionHandle(name) {
   // Like BetterChatango: a temporary name "#name" is mentioned without its #.
   if (name.charAt(0) === '#') return name.slice(1);
   return name.charAt(0) === '!' ? null : name;
@@ -208,7 +242,7 @@ function mentionHandle(name) {
  * @param {string} author Mentionable author of the quoted message.
  * @param {string} text Quoted text.
  */
-function quoteOf(author, text) {
+export function quoteOf(author, text) {
   return '@' + mentionHandle(author) + ': `' + text.replace(/`/g, '').replace(/\n/g, ' ').trim() + '` ';
 }
 
@@ -217,24 +251,24 @@ function quoteOf(author, text) {
  * For an edit shown separately, it is the id of the original.
  * @param {Object} m Edited message.
  */
-function editedId(m) { return m.editId || m.id; }
+export function editedId(m) { return m.editId || m.id; }
 
 /**
  * Author name of a message, without action.
  * @param {string} name Member name as they spell it.
  * @param {?Object} style Name color chosen by the member.
  */
-function authorName(name, style) {
+export function authorName(name, style) {
   return h('span', { className: 'tc-msg-author', style: style }, name);
 }
 
-function MessageContent(p) {
+export function MessageContent(p) {
   var m = p.m, parts = shownParts(m);
   return h(Frag, null, parts.length ? h(MessageText, { text: m.text, parts: parts, style: p.style, plain: p.plain, gid: p.gid }) : null, m.edited ? h('span', { className: 'tc-msg-time' }, '(edited)') : null, m.embeds && m.embeds.length ? h(MessageEmbeds, { embeds: m.embeds }) : null);
 }
 
 var FILE_MEDIA = { video: { icon: 'play', label: 'Play video', className: 'embed-frame' }, audio: { icon: 'volume', label: 'Play audio', className: 'embed-audio' } };
-function MessageEmbeds(p) {
+export function MessageEmbeds(p) {
   return h('div', { className: 'embeds' }, p.embeds.map(function (e, i) {
     if (e.kind === 'youtube') return h(VideoEmbed, { key: i, id: e.id });
     if (e.kind === 'tiktok') return h(TikTokEmbed, { key: i, id: e.id, url: e.url });
@@ -250,7 +284,7 @@ function MessageEmbeds(p) {
  * @param {string} className Link class.
  * @param {*} content Link content.
  */
-function mediaLink(app, url, className, content) {
+export function mediaLink(app, url, className, content) {
   return h('a', { className: className, href: url, target: '_blank', rel: 'noopener noreferrer', onClick: warnOnLink(app, url) }, content);
 }
 

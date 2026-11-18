@@ -1,5 +1,5 @@
-/* ---------- Data ---------- */
-var PERMS = [
+// -- Roles and rights ---------------------------------------------------------
+export var PERMS = [
   { key: 'seeCounter', group: 'Visibility', title: 'See the member count', desc: 'Shows how many people are in the group, guests included.' },
   { key: 'seeIps', group: 'Visibility', title: 'See IP addresses', desc: 'Shows the IP behind each message. Needed to ban people who come back under another name.', sensitive: true },
   { key: 'staffChannel', group: 'Visibility', title: 'Access the staff channel', desc: 'Read and post in the channel only staff can see.' },
@@ -15,9 +15,9 @@ var PERMS = [
   { key: 'manageMods', group: 'Administration', title: 'Manage moderators', desc: 'Add and remove moderators and their permissions.' },
   { key: 'closeGroup', group: 'Administration', title: 'Close the group', desc: 'Stop everyone from posting until it reopens.' }
 ];
-var ROLE_LABEL = { owner: 'Owner', admin: 'Admin', mod: 'Mod' };
-var ROLE_LONG = { owner: 'Owner', admin: 'Admin', mod: 'Moderator' };
-var ROLE_DESC = {
+export var ROLE_LABEL = { owner: 'Owner', admin: 'Admin', mod: 'Mod' };
+export var ROLE_LONG = { owner: 'Owner', admin: 'Admin', mod: 'Moderator' };
+export var ROLE_DESC = {
   owner: "Created the group. Always has every permission and can't be removed.",
   admin: 'A moderator allowed to change group settings.',
   mod: "A moderator who can't change group settings."
@@ -25,23 +25,26 @@ var ROLE_DESC = {
 /* Permission bits of a Chatango moderator, read from the BetterChatango client (chatango.flags) and cross-checked with chadango and chatango-lib. */
 var PERM_FLAG = { seeCounter: 64, seeIps: 16384, staffChannel: 128, modLog: 256, broadcast: 65536, bypass: 8192, bannedWords: 8, automod: 512, unbanAll: 1048576, editGroup: 32, editAnnouncement: 1024, editRestrictions: 16, manageMods: 2, closeGroup: 32768 };
 var PERM_MASK = Object.keys(PERM_FLAG).reduce(function (n, k) { return n | PERM_FLAG[k]; }, 0);
-// Permissions that make a moderator an administrator in Chatango terms.
-var ADMIN_MASK = 2 | 4 | 16 | 32 | 1024 | 32768;
-function allPerms(v) { var o = {}; PERMS.forEach(function (p) { o[p.key] = v; }); return o; }
-function defaultRoles() {
+// Rights outside the permissions of the interface: EDIT_MOD_VISIBILITY shows or hides staff badges, IS_STAFF makes BetterChatango offer the administrator badge.
+var EDIT_MOD_VISIBILITY = 4;
+export var IS_STAFF_RIGHT = 262144;
+// Rights that make a moderator an administrator in Chatango terms.
+var ADMIN_MASK = PERM_FLAG.manageMods | EDIT_MOD_VISIBILITY | PERM_FLAG.editRestrictions | PERM_FLAG.editGroup | PERM_FLAG.editAnnouncement | PERM_FLAG.closeGroup;
+export function allPerms(v) { var o = {}; PERMS.forEach(function (p) { o[p.key] = v; }); return o; }
+export function defaultRoles() {
   var mod = allPerms(false); mod.seeCounter = mod.seeIps = mod.staffChannel = mod.modLog = mod.broadcast = true;
   var admin = allPerms(true); admin.closeGroup = false;
   return { admin: admin, mod: mod };
 }
-function flagsToPerms(flags) { var o = {}; Object.keys(PERM_FLAG).forEach(function (k) { o[k] = !!(flags & PERM_FLAG[k]); }); return o; }
+export function flagsToPerms(flags) { var o = {}; Object.keys(PERM_FLAG).forEach(function (k) { o[k] = !!(flags & PERM_FLAG[k]); }); return o; }
 /** Applies permissions to an existing mask without touching the bits the interface does not manage. */
-function permsToFlags(perms, base) {
+export function permsToFlags(perms, base) {
   var f = (base || 0) & ~PERM_MASK;
   Object.keys(PERM_FLAG).forEach(function (k) { if (perms[k]) f |= PERM_FLAG[k]; });
   return f;
 }
-function roleOfFlags(flags) { return flags & ADMIN_MASK ? 'admin' : 'mod'; }
-function mkSettings(over) {
+export function roleOfFlags(flags) { return flags & ADMIN_MASK ? 'admin' : 'mod'; }
+export function mkSettings(over) {
   var s = Object.assign({
     overview: { title: '', description: '' },
     announcement: { enabled: false, text: '', broadcast: false, interval: 0 },

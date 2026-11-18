@@ -1,10 +1,17 @@
-/* ---------- PMs: conversations, unreads and private history ---------- */
+import { useEffect, useRef } from '../core/globals.js';
+import { MIN, uid, warn } from '../core/util.js';
+import { favoritePeople, isDmInView, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, trimThread, userOf } from '../core/selectors.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { applyEdit, ensureLiveUser, pmAuthor } from './live-state.js';
+import { LIVE } from '../core/env.js';
+import { MEET_PAGE } from '../core/chatango.js';
+// -- PMs: conversations, unreads and private history --------------------------
 
 /**
  * BetterChatango PM archive in live: BetterChatango writes each PM to it itself, the bridge marks it read and counts the unreads in it.
  * @returns {{record: Function, markRead: function(string): Promise, markUnread: function(string): Promise<boolean>, unread: function(string): Promise<number>}} Archive.
  */
-function betterChatangoPmArchive() {
+export function betterChatangoPmArchive() {
   return {
     record: function () {},
     markRead: function (target) { return liveBridge.markPmRead(target); },
@@ -17,15 +24,15 @@ function betterChatangoPmArchive() {
  * @param {Array=} seed Starting entries {target, from, unread, edit}.
  * @returns {{record: Function, markRead: function(string): Promise, markUnread: function(string): Promise<boolean>, unread: function(string): Promise<number>}} Archive.
  */
-function memoryPmArchive(seed) {
+export function memoryPmArchive(seed) {
   var entries = (seed || []).slice();
   return {
-    record: function (target, m, unread) { entries.push({ target: target, from: m.from, unread: !!unread, edit: !!m.editId }); },
+    record: function (target, m, unread) { entries.push({ target: target, author: m.author, unread: !!unread, edit: !!m.editId }); },
     markRead: function (target) { entries.forEach(function (e) { if (e.target === target) e.unread = false; }); return Promise.resolve(); },
     markUnread: function (target) {
       for (var i = entries.length - 1; i >= 0; i--) {
         var e = entries[i];
-        if (e.target === target && e.from === target && !e.edit) { e.unread = true; return Promise.resolve(true); }
+        if (e.target === target && e.author === target && !e.edit) { e.unread = true; return Promise.resolve(true); }
       }
       return Promise.resolve(false);
     },
@@ -40,7 +47,7 @@ function memoryPmArchive(seed) {
  * @param {Array<string>} names Correspondents to read again.
  * @returns {Promise} End of the copy.
  */
-function syncPmUnread(archive, update, names) {
+export function syncPmUnread(archive, update, names) {
   return Promise.all(names.map(function (n) { return archive.unread(n); })).then(function (counts) {
     update(function (d) { names.forEach(function (n, i) { if (d.dms[n]) d.dms[n].unread = counts[i]; }); });
   }, warn);
@@ -52,7 +59,7 @@ function syncPmUnread(archive, update, names) {
  * @param {string} name Correspondent.
  * @returns {Promise} End of the copy.
  */
-function readPm(archive, update, name) {
+export function readPm(archive, update, name) {
   return archive.markRead(name).then(function () { return syncPmUnread(archive, update, [name]); }, warn);
 }
 /**
@@ -62,7 +69,7 @@ function readPm(archive, update, name) {
  * @param {string} name Correspondent.
  * @returns {Promise<boolean>} True if a PM was marked, rejected when the archive cannot be written.
  */
-function unreadPm(archive, update, name) {
+export function unreadPm(archive, update, name) {
   return archive.markUnread(name).then(function (flagged) { return syncPmUnread(archive, update, [name]).then(function () { return flagged; }); });
 }
 
@@ -72,21 +79,20 @@ function unreadPm(archive, update, name) {
  * @param {string} name Correspondent.
  * @param {Object=} extra Fields of a created conversation.
  */
-function pmConversation(d, name, extra) {
-  return d.dms[name] || (d.dms[name] = Object.assign({ messages: [], unread: 0, lastReadTs: Date.now() }, extra));
+export function pmConversation(d, name, extra) {
+  return d.dms[name] || (d.dms[name] = Object.assign({ messages: [], unread: 0 }, extra));
 }
 /**
  * Builds the shown message of a received or archived entry.
  * @param {Object} x Entry read by the bridge, or prototype message.
  */
-function pmMessage(x) {
+export function pmMessage(x) {
   // Edit without a loaded original: it takes the key of the original, which the archive and later edits target.
-  var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
+  var m = { id: uid(), author: x.author, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
   if (x.editId) { m.edited = true; m.editKeys = x.key ? [x.key] : []; m.editTs = x.ts; m.editOnly = true; }
   if (x.replyId) m.replyTo = { key: x.replyId };
   return m;
 }
-function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
 /**
  * Applies a PM edit to its original and counts it once.
  * @param {Object} o Original message.
@@ -107,7 +113,7 @@ function applyPmEdit(o, x) {
  * @param {string} name Correspondent.
  * @param {Object} x Sent message, with its PM key and the key of the original for an edit.
  */
-function addSentPm(d, name, x) {
+export function addSentPm(d, name, x) {
   var c = pmConversation(d, name), o = pmEditTarget(c, x);
   if (o) { applyPmEdit(o, x); return; }
   c.messages.push(pmMessage(x));
@@ -119,8 +125,8 @@ function addSentPm(d, name, x) {
  * @param {Object} x Received message (bridge pm op, or prototype message).
  * @returns {boolean} True if the message was an applied edit.
  */
-function receivePm(d, x) {
-  var c = pmConversation(d, x.from, { lastReadTs: 0 }), o = pmEditTarget(c, x);
+export function receivePm(d, x) {
+  var c = pmConversation(d, x.author), o = pmEditTarget(c, x);
   if (o) { applyPmEdit(o, x); return true; }
   c.closed = false;
   c.messages.push(pmMessage(x));
@@ -134,7 +140,7 @@ function receivePm(d, x) {
  * @param {Array} list Entries read by the bridge, from oldest to newest.
  * @param {function(Object)} onEntry Receives each entry, to keep the author's style.
  */
-function mergePmHistory(c, list, onEntry) {
+export function mergePmHistory(c, list, onEntry) {
   // The timestamp archived by BetterChatango differs from ours: same author and same content within two minutes = same message. Each message already shown covers only one entry.
   var shown = c.messages.slice();
   list.forEach(function (x) {
@@ -144,7 +150,7 @@ function mergePmHistory(c, list, onEntry) {
     var m = pmMessage(x), i = pmShownIndex(shown, m);
     if (i >= 0) { shown[i].archiveTs = m.archiveTs; shown.splice(i, 1); return; }
     // An edit read on a newer page stands for its original until an older page brings it: the original takes its place and keeps the edited text.
-    var e = x.editId ? null : c.messages.find(function (y) { return y.editOnly && y.key === m.key && y.from === m.from; });
+    var e = x.editId ? null : c.messages.find(function (y) { return y.editOnly && y.key === m.key && y.author === m.author; });
     if (e) { delete e.editOnly; e.ts = m.ts; e.archiveTs = m.archiveTs; if (m.replyTo) e.replyTo = m.replyTo; return; }
     c.messages.push(m);
   });
@@ -155,8 +161,6 @@ function mergePmHistory(c, list, onEntry) {
 // -- Private messages in live -------------------------------------------------
 // Chatango pushes no presence for a correspondent who is neither a friend nor connected since the last private connection.
 var PRESENCE_REFRESH = 5 * MIN;
-// Names per presence request, the page size of BetterChatango's Meet people.
-var PRESENCE_MAX = 40;
 /**
  * Merges the BetterChatango private history into the conversations and keeps the presence of their correspondents up to date.
  * @param {{state: Object, stateRef: Object, update: Function}} store Application state, its ref and its update.
@@ -164,7 +168,7 @@ var PRESENCE_MAX = 40;
  * @param {Object} pmArchive Ref to the PM archive.
  * @returns {{loadHistory: function(boolean=), refreshPresence: function(boolean)}} Private history loading and presence refresh.
  */
-function useLivePms(store, localRef, pmArchive) {
+export function useLivePms(store, localRef, pmArchive) {
   var state = store.state, stateRef = store.stateRef, update = store.update;
   var presenceAt = useRef(0);
   /**
@@ -201,7 +205,7 @@ function useLivePms(store, localRef, pmArchive) {
     if (!s0.pmLoaded || !s0.friendsLoaded || (ifStale && Date.now() - presenceAt.current < PRESENCE_REFRESH)) return;
     // The shown conversation follows its presence through connect, whose last online time is exact.
     var names = favoritePeople(s0).concat(listedDms(s0).filter(function (n) { return !userOf(s0, n).favorite; }))
-      .filter(function (n) { return n !== s0.me && !isPaneOpen(s0, 'dm', n) && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
+      .filter(function (n) { return n !== s0.me && !isPaneOpen(s0, 'dm', n) && !userOf(s0, n).friend; }).slice(0, MEET_PAGE);
     if (names.length && liveBridge.refreshPresence(names)) presenceAt.current = Date.now();
   }
   useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);

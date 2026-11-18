@@ -1,14 +1,26 @@
-function AppearancePage() {
+import { T, h } from '../core/globals.js';
+import { readJsonFile, uid } from '../core/util.js';
+import { accentOf, hexToRgb } from '../core/colors.js';
+import { AccentSwatches, JsonFileButton, useApp } from '../core/ui.js';
+import { COLOR } from 'build:tokens';
+import { Page, useBetterChatangoSettings, usePref } from './kit.js';
+/**
+ * Returns the colors of a theme thumbnail: page, sidebar, its lines, borders and composer.
+ * @param {Object} c Colors of the theme in the design system.
+ */
+function themeThumb(c) { return [c.bg, c.sidebar, c.control, c['border-strong'], c.raised]; }
+
+export function AppearancePage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs, accent = accentOf(prefs, app.theme);
-  var md = useState(function () { return LIVE ? liveBridge.setting('markdown') : null; }), markdown = md[0], setMarkdown = md[1];
+  var md = useBetterChatangoSettings(['markdown']), markdown = md[0] && md[0].markdown, setMarkdown = md[1];
   var themes = [
-    ['dark', 'Dark', ['#0e1629', '#080d1b', '#34446a', '#2b3a5f', '#1b2747']],
-    ['light', 'Light', ['#fdfcfa', '#eceaf4', '#c6c2d1', '#d6d2df', '#ffffff']],
+    ['dark', 'Dark', themeThumb(COLOR.dark)],
+    ['light', 'Light', themeThumb(COLOR.light)],
     ['system', 'Match system', null]
   ];
   function thumb(c) {
     if (!c) return h('span', { className: 'thumb', 'aria-hidden': 'true', style: { border: '1px solid var(--border-strong)' } },
-      h('span', { style: { flex: 1, background: '#eceaf4' } }), h('span', { style: { flex: 1, background: '#0e1629' } }));
+      h('span', { style: { flex: 1, background: COLOR.light.sidebar } }), h('span', { style: { flex: 1, background: COLOR.dark.bg } }));
     return h('span', { className: 'thumb', 'aria-hidden': 'true', style: { background: c[0], border: '1px solid ' + c[3] } },
       h('span', { style: { width: '28%', background: c[1], borderRight: '1px solid ' + c[3], padding: '8px 6px', display: 'flex', flexDirection: 'column', gap: 5 } },
         h('span', { style: { height: 5, width: '70%', borderRadius: 3, background: c[2] } }), h('span', { style: { height: 5, width: '90%', borderRadius: 3, background: c[3] } })),
@@ -56,9 +68,9 @@ function AppearancePage() {
       }),
       h(T.SettingRow, { title: '24-hour time', description: 'Shows 14:05 instead of 2:05 PM.', control: pr.sw('h24') }),
       h(T.SettingRow, { title: 'Show group announcements', description: 'Timed staff announcements and the banner at the top of a group.', control: pr.sw('announcements') }),
-      markdown === null ? null : h(T.SettingRow, {
+      md[0] === null ? null : h(T.SettingRow, {
         title: 'Format Markdown when sending', description: '*text* sends as italic, **text** as bold and __text__ as underlined, in groups and private messages.',
-        control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveBetterChatangoSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
+        control: h(T.Switch, { checked: markdown, onChange: function (e) { setMarkdown('markdown', e.target.checked); } })
       })),
     h(T.SettingsSection, { title: 'Chatango styles', description: 'Styles members set on Chatango. Hard-to-read colors are corrected.' },
       h(T.SettingRow, { title: 'Name colors', control: pr.sw('styles.names') }),

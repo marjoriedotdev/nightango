@@ -1,4 +1,9 @@
-// -- Seasonal decorations ------------------------------------------------------
+import { Frag, T, h, useEffect, useState } from '../core/globals.js';
+import { MIN, cx } from '../core/util.js';
+import { useApp } from '../core/ui.js';
+import { ROOT_EL } from '../core/env.js';
+import { newYearAt } from '../core/season.js';
+// -- Seasonal decorations -----------------------------------------------------
 
 var BAT_PATH = 'M22 5 21 1.5 23 3.5h2l2-2L26 5c6-3 14-4 22 1-3 .5-6 1-8 4-2-2-6-2-8 1-2-1-5 0-6 3q-2 4-4 0c-1-3-4-4-6-3-2-3-6-3-8-1-2-3-5-3.5-8-4 8-5 16-4 22-1z';
 var HEART_PATH = 'M6 10.5C2.5 8 0 5.8 0 3.2 0 1.4 1.4 0 3.1 0 4.3 0 5.4.7 6 1.7 6.6.7 7.7 0 8.9 0 10.6 0 12 1.4 12 3.2c0 2.6-2.5 4.8-6 7.3z';
@@ -9,6 +14,18 @@ var FIR_NEEDLES_PATH = 'M93.9 3.2l-4.1 -2.4M93.9 3.2l-3.6 3.1M89.6 3.7l-4.3 -2.9
 // Bulbs of the string of lights as [x, y] of their socket on the wire.
 var LIGHT_BULBS = [[15, 9.8], [30, 13], [45, 11.8], [75, 11.2], [90, 12.8], [105, 10.7], [135, 9.1], [150, 9.5], [165, 6.1]];
 var COSTUMES = { halloween: ['hat', 'ears', 'horns', 'bat', null], winter: ['beanie', 'earmuffs', null], christmas: ['santa', 'antlers', 'elf', null] };
+
+/**
+ * Returns the decoration of member avatars during a season, for AvatarDecorCtx: a costume from 24px up, never on a group icon.
+ * @param {?string} season Current season.
+ * @returns {?function(Object): ?Object} Costume of an avatar from its props, or null outside a season with costumes.
+ */
+export function avatarDecor(season) {
+  if (!season || !COSTUMES[season]) return null;
+  return function (p) {
+    return !p.square && (p.size || 36) >= 24 ? h(Costume, { season: season, name: p.name, color: p.color }) : null;
+  };
+}
 
 /**
  * Returns the costume a member wears during a season, the same on every screen.
@@ -63,7 +80,7 @@ function Costume(p) {
  * Decorations of the season in the sky band of the navigation.
  * @param {{season: string, south: boolean}} p Season shown and whether the sky is seen from the southern hemisphere.
  */
-function SeasonSky(p) {
+export function SeasonSky(p) {
   if (p.season === 'winter') return h(WinterSky);
   if (p.season === 'christmas') return h(ChristmasSky, { snow: !p.south });
   if (p.season === 'valentine') return h(ValentineSky);
@@ -128,7 +145,7 @@ function ChristmasSky(p) {
 /**
  * Star beside the moon of the brand at Christmas.
  */
-function SeasonStar() {
+export function SeasonStar() {
   return h('svg', { className: 'season-star', viewBox: '0 0 12 12', 'aria-hidden': 'true' }, h('path', { d: STAR_PATH }));
 }
 
@@ -150,7 +167,7 @@ function ValentineSky() {
 /**
  * Cobweb in the top corner of a column, with a spider on its thread.
  */
-function SeasonWeb() {
+export function SeasonWeb() {
   return h('span', { className: 'season-web', 'aria-hidden': 'true' },
     h('svg', { className: 'season-web-threads', viewBox: '0 0 120 120' },
       h('path', { d: 'M120 0H0M120 0 12 48M120 0 40 88M120 0 80 112M120 0v120M84 0q8 6 3.6 14.4 9.4 4.6 8.4 12 9 1.6 12 7.2 7-.6 12 2.4M54 0q12 12 6.6 26.4 12.4 8.6 15.4 22 14 3.6 22 13.2 12-.6 22 4.4M24 0q17 17 9.6 38.4 17.4 12.6 22.4 32 20 6.6 32 19.2 17 .4 32 6.4' })),
@@ -173,15 +190,15 @@ var SKY_BURSTS = [
 var BAND_BURSTS = [['66px', '-24px', 16, 0], ['142px', '-34px', 20, -1.2], ['212px', '-22px', 15, -2.1]];
 var FIREWORK_RAYS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
 
-function newYearNow() { return Date.now(); }
-/*PROTOTYPE*/
-// Review of the hosted prototype: plays the last ten seconds of the year, then the fireworks, whatever the date.
-window.showNewYear = function () {
-  var shift = new Date(new Date().getFullYear() + 1, 0, 1).getTime() - 10000 - Date.now();
-  newYearNow = function () { return Date.now() + shift; };
-  window.dispatchEvent(new Event('torch-new-year'));
-};
-/*END PROTOTYPE*/
+var newYearShift = 0, newYearReviews = [];
+function newYearNow() { return Date.now() + newYearShift; }
+/**
+ * Plays the last ten seconds of the year, then the fireworks, whatever the date: review of the hosted prototype.
+ */
+export function reviewNewYear() {
+  newYearShift = new Date(new Date().getFullYear() + 1, 0, 1).getTime() - 10000 - Date.now();
+  newYearReviews.forEach(function (show) { show(); });
+}
 
 /**
  * Returns where the device time stands around New Year's midnight (newYearAt), rendered again each time it changes.
@@ -194,13 +211,11 @@ function useNewYear() {
     var timer = setTimeout(function () { setNow(newYearNow()); }, Math.min(at.next, 60 * MIN));
     return function () { clearTimeout(timer); };
   }, [now]);
-  /*PROTOTYPE*/
   useEffect(function () {
     function show() { setNow(newYearNow()); }
-    window.addEventListener('torch-new-year', show);
-    return function () { window.removeEventListener('torch-new-year', show); };
+    newYearReviews.push(show);
+    return function () { newYearReviews.splice(newYearReviews.indexOf(show), 1); };
   }, []);
-  /*END PROTOTYPE*/
   return at;
 }
 
@@ -208,7 +223,7 @@ function useNewYear() {
  * Tells whether the sky may move: neither Calm sky nor reduced motion, in Nightango or on the device.
  * @param {Object} prefs Preferences.
  */
-function skyMoves(prefs) {
+export function skyMoves(prefs) {
   return !prefs.sky.calm && !prefs.a11y.reduceMotion && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
@@ -226,7 +241,7 @@ function Fireworks(p) {
 /**
  * Fireworks in the sky behind the panels during the first minute of the year. Puts the class of their colors on the root.
  */
-function NewYearSky() {
+export function NewYearSky() {
   var prefs = useApp().state.prefs, at = useNewYear();
   var on = prefs.sky.season && at.phase === 'fireworks' && skyMoves(prefs);
   useEffect(function () {
@@ -240,7 +255,7 @@ function NewYearSky() {
 /**
  * Countdown under the moon in the last minute of the year, then the greeting and fireworks on the sky band in the first minute.
  */
-function NewYearMark() {
+export function NewYearMark() {
   var prefs = useApp().state.prefs, at = useNewYear();
   if (!prefs.sky.season || !at.phase) return null;
   var midnight = at.phase === 'fireworks';

@@ -12,13 +12,15 @@
 // @connect      cdn.syndication.twimg.com
 // @run-at       document-idle
 // ==/UserScript==
+import { ACCOUNT_EVENT, LOADER_TEXT, LOADER_TIMEOUT, TIKTOK_POST, TIKTOK_SHORT, VISIT_GETS, X_IMAGE, X_POST, X_VIDEO, loaderEvent } from '../core/loader-contract.js';
+
 (function () {
   'use strict';
   // st.chatango.com also serves the chat windows embedded in other sites: only the home page is concerned.
   if (window.top !== window || location.pathname !== '/') return;
   // The userscript runs in a sandbox that sees neither BetterChatango nor React: the interface is injected into the page.
   var page = document.createElement('script');
-  page.textContent = /*PAGE*/;
+  page.textContent = __PAGE_CODE__;
   document.head.appendChild(page); page.remove();
 
   /* Bridge to vissle.me: the page cannot call it itself, vissle refuses the st.chatango.com origin. */
@@ -26,16 +28,16 @@
   function accountName() {
     var name = '';
     function take(e) { name = String(e.detail); }
-    document.addEventListener('torch-skin:account', take);
+    document.addEventListener(ACCOUNT_EVENT, take);
     var probe = document.createElement('script');
-    probe.textContent = 'document.dispatchEvent(new CustomEvent("torch-skin:account", { detail: typeof client !== "undefined" && client.user ? String(client.user.name || "") : "" }));';
+    probe.textContent = 'document.dispatchEvent(new CustomEvent("' + ACCOUNT_EVENT + '", { detail: typeof client !== "undefined" && client.user ? String(client.user.name || "") : "" }));';
     document.head.appendChild(probe); probe.remove();
-    document.removeEventListener('torch-skin:account', take);
+    document.removeEventListener(ACCOUNT_EVENT, take);
     return name.toLowerCase();
   }
   function reply(channel, id, out) {
     out.id = id;
-    document.dispatchEvent(new CustomEvent('torch-skin:' + channel + '-response', { detail: JSON.stringify(out) }));
+    document.dispatchEvent(new CustomEvent(loaderEvent(channel, 'response'), { detail: JSON.stringify(out) }));
   }
   // Any script of the page can send a request: only a JSON object with a string id is read.
   function request(e) {
@@ -43,11 +45,10 @@
     try { q = JSON.parse(e.detail); } catch (x) { /* answered with an error by the caller */ }
     return q && typeof q === 'object' && typeof q.id === 'string' ? q : null;
   }
-  var VISSLE_GET = ['all', 'log', 'like', 'dislike', 'msg', 'refer'];
-  document.addEventListener('torch-skin:vissle-request', function (e) {
+  document.addEventListener(loaderEvent('vissle', 'request'), function (e) {
     var q = request(e);
     // Only what the Visitors screen sends: page 1 or the time of its last row, newest first, one of its filters.
-    if (!q || typeof q.page !== 'number' || !(q.page >= 0 && isFinite(q.page)) || q.order !== 'desc' || VISSLE_GET.indexOf(q.get) < 0) {
+    if (!q || typeof q.page !== 'number' || !(q.page >= 0 && isFinite(q.page)) || q.order !== 'desc' || VISIT_GETS.indexOf(q.get) < 0) {
       reply('vissle', q ? q.id : undefined, { error: 'Nightango refused this activity request. Reload the page and try again.' });
       return;
     }
@@ -55,13 +56,13 @@
     var me = accountName();
     if (!me) { reply('vissle', q.id, { error: "Couldn't read your BetterChatango account. Reload the page and try again." }); return; }
     GM_xmlhttpRequest({
-      method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, timeout: 15000,
+      method: 'POST', url: 'https://vissle.me/track1/activity', anonymous: true, timeout: LOADER_TIMEOUT,
       // Same header as the vissle client, which sends the JSON as plain text.
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       data: JSON.stringify({ action: 'activity', profile: me, page: q.page, order: q.order, get: q.get }),
       onload: function (r) {
         if (r.status !== 200) { reply('vissle', q.id, { error: 'vissle is having trouble right now. Try again in a moment.' }); return; }
-        try { reply('vissle', q.id, { data: JSON.parse(r.responseText) }); } catch (x) { reply('vissle', q.id, { error: "vissle sent an answer Nightango can't read." }); }
+        try { reply('vissle', q.id, { data: JSON.parse(r.responseText) }); } catch (x) { reply('vissle', q.id, { error: LOADER_TEXT.vissleUnreadable }); }
       },
       onerror: function () { reply('vissle', q.id, { error: "Couldn't reach vissle. Try again later." }); },
       ontimeout: function () { reply('vissle', q.id, { error: "vissle didn't answer in time." }); }
@@ -70,16 +71,14 @@
 
   /* Bridge to TikTok: the post page of a short or post link, which the page cannot read across origins. */
   // Any script of the page can send this event: only a short or post link goes out, rebuilt here, and only the post link and its cover address come back.
-  var TIKTOK_SHORT = /^https?:\/\/((?:vm|vt)\.tiktok\.com|(?:www\.)?tiktok\.com\/t)\/([\w-]+)\/?(?:[?#]\S*)?$/;
-  var TIKTOK_POST = /^https?:\/\/(?:www\.|m\.)?tiktok\.com\/@([\w.-]+)\/(video|photo)\/(\d+)/;
   // TikTok's oEmbed no longer gives thumbnail_url: the cover is only in the JSON of the post page, its slashes escaped as \u002F.
   var TIKTOK_COVER = /"cover":"(https:[^"\s]+)"/;
   function tiktokPostLink(m) { return 'https://www.tiktok.com/@' + m[1] + '/' + m[2] + '/' + m[3]; }
-  document.addEventListener('torch-skin:tiktok-request', function (e) {
-    var q = request(e), url = q && typeof q.url === 'string' ? q.url : '', short = TIKTOK_SHORT.exec(url), post = TIKTOK_POST.exec(url), unknown = "TikTok didn't say which video this link leads to. Open the link instead.";
+  document.addEventListener(loaderEvent('tiktok', 'request'), function (e) {
+    var q = request(e), url = q && typeof q.url === 'string' ? q.url : '', short = TIKTOK_SHORT.exec(url), post = TIKTOK_POST.exec(url), unknown = LOADER_TEXT.tiktokUnknown;
     if (!short && !post) { reply('tiktok', q ? q.id : undefined, { error: unknown }); return; }
     GM_xmlhttpRequest({
-      method: 'GET', url: short ? 'https://' + short[1] + '/' + short[2] + '/' : tiktokPostLink(post), anonymous: true, timeout: 15000,
+      method: 'GET', url: short ? 'https://' + short[1] + '/' + short[2] + '/' : tiktokPostLink(post), anonymous: true, timeout: LOADER_TIMEOUT,
       onload: function (r) {
         // finalUrl in Tampermonkey, responseURL in Userscripts (Safari).
         var to = short ? TIKTOK_POST.exec(r.finalUrl || r.responseURL || '') : post;
@@ -89,17 +88,15 @@
         reply('tiktok', q.id, out);
       },
       onerror: function () { reply('tiktok', q.id, { error: "Couldn't reach TikTok. Open the link instead." }); },
-      ontimeout: function () { reply('tiktok', q.id, { error: "TikTok didn't answer in time. Open the link instead." }); }
+      ontimeout: function () { reply('tiktok', q.id, { error: LOADER_TEXT.tiktokLate }); }
     });
   });
 
   /* Bridge to X: the oEmbed of a post, its author picture, time and first media, which the page cannot read across origins. */
   // Any script of the page can send this event: only a post link goes out, rebuilt here, and only the fields of the card come back.
   // Mirrors (fxtwitter, vxtwitter, fixupx, fixvx) are only read for the post: the call goes to X, never to them.
-  var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter|fxtwitter|vxtwitter|fixupx|fixvx)\.com\/(\w{1,15})\/status\/(\d{1,20})/;
   var X_AVATAR = /^https:\/\/pbs\.twimg\.com\/profile_images\/[^\s"'<>]+_normal\.\w+$/;
   var X_AUTHOR = /^https:\/\/(?:x|twitter)\.com\/(\w{1,15})$/;
-  var X_IMAGE = /^https:\/\/pbs\.twimg\.com\/[^\s"'<>]+$/, X_VIDEO = /^https:\/\/video\.twimg\.com\/[^\s"'<>]+$/;
   // Up to 720p: the card is 420 pixels wide and the 1080p variant weighs about five times more.
   var X_VIDEO_BITRATE = 2500000;
   // Token that platform.twitter.com derives from the post id, as read in vercel/react-tweet (fetch-tweet.ts): not a secret.
@@ -133,9 +130,9 @@
     out.kind = 'video'; out.video = pick.url;
     return out;
   }
-  document.addEventListener('torch-skin:x-request', function (e) {
+  document.addEventListener(loaderEvent('x', 'request'), function (e) {
     var q = request(e), post = q && typeof q.url === 'string' && X_POST.exec(q.url);
-    if (!post) { reply('x', q ? q.id : undefined, { error: "X didn't share this post. Open the link instead." }); return; }
+    if (!post) { reply('x', q ? q.id : undefined, { error: LOADER_TEXT.xUnshared }); return; }
     var link = 'https://x.com/' + post[1] + '/status/' + post[2], card = null, extra = {}, error = null, left = 2;
     // The card waits for both replies: the media is a bonus, the text decides.
     function done() {
@@ -144,27 +141,28 @@
       reply('x', q.id, Object.assign(card, extra));
     }
     GM_xmlhttpRequest({
-      method: 'GET', url: 'https://publish.x.com/oembed?url=' + encodeURIComponent(link) + '&omit_script=true&dnt=true&hide_thread=true', anonymous: true, timeout: 15000,
+      method: 'GET', url: 'https://publish.x.com/oembed?url=' + encodeURIComponent(link) + '&omit_script=true&dnt=true&hide_thread=true', anonymous: true, timeout: LOADER_TIMEOUT,
       onload: function (r) {
         var o = null, body = null, author = null;
         try { o = r.status === 200 ? JSON.parse(r.responseText) : null; } catch (x) { /* unreadable reply: no card */ }
         if (o && typeof o.html === 'string') { body = xText(o.html); author = X_AUTHOR.exec(o.author_url || ''); }
         if (body && author) card = { author: String(o.author_name || author[1]), handle: author[1], text: body.text, date: body.date, link: 'https://x.com/' + author[1] + '/status/' + post[2] };
-        else error = "X didn't share this post. Open the link instead.";
+        else error = LOADER_TEXT.xUnshared;
         done();
       },
       onerror: function () { error = "Couldn't reach X. Open the link instead."; done(); },
-      ontimeout: function () { error = "X didn't answer in time. Open the link instead."; done(); }
+      ontimeout: function () { error = LOADER_TEXT.xLate; done(); }
     });
     GM_xmlhttpRequest({
-      method: 'GET', url: 'https://cdn.syndication.twimg.com/tweet-result?id=' + post[2] + '&lang=en&token=' + xToken(post[2]), anonymous: true, timeout: 15000,
+      method: 'GET', url: 'https://cdn.syndication.twimg.com/tweet-result?id=' + post[2] + '&lang=en&token=' + xToken(post[2]), anonymous: true, timeout: LOADER_TIMEOUT,
       onload: function (r) {
-        // Undocumented reply: if X changes it, the card shows without media.
-        try {
-          var t = r.status === 200 ? JSON.parse(r.responseText) : null, media = t && xMedia(t);
-          if (t) extra = xAuthor(t);
-          if (media) extra.media = media;
-        } catch (x) { extra = {}; }
+        // Undocumented reply: if X changes it, the card shows without what it no longer reads. Author and media are read apart: a media X changed keeps the author.
+        var t = null;
+        try { t = r.status === 200 ? JSON.parse(r.responseText) : null; } catch (x) { t = null; }
+        if (t) {
+          try { extra = xAuthor(t); } catch (x) { extra = {}; }
+          try { var media = xMedia(t); if (media) extra.media = media; } catch (x) { delete extra.media; }
+        }
         done();
       },
       onerror: done, ontimeout: done

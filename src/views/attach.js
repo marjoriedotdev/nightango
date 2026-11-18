@@ -1,4 +1,7 @@
-/* ---------- Composer file upload ---------- */
+import { h, useEffect, useRef, useState } from '../core/globals.js';
+import { useApp } from '../core/ui.js';
+import { LIVE } from '../core/env.js';
+// -- Composer file upload -----------------------------------------------------
 // Types offered by BetterChatango's Upload window (inject.js:7552).
 var UPLOAD_TYPES = '.png, .apng, .jpg, .jpeg, .gif, .bmp, .webp, .mp3, .ogg, .wav, .mp4, .wmv, .webm';
 var UPLOAD_ICONS = { image: 'image', video: 'play', audio: 'volume' };
@@ -23,7 +26,7 @@ function isUploadType(file) {
  * Names the file upload in progress to a group or a PM.
  * @param {{kind: string, id: string}} to Target group (group) or PM (dm).
  */
-function uploadKey(to) { return to.kind + ':' + to.id; }
+export function uploadKey(to) { return to.kind + ':' + to.id; }
 
 /**
  * Keeps the file picked in a composer until the next send, which uploads it through vissle and posts its link after the typed text.
@@ -31,7 +34,7 @@ function uploadKey(to) { return to.kind + ':' + to.id; }
  * @param {Function} setDraft Draft setter of the composer, which gets the text back if the send fails.
  * @returns {{onAttach: ?Function, onFiles: ?Function, status: ?string, busy: boolean, attachment: ?Object, file: ?File, send: Function, input: ?Object}} Attach media button action, paste or drop of files on the composer, upload in progress, Composer attachment, picked file, send of the file with the text, and picker to render next to the composer.
  */
-function useAttachMedia(to, setDraft) {
+export function useAttachMedia(to, setDraft) {
   var app = useApp(), inputRef = useRef(null), key = uploadKey(to);
   var st = useState(null), staged = st[0], setStaged = st[1];
   var pv = useState(null), preview = pv[0], setPreview = pv[1];

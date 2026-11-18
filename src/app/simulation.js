@@ -1,15 +1,19 @@
-/* ---------- Prototype simulation: activity of the sample world ---------- */
+import { useEffect } from '../core/globals.js';
+import { pick, uid } from '../core/util.js';
+import { isNotifyingOnline, roleOf, shownName, userOf } from '../core/selectors.js';
+import { beep } from '../core/sound.js';
+import { LINES, MENTION_LINES, dmReply } from './sample-data.js';
+// -- Prototype simulation: activity of the sample world -----------------------
 /**
- * Simulates activity in the prototype: group messages and mentions, members joining and leaving, PMs, friends going online and offline.
- * @param {{state: Object, stateRef: Object, update: Function}} store Application state, its ref and its update.
- * @param {{receiveGroup: Function, receiveDm: Function}} inbox Reception of messages.
- * @param {Function} toast Shows a notification.
- * @param {Object} actions Actions, for the Message button of a friend who comes online.
+ * Simulates activity in the prototype: group messages and mentions, members joining and leaving, PMs, friends going online and offline. It renders nothing.
+ * @param {{store: {state: Object, stateRef: Object, update: Function}, inbox: {receiveGroup: Function, receiveDm: Function}, toast: Function, actions: Object}} p
+ *   Application state with its ref and update, reception of messages, notifications, and actions for the Message button of a friend who comes online.
  */
-function useSimulation(store, inbox, toast, actions) {
+export function Simulation(p) {
+  var store = p.store, inbox = p.inbox, toast = p.toast, actions = p.actions;
   var state = store.state, prefs = state.prefs, stateRef = store.stateRef, update = store.update, receiveGroup = inbox.receiveGroup, receiveDm = inbox.receiveDm;
   useEffect(function () {
-    if (LIVE || !state.auth.loggedIn || !prefs.simulate) return;
+    if (!state.auth.loggedIn || !prefs.simulate) return;
     var timer = null, alive = true;
     function tick() {
       if (!alive) return;
@@ -39,7 +43,7 @@ function useSimulation(store, inbox, toast, actions) {
         var senders = ['kestrel', 'sable', 'quill'].filter(function (n) { var u = userOf(s0, n); return !u.blocked && u.status !== 'offline'; });
         if (senders.length) {
           var from = pick(senders);
-          setTimeout(function () { if (!alive) return; receiveDm(from, pick(DM_LINES[from] || DM_LINES.default)); }, 1800);
+          setTimeout(function () { if (!alive) return; receiveDm(from, dmReply(from)); }, 1800);
         }
       } else if (r < 0.92) {
         var friends = Object.keys(s0.users).filter(function (n) { return s0.users[n].friend && n !== me; });
@@ -58,4 +62,5 @@ function useSimulation(store, inbox, toast, actions) {
     timer = setTimeout(tick, 4000);
     return function () { alive = false; clearTimeout(timer); };
   }, [state.auth.loggedIn, prefs.simulate]);
+  return null;
 }

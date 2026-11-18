@@ -1,4 +1,16 @@
-/* ---------- Inbox: messages received and read ---------- */
+import { useCallback, useRef } from '../core/globals.js';
+import { uid, warn } from '../core/util.js';
+import { groupRouteAt, isDmInView, isGroupInView, isHiddenAuthor, isPaneOpen, mentionsMe, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { quietOutsideSpace } from '../views/spaces.js';
+import { withReply } from './live-state.js';
+import { betterChatangoPmArchive, memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
+import { LIVE } from '../core/env.js';
+import { isGuest } from '../core/chatango.js';
+import { messagePreview } from '../core/message-content.js';
+import { beep } from '../core/sound.js';
+import { openPipWindow } from '../views/pip-window.js';
+// -- Inbox: messages received and read ----------------------------------------
 var MENTION_MAX = 100;
 /**
  * Records for the Mentions page a group message that mentions the user with the newest first.
@@ -6,7 +18,7 @@ var MENTION_MAX = 100;
  * @param {string} gid Group of the message.
  * @param {Object} m Received message.
  */
-function logMention(d, gid, m) {
+export function logMention(d, gid, m) {
   // An edit shown on its own joins its original when the original arrives: only the original enters the list.
   if (m.kind !== 'msg' || m.editId || m.author === d.me || userOf(d, m.author).ignored || !mentionsMe(d.me, m.text)) return;
   if (d.mentionLog.some(function (x) { return x.gid === gid && x.id === m.id; })) return;
@@ -20,7 +32,7 @@ function logMention(d, gid, m) {
  * @param {string} gid Target group.
  * @param {?string[]} ids Removed messages, null for the whole group.
  */
-function dropMentions(d, gid, ids) {
+export function dropMentions(d, gid, ids) {
   d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && ids.indexOf(x.id) < 0); });
 }
 
@@ -32,7 +44,7 @@ function dropMentions(d, gid, ids) {
 function opened(d, route) {
   var r = Object.assign({}, route);
   if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = readThrough(g); g.unread = 0; g.mentions = 0; }
-  if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
+  if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].closed = false; }
   return r;
 }
 function sameConversation(a, b) { return !!a && !!b && a.view === b.view && a.id === b.id; }
@@ -43,10 +55,10 @@ function sameConversation(a, b) { return !!a && !!b && a.view === b.view && a.id
  * @param {Function} update State update.
  * @param {Function} toast Shows a notification.
  * @param {function(boolean)} setNavOpen Opens or closes the navigation drawer.
- * @returns {{pmArchive: Object, nav: Function, readInView: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification
- *   of an event and of a PM, and reception.
+ * @returns {{pmArchive: Object, nav: Function, readInView: Function, openSplit: Function, closeSplit: Function, openPip: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}}
+ *   PM archive ref, navigation, side-by-side and floating panes, notification of an event and of a PM, and reception.
  */
-function useInbox(stateRef, update, toast, setNavOpen) {
+export function useInbox(stateRef, update, toast, setNavOpen) {
   // Only source of PM unreads: the BetterChatango database in live, an in-memory archive in the prototype or when that database is missing.
   var pmArchive = useRef(null);
   if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();
@@ -185,13 +197,9 @@ function useInbox(stateRef, update, toast, setNavOpen) {
    * @param {string} text Message text.
    */
   function receiveDm(from, text) {
-    var s0 = stateRef.current, m = { from: from, key: uid(), text: text, ts: Date.now() };
+    var s0 = stateRef.current, m = { author: from, key: uid(), text: text, ts: Date.now() };
     var focused = isDmInView(s0, from);
-    update(function (d) {
-      receivePm(d, m);
-      var c = d.dms[from];
-      if (focused) c.lastReadTs = Date.now();
-    });
+    update(function (d) { receivePm(d, m); });
     pmArchive.current.record(from, m, !focused);
     syncPmUnread(pmArchive.current, update, [from]);
     if (!focused && !userOf(s0, from).ignored) notifyPm(from, text);

@@ -1,119 +1,142 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { Script } from 'node:vm';
-import { transform } from 'esbuild';
+import { build as esbuild, transform } from 'esbuild';
 import { parseChangelog } from './changelog.mjs';
+import { versionOf } from './release.mjs';
+import { unimportedReads } from './imports.mjs';
 
 // -- Sources ------------------------------------------------------------------
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
-// Order matters: the files share the single scope of the application IIFE.
-export const APP_SOURCES = [
-  'core/globals.js',
-  'core/util.js',
-  'core/draft.js',
-  'core/colors.js',
-  'core/roles.js',
-  'core/sample-data.js',
-  'core/prefs.js',
-  'core/ui.js',
-  'core/rich-text.js',
-  'core/selectors.js',
-  'bridge/live-model.js',
-  'bridge/live-parse.js',
-  'bridge/live-bridge.js',
-  'views/login.js',
-  'views/season.js',
-  'views/shell.js',
-  'views/group.js',
-  'views/message.js',
-  'views/message-log.js',
-  'views/members.js',
-  'views/dm.js',
-  'views/pip.js',
-  'views/spaces.js',
-  'views/meet.js',
-  'views/mentions.js',
-  'views/profile.js',
-  'views/new-dm.js',
-  'views/message-style.js',
-  'views/emoji-picker.js',
-  'views/attach.js',
-  'views/voice.js',
-  'views/media.js',
-  'views/gif.js',
-  'views/shared-media.js',
-  'views/commands.js',
-  'views/discover.js',
-  'views/palette.js',
-  'views/live-joined.js',
-  'views/session.js',
-  'settings/shell.js',
-  'settings/markup-toolbar.js',
-  'settings/profile.js',
-  'settings/appearance.js',
-  'settings/notifications.js',
-  'settings/privacy.js',
-  'settings/language-a11y-about.js',
-  'settings/group-view.js',
-  'settings/group-pages.js',
-  'settings/group-staff.js',
-  'settings/live-group-view.js',
-  'settings/live-group-pages.js',
-  'settings/live-group-staff.js',
-  'settings/avatar-crop.js',
-  'settings/live-account.js',
-  'app/sound.js',
-  'app/state.js',
-  'app/live-state.js',
-  'app/pm.js',
-  'app/overlays.js',
-  'app/inbox.js',
-  'app/actions.js',
-  'app/reconnection.js',
-  'app/simulation.js',
-  'app/live-ops.js',
-  'app/root.js',
-  'app/start.js'
-];
+// Modules the build provides, by name: each export with its value, from the version and the release notes.
+const BUILD_MODULES = {
+  'build:info': (info) => ({ APP_VERSION: info.version, RELEASE_NOTES: info.notes }),
+  // Every color token of the design system by theme.
+  'build:tokens': () => {
+    const color = { dark: {}, light: {} };
+    for (const t of designTokens().color.tokens) for (const theme of ['dark', 'light']) color[theme][t.name] = typeof t.value === 'object' ? t.value[theme] : t.value;
+    return { COLOR: color };
+  }
+};
 
 /**
- * Lists the sources of a layer.
- * @param {string} layer Folder of src.
+ * Provides the modules of BUILD_MODULES to the bundle.
+ * @param {{version: string, notes: object[]}} info Version and release notes.
  */
-export function layerSources(layer) {
-  return APP_SOURCES.filter((file) => file.startsWith(layer + '/'));
+function buildModules(info) {
+  return {
+    name: 'build-modules',
+    setup(build) {
+      build.onResolve({ filter: /^build:/ }, (args) => ({ path: args.path, namespace: 'build-modules' }));
+      build.onLoad({ filter: /.*/, namespace: 'build-modules' }, (args) => ({
+        contents: Object.entries(BUILD_MODULES[args.path](info)).map(([name, value]) => `export var ${name} = ${JSON.stringify(value)};\n`).join(''),
+        loader: 'js'
+      }));
+    }
+  };
 }
 
 /**
- * Concatenates application sources.
- * @param {string} root Repository root.
- * @param {string[]} files Paths relative to src.
+ * Bundles application modules into ES5 code with one scope.
+ * @param {object} input esbuild entry: entryPoints, or stdin with its resolveDir.
+ * @param {{version: string, notes: object[]}} info Version and release notes for build:info.
+ * @param {object} [options] Further esbuild options.
+ * @returns {Promise<object>} esbuild result, the code in outputFiles[0].
  */
-export function concatSources(root, files) {
-  return files.map((file) => readFileSync(join(root, 'src', file), 'utf8')).join('\n');
+function bundle(input, info, options) {
+  return esbuild(Object.assign({ bundle: true, format: 'esm', target: 'es5', charset: 'utf8', write: false, logLevel: 'silent', absWorkingDir: ROOT, plugins: [buildModules(info)] }, input, options));
 }
-
-// -- Shared scope -------------------------------------------------------------
 
 /**
- * Returns the compile error of the sources once their top-level declarations are let.
- * Two files that declare the same name share one scope where the second silently replaces the first: declared with let they do not compile.
- * @param {string} code Concatenated application sources.
- * @returns {?string} Message that names the identifier declared twice or null.
+ * Bundles an application entry into the strict mode IIFE the pages run, once its imports are checked.
+ * @param {string} entry Entry file relative to src.
+ * @param {{version: string, notes: object[]}} info Version and release notes for build:info.
  */
-function redeclared(code) {
-  const strict = code.replace(/^var /gm, 'let ').replace(/^function\s+([A-Za-z_$][\w$]*)/gm, 'let $1 = function $1');
-  try { new Script('(function () {\n"use strict";\n' + strict + '\n})'); return null; } catch (e) { return e.message; }
+async function appBundle(entry, info) {
+  const result = await bundle({ entryPoints: [join(ROOT, 'src', entry)] }, info, { metafile: true });
+  checkImports(result.metafile);
+  return "(function () {\n'use strict';\n" + result.outputFiles[0].text + '\n})();\n';
 }
+
+/**
+ * Bundles the modules a suite reads into an IIFE that exposes them under one global name.
+ * @param {string} exports Code of the entry, export statements with paths relative to the repository root.
+ * @param {string} [name] Global variable that receives the exports.
+ */
+export async function bundleForTest(exports, name) {
+  const result = await bundle({ stdin: { contents: exports, resolveDir: ROOT, loader: 'js' } }, { version: '0.0.0-test', notes: [] },
+    { format: 'iife', globalName: name || '__mod' });
+  return result.outputFiles[0].text;
+}
+
+// -- Import graph -------------------------------------------------------------
+
+// Imports only go down these layers (ADR-0017). views/ and settings/ are one layer: the screens.
+const LAYER_RANK = { core: 0, bridge: 1, views: 2, settings: 2, app: 3 };
+
+/**
+ * Refuses an import that goes up the layers, and a cycle of imports.
+ * @param {object} metafile esbuild metafile of an application entry.
+ */
+function checkImports(metafile) {
+  const graph = new Map();
+  for (const [path, input] of Object.entries(metafile.inputs)) {
+    if (path.startsWith('src/')) graph.set(path.slice(4), input.imports.map((i) => i.path).filter((p) => p.startsWith('src/')).map((p) => p.slice(4)));
+  }
+  const rank = (file) => LAYER_RANK[file.split('/')[0]] ?? Infinity;
+  const errors = [];
+  for (const [file, imports] of graph) for (const target of imports) {
+    if (rank(target) > rank(file)) errors.push(`${file} -> ${target} goes up the layers`);
+  }
+  for (const group of cycles(graph)) errors.push(`import cycle: ${group.join(', ')}`);
+  if (errors.length) throw new Error('Import graph (ADR-0017):\n' + errors.join('\n'));
+}
+
+/**
+ * Lists the groups of modules that import each other, directly or not.
+ * @param {Map<string, string[]>} graph Imports of each module.
+ */
+function cycles(graph) {
+  let next = 0;
+  const index = new Map(), low = new Map(), stack = [], onStack = new Set(), groups = [];
+  const visit = (v) => {
+    index.set(v, next); low.set(v, next++); stack.push(v); onStack.add(v);
+    for (const w of graph.get(v) || []) {
+      if (!index.has(w)) { visit(w); low.set(v, Math.min(low.get(v), low.get(w))); } else if (onStack.has(w)) low.set(v, Math.min(low.get(v), index.get(w)));
+    }
+    if (low.get(v) !== index.get(v)) return;
+    const group = [];
+    let w;
+    do { w = stack.pop(); onStack.delete(w); group.push(w); } while (w !== v);
+    if (group.length > 1) groups.push(group);
+  };
+  for (const v of graph.keys()) if (!index.has(v)) visit(v);
+  return groups;
+}
+
 
 // -- Design system tokens -----------------------------------------------------
 
 const OVERRIDE = new Set(['accent-text', 'accent-soft', 'focus-ring']);
-const ACCENT_DEFAULTS = '--accent-text-d: #fbf6df; --accent-text-l: #964c27; ' +
-  '--accent-soft-d: rgba(251, 246, 223, 0.12); --accent-soft-l: rgba(242, 122, 63, 0.14);';
+
+/**
+ * Reads tokens.json.
+ */
+function designTokens() {
+  return JSON.parse(readFileSync(join(ROOT, 'torchds', 'project', 'tokens.json'), 'utf8'));
+}
+
+/**
+ * Declares the accent text and soft fill of each theme, which the root and an accent scope pick from (accentScope).
+ * @param {object} tokens Content of tokens.json.
+ */
+function accentDefaults(tokens) {
+  const value = (name) => tokens.color.tokens.find((t) => t.name === name).value;
+  return `--accent-text-d: ${value('accent-text').dark}; --accent-text-l: ${value('accent-text').light}; ` +
+    `--accent-soft-d: ${value('accent-soft').dark}; --accent-soft-l: ${value('accent-soft').light};`;
+}
 
 /**
  * Declares the variables of a theme.
@@ -145,7 +168,7 @@ function themeRules(tokens, root, auto, light, dark) {
   for (const family of ['spacing', 'radius', 'size', 'motion']) for (const t of tokens[family].tokens) statics.push(`--${t.name}: ${t.value};`);
   for (const [key, stack] of Object.entries(tokens.type.families)) statics.push(`--font-${key}: ${stack};`);
   for (const group of tokens.type.groups) for (const style of group.styles) statics.push(`--font-size-${style.name}: ${style.fontSize};`);
-  return `${root} { color-scheme: dark; ${ACCENT_DEFAULTS} ${statics.join(' ')} ${themeBlock(tokens, 'dark')} }\n` +
+  return `${root} { color-scheme: dark; ${accentDefaults(tokens)} ${statics.join(' ')} ${themeBlock(tokens, 'dark')} }\n` +
     `@media (prefers-color-scheme: light) { ${auto} { color-scheme: light; ${themeBlock(tokens, 'light')} } }\n` +
     `${light} { color-scheme: light; ${themeBlock(tokens, 'light')} }\n` +
     `${dark} { color-scheme: dark; ${themeBlock(tokens, 'dark')} }\n`;
@@ -209,18 +232,7 @@ const SHADOW_SELECTORS = [
   [':root:not([data-theme="dark"])', ':host(:not([data-theme="dark"]))'],
   [':root {', ':host {']
 ];
-const JSON_ESCAPES = { '\\': '\\\\', '"': '\\"', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t' };
-// The hosted prototype hook hands the interface a state and reads it back: any script on st.chatango.com could define it.
-const PROTOTYPE_CODE = /[ \t]*\/\*PROTOTYPE\*\/[\s\S]*?\/\*END PROTOTYPE\*\/\r?\n/g;
 
-/**
- * Writes a JSON string literal limited to ASCII.
- * @param {string} text Text to encode.
- */
-function jsonString(text) {
-  // Every character outside printable ASCII becomes a \u sequence: U+2028 and U+2029 would break the injected literal.
-  return '"' + text.replace(/[\\"]|[^ -~]/g, (c) => JSON_ESCAPES[c] ?? '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')) + '"';
-}
 
 /**
  * Adapts a stylesheet to the userscript Shadow DOM.
@@ -250,24 +262,35 @@ const MINIFIED = {
 };
 
 /**
+ * Bundles code of the loader into an IIFE limited to ASCII, the values of define written in.
+ * @param {object} input esbuild entry: entryPoints, or stdin with its resolveDir.
+ * @param {Object<string, string>} define Identifier replaced by the JSON literal of its value.
+ */
+async function loaderBundle(input, define) {
+  const result = await esbuild(Object.assign({ bundle: true, format: 'iife', target: 'es5', write: false, logLevel: 'silent', absWorkingDir: ROOT,
+    // Every character outside printable ASCII becomes an escape: U+2028 and U+2029 would break the injected literal.
+    charset: 'ascii', define: Object.fromEntries(Object.entries(define).map(([k, v]) => [k, JSON.stringify(v)])) }, input));
+  return result.outputFiles[0].text;
+}
+
+const BOOT = '__TORCH_BOOT__();';
+
+/**
  * Assembles the userscript.
- * @param {object} source Templates and content to insert.
+ * @param {object} source Header and sandbox code, stylesheets and code to insert.
  * @param {{ js: Function, css: Function }} pack Transform of the code and the stylesheets.
  */
 async function userscript(source, pack) {
   const [css, fontsCss, loginStyles] = await Promise.all([pack.css(source.css), pack.css(source.fontsCss), pack.css(source.loginCss)]);
-  // The page code becomes a string literal run by a <script> through textContent: never parsed as HTML.
-  const page = await pack.js(source.page
-    .replaceAll('/*CSS*/', () => jsonString(css))
-    .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
-    .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginStyles))
-    .replaceAll('/*JOURNAL*/', () => source.journalJs)
-    .replaceAll('/*BUNDLE*/', () => source.bundleJs)
-    .replaceAll('/*APP*/', () => source.appJs));
-  // Tampermonkey reads the header as is: it stays out of the transform.
+  const shell = await loaderBundle({ entryPoints: [join(ROOT, 'src', 'loader', 'skin-page.js')] }, { __SKIN_CSS__: css, __FONTS_CSS__: fontsCss, __LOGIN_CSS__: loginStyles });
+  if (shell.split(BOOT).length !== 2) throw new Error(`The page code must call ${BOOT} once, where the application starts.`);
+  const page = await pack.js(shell.replace(BOOT, () => source.bundleJs + '\n' + source.appJs));
+  // Tampermonkey reads the header as is: it stays out of the bundle.
   const header = /^[\s\S]*?\/\/ ==\/UserScript==\r?\n/.exec(source.loader)[0];
   const notice = `/*\nFonts embedded in this script: Geist, Geist Mono and Instrument Serif.\n\n${source.fontsLicense}*/\n`;
-  return header + notice + await pack.js(source.loader.slice(header.length).replaceAll('/*PAGE*/', () => jsonString(page)));
+  // The page code becomes a string literal run by a <script> through textContent: never parsed as HTML.
+  const sandbox = await loaderBundle({ stdin: { contents: source.loader.slice(header.length), resolveDir: join(ROOT, 'src', 'loader'), loader: 'js' } }, { __PAGE_CODE__: page });
+  return header + notice + await pack.js(sandbox);
 }
 
 // -- Build --------------------------------------------------------------------
@@ -292,21 +315,21 @@ function emit(name, content) {
 }
 
 async function build() {
-  const tokens = JSON.parse(read('torchds', 'project', 'tokens.json'));
+  const tokens = designTokens();
   const bundleJs = read('torchds', 'project', 'components', 'bundle.js');
   const bundleCss = read('torchds', 'project', 'components', 'bundle.css');
   const appCss = read('src', 'styles', 'app.css');
   const loader = read('src', 'loader', 'skin-loader.js');
-  const version = /@version\s+(\S+)/.exec(loader)[1];
+  const version = versionOf(loader);
   const releaseNotes = parseChangelog(read('CHANGELOG.md'));
   if (releaseNotes[0]?.version !== version) throw new Error(`CHANGELOG.md must start with the notes of @version ${version}.`);
-  const sources = concatSources(ROOT, APP_SOURCES);
-  const twice = redeclared(sources);
-  if (twice) throw new Error(`The files of src/ share one scope and a top-level name is declared twice: ${twice}.`);
-  const appJs = "(function () {\n'use strict';\n" +
-    `var APP_VERSION = ${JSON.stringify(version)}, RELEASE_NOTES = ${JSON.stringify(releaseNotes)};\n` +
-    sources + '\n})();\n';
-  for (const [name, src] of [['bundle', bundleJs], ['app', appJs]]) {
+  const info = { version, notes: releaseNotes };
+  // The hosted prototype hook hands the interface a state and reads it back: any script on st.chatango.com could define it, so only the hosted entry reads it.
+  const [appJs, userscriptAppJs] = await Promise.all([appBundle('main-hosted.js', info), appBundle('main.js', info)]);
+  const provided = Object.fromEntries(Object.entries(BUILD_MODULES).flatMap(([module, exportsOf]) => Object.keys(exportsOf(info)).map((name) => [name, module])));
+  const unimported = await unimportedReads(join(ROOT, 'src'), provided);
+  if (unimported.length) throw new Error('Each module imports what it reads (ADR-0017):\n' + unimported.join('\n'));
+  for (const [name, src] of [['bundle', bundleJs], ['app', appJs], ['userscript app', userscriptAppJs]]) {
     if (src.toLowerCase().includes('</script')) throw new Error(`${name} contains </script`);
   }
   const css = tokensCss(tokens);
@@ -333,14 +356,12 @@ ${appJs}
 
   const source = {
     loader,
-    page: read('src', 'loader', 'skin-page.js'),
-    journalJs: read('src', 'loader', 'skin-journal.js'),
     css: skinCss(css, bundleCss, appCss),
     fontsCss,
     loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
     fontsLicense: read('torchds', 'project', 'fonts', 'OFL.txt'),
     bundleJs,
-    appJs: appJs.replace(PROTOTYPE_CODE, '')
+    appJs: userscriptAppJs
   };
 
   mkdirSync(join(ROOT, 'dist'), { recursive: true });

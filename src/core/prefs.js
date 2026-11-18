@@ -1,4 +1,4 @@
-function defaultPrefs() {
+export function defaultPrefs() {
   return {
     // Schema version of the stored preferences: those stored without one have the schema of version 1.
     version: 1,
@@ -20,5 +20,4 @@ function defaultPrefs() {
   };
 }
 // In live, these preferences are BetterChatango settings, which are authoritative: read again at sign-in, written to BetterChatango before switching.
-var BETTER_CHATANGO_PREFS = { 'safety.guestMessages': 'guestMessages', announcements: 'announcements' };
-var BETTER_CHATANGO_SAVE_FAILED = "BetterChatango couldn't save this setting. Reload the page and try again.";
+export var BETTER_CHATANGO_PREFS = { 'safety.guestMessages': 'guestMessages', announcements: 'announcements' };

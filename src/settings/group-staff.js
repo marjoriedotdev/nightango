@@ -1,8 +1,18 @@
+import { Frag, T, h, useState } from '../core/globals.js';
+import { copyText, plural } from '../core/util.js';
+import { PERMS, ROLE_DESC, ROLE_LONG, defaultRoles, flagsToPerms, permsToFlags, roleOfFlags } from '../core/roles.js';
+import { useApp } from '../core/ui.js';
+import { guestsOf, shownName, statusLabel, userOf } from '../core/selectors.js';
+import { ACCOUNT_NAME, chatangoPageUrl } from '../core/chatango.js';
+import { Page } from './kit.js';
+import { banItem, viewProfileItem, whoItem } from '../views/people.js';
+import { MenuButton } from '../core/layers.js';
+import { youBadge } from '../core/people-ui.js';
 /**
  * Staff and roles page in live and in the prototype: the owner then each moderator with their Chatango permissions.
  * @param {{g: Object, draft: Object, edit: Function, myRole: ?string, perms: Object}} p Group, settings draft, draft edit, role and permissions of the user.
  */
-function GSStaff(p) {
+export function GSStaff(p) {
   var app = useApp(), g = p.g, draft = p.draft;
   var owner = Object.keys(draft.staff).filter(function (n) { return draft.staff[n] === 'owner'; })[0] || null;
   var names = Object.keys(draft.modFlags || {}).sort();
@@ -61,7 +71,7 @@ function GSStaff(p) {
         : h(T.SettingsSection, { padded: true }, h('p', { className: 'pal-empty' }, 'No moderators yet.' + (canEdit ? ' Add one with their Chatango username.' : ''))))));
 }
 
-function GSMembers(p) {
+export function GSMembers(p) {
   var app = useApp(), s = app.state, g = p.g;
   var a = useState(''), q = a[0], setQ = a[1];
   var list = g.members.filter(function (n) { return !q || n.indexOf(q.toLowerCase()) >= 0; });
@@ -87,8 +97,8 @@ function GSMembers(p) {
     }) : h('p', { className: 'pal-empty' }, 'No member matches.')));
 }
 
-function GSInvites(p) {
-  var app = useApp(), link = 'https://' + p.g.id + '.chatango.com';
+export function GSInvites(p) {
+  var app = useApp(), link = chatangoPageUrl(p.g.id);
   return h(Page, { title: 'Invites', lede: "Anyone with the link can join. Banned members still can't." },
     h(T.SettingsSection, { title: 'Invite link', padded: true },
       h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },

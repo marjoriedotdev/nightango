@@ -1,10 +1,15 @@
 // Voice messages: the WAV file written by src/views/voice.js and the downmix of a recording.
-const fs = require('fs'), vm = require('vm');
+const vm = require('vm');
+const React = require('react');
+const { JSDOM } = require('jsdom');
+const { bundleForTest } = require('../scripts/build.mjs');
 const check = (c, msg, detail) => console.log((c ? 'ok  ' : 'FAIL') + ' ' + msg + (c || !detail ? '' : ' ' + JSON.stringify(detail)));
-const ctx = { Blob, DataView, ArrayBuffer, Float32Array, Promise, Math };
-vm.runInNewContext(fs.readFileSync(process.argv[2] + '/src/views/voice.js', 'utf8'), ctx);
+// The recorder module also renders a menu and logs through the bridge helpers: React and a document are there, as in the page.
+const ctx = { Blob, DataView, ArrayBuffer, Float32Array, Promise, Math, window: { React }, document: new JSDOM('').window.document };
 
 (async () => {
+  vm.runInNewContext(await bundleForTest("export { wavBlob, recordingToWav, VOICE_RATE, VOICE_MAX_S } from './src/views/voice.js';"), ctx);
+  Object.assign(ctx, ctx.__mod);
   /* WAV header: RIFF, 16-bit PCM mono at the given rate, sizes in little endian */
   const blob = ctx.wavBlob(new Float32Array([0, 1, -1, 2, -0.5]), 16000);
   const v = new DataView(await blob.arrayBuffer());

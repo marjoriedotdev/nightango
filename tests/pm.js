@@ -1,12 +1,15 @@
 // PM conversations: unreads read from the archive (BetterChatango database or memory), private history reading, merge and import, message cap.
 const { JSDOM } = require('jsdom');
-const { concatSources, layerSources } = require('../scripts/build.mjs');
+const { bundleForTest } = require('../scripts/build.mjs');
 const { keyRange, fakePmDb } = require('./fake-pm-db.js');
 
 const ME = 'marjorie';
 const fs = require('fs');
 const ROOT = process.argv[2];
-const code = concatSources(ROOT, layerSources('core').concat(layerSources('bridge'), ['app/pm.js']));
+// Bundled once in main: the bridge, the PM module and what the cases read.
+let code = null;
+const EXPORTS = "export { liveBridge } from './src/bridge/live-bridge.js'; export { pmRecordEntry } from './src/bridge/live-parse.js'; export { THREAD_MAX } from './src/core/selectors.js';"
+  + "export { betterChatangoPmArchive, memoryPmArchive, syncPmUnread, readPm, unreadPm, mergePmHistory, receivePm, addSentPm } from './src/app/pm.js';";
 const record = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const received = (from, ts, body) => 'msg:' + from + ':' + ME + ':unknown:' + ts + ':0:' + body;
 
@@ -42,12 +45,13 @@ function load(records, opts = {}) {
     window.__betterChatangoRefs = { client: window.client, chatango: {} };
   `);
   if (records) w.client.database.pm = { transaction };
-  w.eval(code + '; window.mod = { liveBridge: liveBridge, betterChatangoPmArchive: betterChatangoPmArchive, memoryPmArchive: memoryPmArchive, syncPmUnread: syncPmUnread, readPm: readPm, unreadPm: unreadPm, mergePmHistory: mergePmHistory, receivePm: receivePm, addSentPm: addSentPm, pmRecordEntry: pmRecordEntry };');
+  w.eval(code);
   const d = { dms: {} };
-  return { w, m: w.mod, d, journal, update: fn => fn(d) };
+  return { w, m: w.__mod, d, journal, update: fn => fn(d) };
 }
 
 (async () => {
+  code = await bundleForTest(EXPORTS);
   /* BetterChatango database: unread received PMs count, not their edits, not read entries, not the other conversation */
   const records = [
     record('gus', received('gus', '1700005000.5', '<n000/><iorig9876/>First'), 1),
@@ -89,7 +93,7 @@ function load(records, opts = {}) {
   step('browser without BetterChatango history reported', saved === false && t.d.dms.gus.unread === 0, { saved, unread: t.d.dms.gus.unread });
 
   /* In-memory archive: initial unreads, an edit does not count, a read touches only its own conversation */
-  const memory = t.m.memoryPmArchive([{ target: 'kim', from: 'kim', unread: true, edit: false }, { target: 'kim', from: 'kim', unread: true, edit: false }]);
+  const memory = t.m.memoryPmArchive([{ target: 'kim', author: 'kim', unread: true, edit: false }, { target: 'kim', author: 'kim', unread: true, edit: false }]);
   memory.record('kim', { editId: 'x' }, true);
   memory.record('lou', {}, true);
   memory.record('lou', {}, false);
@@ -103,7 +107,7 @@ function load(records, opts = {}) {
   const entries = [records[0], records[1]].map(r => t.m.pmRecordEntry(r));
   const shown = Object.assign({}, entries[0], { id: 'live1', archiveTs: undefined, ts: entries[0].ts + 30000 });
   const c = { messages: [shown] }, authors = [];
-  t.m.mergePmHistory(c, entries, x => authors.push(x.from));
+  t.m.mergePmHistory(c, entries, x => authors.push(x.author));
   step('history merged once into a shown message, edit applied to its original',
     c.messages.length === 1 && c.messages[0].id === 'live1' && c.messages[0].archiveTs === records[0].ts && c.messages[0].text === 'First, fixed' && c.messages[0].edited && authors.length === 2,
     c.messages);
@@ -161,10 +165,10 @@ function load(records, opts = {}) {
   // Archived under a name with capitals before imports lowercased it: one conversation with the lowercase records.
   archive('Zoe', 70, 1700300000);
   archive('zoe', 70, 1700300070);
-  t = load(big);
-  const parse = t.w.parseContent;
+  // Each record counts the reads of its body: a parse reads it, the walk of the archive reads only target and time.
   let parsed = 0;
-  t.w.parseContent = function () { parsed++; return parse.apply(this, arguments); };
+  big.forEach(r => { const body = r.data; r.data = { toString() { parsed++; return body; } }; });
+  t = load(big);
   const hist = await t.m.liveBridge.pmHistory(100);
   const listed = target => hist[target] ? hist[target].list.map(x => x.text) : null;
   step('reconnection on a large private history parses only the last 100 records of each correspondent',
@@ -177,7 +181,7 @@ function load(records, opts = {}) {
   const long = [];
   for (let i = 0; i < 600; i++) long.push(record('una', received('una', String(1700400000 + i) + '.5', '<n000/>una ' + i), i < 5 || i >= 595 ? 1 : 0));
   t = load(long);
-  const max = t.w.THREAD_MAX, una = t.d.dms.una = { messages: [], unread: 0 };
+  const max = t.m.THREAD_MAX, una = t.d.dms.una = { messages: [], unread: 0 };
   const firstPage = (await t.m.liveBridge.pmHistory(100)).una;
   t.m.mergePmHistory(una, firstPage.list, () => {});
   una.olderMore = firstPage.more;
@@ -190,8 +194,8 @@ function load(records, opts = {}) {
     sizes.push(una.messages.length);
   }
   const scrolled = una.messages.map(m => m.text);
-  t.m.receivePm(t.d, { from: 'una', key: 'new00001=', text: 'una received', ts: Date.now(), archiveTs: Date.now() / 1000 });
-  t.m.addSentPm(t.d, 'una', { from: ME, key: 'new00002=', text: 'una sent', ts: Date.now() + 1 });
+  t.m.receivePm(t.d, { author: 'una', key: 'new00001=', text: 'una received', ts: Date.now(), archiveTs: Date.now() / 1000 });
+  t.m.addSentPm(t.d, 'una', { author: ME, key: 'new00002=', text: 'una sent', ts: Date.now() + 1 });
   const after = una.messages.map(m => m.text);
   await t.m.syncPmUnread(t.m.betterChatangoPmArchive(), t.update, ['una']);
   step('long pm conversation loads older pages up to the cap, then drops its oldest messages and keeps its unread count',

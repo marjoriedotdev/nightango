@@ -1,5 +1,8 @@
-/* ---------- Sign-in ---------- */
-function Login() {
+import { APP_VERSION } from 'build:info';
+import { T, h, useState } from '../core/globals.js';
+import { useApp } from '../core/ui.js';
+// -- Sign-in ------------------------------------------------------------------
+export function Login() {
   var app = useApp();
   var a = useState('orrin'), user = a[0], setUser = a[1];
   var b = useState(''), pass = b[0], setPass = b[1];
@@ -14,7 +17,7 @@ function Login() {
     setErrors(err);
     if (Object.keys(err).length) return;
     setBusy(true);
-    setTimeout(function () { app.actions.login(user.toLowerCase(), pass); }, 450);
+    setTimeout(function () { app.actions.login(user.toLowerCase()); }, 450);
   }
   return h('div', { className: 'login' },
     h('section', { className: 'login-main', 'aria-label': 'Account' },

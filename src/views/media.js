@@ -1,4 +1,8 @@
-/* ---------- BetterChatango media library ---------- */
+import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { cx, downloadJson, plural, readJsonArray } from '../core/util.js';
+import { JsonFileButton, LOAD_BELOW_MARGIN, useApp, useAppApi, useInfiniteScroll, useStatePart } from '../core/ui.js';
+import { waitsForClick } from '../core/rich-text.js';
+// -- BetterChatango media library ---------------------------------------------
 var MEDIA_SORTS = [{ value: 'name', label: 'Name' }, { value: 'url', label: 'Link' }];
 // Like BetterChatango's completion (searchMedia with auto): three media at most.
 var MEDIA_SUGGESTIONS = 3;
@@ -11,13 +15,13 @@ var MEDIA_TOKEN = /(?:^|\s):(\S+)$/;
  * @param {boolean} revealed The user asked for "Show images".
  * @param {string} url Image address.
  */
-function mediaThumbShown(safety, revealed, url) { return safety.embedImages && (revealed || !waitsForClick(safety, 'image', url)); }
+export function mediaThumbShown(safety, revealed, url) { return safety.embedImages && (revealed || !waitsForClick(safety, 'image', url)); }
 
 /**
  * Media thumbnail without referrer, replaced by an icon while it may not load or if it fails.
  * @param {{url: string, shown: boolean}} p Image address and whether loading is allowed.
  */
-function MediaThumb(p) {
+export function MediaThumb(p) {
   var st = useState(false), broken = st[0], setBroken = st[1];
   if (!p.shown || broken) return h('span', { className: 'media-thumb media-thumb-empty' }, h(T.Icon, { name: 'image', size: 16 }));
   return h('img', { className: 'media-thumb', src: p.url, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer', onError: function () { setBroken(true); } });
@@ -27,7 +31,7 @@ function MediaThumb(p) {
  * Star that adds an image to the media library or removes it.
  * @param {{url: string, saved: boolean}} p Image address and whether it is in the media library.
  */
-function MediaStarButton(p) {
+export function MediaStarButton(p) {
   var app = useAppApi();
   return h(T.IconButton, {
     icon: 'star', label: p.saved ? 'Remove from media' : 'Add to media', size: 28, iconSize: 16, className: cx('media-star', p.saved && 'media-star-saved'),
@@ -42,7 +46,7 @@ function mediaRevOf(s) { return s.mediaRev; }
  * It is absent without a database.
  * @param {{url: string}} p Image address.
  */
-function MediaStar(p) {
+export function MediaStar(p) {
   var app = useAppApi(), rev = useStatePart(mediaRevOf);
   var st = useState(null), saved = st[0], setSaved = st[1];
   useEffect(function () {
@@ -58,7 +62,7 @@ function MediaStar(p) {
  * It shows BetterChatango's media library by pages, with search by name and import and export in BetterChatango's format.
  * @param {{scrollRef: Object, onPick: function(string)}} p Scrolling area and insertion of the chosen address.
  */
-function MediaPanel(p) {
+export function MediaPanel(p) {
   var app = useApp(), safety = app.state.prefs.safety, rev = app.state.mediaRev, toast = app.ui.toast;
   var a = useState('name'), sort = a[0], setSort = a[1];
   var b = useState(''), query = b[0], setQuery = b[1];
@@ -119,7 +123,7 @@ function MediaPanel(p) {
  * @param {function(string)} setValue Writes the composer text.
  * @returns {{onKeyDown: Function, panel: Object}} Keys to handle before the composer's own, and suggestions to render in composer-wrap.
  */
-function useMediaCompletion(value, setValue) {
+export function useMediaCompletion(value, setValue) {
   var app = useApp(), safety = app.state.prefs.safety;
   var m = MEDIA_TOKEN.exec(value), token = m ? m[1] : null;
   var st = useState(null), found = st[0], setFound = st[1];

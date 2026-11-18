@@ -1,7 +1,7 @@
 // Layers of src/core/ui.js, mounted in a Shadow DOM as in live: focus given back by menus, focus trap and inert background of dialogs, toast delays.
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
-const { concatSources, layerSources } = require('../scripts/build.mjs');
+const { bundleForTest } = require('../scripts/build.mjs');
 
 const ROOT = process.argv[2];
 const errors = [];
@@ -26,7 +26,8 @@ w.clearTimeout = id => { timers.delete(id); };
 const nativeFocus = w.HTMLElement.prototype.focus;
 w.HTMLElement.prototype.focus = function (o) { if (!this.closest('[inert]')) nativeFocus.call(this, o); };
 
-w.eval(concatSources(ROOT, layerSources('core')) + '; window.ui = { Layers: Layers, MenuButton: MenuButton, Dialog: Dialog, Toasts: Toasts };');
+(async () => {
+w.eval(await bundleForTest("export { Layers, MenuButton, Dialog, Toasts } from './src/core/layers.js';", 'ui'));
 const ui = w.ui, R = w.React, h = R.createElement;
 
 // Like skin-page.js: #app in the shadow root of the host, the layer next to it.
@@ -54,7 +55,7 @@ function Harness() {
     h(ui.Toasts, { toasts, dismiss: id => setToasts(list => list.filter(t => t.id !== id)) }));
 }
 
-/* ---------- Helpers ---------- */
+// -- Helpers ------------------------------------------------------------------
 const flush = () => new Promise(r => setTimeout(r, 30));
 /**
  * Moves the clock forward and runs the timers due on the way.
@@ -102,7 +103,7 @@ async function openMenu() { click(trigger()); await flush(); }
 const log = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 
-(async () => {
+await (async () => {
   w.ReactDOM.createRoot(mount).render(h(ui.Layers, null, h(Harness)));
   await flush();
 
@@ -179,3 +180,4 @@ function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok
   console.log('ERRORS: ' + (errors.length ? '\n' + errors.join('\n') : 'none'));
   process.exit(log.some(l => l.indexOf('FAIL') === 0) || errors.length ? 1 : 0);
 })().catch(e => { console.log(log.join('\n')); console.log('CRASH', e.stack); console.log('ERRORS: ' + (errors.join('\n') || 'none')); process.exit(2); });
+})().catch(e => { console.log('CRASH', e.stack); process.exit(2); });

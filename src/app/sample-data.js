@@ -1,4 +1,9 @@
-var LINES = {
+import { MIN, pick, uid } from '../core/util.js';
+import { mkSettings } from '../core/roles.js';
+import { VISIT_PAGE } from '../core/vissle.js';
+import { MEDIA_PAGE, mediaMatch, screenMediaEntries } from '../core/media-library.js';
+import { newGroup, newWorld } from './state.js';
+export var LINES = {
   community: ['Did the reconnect fix stick for everyone?', 'Theme import works on Firefox now.', 'Is there a way to pin a group to the top?', 'Welcome to the new folks.', 'The compact mode is so much easier to read.', 'Anyone tried the light theme on mobile?', 'Server s12 seems stable again.', 'How do I turn names colors back on?', 'Thanks for the quick fix.', 'Reminder: bug reports go to #betterchatangodev.'],
   betterchatangodev: ['Pushed a fix for the reply preview.', 'CI is green again.', 'Can someone review the AutoMod copy?', 'Safari still clips the composer on iOS 17.', 'Merged the notification matrix.'],
   trade: ['Selling a 6 month Premium gift, PM me.', 'Looking for an old 4 letter name.', 'Anyone have spare gifts?', 'Price check on a 3 letter username?'],
@@ -7,7 +12,7 @@ var LINES = {
   artcorner: ['New palette challenge is up.', 'WIP of my pixel city.', 'Feedback welcome on the lighting.'],
   generic: ['Hi everyone.', 'Evening all.', 'That makes sense.', 'Back in a bit.', 'Nice.']
 };
-var MENTION_LINES = ['@%me do you have a minute to test the new build?', '@%me nice theme, can you share the file?', '@%me thanks for the help earlier.', '@%me are you joining speedrun night?'];
+export var MENTION_LINES = ['@%me do you have a minute to test the new build?', '@%me nice theme, can you share the file?', '@%me thanks for the help earlier.', '@%me are you joining speedrun night?'];
 var DM_LINES = {
   sable: ["Logs look clean on my side. I think it's Chatango.", 'Ping me if the drops come back.', 'Sounds good.', "I'll pin it in the announcement."],
   kestrel: ['Still interested in that trade?', 'I can do two gifts for it.', 'No rush, let me know.'],
@@ -16,7 +21,12 @@ var DM_LINES = {
   default: ['Hey.', 'Sure.', 'Sounds good.', 'Talk later.']
 };
 
-function seedWorld(me) {
+/**
+ * Picks what a sample member answers to a PM.
+ * @param {string} name Sample member.
+ */
+export function dmReply(name) { return pick(DM_LINES[name] || DM_LINES.default); }
+export function seedWorld(me) {
   var now = Date.now();
   function t(m) { return now - m * MIN; }
   function msg(author, text, m, extra) { return Object.assign({ id: uid(), kind: 'msg', author: author, text: text, ts: t(m) }, extra || {}); }
@@ -37,12 +47,7 @@ function seedWorld(me) {
   };
   users[me] = { status: 'online', age: 27, gender: 'Not specified', location: 'Rennes, France', about: 'Building themes for BetterChatango. Usually in #community and #betterchatangodev. Ping me for theme import issues.', style: {}, self: true };
 
-  function group(id, o) {
-    return Object.assign({
-      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: now,
-      members: [], guests: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false
-    }, o);
-  }
+  function group(id, o) { return newGroup(id, Object.assign({ title: '', topic: '', lastReadTs: now }, o)); }
   var groups = {};
   var known = msg('sable', "Known issue on server s12, it's on Chatango's side. Reconnecting twice usually sticks.", 18);
   groups.community = group('community', {
@@ -128,24 +133,22 @@ function seedWorld(me) {
     });
   });
 
-  function dm(from, text, m, extra) { return Object.assign({ id: uid(), key: uid(), from: from, text: text, ts: t(m) }, extra); }
+  function dm(author, text, m, extra) { return Object.assign({ id: uid(), key: uid(), author: author, text: text, ts: t(m) }, extra); }
   var backdrop = dm('sable', 'Quick question: does it keep the backdrop color, or only the palette?', 7);
   var dms = {
-    sable: { messages: [dm('sable', 'Hey, saw your theme export change. Clean work.', 7), backdrop, dm(me, 'Both. The backdrop is stored with the palette in the same JSON file.', 6, { replyTo: { key: backdrop.key } }), dm('sable', "Perfect. I'll check the s12 logs tonight and tell you whether it's the client or Chatango.", 5)], unread: 1, lastReadTs: t(6) },
-    kestrel: { messages: [dm('kestrel', 'Did you get my trade offer?', 65)], unread: 1, lastReadTs: t(120) },
-    quill: { messages: [dm('quill', 'Can you send the invite link for #retrogaming?', 60 * 3), dm(me, 'Here: retrogaming.chatango.com', 60 * 3 - 2), dm(me, 'Thanks for the invite link', 60 * 2)], unread: 0, lastReadTs: now },
-    halcyon: { messages: [dm('halcyon', 'See you Friday for game night.', 60 * 26)], unread: 0, lastReadTs: now },
-    pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60) }
+    sable: { messages: [dm('sable', 'Hey, saw your theme export change. Clean work.', 7), backdrop, dm(me, 'Both. The backdrop is stored with the palette in the same JSON file.', 6, { replyTo: { key: backdrop.key } }), dm('sable', "Perfect. I'll check the s12 logs tonight and tell you whether it's the client or Chatango.", 5)], unread: 1 },
+    kestrel: { messages: [dm('kestrel', 'Did you get my trade offer?', 65)], unread: 1 },
+    quill: { messages: [dm('quill', 'Can you send the invite link for #retrogaming?', 60 * 3), dm(me, 'Here: retrogaming.chatango.com', 60 * 3 - 2), dm(me, 'Thanks for the invite link', 60 * 2)], unread: 0 },
+    halcyon: { messages: [dm('halcyon', 'See you Friday for game night.', 60 * 26)], unread: 0 },
+    pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1 }
   };
-  return {
-    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0,
-    meStatus: 'online',
-    pmSettings: { hideIdle: false, allowAnon: true, emailOffline: false }, pmSettingSave: null,
+  return newWorld(me, {
+    users: users, groups: groups, dms: dms,
+    pmSettings: { hideIdle: false, allowAnon: true, emailOffline: false },
     premium: { status: 200, until: now + 2 * 1440 * MIN + 5 * 60 * MIN },
     profile: { visibility: { meet: false } },
-    route: { view: 'group', id: 'community', markerTs: now }, split: null, pip: null,
-    sections: { favorites: true, groups: true, dms: true }
-  };
+    route: { view: 'group', id: 'community', markerTs: now }
+  });
 }
 
 var SAMPLE_VISITS = (function () {
@@ -156,15 +159,11 @@ var SAMPLE_VISITS = (function () {
     return { user: n, action: action, time: now - (i * 47 + 3) * 60, msg: action === 'msg' ? 'Love the new theme.' : '' };
   });
 })();
-/**
- * Simulates a page of vissle activity.
- * @param {{page: number, get: string}} q Cursor and filter of the requested page.
- */
 // Post of TikTok's embed documentation, and the thumbnail the prototype shows in place of the one TikTok's oEmbed would give.
 var SAMPLE_TIKTOK_LINK = 'https://www.tiktok.com/@scout2015/video/6718335390845095173';
-var SAMPLE_TIKTOK_THUMB = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 320"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a2a4f"/><stop offset="1" stop-color="#c9774a"/></linearGradient></defs><rect width="180" height="320" fill="url(#g)"/><circle cx="90" cy="150" r="46" fill="#f3d2b3"/><path d="M52 120l12-40 22 30zM128 120l-12-40-22 30z" fill="#f3d2b3"/><circle cx="74" cy="148" r="5" fill="#2a2030"/><circle cx="106" cy="148" r="5" fill="#2a2030"/><path d="M84 166q6 6 12 0" stroke="#2a2030" stroke-width="3" fill="none"/></svg>');
+export var SAMPLE_TIKTOK_THUMB = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 320"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a2a4f"/><stop offset="1" stop-color="#c9774a"/></linearGradient></defs><rect width="180" height="320" fill="url(#g)"/><circle cx="90" cy="150" r="46" fill="#f3d2b3"/><path d="M52 120l12-40 22 30zM128 120l-12-40-22 30z" fill="#f3d2b3"/><circle cx="74" cy="148" r="5" fill="#2a2030"/><circle cx="106" cy="148" r="5" fill="#2a2030"/><path d="M84 166q6 6 12 0" stroke="#2a2030" stroke-width="3" fill="none"/></svg>');
 // Post of X's oEmbed documentation, as the loader would read it, with a sample photo in place of the one on pbs.twimg.com.
-var SAMPLE_X_POST = {
+export var SAMPLE_X_POST = {
   id: '463440424141459456',
   card: {
     author: 'U.S. Department of the Interior', handle: 'Interior', date: 'May 5, 2014', time: Date.parse('2014-05-05T22:09:42Z'), avatar: null, link: 'https://x.com/Interior/status/463440424141459456',
@@ -175,12 +174,16 @@ var SAMPLE_X_POST = {
     }
   }
 };
-function sampleVisits(q) {
+/**
+ * Simulates a page of vissle activity.
+ * @param {{page: number, get: string}} q Cursor and filter of the requested page.
+ */
+export function sampleVisits(q) {
   return SAMPLE_VISITS.filter(function (x) { return (q.get === 'all' || x.action === q.get) && (q.page === 1 || x.time < q.page); }).slice(0, VISIT_PAGE);
 }
 
 /* Sample media library of the prototype, in memory, with the calls the bridge makes on the BetterChatango database. */
-var sampleMedia = (function () {
+export var sampleMedia = (function () {
   var list = ['wave', 'thumbs up', 'party', 'facepalm', 'coffee', 'cat nap', 'good night', 'popcorn'].map(function (n) {
     return { url: 'https://media.example/' + n.replace(/ /g, '-') + '.gif', name: n };
   });

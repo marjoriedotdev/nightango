@@ -1,4 +1,10 @@
-/* ---------- Session loss ---------- */
+import { T, h, useEffect, useState } from '../core/globals.js';
+import { cx } from '../core/util.js';
+import { useApp } from '../core/ui.js';
+import { LIVE } from '../core/env.js';
+import { PM_CONNECTION } from '../core/chatango.js';
+import { Dialog } from '../core/layers.js';
+// -- Session loss -------------------------------------------------------------
 var SESSION_ATTEMPTS = 3;
 // A lost connection has no dialog: it shows in SessionBanner.
 var SESSION_COPY = {
@@ -35,20 +41,25 @@ function sessionLost(s) { return !!(LIVE && s.auth.loggedIn && s.session && s.se
  * Tells whether the session loss blocks the interface with its dialog.
  * @param {Object} s Application state.
  */
-function sessionBlocks(s) { return !!(s.auth.loggedIn && s.session && s.session.reason !== 'lost'); }
+export function sessionBlocks(s) { return !!(s.auth.loggedIn && s.session && s.session.reason !== 'lost'); }
+/**
+ * Tells whether the session loss shows, as its banner or its dialog: the banner of each connection then gives way to it.
+ * @param {Object} s Application state.
+ */
+export function sessionDown(s) { return sessionLost(s) || sessionBlocks(s); }
 
 /**
  * Blocking session loss dialog: signed in somewhere else, session expired, offline.
  * @param {{session: {reason: string}}} p Reason of the loss.
  */
-function SessionOverlay(p) {
+export function SessionOverlay(p) {
   var app = useApp(), s = p.session, copy = SESSION_COPY[s.reason], busy = anyConnecting(app.state);
   /**
    * Builds the Reload button.
    * @param {string} variant Button variant.
    */
   function reload(variant) { return h(T.Button, { key: 'reload', variant: variant, onClick: function () { location.reload(); } }, 'Reload'); }
-  var footer = s.reason === 'kicked' ? [h(T.Button, { key: 'here', variant: 'ghost', disabled: busy, onClick: function () { app.actions.reconnect('private_message'); } }, 'Reconnect here'), reload('primary')]
+  var footer = s.reason === 'kicked' ? [h(T.Button, { key: 'here', variant: 'ghost', disabled: busy, onClick: function () { app.actions.reconnect(PM_CONNECTION); } }, 'Reconnect here'), reload('primary')]
     // Offline, a reload would lose the page: the automatic reconnection is the way back.
     : s.reason === 'offline' ? [reload('secondary')]
     : [reload('primary')];
@@ -78,7 +89,7 @@ function lostPhase(s, now) {
  * then Reconnected before it folds away. The interface stays open meanwhile: a send fails with its notification.
  * @param {{inset: number=, className: string=}} p Side margin and class given by the page that holds it.
  */
-function SessionBanner(p) {
+export function SessionBanner(p) {
   var app = useApp(), s = app.state, now = Date.now();
   var lost = sessionLost(s) ? lostPhase(s, now) : null;
   var st = useState(lost), phase = st[0], setPhase = st[1];
@@ -98,7 +109,7 @@ function SessionBanner(p) {
   }, [phase]);
   if (!next) return null;
   var shown = next === 'leaving' ? 'done' : next, retry = lost ? nextRetry(s.retrying) : null;
-  var attempt = retry && retry.attempt ? 'Attempt ' + retry.attempt + ' of ' + RECONNECT_DELAYS.length + '.' : null;
+  var attempt = retry && retry.attempt ? 'Attempt ' + retry.attempt + ' of ' + retry.of + '.' : null;
   var title, text = null, action = null, icon;
   /**
    * Builds the Reload button.
@@ -108,7 +119,7 @@ function SessionBanner(p) {
   if (shown === 'waiting') {
     title = 'Connection lost';
     text = ['Reconnecting in ' + Math.ceil((retry.at - now) / 1000) + ' s.', attempt].filter(Boolean).join(' ');
-    icon = h(CountdownRing, { left: retry.at - now, total: RECONNECT_DELAYS[retry.attempt - 1] });
+    icon = h(CountdownRing, { left: retry.at - now, total: retry.delay });
     // Ember only once Nightango has stopped trying: until then the automatic attempts are the way back.
     action = [reload('ghost'), h(T.Button, { key: 'now', size: 'sm', onClick: app.actions.reconnectSession }, 'Reconnect now')];
   } else if (shown === 'trying') {
@@ -141,4 +152,57 @@ function CountdownRing(p) {
   return h('svg', { className: 'countdown-ring', width: 16, height: 16, viewBox: '0 0 16 16', 'aria-hidden': 'true' },
     h('circle', { className: 'countdown-ring-track', cx: 8, cy: 8, r: 6.5 }),
     h('circle', { className: 'countdown-ring-arc', cx: 8, cy: 8, r: 6.5, pathLength: 100, strokeDasharray: 100, strokeDashoffset: 100 * (1 - lit) }));
+}
+var CONN_COPY = {
+  trying: { title: 'Reconnecting to ', text: 'Messages you send now may not arrive.' },
+  done: { title: 'Reconnected to ', text: null },
+  failed: { title: "Couldn't reconnect to ", text: 'Try again, or reload the page if it keeps failing.' }
+};
+/**
+ * Returns the phase the connection banner moves to from the one it shows.
+ * A first connection has no sequence of attempts and shows nothing.
+ * @param {{conn: string, retrying: boolean}} p Connection state and sequence of automatic attempts in progress.
+ * @param {?string} phase Phase shown: trying, done, failed, leaving or null.
+ * @returns {?string}
+ */
+function connPhase(p, phase) {
+  if (p.conn === 'open') return phase === 'trying' || phase === 'failed' ? 'done' : phase;
+  if (p.retrying) return 'trying';
+  if (p.conn === 'closed') return 'failed';
+  return phase ? 'trying' : null;
+}
+/**
+ * Banner of a lost live connection: one block whose icon and text change in place from reconnecting to reconnected, then folds away, or to failed.
+ * @param {{name: string, conn: string, retrying: boolean, onRetry: Function, inset: number=}} p Named connection (#group or private messages), its state, its automatic attempts, a new sequence of attempts and the side margin.
+ */
+export function ConnectionBanner(p) {
+  var st = useState(function () { return connPhase(p, null); }), phase = st[0], setPhase = st[1];
+  var next = connPhase(p, phase);
+  if (next !== phase) setPhase(next);
+  useEffect(function () {
+    if (phase !== 'done' && phase !== 'leaving') return;
+    var t = setTimeout(function () { setPhase(phase === 'done' ? 'leaving' : null); }, phase === 'done' ? CONN_DONE_MS : CONN_LEAVE_MS);
+    return function () { clearTimeout(t); };
+  }, [phase]);
+  if (!next) return null;
+  var shown = next === 'leaving' ? 'done' : next, copy = CONN_COPY[shown];
+  return h('div', { className: cx('conn-banner', next === 'leaving' && 'conn-banner-leaving'), 'data-phase': shown, role: 'status', style: p.inset != null ? { marginLeft: p.inset, marginRight: p.inset } : null },
+    h('div', { className: 'conn-banner-clip' }, h(T.Banner, {
+      icon: h(ConnectionIcon),
+      title: h('span', { key: shown, className: 'conn-fade' }, copy.title + p.name),
+      action: shown === 'failed' ? h('span', { className: 'conn-banner-actions conn-fade' },
+        h(T.Button, { size: 'sm', variant: 'ghost', onClick: p.onRetry }, 'Try again'),
+        h(T.Button, { size: 'sm', onClick: function () { location.reload(); } }, 'Reload')) : null
+    }, copy.text ? h('span', { key: shown, className: 'conn-fade' }, copy.text) : null)));
+}
+var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;
+/**
+ * Icon of the connection banner. The three icons stay stacked so that the phase cross-fades them in CSS.
+ */
+function ConnectionIcon() {
+  return h('span', { className: 'conn-icon' },
+    h('span', { className: 'conn-icon-spin' }, h(T.Spinner, { size: 16 })),
+    h('span', { className: 'conn-icon-check' }, h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true' },
+      h('path', { d: 'M20 6 9 17l-5-5', pathLength: 1 }))),
+    h('span', { className: 'conn-icon-alert' }, h(T.Icon, { name: 'alert', size: 16 })));
 }

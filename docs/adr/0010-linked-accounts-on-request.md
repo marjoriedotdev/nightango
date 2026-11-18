@@ -28,7 +28,7 @@ Guards:
 - the result is shown to the user only, in a dialog, never posted in a group or a PM
 - it is never stored (no persistent state, no `torch-skin:<username>`, no cache) or logged (no `console`, no `warn`): it lives in the dialog, and closing it forgets it. The mini profiles loaded for the cards join the in-memory state like any profile viewed, with no trace of the link to the targeted account
 - one call per user click, never automatic or in batch
-- the call joins the closed list ([ADR-0001](0001-password-never-read.md), `docs/betterchatango-protocol.md#allowed-http-calls`) with its source: `GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential, `{name}` validated by `ACCOUNT_NAME` (`src/bridge/live-model.js`), source `inject.js:7452-7477`
+- the call joins the closed list ([ADR-0001](0001-password-never-read.md), `docs/betterchatango-protocol.md#allowed-http-calls`) with its source: `GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential, `{name}` validated by `ACCOUNT_NAME` (`src/core/chatango.js`), source `inject.js:7452-7477`
 - only the strings of the five levels are read, any other field is ignored, and names are rendered as text, never as HTML.
 
 ## Risks accepted by the owner

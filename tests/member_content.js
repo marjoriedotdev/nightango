@@ -1,7 +1,7 @@
 // Member content read by the bridge and the interface, on the sources of src/core/ and src/bridge/.
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const { concatSources, layerSources } = require('../scripts/build.mjs');
+const { bundleForTest } = require('../scripts/build.mjs');
 
 const ROOT = process.argv[2];
 const dom = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', url: 'https://st.chatango.com/' });
@@ -10,8 +10,9 @@ const w = dom.window;
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
 w.eval(fs.readFileSync(ROOT + '/torchds/project/components/bundle.js', 'utf8'));
-w.eval(concatSources(ROOT, layerSources('core').concat(layerSources('bridge'))) + '; window.mod = { parseMiniCss: parseMiniCss, parseContent: parseContent, shownParts: shownParts };');
-const m = w.mod;
+(async () => {
+w.eval(await bundleForTest("export { parseMiniCss } from './src/bridge/live-parse.js'; export { parseContent, shownParts } from './src/core/message-content.js';"));
+const m = w.__mod;
 
 const log = [];
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' ' + JSON.stringify(detail))); }
@@ -108,3 +109,4 @@ try {
   console.log('CRASH', e.stack);
   process.exit(1);
 }
+})();

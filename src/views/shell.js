@@ -1,57 +1,54 @@
-/* ---------- Application shell ---------- */
-function MobileNavButton() {
-  var app = useApp();
-  return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', count: unreadTotal(app.state), onClick: app.ui.openNav });
-}
-
-/**
- * Titled header of a main page with the mobile navigation button.
- * @param {string} title Page title.
- */
-function pageHeader(title) {
-  return h('header', { className: 'topbar' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, title));
-}
-
-/**
- * Titled header of a right column.
- * @param {string} title Column title.
- */
-function columnHeader(title) {
-  return h('header', { className: 'topbar col-head' }, h('h2', { className: 'grow' }, title));
-}
+import { Frag, React, T, h, useEffect, useMemo, useState } from '../core/globals.js';
+import { cx } from '../core/util.js';
+import { onAccentOf } from '../core/colors.js';
+import { SkeletonRows, useApp, useStatePart, useWideLayout } from '../core/ui.js';
+import { favoritePeople, isPaneOpen, listedDms, paneShown, shownName, statusLabel, unreadDmCount, userOf } from '../core/selectors.js';
+import { NewYearMark, NewYearSky, SeasonSky, SeasonStar, skyMoves } from './season.js';
+import { GroupView } from './group.js';
+import { DMView, DmThread } from './dm.js';
+import { SpaceBar, currentSpace, inCurrentSpace, spacesItem } from './spaces.js';
+import { MentionsView } from './mentions.js';
+import { Discover } from './discover.js';
+import { SettingsView } from '../settings/shell.js';
+import { GroupSettingsView } from '../settings/group-view.js';
+import { LIVE } from '../core/env.js';
+import { favoriteItem } from './chrome.js';
+import { DraftMark, dmDraftKey, groupDraftKey, showsDraft, useDraftMarks } from '../core/drafts.js';
+import { MenuButton } from '../core/layers.js';
+import { presenceSr } from '../core/people-ui.js';
+// -- Application shell --------------------------------------------------------
 
 // Memoized: Root renders again for its toasts and dialogs, which leave the shell alone.
-var Shell = React.memo(function Shell() {
+export var Shell = React.memo(function Shell() {
   var app = useApp(), s = app.state, r = s.route, main;
   var wide = useWideLayout();
   var split = wide && s.split && paneShown(s, s.split) ? s.split : null;
   // A window too narrow for two panes, or a conversation that went away, closes the pane beside.
   useEffect(function () { if (s.split && !split) app.actions.closeSplit(); }, [!!s.split, !!split]);
-  // PipHost on every route: without it the floating window stops following the state.
-  if (r.view === 'settings') return h(Frag, null, h(SettingsView, { page: r.page }), h(PipHost, null));
-  if (r.view === 'gsettings') return h(Frag, null, h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page }), h(PipHost, null));
+  if (r.view === 'settings') return h(SettingsView, { page: r.page });
+  if (r.view === 'gsettings') return h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
   if (LIVE && !s.groupsSeen) main = h(StartupScreen, null);
-  else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id, msgId: r.msgId, markerTs: r.markerTs, compact: !!split });
+  else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id, role: 'main', msgId: r.msgId, markerTs: r.markerTs, compact: !!split });
   else if (r.view === 'dm') main = h(DMView, { id: r.id, tab: r.tab, seek: r.seek, compact: !!split });
   else if (r.view === 'mentions') main = h(MentionsView, null);
   else main = h(Discover, null);
-  var side = !split ? null : split.view === 'group'
-    ? h(GroupView, { key: 'split:' + split.id, gid: split.id, markerTs: split.markerTs, compact: true, onClose: app.actions.closeSplit, closeLabel: 'Close #' + split.id + ' side by side' })
-    : h(SplitDm, { key: 'split:' + split.id, id: split.id });
+  var side = split ? h(SidePane, { route: split, role: 'beside' }) : null;
   return h('div', { className: cx('shell', app.navOpen && 'nav-open', split && 'side-by-side') },
     h(NewYearSky, null),
     h(Sidebar, { wide: wide }),
     h('div', { className: 'scrim', onClick: app.ui.closeNav }),
-    main, side,
-    h(PipHost, null));
+    main, side);
 });
 
 /**
- * Tells whether a pane can show its conversation: a joined group or a known PM.
- * @param {Object} s Application state.
- * @param {{view: string, id: string}} t Conversation of the pane.
+ * Group or private conversation shown beside the main pane or in the floating window.
+ * @param {{route: {view: string, id: string, markerTs: ?number}, role: string}} p Conversation and pane: beside or floating.
  */
-function paneShown(s, t) { return t.view === 'group' ? !!(s.groups[t.id] && s.groups[t.id].joined) : !!s.dms[t.id]; }
+export function SidePane(p) {
+  var r = p.route, key = p.role + ':' + r.id;
+  if (r.view === 'group') return h(GroupView, { key: key, gid: r.id, role: p.role, markerTs: r.markerTs });
+  return h('div', { key: key, className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: r.id, role: p.role }));
+}
 
 /**
  * Menu entry that opens a conversation beside the main one, absent where two panes do not fit.
@@ -61,19 +58,6 @@ function paneShown(s, t) { return t.view === 'group' ? !!(s.groups[t.id] && s.gr
  */
 function splitItem(app, wide, route) {
   return wide && !isPaneOpen(app.state, route.view, route.id) ? { label: 'Open side by side', icon: 'panel', onSelect: function () { app.actions.openSplit(route); } } : null;
-}
-
-/**
- * Menu entry that adds a group or a person to the favorites, or removes them.
- * @param {Object} app Application context.
- * @param {{view: string, id: string}} route Group, or PM with the person.
- * @param {boolean} on The group or the person is a favorite.
- */
-function favoriteItem(app, route, on) {
-  return {
-    id: 'favorite', label: on ? 'Remove from favorites' : 'Add to favorites', icon: 'star',
-    onSelect: function () { if (route.view === 'group') app.actions.toggleFavorite(route.id); else app.actions.toggleUser(route.id, 'favorite'); }
-  };
 }
 
 // Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames). The startup screen leaves New Year out.

@@ -1,11 +1,27 @@
-/* ---------- Live operations: what the bridge emits, applied to the state ---------- */
+import { useEffect, useRef } from '../core/globals.js';
+import { CHATANGO_URL, dayKey, plural, shortDate, uid, unknownUserText } from '../core/util.js';
+import { plainOf } from '../core/draft.js';
+import { BETTER_CHATANGO_PREFS } from '../core/prefs.js';
+import { banListOf, isDmInView, isGroupInView, isNotifyingOnline, mentionsMe, pmEditTarget, premiumEndsSoon, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
+import { deliverOp, liveBridge } from '../bridge/live-bridge.js';
+import { DEFAULT_MESSAGE_STYLE } from '../views/message-style.js';
+import { SESSION_RANK, applyGroupEdit, applyPresence, blankBanPage, deriveLive, editTarget, ensureLiveGroup, ensureLiveUser, ensurePresentUser, ensureUnseenUser, groupUpdate, mergeEdits, mergeSpelling, mergeStyle, noteBadge, receiveBanPage, sessionAfterConn, withReply } from './live-state.js';
+import { memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
+import { dropMentions, logMention } from './inbox.js';
+import { JOURNAL, LIVE } from '../core/env.js';
+import { PM_CONNECTION } from '../core/chatango.js';
+import { messagePreview } from '../core/message-content.js';
+import { readOwn, writeOwn } from '../core/account-store.js';
+import { setIn } from '../settings/kit.js';
+import { newWorld } from './state.js';
+// -- Live operations: what the bridge emits, applied to the state -------------
 /**
  * Hands each bridge operation to the handler of the latest render.
  * The operations received after login wait for its first render: until then they would read the signed-out state, without groups, users or route.
  * @param {function(Object)} handle Handler of this render.
  * @param {boolean} loggedIn The state of this render is signed in.
  */
-function useBridgeOps(handle, loggedIn) {
+export function useBridgeOps(handle, loggedIn) {
   var latest = useRef(handle), held = useRef(null);
   latest.current = handle;
   useEffect(function () {
@@ -27,16 +43,16 @@ function useBridgeOps(handle, loggedIn) {
 /**
  * Adds a message of a history page to its group without sorting it: the page sorts each group it fills once.
  * @param {Object} d State being modified.
- * @param {{gid: string, msg: Object}} op History operation.
+ * @param {{gid: string, msg: Object, style: ?Object, spelling: ?string}} op History operation: the message, its author's style and spelling.
  * @param {Object} local Account data kept in this browser.
  * @returns {boolean} True if the message joined the message log, false for a message already there or an edit applied to its original.
  */
 function addHistory(d, op, local) {
-  var hm = Object.assign({}, op.msg), hs = hm.style; delete hm.style; delete hm.spelling;
+  var hm = Object.assign({}, op.msg);
   var g = ensureLiveGroup(d, op.gid, local), u = ensureLiveUser(d, hm.author, local);
   noteBadge(g, hm.author, hm.badge, hm.ts);
-  mergeStyle(u, hs, hm.ts);
-  mergeSpelling(u, op.msg.spelling, hm.ts);
+  mergeStyle(u, op.style, hm.ts);
+  mergeSpelling(u, op.spelling, hm.ts);
   if (plainOf(g.messages).some(function (x) { return x.id === hm.id || (x.editIds || []).indexOf(hm.id) >= 0; })) return false;
   var o = editTarget(g, hm);
   // History received from newest to oldest: like BetterChatango, an original already edited keeps its text.
@@ -59,7 +75,7 @@ function addHistory(d, op, local) {
  *   Application state with its ref and update, notifications, inbox (useInbox), actions (useActions), account data kept in this browser (useLocalStore),
  *   reconnection (useReconnection) and live PMs (useLivePms).
  */
-function useLiveOps(k) {
+export function useLiveOps(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast;
   var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, notify = k.inbox.notify, notifyPm = k.inbox.notifyPm, receiveGroup = k.inbox.receiveGroup;
   var actions = k.actions, local = k.local, localRef = k.local.ref, reconnection = k.reconnection, pms = k.pms;
@@ -91,12 +107,12 @@ function useLiveOps(k) {
         // BetterChatango's "Mentioned in #g" title would come back 5 s later without the Nightango counter.
         if (liveBridge.setting('tabTitleAlerts')) liveBridge.setSetting('tabTitleAlerts', false);
         update(function (d) {
-          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = storedNotes(localRef.current.notes); d.spaces = storedSpaces(localRef.current.spaces); d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
+          Object.assign(d, newWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = localRef.current.notes; d.spaces = localRef.current.spaces; d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
           mergeSpelling(d.users[op.me], op.spelling, Date.now());
-          (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
-          storedFavoritePeople(localRef.current.favoritePeople).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); d.users[n].favorite = true; });
+          (liveBridge.list('ignored') || []).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
+          localRef.current.favoritePeople.forEach(function (n) { ensureUnseenUser(d, n, localRef.current); d.users[n].favorite = true; });
           Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
-          d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
+          d.prefs.safety.trustedHosts = liveBridge.list('trusted');
         });
         // An account with no joined group receives no group frame.
         setTimeout(function () { update(function (d) { d.groupsSeen = true; }); }, 10000);
@@ -119,14 +135,14 @@ function useLiveOps(k) {
         break;
       }
       case 'msg': {
-        var m = Object.assign({}, op.msg), style = m.style; delete m.style; delete m.spelling;
+        var m = Object.assign({}, op.msg);
         if (m.editId) {
           // Edit: applied to the original if it is loaded, otherwise shown as an edited message that keeps its reference.
           update(function (d) {
             if (!d.auth.loggedIn) return;
             var g = ensureLiveGroup(d, op.gid, localRef.current), u = ensureLiveUser(d, m.author, localRef.current), o = editTarget(g, m);
-            mergeStyle(u, style, m.ts);
-            mergeSpelling(u, op.msg.spelling, m.ts);
+            mergeStyle(u, op.style, m.ts);
+            mergeSpelling(u, op.spelling, m.ts);
             noteBadge(g, m.author, m.badge, m.ts);
             if (o) { applyGroupEdit(o, m); return; }
             m.edited = true;
@@ -142,8 +158,8 @@ function useLiveOps(k) {
           if (m.author === d.me && mg.live.tempBan) mg.live.tempBan = null;
           noteBadge(mg, m.author, m.badge, m.ts);
           var mu = ensureLiveUser(d, m.author, localRef.current);
-          mergeStyle(mu, style, m.ts);
-          mergeSpelling(mu, op.msg.spelling, m.ts);
+          mergeStyle(mu, op.style, m.ts);
+          mergeSpelling(mu, op.spelling, m.ts);
         });
         receiveGroup(op.gid, m);
         break;
@@ -199,9 +215,9 @@ function useLiveOps(k) {
         groupUpdate(update, op.gid, function (g) { g.inited = true; });
         break;
       case 'info': groupUpdate(update, op.gid, function (g) {
-        if (op.title) { g.title = op.title; g.topic = op.description && op.description !== 'No description' ? op.description : op.title; }
+        if (op.title) { g.title = op.title; g.topic = op.description || op.title; }
         g.settings.overview.title = op.title || g.settings.overview.title;
-        g.settings.overview.description = op.description && op.description !== 'No description' ? op.description : '';
+        g.settings.overview.description = op.description;
       }); break;
       case 'denied': groupUpdate(update, op.gid, function (g) { g.inited = true; g.membersLoaded = true; }); break;
       case 'histEnd': groupUpdate(update, op.gid, function (g) { g.historyDone = true; g.loadingMore = false; }); break;
@@ -219,7 +235,7 @@ function useLiveOps(k) {
         if (op.text) g.live.refused = op.text;
       }); break;
       // Raw length kept, end read as minutes like chadango: the longer reading, a message of the user that gets through ends the ban sooner.
-      case 'tempBan': groupUpdate(update, op.gid, function (g) { g.live.tempBan = { length: op.length, until: op.length ? Date.now() + op.length * MIN : 0 }; }); break;
+      case 'tempBan': groupUpdate(update, op.gid, function (g) { g.live.tempBan = { length: op.length, until: op.until }; }); break;
       case 'bans': groupUpdate(update, op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;
@@ -258,7 +274,7 @@ function useLiveOps(k) {
       case 'conn':
         reconnection.follow(op);
         update(function (d) {
-          if (op.gid === 'private_message') d.pmConn = op.state;
+          if (op.gid === PM_CONNECTION) d.pmConn = op.state;
           if (!d.auth.loggedIn) return;
           var g = d.groups[op.gid];
           // A pending history request gets no response on a closed socket.
@@ -283,22 +299,22 @@ function useLiveOps(k) {
       case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { tone: 'error', action: { label: op.button, run: op.action } } : { tone: 'error' }); break;
       case 'pm': {
         var s0 = stateRef.current;
-        var focused = isDmInView(s0, op.from);
+        var focused = isDmInView(s0, op.author);
         // Like in BetterChatango, the PM of an ignored member is received and archived without an alert.
-        var ignored = !!userOf(s0, op.from).ignored;
-        var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
+        var ignored = !!userOf(s0, op.author).ignored;
+        var edit = !!(s0.dms[op.author] && pmEditTarget(s0.dms[op.author], op));
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          var pu = ensureLiveUser(d, op.from, localRef.current);
+          var pu = ensureLiveUser(d, op.author, localRef.current);
           mergeStyle(pu, op.style, op.ts);
           mergeSpelling(pu, op.spelling, op.ts);
           receivePm(d, op);
         });
-        pmArchive.current.record(op.from, op, true);
+        pmArchive.current.record(op.author, op, true);
         // Read created after the current stack: BetterChatango archives a received PM only after pm is emitted.
-        if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
+        if (focused) readPm(pmArchive.current, update, op.author); else syncPmUnread(pmArchive.current, update, [op.author]);
         if (edit) break;
-        if (!focused && !op.offline && !ignored) notifyPm(op.from, messagePreview(op));
+        if (!focused && !op.offline && !ignored) notifyPm(op.author, messagePreview(op));
         // msgoff frames arrive in a burst right after the connection: a single notification for the whole burst.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;
@@ -319,11 +335,11 @@ function useLiveOps(k) {
         actions.checkPmr();
         break;
       case 'premium': {
-        var premium = { status: op.status, until: op.until }, today = dayKey(Date.now()), key = skinKey(stateRef.current.me);
+        var premium = { status: op.status, until: op.until }, today = dayKey(Date.now()), me = stateRef.current.me;
         update(function (d) { if (d.auth.loggedIn) d.premium = premium; });
         // Chatango sends the frame on each private connection: the day of the last reminder is kept for the account.
-        if (premiumEndsSoon(premium, Date.now()) && (storageGet(key) || {}).premiumReminded !== today) {
-          storageMerge(key, { premiumReminded: today });
+        if (premiumEndsSoon(premium, Date.now()) && readOwn(me, 'premiumReminded') !== today) {
+          writeOwn(me, 'premiumReminded', today);
           toast('Your Chatango Premium ends on ' + shortDate(op.until) + '.', { icon: 'star', action: { label: 'Open chatango.com', run: function () { window.open(CHATANGO_URL, '_blank', 'noopener,noreferrer'); } } });
         }
         break;

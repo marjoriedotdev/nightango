@@ -1,8 +1,15 @@
-/* ---------- Own message style ---------- */
-var DEFAULT_MESSAGE_STYLE = { face: '0', size: 11, textColor: '#000000', nameColor: '#000000', bold: false, italic: false, underline: false, strike: false };
+import { Frag, T, h, useState } from '../core/globals.js';
+import { ColorField, useApp } from '../core/ui.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { memberStyles } from './message.js';
+import { LIVE } from '../core/env.js';
+import { FONT_FACES, FONT_STACKS, fontPercent } from '../core/chatango.js';
+import { Dialog } from '../core/layers.js';
+// -- Own message style --------------------------------------------------------
+export var DEFAULT_MESSAGE_STYLE = { face: '0', size: 11, textColor: '#000000', nameColor: '#000000', bold: false, italic: false, underline: false, strike: false };
 var MESSAGE_STYLE_SIZES = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 
-function MessageStyleButton() {
+export function MessageStyleButton() {
   var st = useState(false), open = st[0], setOpen = st[1];
   return h(Frag, null,
     h(T.IconButton, { icon: 'type', label: 'Message style', onClick: function () { setOpen(true); } }),

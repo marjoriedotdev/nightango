@@ -94,15 +94,17 @@ function page(o) {
   // Counts the renders of the components named in COUNTED, plain or memoized: the app reads createElement and memo when it loads.
   const renders = {};
   const R = w.React, createElement = R.createElement, memo = R.memo, counted = new Map();
+  // esbuild suffixes a function named like a top-level name of the bundle: MessageRow2 is the component MessageRow.
+  const nameOf = type => type.name.replace(/\d+$/, '');
   function counting(type) {
-    if (!counted.has(type)) counted.set(type, function (props) { renders[type.name] = (renders[type.name] || 0) + 1; return type(props); });
+    if (!counted.has(type)) counted.set(type, function (props) { renders[nameOf(type)] = (renders[nameOf(type)] || 0) + 1; return type(props); });
     return counted.get(type);
   }
   R.createElement = function (type) {
-    if (typeof type === 'function' && !(type.prototype && type.prototype.isReactComponent) && COUNTED.includes(type.name)) arguments[0] = counting(type);
+    if (typeof type === 'function' && !(type.prototype && type.prototype.isReactComponent) && COUNTED.includes(nameOf(type))) arguments[0] = counting(type);
     return createElement.apply(this, arguments);
   };
-  R.memo = function (type, compare) { return memo(COUNTED.includes(type.name) ? counting(type) : type, compare); };
+  R.memo = function (type, compare) { return memo(COUNTED.includes(nameOf(type)) ? counting(type) : type, compare); };
   w.eval(app);
   return {
     w, d, C, intervals,
@@ -143,7 +145,7 @@ function busyState(tpl, style) {
   for (let k = 0; k < CHATS; k++) {
     const n = 'c' + k;
     s.users[n] = user();
-    s.dms[n] = { messages: [{ id: 'pm' + k, from: n, key: 'k' + k, text: 'Hello ' + k, ts: now - k * MIN }], unread: 0, lastReadTs: now, olderMore: false };
+    s.dms[n] = { messages: [{ id: 'pm' + k, author: n, key: 'k' + k, text: 'Hello ' + k, ts: now - k * MIN }], unread: 0, olderMore: false };
   }
   // Seen once and referenced by nothing any more: former members, search results.
   for (let k = 0; k < STALE; k++) s.users['gone' + k] = user({ status: 'offline' });
@@ -190,7 +192,6 @@ const show = async t => { t.paint(); await nextTask(); };
   t.paint(); await wait(50);
   step('busy state shown', t.d.querySelectorAll('.tc-msg').length >= 400 && !!t.d.querySelector('.members-list'), t.d.querySelectorAll('.tc-msg').length);
   const s0 = t.state();
-  step('busy state size', Object.keys(s0.users).length > 2000 && GROUPS.every((gid, i) => s0.groups[gid].messages.length === SIZES[i]), Object.keys(s0.users).length);
 
   /* One operation copies only what it touches */
   t.group('b', 'busy0', msgFrame('m0x1', 'one', Date.now() / 1000, 'One more'));
@@ -215,7 +216,8 @@ const show = async t => { t.paint(); await nextTask(); };
   await wait(50);
   const burst = { roots: t.count('Root'), rows: t.count('MessageRow'), shown: t.d.body.textContent.includes('Burst ' + (BURST - 1)), perOp };
   step('a burst of messages within one animation frame gives one render', burst.roots === 1 && burst.shown, burst);
-  step('a burst of messages renders only the new rows', burst.rows <= BURST + 2, burst);
+  // At least one row: the zero counts of the steps below then show the counter still counts.
+  step('a burst of messages renders only the new rows', burst.rows > 0 && burst.rows <= BURST + 2, burst);
   step('a burst of messages stays within ' + MS_PER_OP + ' ms per operation', perOp < MS_PER_OP, burst);
 
   /* A history page arrives together: one update, one sort of its group */

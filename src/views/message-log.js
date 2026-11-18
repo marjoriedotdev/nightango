@@ -1,4 +1,6 @@
-/* ---------- Message log ---------- */
+import { Frag, T, h, useEffect, useLayoutEffect, useRef, useState } from '../core/globals.js';
+import { SkeletonRows, useApp, useInfiniteScroll } from '../core/ui.js';
+// -- Message log --------------------------------------------------------------
 // Distance from the bottom of a log under which it stays stuck to the bottom.
 var LOG_BOTTOM_SLACK = 48;
 
@@ -7,7 +9,7 @@ var LOG_BOTTOM_SLACK = 48;
  * @returns {{targetId: ?string, jumpTo: function(string), follow: Function, toBottom: Function, view: Object}} Target message, jump to a message,
  *   log kept at the bottom on the next change, immediate return to the bottom, and state reserved for MessageLog.
  */
-function useMessageLog() {
+export function useMessageLog() {
   var reduceMotion = useApp().state.prefs.a11y.reduceMotion;
   var logRef = useRef(null), atBottom = useRef(true);
   var a = useState(null), target = a[0], setTarget = a[1];
@@ -38,7 +40,7 @@ function useMessageLog() {
  * Returns the change key of a message log for its messages.
  * @param {Array} messages Messages of the log, sorted.
  */
-function logChangeKey(messages) {
+export function logChangeKey(messages) {
   // At THREAD_MAX a new message keeps the length: the first message, which it pushes out, tells the change instead.
   return messages.length + ':' + (messages.length ? messages[0].id : '');
 }
@@ -51,7 +53,7 @@ function logChangeKey(messages) {
  *   (follow: back to the bottom, notify: New messages button) and log head: null, {status: 'pending'} on the first load,
  *   {status: 'start', text} at the start of the history, or {status: 'more', loading, ready, load, retry} with retry called on every scroll if given.
  */
-function MessageLog(p) {
+export function MessageLog(p) {
   var v = p.log.view, older = p.older, more = !!older && older.status === 'more';
   var sentinelRef = useRef(null), seenFirstTs = useRef(null);
   useInfiniteScroll(v.ref, sentinelRef, more && older.ready && !p.log.targetId, function () { older.load(); }, '200px 0px 0px 0px');

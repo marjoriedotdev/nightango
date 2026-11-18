@@ -1,11 +1,15 @@
 // Profile formatting toolbar: tags placed around the selection and merging of <font> attributes.
 const vm = require('vm');
-const { concatSources } = require('../scripts/build.mjs');
+const React = require('react');
+const { JSDOM } = require('jsdom');
+const { bundleForTest } = require('../scripts/build.mjs');
 
-const ROOT = process.argv[2];
-const ctx = {};
+(async () => {
+// The toolbar module also renders its dialogs and reads the page environment: React and a document are there, as in the page.
+const ctx = { window: { React }, document: new JSDOM('').window.document };
 vm.createContext(ctx);
-vm.runInContext(concatSources(ROOT, ['settings/markup-toolbar.js']), ctx);
+vm.runInContext(await bundleForTest("export { fontMarkup, wrapMarkup } from './src/settings/markup-toolbar.js';"), ctx);
+Object.assign(ctx, ctx.__mod);
 
 let failed = 0;
 /**
@@ -47,3 +51,4 @@ check('nests when the tag goes on after the selection', '<font color="#ff0000">m
 check('nests when the selection holds a font tag', '<font color="#ff0000">a<font size="2">b</font></font>', 'a<font size="2">b', font('face', 'Georgia'), '<font color="#ff0000"><font face="Georgia">a<font size="2">b</font></font></font>', 'a<font size="2">b');
 console.log('ERRORS: ' + (failed ? failed + ' failed' : 'none'));
 process.exit(failed ? 1 : 0);
+})().catch((e) => console.log('CRASH ' + e.stack));
