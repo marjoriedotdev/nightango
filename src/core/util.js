@@ -201,7 +201,7 @@ export function copyText(text, onDone) {
   try { navigator.clipboard.writeText(text).then(function () { onDone(true); }, fallback); } catch (e) { fallback(); }
 }
 
-export function warn(e) { try { console.warn('[torch-skin]', e); } catch (x) { /* console unavailable */ } }
+export function warn(e) { console.warn('[torch-skin]', e); }
 export function lower(v) { return String(v == null ? '' : v).toLowerCase(); }
 // Like urllib.parse.unquote (chatango-lib) and BetterChatango: "+" stays a "+".
 export function unquote(v) { try { return decodeURIComponent(String(v || '')); } catch (e) { return String(v || ''); } }
