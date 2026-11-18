@@ -10,32 +10,19 @@ import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
 import { GroupInfoSheet, MembersPanel } from './members.js';
 import { popOutItem } from './pip-window.js';
 import { spacesItem } from './spaces.js';
-import { MessageStyleButton } from './message-style.js';
-import { useEmojiPicker } from './emoji-picker.js';
-import { uploadKey, useAttachMedia } from './attach.js';
-import { attachMenu, useVoiceRecorder } from './voice.js';
-import { useMediaCompletion } from './media.js';
 import { SharedMediaDialog } from './shared-media.js';
-import { confirmLeave, runCommand } from './commands.js';
+import { confirmLeave } from './commands.js';
 import { SessionBanner, sessionLost } from './session.js';
 import { LIVE } from '../core/env.js';
 import { CHANNELS, channelLabel, chatangoPageUrl, isGuest } from '../core/chatango.js';
-import { messagePreview } from '../core/message-content.js';
 import { MobileNavButton, favoriteItem } from './chrome.js';
+import { ConversationComposer, EDIT_MAX, useComposerMode } from './composer.js';
 /* ---------- Group ---------- */
-// BetterChatango rejects the tenth edit of a message.
-export var EDIT_MAX = 9;
 // BetterChatango's limit for a group, counted on the body it builds and not on the typed text.
 var GROUP_MESSAGE_MAX = 2900;
 // From the @ on, like Discord. A Chatango name has 20 characters at most.
 var MENTION_TOKEN = /(?:^|\s)@([A-Za-z0-9_-]{0,20})$/;
 var MENTION_SUGGESTIONS = 8;
-export var COMPOSER_MODES = {
-  // BetterChatango renders replies and edits too (inject.js:5407, 5514), other Chatango apps show a new message.
-  reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply', note: 'Only people on Nightango or BetterChatango see this.' },
-  edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit', note: 'Only people on Nightango or BetterChatango see this.' },
-  quote: { icon: 'quote', verb: 'Quoting', cancelLabel: 'Cancel quote' }
-};
 
 /**
  * Composer line for the posting limits of a live group: temporary ban, message refused as too fast and slow mode, counted down every second.
@@ -60,38 +47,7 @@ function ComposerLimit(p) {
   return h(Frag, null, banned || wait && cd.refused ? h(T.Icon, { name: 'alert', size: 14, className: 'limit-alert' }) : null, text);
 }
 
-/**
- * Reply, edit or quote mode of a composer.
- * During an edit, the draft holds the edited text and the typed draft waits aside.
- * @param {Array} draft useDraft result of the composer.
- * @returns {{mode: ?{kind: string, m: Object}, setMode: Function, close: Function, enter: function(string): Function, edit: function(Object, number)}} Mode and its transitions.
- */
-export function useComposerMode(draft) {
-  var app = useApp();
-  var st = useState(null), mode = st[0], setMode = st[1], stash = useRef('');
-  if (mode && mode.kind === 'edit') draft[2].current = stash.current;
-  function close() { if (mode && mode.kind === 'edit') draft[1](stash.current); setMode(null); }
-  return {
-    mode: mode, setMode: setMode, close: close,
-    enter: function (kind) { return function (m) { close(); setMode({ kind: kind, m: m }); }; },
-    edit: function (m, edits) {
-      if (edits >= EDIT_MAX) { app.ui.toast("You can't edit this message again. BetterChatango allows " + EDIT_MAX + ' edits per message.'); return; }
-      if (!mode || mode.kind !== 'edit') stash.current = draft[0];
-      draft[1](m.text);
-      setMode({ kind: 'edit', m: m });
-    }
-  };
-}
 
-/**
- * Tells whether a key pressed in a composer opens the edit of the user's last message.
- * @param {KeyboardEvent} e Key pressed in the composer field.
- * @param {string} draft Composer text.
- * @param {?Object} mode Reply, edit or quote mode of the composer.
- */
-export function editsLastOnUp(e, draft, mode) {
-  return e.key === 'ArrowUp' && !draft && !mode && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey;
-}
 
 export function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
@@ -105,16 +61,19 @@ export function GroupView(p) {
   // Side by side, the members open as a sheet: a right column would leave no room for the messages.
   if (p.compact) column = { open: false, pressed: null, toggle: function () { setInfoOpen(true); } };
   var a9 = useDraft(groupDraftKey(p.gid)), draft = a9[0], setDraft = a9[1];
-  var cm = useComposerMode(a9), mode = cm.mode, setMode = cm.setMode;
+  var cm = useComposerMode(a9), mode = cm.mode;
   var inputRef = useRef(null);
-  var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft), mentions = useMentionCompletion(g, inputRef, draft, setDraft);
-  var attach = useAttachMedia({ kind: 'group', id: p.gid }, setDraft);
-  var voice = useVoiceRecorder(uploadKey({ kind: 'group', id: p.gid }), attach.onFiles);
+  var mentions = useMentionCompletion(g, inputRef, draft, setDraft);
   var log = useMessageLog();
   var count = g ? g.messages.length : 0;
   var q = search ? search.trim().toLowerCase() : '';
-  // Jump asked by the route: jumpTo, declared below, refuses a message the log hides.
-  useEffect(function () { var o = findMsg(g, p.msgId); if (o) jumpTo(o); }, []);
+  // Jump asked by the route, then forgotten so that the same message can be asked again: jumpTo, declared below, refuses a message the log hides.
+  useEffect(function () {
+    if (!p.msgId) return;
+    var o = findMsg(g, p.msgId);
+    if (o) jumpTo(o);
+    app.update(function (d) { delete d.route.msgId; });
+  }, [p.msgId]);
   var kind = mode && mode.kind, replyId = kind === 'reply' ? mode.m.id : null, quoted = kind === 'quote' ? quoteOf(shownName(s, mode.m.author), mode.m.text) : null;
   var typed = draft.trim(), editId = kind === 'edit' ? editedId(mode.m) : null;
   var measured = useMemo(function () {
@@ -147,32 +106,14 @@ export function GroupView(p) {
     setDraft(function (v) { return v + (v && !/\s$/.test(v) ? ' ' : '') + '@' + handle + ' '; });
     if (inputRef.current) inputRef.current.focus();
   }
-  function onKeyDown(e) {
-    media.onKeyDown(e);
-    if (!e.defaultPrevented) mentions.onKeyDown(e);
-    if (!editsLastOnUp(e, draft, mode)) return;
+  function editLast() {
     var last = lastMatch(g.messages, function (m) {
       return m.kind === 'msg' && !m.deleted && canEditGroupMessage(m, me) && (m.editCount || 0) < EDIT_MAX && shown(m) && !hiddenByChannel(m);
     });
-    if (!last) return;
-    e.preventDefault();
-    edit(last);
+    if (last) edit(last);
+    return !!last;
   }
-  var closeMode = cm.close;
   function edit(m) { cm.edit(m, m.editCount || 0); }
-  function send(text) {
-    if (kind === 'edit') {
-      if (text !== mode.m.text && !app.actions.editMessage(g.id, mode.m, text)) { setDraft(text); return; }
-      closeMode();
-      return;
-    }
-    if (runCommand(app, text, g.id)) return;
-    log.follow();
-    var opts = { replyTo: replyId ? { id: replyId } : null, quote: quoted, channel: channel }, sentMode = mode;
-    if (attach.file) { attach.send(text, opts, function () { setMode(function (cur) { return cur === sentMode ? null : cur; }); }); return; }
-    if (!app.actions.sendGroup(g.id, text, opts)) { setDraft(text); return; }
-    setMode(null);
-  }
   // As in BetterChatango, a hidden message still counts in unreads and mentions.
   function shown(m) { return m.annc ? prefs.announcements : m.kind !== 'msg' || prefs.safety.guestMessages || !isGuest(m.author); }
   // The prototype's sample messages have no channel.
@@ -232,17 +173,15 @@ export function GroupView(p) {
     composer = h('div', { className: 'notice' }, h(T.Icon, { name: 'volume', size: 16 }), h('span', { className: 'grow' }, 'Broadcast mode is on. Only staff can post right now.'));
   } else {
     var left = GROUP_MESSAGE_MAX - measured;
-    composer = h(Frag, null, media.panel, mentions.panel, voice.panel, h(T.Composer, {
-      placeholder: 'Message #' + g.id, value: draft, onChange: mentions.onChange, onKeyDown: onKeyDown, inputRef: inputRef, canSend: left >= 0 && (kind === 'edit' || !attach.busy),
+    composer = h(ConversationComposer, {
+      target: { kind: 'group', id: g.id }, draft: a9, cm: cm, inputRef: inputRef, placeholder: 'Message #' + g.id, completion: mentions,
+      replyTo: groupReplyTo, opts: { channel: channel }, onSending: log.follow, editLast: editLast,
+      send: function (text, opts) { return app.actions.sendGroup(g.id, text, opts); },
+      edit: function (m, text) { return app.actions.editMessage(g.id, m, text); },
+      canSend: left >= 0,
       hint: left < 0 ? 'Shorten your message by ' + plural(-left, 'character', 'characters') + ' to send it.' : left <= 300 ? plural(left, 'character', 'characters') + ' left'
         : g.live ? h(ComposerLimit, { ban: g.live.tempBan, cooldown: g.live.cooldown, rate: g.live.rate, bypass: !!rights.bypass }) : null,
       hintTone: left < 0 ? 'warning' : null,
-      context: mode ? Object.assign({ author: shownName(s, mode.m.author), text: messagePreview(mode.m) }, COMPOSER_MODES[mode.kind]) : null,
-      onCancelContext: closeMode, onSend: send, onEmoji: emoji.onEmoji, status: attach.status,
-      // An edit changes only the text: the picked file waits for the next message.
-      onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
-      attachMenu: kind === 'edit' ? null : attachMenu(attach, voice),
-      beforeSend: h(MessageStyleButton, null),
       aside: h(MenuButton, {
         up: true, items: chans.map(function (k) {
           return { label: channelLabel(k), swatch: CHANNELS[k].color || 'transparent', checked: channel === k, onSelect: function () { app.actions.setSendChannel(g.id, k); } };
@@ -255,7 +194,7 @@ export function GroupView(p) {
             h('span', { className: 'hide-mobile' }, CHANNELS[channel].label), hiddenChans.length ? h(T.Icon, { name: 'eye-off', size: 12 }) : null, h(T.Icon, { name: 'chevron-down', size: 12, className: 'hide-mobile' }));
         }
       })
-    }), emoji.picker, attach.input);
+    });
   }
 
   var waitingCount = LIVE && !g.membersLoaded && !g.liveCount;
@@ -309,11 +248,12 @@ export function GroupView(p) {
     badgeOpen ? h(OwnBadgeDialog, { g: g, onClose: function () { setBadgeOpen(false); } }) : null,
     sharedOpen ? h(SharedMediaDialog, {
       where: '#' + g.id, messages: g.messages.filter(function (m) { return m.kind === 'msg' && shown(m) && !hiddenByChannel(m) && !(isHiddenAuthor(s, m.author) && !revealed[m.id]); }),
-      authorOf: groupAuthorOf, onJump: function (id) { var o = findMsg(g, id); if (o) jumpTo(o); }, onClose: function () { setSharedOpen(false); }
+      onJump: function (id) { var o = findMsg(g, id); if (o) jumpTo(o); }, onClose: function () { setSharedOpen(false); }
     }) : null);
 }
 
-function groupAuthorOf(m) { return m.author; }
+/** Points a reply to a group message by its id. */
+function groupReplyTo(m) { return { id: m.id }; }
 
 function GroupColorDialog(p) {
   var app = useApp(), g = p.g;

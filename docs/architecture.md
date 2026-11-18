@@ -40,6 +40,7 @@ src/
                      profiles, search, private history, media library, vissle, group creation
   views/      main screens
     login, shell (sidebar and routing between panes), chrome (headers, mobile navigation button and Favorite item shared by the panes), group (and @name suggestions of its composer), message (row, media),
+    composer (composer of groups and PMs: reply, edit and quote modes, tools of the field, order of sending),
     message-log (group and PM message log: bottom tracking, reading kept in place, older pages, jump to a message),
     members (list, profile card, linked accounts, ban, external link, profile link), dm (Chats and PM search, Friends),
     people (presence and info lines of a person, person card and row of a message outside its message log, actions on a person shared by the menus),

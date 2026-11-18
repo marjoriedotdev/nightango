@@ -4,26 +4,20 @@ import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftK
 import { bidiText } from '../core/rich-text.js';
 import { THREAD_MAX, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, shownName, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { COMPOSER_MODES, EDIT_MAX, editsLastOnUp, useComposerMode } from './group.js';
-import { MessageContent, authorName, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton, quoteOf } from './message.js';
+import { MessageContent, authorName, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton } from './message.js';
 import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
 import { popOutItem } from './pip-window.js';
 import { inCurrentSpace, spacesItem } from './spaces.js';
 import { MeetPeople } from './meet.js';
 import { ProfilePanel } from './profile.js';
-import { MessageStyleButton } from './message-style.js';
-import { useEmojiPicker } from './emoji-picker.js';
-import { uploadKey, useAttachMedia } from './attach.js';
-import { attachMenu, useVoiceRecorder } from './voice.js';
-import { useMediaCompletion } from './media.js';
 import { SharedMediaDialog } from './shared-media.js';
-import { runCommand } from './commands.js';
 import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, PM_CONNECTION } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
 import { MobileNavButton, favoriteItem } from './chrome.js';
 import { MessageEntry, PresenceTime, confirmRemoveFriend, notifyOnlineItem, personActionGroups, personAsl, personMetaLine, personStatus, presenceSince, presenceText, useFriendRequest, useProfileActions, useProfiles, viewProfileItem, whoItem } from './people.js';
+import { ConversationComposer, EDIT_MAX, useComposerMode } from './composer.js';
 /* ---------- Private messages ---------- */
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };
@@ -193,7 +187,7 @@ export function DmThread(p) {
   var asked = useRef(false);
   var len = convo.messages.length;
   var log = useMessageLog();
-  var draft = useDraft(dmDraftKey(id)), cm = useComposerMode(draft);
+  var draft = useDraft(dmDraftKey(id)), cm = useComposerMode(draft), inputRef = useRef(null);
   var personActions = useProfileActions(id, null);
   var sh = useState(false), sharedOpen = sh[0], setSharedOpen = sh[1];
   // Search result: older pages load one by one until it is reached.
@@ -244,7 +238,11 @@ export function DmThread(p) {
     };
   var bottom;
   if (u.blocked) bottom = h('div', { className: 'notice' }, h(T.Icon, { name: 'user-x', size: 16 }), h('span', { className: 'grow' }, 'You blocked ' + shownName(s, id) + '. Unblock them to send messages.'), h(T.Button, { size: 'sm', onClick: function () { app.actions.toggleUser(id, 'blocked'); } }, 'Unblock'));
-  else bottom = h(DmComposer, { id: id, draft: draft, mode: cm.mode, onCancelMode: cm.close, onEditLast: editLast });
+  else bottom = h(ConversationComposer, {
+    target: { kind: 'dm', id: id }, draft: draft, cm: cm, inputRef: inputRef, placeholder: 'Message ' + shownName(s, id), replyTo: dmReplyTo, editLast: editLast,
+    send: function (text, opts) { return app.actions.sendDm(id, text, opts); },
+    edit: function (m, text) { return app.actions.sendDm(id, text, { editKey: m.key }); }
+  });
   return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
       p.onClose ? null : h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', count: unreadTotal(s), onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
@@ -260,10 +258,11 @@ export function DmThread(p) {
     p.onClose ? null : h(SessionBanner, null),
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom)),
-    sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + shownName(s, id), messages: convo.messages, authorOf: dmAuthorOf, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
+    sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + shownName(s, id), messages: convo.messages, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
 }
 
-function dmAuthorOf(m) { return m.author; }
+/** Points a reply to a private message by its PM key. */
+function dmReplyTo(m) { return { key: m.key }; }
 
 /**
  * Private conversation in the pane beside the main one.
@@ -318,38 +317,6 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
     actions: actions, msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', joined.className)
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
 });
-
-/**
- * Private conversation composer with its reply, edit or quote, emoticon and media picker, :name completion and file upload.
- * @param {{id: string, draft: Array, mode: ?Object, onCancelMode: Function, onEditLast: function(): boolean}} p Conversation correspondent, draft (useDraft),
- *   mode (useComposerMode) and its end, and edit of the user's last message, false if none can be edited.
- */
-function DmComposer(p) {
-  var app = useApp(), id = p.id, mode = p.mode, kind = mode && mode.kind;
-  var draft = p.draft[0], setDraft = p.draft[1];
-  var inputRef = useRef(null);
-  var emoji = useEmojiPicker(inputRef, setDraft), media = useMediaCompletion(draft, setDraft);
-  var attach = useAttachMedia({ kind: 'dm', id: id }, setDraft);
-  var voice = useVoiceRecorder(uploadKey({ kind: 'dm', id: id }), attach.onFiles);
-  function onKeyDown(e) {
-    media.onKeyDown(e);
-    if (editsLastOnUp(e, draft, mode) && p.onEditLast()) e.preventDefault();
-  }
-  return h(Frag, null, media.panel, voice.panel, h(T.Composer, {
-    placeholder: 'Message ' + shownName(app.state, id), value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
-    // An edit changes only the text: the picked file waits for the next message.
-    onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
-    context: mode ? Object.assign({ author: shownName(app.state, mode.m.author), text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
-    onSend: function (text) {
-      if (kind === 'edit') { if (text !== mode.m.text && !app.actions.sendDm(id, text, { editKey: mode.m.key })) { setDraft(text); return; } p.onCancelMode(); return; }
-      if (runCommand(app, text, null)) return;
-      var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(shownName(app.state, mode.m.author), mode.m.text) : null };
-      if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
-      if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
-      p.onCancelMode();
-    }, attachMenu: kind === 'edit' ? null : attachMenu(attach, voice), beforeSend: h(MessageStyleButton, null)
-  }), emoji.picker, attach.input);
-}
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };
 function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
