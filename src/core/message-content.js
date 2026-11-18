@@ -1,6 +1,7 @@
 import { FONT_FACES, MSG_FLAG, fontPercent } from './chatango.js';
 import { EMOTICON_BY_NAME } from './emoticons.js';
 import { lower, trimEnd } from './util.js';
+import { TIKTOK_POST, TIKTOK_SHORT, X_POST } from './loader-contract.js';
 // -- Message content ----------------------------------------------------------
 // What a message holds once read: text, emphasis segments, references and media, shared by live and the prototype.
 
@@ -15,11 +16,6 @@ function fileUrlPattern(extensions) { return new RegExp('^https:\\/\\/\\S+\\.(?:
 export var IMAGE_URL = fileUrlPattern('png|apng|jpe?g|gif|bmp|webp'), GIF_URL = fileUrlPattern('gif'), VIDEO_URL = fileUrlPattern('mp4|webm'), AUDIO_URL = fileUrlPattern('mp3|ogg|wav');
 // BetterChatango regex (inject.js:8256) applied to a single link: case-sensitive and open to http, only the id is kept.
 var YOUTUBE_LINK = /^https?:\/\/(?:(?:\w+\.)?youtube\.\w{1,3}|youtu\.be)(?:.*v=|\/\w+\/|\/)([\w-]{11})/;
-// TikTok post or short link: the embed player needs the post id, which only the redirect of a short link gives.
-var TIKTOK_POST = /^https?:\/\/(?:www\.|m\.)?tiktok\.com\/@[\w.-]+\/(?:video|photo)\/(\d+)/;
-var TIKTOK_SHORT = /^https?:\/\/((?:vm|vt)\.tiktok\.com|(?:www\.)?tiktok\.com\/t)\/([\w-]+)/;
-// X post link, on X or a mirror that the loader turns back into an X link.
-var X_POST = /^https?:\/\/(?:www\.|mobile\.)?(?:x|twitter|fxtwitter|vxtwitter|fixupx|fixvx)\.com\/\w{1,15}\/status\/(\d{1,20})/;
 // Like BetterChatango renderMessage: only a ▓…▒ pair becomes a strikethrough, a lone marker stays text.
 var STRIKE_PAIR = /\u2593([\s\S]*?)\u2592/g;
 // Like BetterChatango crawl (inject.js:1112): an http media loads over https, one on fp.chatango.com loads from ust.chatango.com.
@@ -40,9 +36,9 @@ function embedOf(src) {
 function linkEmbedOf(url) {
   var yt = YOUTUBE_LINK.exec(url), tt = TIKTOK_POST.exec(url), short = TIKTOK_SHORT.exec(url), xp = X_POST.exec(url);
   if (yt) return { kind: 'youtube', id: yt[1] };
-  if (xp) return { kind: 'x', id: xp[1], url: xp[0] };
+  if (xp) return { kind: 'x', id: xp[2], url: xp[0] };
   // Like YouTube, the link may run into text without a space ("…/t/ZPLy/....."): only the post or short link part is kept.
-  if (tt) return { kind: 'tiktok', id: tt[1], url: tt[0] };
+  if (tt) return { kind: 'tiktok', id: tt[3], url: tt[0] };
   if (short) return { kind: 'tiktok', url: 'https://' + short[1] + '/' + short[2] + '/' };
   var file = secureMediaUrl(url);
   return VIDEO_URL.test(file) ? { kind: 'video', url: file } : AUDIO_URL.test(file) ? { kind: 'audio', url: file } : embedOf(url);

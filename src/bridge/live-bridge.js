@@ -5,6 +5,7 @@ import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNELS, GENDER_LABEL, MEET_
 import { MEDIA_PAGE, mediaEntryOk, mediaMatch, screenMediaEntries } from '../core/media-library.js';
 import { encodeRef, parseContent, parsePm } from '../core/message-content.js';
 import { readOwn, writeOwn } from '../core/account-store.js';
+import { LOADER_TEXT, LOADER_WAIT, X_HANDLE, X_IMAGE, X_LINK, X_PICTURE, X_VIDEO, loaderEvent } from '../core/loader-contract.js';
 /**
  * Gives an operation to a listener: one that throws stops neither the other listeners nor the sequence that emits, sign-in included.
  * @param {function(Object)} fn Listener.
@@ -830,8 +831,6 @@ export var liveBridge = (function () {
   }
 
   /* Replies from the userscript bridges (vissle, TikTok, X), matched to requests by id */
-  // Longer than the GM_xmlhttpRequest timeout of the loader, whose own reply says more.
-  var LOADER_WAIT = 20000;
   // Any script of the page can send a reply: one that is not JSON or matches no request is ignored.
   var loaderWaits = Object.create(null);
   function onLoaderReply(e) {
@@ -843,9 +842,7 @@ export var liveBridge = (function () {
     clearTimeout(wait.timer);
     if (r.error && typeof r.error === 'string') wait.reject(new Error(r.error)); else wait.resolve(r);
   }
-  document.addEventListener('torch-skin:vissle-response', onLoaderReply);
-  document.addEventListener('torch-skin:tiktok-response', onLoaderReply);
-  document.addEventListener('torch-skin:x-response', onLoaderReply);
+  ['vissle', 'tiktok', 'x'].forEach(function (channel) { document.addEventListener(loaderEvent(channel, 'response'), onLoaderReply); });
   /**
    * Sends a request to a userscript bridge.
    * @param {string} channel Bridge name: vissle, tiktok or x.
@@ -862,12 +859,12 @@ export var liveBridge = (function () {
     function text(v) { return typeof v === 'string'; }
     function size(v) { return v === undefined || (typeof v === 'number' && v > 0 && isFinite(v)); }
     var m = r.media == null ? null : r.media;
-    if (!text(r.author) || !text(r.text) || !text(r.date) || !text(r.handle) || !/^\w{1,15}$/.test(r.handle) || !text(r.link) || !/^https:\/\/x\.com\/\w{1,15}\/status\/\d{1,20}$/.test(r.link)) return null;
-    if (r.avatar != null && !(text(r.avatar) && /^https:\/\/pbs\.twimg\.com\/profile_images\//.test(r.avatar))) return null;
+    if (!text(r.author) || !text(r.text) || !text(r.date) || !text(r.handle) || !X_HANDLE.test(r.handle) || !text(r.link) || !X_LINK.test(r.link)) return null;
+    if (r.avatar != null && !(text(r.avatar) && X_PICTURE.test(r.avatar))) return null;
     // A time new Date cannot hold would throw when the card writes it.
     if (r.time != null && !(typeof r.time === 'number' && Math.abs(r.time) <= 8.64e15)) return null;
-    if (m && !(text(m.thumb) && /^https:\/\/pbs\.twimg\.com\//.test(m.thumb) && typeof m.sensitive === 'boolean' && size(m.width) && size(m.height)
-      && (m.kind === 'photo' || (m.kind === 'video' && text(m.video) && /^https:\/\/video\.twimg\.com\//.test(m.video))))) return null;
+    if (m && !(text(m.thumb) && X_IMAGE.test(m.thumb) && typeof m.sensitive === 'boolean' && size(m.width) && size(m.height)
+      && (m.kind === 'photo' || (m.kind === 'video' && text(m.video) && X_VIDEO.test(m.video))))) return null;
     return { author: r.author, handle: r.handle, text: r.text, date: r.date, link: r.link, avatar: r.avatar || null, time: r.time == null ? null : r.time, media: m };
   }
   function askLoader(channel, q, late) {
@@ -875,7 +872,7 @@ export var liveBridge = (function () {
       var id = uid();
       var timer = setTimeout(function () { delete loaderWaits[id]; reject(new Error(late)); }, LOADER_WAIT);
       loaderWaits[id] = { resolve: resolve, reject: reject, timer: timer };
-      document.dispatchEvent(new CustomEvent('torch-skin:' + channel + '-request', { detail: JSON.stringify(Object.assign({ id: id }, q)) }));
+      document.dispatchEvent(new CustomEvent(loaderEvent(channel, 'request'), { detail: JSON.stringify(Object.assign({ id: id }, q)) }));
     });
   }
 
@@ -1589,8 +1586,8 @@ export var liveBridge = (function () {
      * @returns {Promise<{post: string, link: string, thumb: ?string}>} Post id and link, and cover address if the page gives one, rejected with the text to show if TikTok does not give the post.
      */
     tiktokPost: function (url) {
-      return askLoader('tiktok', { url: url }, "TikTok didn't answer in time. Open the link instead.").then(function (r) {
-        if (typeof r.post !== 'string' || !/^\d+$/.test(r.post) || typeof r.link !== 'string') throw new Error("TikTok didn't say which video this link leads to. Open the link instead.");
+      return askLoader('tiktok', { url: url }, LOADER_TEXT.tiktokLate).then(function (r) {
+        if (typeof r.post !== 'string' || !/^\d+$/.test(r.post) || typeof r.link !== 'string') throw new Error(LOADER_TEXT.tiktokUnknown);
         return { post: r.post, link: r.link, thumb: typeof r.thumb === 'string' ? r.thumb : null };
       });
     },
@@ -1600,9 +1597,9 @@ export var liveBridge = (function () {
      * @returns {Promise<Object>} Author, handle, text, date and link of the post, and its author picture, time and media if X gives them, rejected with the text to show.
      */
     xPost: function (url) {
-      return askLoader('x', { url: url }, "X didn't answer in time. Open the link instead.").then(function (r) {
+      return askLoader('x', { url: url }, LOADER_TEXT.xLate).then(function (r) {
         var post = xCard(r);
-        if (!post) throw new Error("X didn't share this post. Open the link instead.");
+        if (!post) throw new Error(LOADER_TEXT.xUnshared);
         return post;
       });
     },

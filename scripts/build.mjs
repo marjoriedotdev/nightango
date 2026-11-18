@@ -219,16 +219,7 @@ const SHADOW_SELECTORS = [
   [':root:not([data-theme="dark"])', ':host(:not([data-theme="dark"]))'],
   [':root {', ':host {']
 ];
-const JSON_ESCAPES = { '\\': '\\\\', '"': '\\"', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t' };
 
-/**
- * Writes a JSON string literal limited to ASCII.
- * @param {string} text Text to encode.
- */
-function jsonString(text) {
-  // Every character outside printable ASCII becomes a \u sequence: U+2028 and U+2029 would break the injected literal.
-  return '"' + text.replace(/[\\"]|[^ -~]/g, (c) => JSON_ESCAPES[c] ?? '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')) + '"';
-}
 
 /**
  * Adapts a stylesheet to the userscript Shadow DOM.
@@ -258,24 +249,35 @@ const MINIFIED = {
 };
 
 /**
+ * Bundles code of the loader into an IIFE limited to ASCII, the values of define written in.
+ * @param {object} input esbuild entry: entryPoints, or stdin with its resolveDir.
+ * @param {Object<string, string>} define Identifier replaced by the JSON literal of its value.
+ */
+async function loaderBundle(input, define) {
+  const result = await esbuild(Object.assign({ bundle: true, format: 'iife', target: 'es5', write: false, logLevel: 'silent', absWorkingDir: ROOT,
+    // Every character outside printable ASCII becomes an escape: U+2028 and U+2029 would break the injected literal.
+    charset: 'ascii', define: Object.fromEntries(Object.entries(define).map(([k, v]) => [k, JSON.stringify(v)])) }, input));
+  return result.outputFiles[0].text;
+}
+
+const BOOT = '__TORCH_BOOT__();';
+
+/**
  * Assembles the userscript.
- * @param {object} source Templates and content to insert.
+ * @param {object} source Header and sandbox code, stylesheets and code to insert.
  * @param {{ js: Function, css: Function }} pack Transform of the code and the stylesheets.
  */
 async function userscript(source, pack) {
   const [css, fontsCss, loginStyles] = await Promise.all([pack.css(source.css), pack.css(source.fontsCss), pack.css(source.loginCss)]);
-  // The page code becomes a string literal run by a <script> through textContent: never parsed as HTML.
-  const page = await pack.js(source.page
-    .replaceAll('/*CSS*/', () => jsonString(css))
-    .replaceAll('/*FONTS_CSS*/', () => jsonString(fontsCss))
-    .replaceAll('/*LOGIN_CSS*/', () => jsonString(loginStyles))
-    .replaceAll('/*JOURNAL*/', () => source.journalJs)
-    .replaceAll('/*BUNDLE*/', () => source.bundleJs)
-    .replaceAll('/*APP*/', () => source.appJs));
-  // Tampermonkey reads the header as is: it stays out of the transform.
+  const shell = await loaderBundle({ entryPoints: [join(ROOT, 'src', 'loader', 'skin-page.js')] }, { __SKIN_CSS__: css, __FONTS_CSS__: fontsCss, __LOGIN_CSS__: loginStyles });
+  if (shell.split(BOOT).length !== 2) throw new Error(`The page code must call ${BOOT} once, where the application starts.`);
+  const page = await pack.js(shell.replace(BOOT, () => source.bundleJs + '\n' + source.appJs));
+  // Tampermonkey reads the header as is: it stays out of the bundle.
   const header = /^[\s\S]*?\/\/ ==\/UserScript==\r?\n/.exec(source.loader)[0];
   const notice = `/*\nFonts embedded in this script: Geist, Geist Mono and Instrument Serif.\n\n${source.fontsLicense}*/\n`;
-  return header + notice + await pack.js(source.loader.slice(header.length).replaceAll('/*PAGE*/', () => jsonString(page)));
+  // The page code becomes a string literal run by a <script> through textContent: never parsed as HTML.
+  const sandbox = await loaderBundle({ stdin: { contents: source.loader.slice(header.length), resolveDir: join(ROOT, 'src', 'loader'), loader: 'js' } }, { __PAGE_CODE__: page });
+  return header + notice + await pack.js(sandbox);
 }
 
 // -- Build --------------------------------------------------------------------
@@ -338,8 +340,6 @@ ${appJs}
 
   const source = {
     loader,
-    page: read('src', 'loader', 'skin-page.js'),
-    journalJs: read('src', 'loader', 'skin-journal.js'),
     css: skinCss(css, bundleCss, appCss),
     fontsCss,
     loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),

@@ -7,6 +7,8 @@ Amended on 2026-10-31 by [ADR-0014](0014-tiktok-embed.md): the sandbox also hold
 
 Amended on 2026-10-31 by [ADR-0015](0015-x-embed.md): the sandbox also holds the X bridge (`@connect publish.x.com` and `cdn.syndication.twimg.com`, `torch-skin:x-request` and `torch-skin:x-response`).
 
+Amended on 2026-11-18 by [ADR-0017](0017-es-modules.md): both contexts are bundled by esbuild, and what they agree on lives in `src/core/loader-contract.js`.
+
 # Two-context loader: sandbox and page
 
 ## Context

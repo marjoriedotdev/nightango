@@ -1,11 +1,14 @@
+import { startJournal } from './skin-journal.js';
+
 (function () {
   'use strict';
   if (window.__TORCH_SKIN__) return;
   window.__TORCH_SKIN__ = true;
-/*JOURNAL*/
-  var CSS = /*CSS*/;
-  var FONTS_CSS = /*FONTS_CSS*/;
-  var LOGIN_CSS = /*LOGIN_CSS*/;
+  startJournal();
+  // Stylesheets and, in boot, the design system and the application: inserted by the build (scripts/build.mjs).
+  var CSS = __SKIN_CSS__;
+  var FONTS_CSS = __FONTS_CSS__;
+  var LOGIN_CSS = __LOGIN_CSS__;
   var BETTER_CHATANGO_START = 'https://vissle.me/client/start';
 
   // Libraries checked by hash: a file modified on the CDN is not executed.
@@ -118,7 +121,6 @@
     });
 
   function boot() {
-/*BUNDLE*/
-/*APP*/
+    __TORCH_BOOT__();
   }
 })();
