@@ -1,5 +1,5 @@
 import { useEffect, useRef } from '../core/globals.js';
-import { CHATANGO_URL, MIN, dayKey, plural, shortDate, uid, unknownUserText } from '../core/util.js';
+import { CHATANGO_URL, dayKey, plural, shortDate, uid, unknownUserText } from '../core/util.js';
 import { plainOf } from '../core/draft.js';
 import { BETTER_CHATANGO_PREFS } from '../core/prefs.js';
 import { banListOf, isDmInView, isGroupInView, isNotifyingOnline, mentionsMe, pmEditTarget, premiumEndsSoon, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
@@ -214,9 +214,9 @@ export function useLiveOps(k) {
         groupUpdate(update, op.gid, function (g) { g.inited = true; });
         break;
       case 'info': groupUpdate(update, op.gid, function (g) {
-        if (op.title) { g.title = op.title; g.topic = op.description && op.description !== 'No description' ? op.description : op.title; }
+        if (op.title) { g.title = op.title; g.topic = op.description || op.title; }
         g.settings.overview.title = op.title || g.settings.overview.title;
-        g.settings.overview.description = op.description && op.description !== 'No description' ? op.description : '';
+        g.settings.overview.description = op.description;
       }); break;
       case 'denied': groupUpdate(update, op.gid, function (g) { g.inited = true; g.membersLoaded = true; }); break;
       case 'histEnd': groupUpdate(update, op.gid, function (g) { g.historyDone = true; g.loadingMore = false; }); break;
@@ -234,7 +234,7 @@ export function useLiveOps(k) {
         if (op.text) g.live.refused = op.text;
       }); break;
       // Raw length kept, end read as minutes like chadango: the longer reading, a message of the user that gets through ends the ban sooner.
-      case 'tempBan': groupUpdate(update, op.gid, function (g) { g.live.tempBan = { length: op.length, until: op.length ? Date.now() + op.length * MIN : 0 }; }); break;
+      case 'tempBan': groupUpdate(update, op.gid, function (g) { g.live.tempBan = { length: op.length, until: op.until }; }); break;
       case 'bans': groupUpdate(update, op.gid, function (g) { receiveBanPage(banListOf(g, op.kind), op); }); break;
       case 'banned': {
         var mine = op.ban.by === stateRef.current.me;

@@ -350,6 +350,12 @@ export function friendPresence(name, state, ts, minutes) {
   return { name: lower(name), status: status, lastOn: state === 'off' ? epochMs(ts) : 0, idleSince: status === 'idle' ? Date.now() - minutes * MIN : 0 };
 }
 /**
+ * Reads the title and description of a group, Chatango's No description placeholder read as no description.
+ * @param {string} title Title.
+ * @param {string} description Description.
+ */
+export function groupInfo(title, description) { return { title: title, description: description === 'No description' ? '' : description }; }
+/**
  * Reads the presence frame: name, minutes and state of each person.
  * When offline, the minutes are not idle time: they serve as an approximate last online time.
  * @param {Array<string>} data Frame split on :, three fields per person.

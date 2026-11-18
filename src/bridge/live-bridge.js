@@ -1,5 +1,5 @@
-import { CONFIRM_TIMEOUT, esc, lower, uid, unquote, warn } from '../core/util.js';
-import { MINI_CSS_MAX_LENGTH, PM_SETTING_NAMES, VISSLE_UPLOAD, epochMs, friendPresence, miniStyleOfForm, notNone, parseBanSearch, parseBans, parseBlocked, parseMiniCss, parseModLog, parseMods, parseMsgBg, parseParticipants, parsePmSettings, parsePresence, parseProfileReply, parseUnbanned, parseVisits, parseWho, pmFrame, pmRecordEntry, postRefusal, screenPmRecords, sessionOf, spellingOf, stateOf } from './live-parse.js';
+import { CONFIRM_TIMEOUT, MIN, esc, lower, uid, unquote, warn } from '../core/util.js';
+import { MINI_CSS_MAX_LENGTH, PM_SETTING_NAMES, VISSLE_UPLOAD, epochMs, friendPresence, groupInfo, miniStyleOfForm, notNone, parseBanSearch, parseBans, parseBlocked, parseMiniCss, parseModLog, parseMods, parseMsgBg, parseParticipants, parsePmSettings, parsePresence, parseProfileReply, parseUnbanned, parseVisits, parseWho, pmFrame, pmRecordEntry, postRefusal, screenPmRecords, sessionOf, spellingOf, stateOf } from './live-parse.js';
 import { JOURNAL, LIVE, betterChatangoRefs, showInterface } from '../core/env.js';
 import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNELS, GENDER_LABEL, MEET_PAGE, MSG_FLAG, PM_CONNECTION, badgeRoleOf, channelOf, isGuest, isTempMsgId, tempMsgId } from '../core/chatango.js';
 import { MEDIA_PAGE, mediaEntryOk, mediaMatch, screenMediaEntries } from '../core/media-library.js';
@@ -164,7 +164,7 @@ export var liveBridge = (function () {
         send(room, 'getannouncement', '');
         send(room, 'getratelimit', '');
         // BetterChatango loads the group title and description right after the connection.
-        setTimeout(function () { var info = roomInfo(room); if (info) emit({ op: 'info', gid: room, title: info.title, description: info.description }); }, 3000);
+        setTimeout(function () { var info = roomInfo(room); if (info) emit(Object.assign({ op: 'info', gid: room }, groupInfo(info.title, info.description))); }, 3000);
         break;
       case 'nomore': emit({ op: 'histEnd', gid: room }); break;
       case 'gotmore': emit({ op: 'moreLoaded', gid: room }); break;
@@ -205,7 +205,7 @@ export var liveBridge = (function () {
       }
       case 'miu': delete msgBgCache[lower(data[0])]; emit({ op: 'msgBgStale', name: lower(data[0]) }); break;
       case 'updateprofile': profileChanged(data[0]); break;
-      case 'updgroupinfo': emit({ op: 'info', gid: room, title: unquote(data[0]), description: unquote(data.slice(1).join(':')) }); break;
+      case 'updgroupinfo': emit(Object.assign({ op: 'info', gid: room }, groupInfo(unquote(data[0]), unquote(data.slice(1).join(':'))))); break;
       case 'denied':
         // Neither inited nor participants will arrive: the message log and the members stop waiting.
         emit({ op: 'denied', gid: room });
@@ -214,11 +214,20 @@ export var liveBridge = (function () {
       case 'addmoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to add this moderator. Check the username and try again.', tone: 'error' }); break;
       case 'updatemoderr': emit({ op: 'notice', gid: room, text: "Chatango refused to change this moderator's permissions.", tone: 'error' }); break;
       case 'removemoderr': emit({ op: 'notice', gid: room, text: 'Chatango refused to remove this moderator.', tone: 'error' }); break;
-      // Unit unconfirmed: chadango reads minutes, its own show_nlp_tb:3:900 sample suggests seconds.
-      case 'show_tb': case 'tb': case 'nlptb': emit({ op: 'tempBan', gid: room, length: parseInt(data[0], 10) || 0 }); break;
-      case 'show_nlp_tb': emit({ op: 'tempBan', gid: room, length: parseInt(data[1], 10) || 0 }); break;
+      case 'show_tb': case 'tb': case 'nlptb': emit(tempBan(room, data[0])); break;
+      case 'show_nlp_tb': emit(tempBan(room, data[1])); break;
       default: break;
     }
+  }
+  /**
+   * Reads the length of a temporary posting ban, 0 for one without an end.
+   * Unit unconfirmed: chadango reads minutes, its own show_nlp_tb:3:900 sample suggests seconds. Read as minutes, the end can come later than the real one, never earlier.
+   * @param {string} gid Group.
+   * @param {string} length Length field of the frame.
+   */
+  function tempBan(gid, length) {
+    var n = parseInt(length, 10) || 0;
+    return { op: 'tempBan', gid: gid, length: n, until: n ? Date.now() + n * MIN : 0 };
   }
   function tapPrivate(name, data) {
     switch (name) {
