@@ -52,7 +52,7 @@ src/
     season (decorations of a season, New Year countdown and fireworks), pip (conversation popped out into a floating window), pip-window (the floating window itself: opening, closing, Pop out item, rendering in it),
     spaces (spaces, their bar under Search or jump to, their editor), voice (voice message recording of the composers and its WAV file),
     gif (GIF tab of the emoji and media picker), shared-media (media and links of a group or a PM),
-    discover (with the joined, owned and recent groups), palette (Ctrl K), session (session loss dialog, banner of a lost connection)
+    discover (with the joined, owned and recent groups), palette (Ctrl K), session (session loss dialog and banner, banner of each lost connection, sessionDown)
   settings/   settings
     kit (page frame and navigation, preferences, BetterChatango settings, shared rows), shell (navigation and router: picks the live variant of a page),
     profile (Visitors and vissle tracker included), appearance, notifications, privacy (Chatango account PM settings included, and Safety),

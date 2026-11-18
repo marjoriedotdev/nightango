@@ -1,6 +1,6 @@
 import { T, h, useEffect, useState } from '../core/globals.js';
 import { cx } from '../core/util.js';
-import { CONN_DONE_MS, CONN_LEAVE_MS, Dialog, useApp } from '../core/ui.js';
+import { Dialog, useApp } from '../core/ui.js';
 import { LIVE } from '../core/env.js';
 import { PM_CONNECTION } from '../core/chatango.js';
 /* ---------- Session loss ---------- */
@@ -35,12 +35,17 @@ function anyConnecting(s) {
  * Tells whether the connection to Chatango is lost, which SessionBanner shows without blocking the interface.
  * @param {Object} s Application state.
  */
-export function sessionLost(s) { return !!(LIVE && s.auth.loggedIn && s.session && s.session.reason === 'lost'); }
+function sessionLost(s) { return !!(LIVE && s.auth.loggedIn && s.session && s.session.reason === 'lost'); }
 /**
  * Tells whether the session loss blocks the interface with its dialog.
  * @param {Object} s Application state.
  */
 export function sessionBlocks(s) { return !!(s.auth.loggedIn && s.session && s.session.reason !== 'lost'); }
+/**
+ * Tells whether the session loss shows, as its banner or its dialog: the banner of each connection then gives way to it.
+ * @param {Object} s Application state.
+ */
+export function sessionDown(s) { return sessionLost(s) || sessionBlocks(s); }
 
 /**
  * Blocking session loss dialog: signed in somewhere else, session expired, offline.
@@ -146,4 +151,57 @@ function CountdownRing(p) {
   return h('svg', { className: 'countdown-ring', width: 16, height: 16, viewBox: '0 0 16 16', 'aria-hidden': 'true' },
     h('circle', { className: 'countdown-ring-track', cx: 8, cy: 8, r: 6.5 }),
     h('circle', { className: 'countdown-ring-arc', cx: 8, cy: 8, r: 6.5, pathLength: 100, strokeDasharray: 100, strokeDashoffset: 100 * (1 - lit) }));
+}
+var CONN_COPY = {
+  trying: { title: 'Reconnecting to ', text: 'Messages you send now may not arrive.' },
+  done: { title: 'Reconnected to ', text: null },
+  failed: { title: "Couldn't reconnect to ", text: 'Try again, or reload the page if it keeps failing.' }
+};
+/**
+ * Returns the phase the connection banner moves to from the one it shows.
+ * A first connection has no sequence of attempts and shows nothing.
+ * @param {{conn: string, retrying: boolean}} p Connection state and sequence of automatic attempts in progress.
+ * @param {?string} phase Phase shown: trying, done, failed, leaving or null.
+ * @returns {?string}
+ */
+function connPhase(p, phase) {
+  if (p.conn === 'open') return phase === 'trying' || phase === 'failed' ? 'done' : phase;
+  if (p.retrying) return 'trying';
+  if (p.conn === 'closed') return 'failed';
+  return phase ? 'trying' : null;
+}
+/**
+ * Banner of a lost live connection: one block whose icon and text change in place from reconnecting to reconnected, then folds away, or to failed.
+ * @param {{name: string, conn: string, retrying: boolean, onRetry: Function, inset: number=}} p Named connection (#group or private messages), its state, its automatic attempts, a new sequence of attempts and the side margin.
+ */
+export function ConnectionBanner(p) {
+  var st = useState(function () { return connPhase(p, null); }), phase = st[0], setPhase = st[1];
+  var next = connPhase(p, phase);
+  if (next !== phase) setPhase(next);
+  useEffect(function () {
+    if (phase !== 'done' && phase !== 'leaving') return;
+    var t = setTimeout(function () { setPhase(phase === 'done' ? 'leaving' : null); }, phase === 'done' ? CONN_DONE_MS : CONN_LEAVE_MS);
+    return function () { clearTimeout(t); };
+  }, [phase]);
+  if (!next) return null;
+  var shown = next === 'leaving' ? 'done' : next, copy = CONN_COPY[shown];
+  return h('div', { className: cx('conn-banner', next === 'leaving' && 'conn-banner-leaving'), 'data-phase': shown, role: 'status', style: p.inset != null ? { marginLeft: p.inset, marginRight: p.inset } : null },
+    h('div', { className: 'conn-banner-clip' }, h(T.Banner, {
+      icon: h(ConnectionIcon),
+      title: h('span', { key: shown, className: 'conn-fade' }, copy.title + p.name),
+      action: shown === 'failed' ? h('span', { className: 'conn-banner-actions conn-fade' },
+        h(T.Button, { size: 'sm', variant: 'ghost', onClick: p.onRetry }, 'Try again'),
+        h(T.Button, { size: 'sm', onClick: function () { location.reload(); } }, 'Reload')) : null
+    }, copy.text ? h('span', { key: shown, className: 'conn-fade' }, copy.text) : null)));
+}
+var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;
+/**
+ * Icon of the connection banner. The three icons stay stacked so that the phase cross-fades them in CSS.
+ */
+function ConnectionIcon() {
+  return h('span', { className: 'conn-icon' },
+    h('span', { className: 'conn-icon-spin' }, h(T.Spinner, { size: 16 })),
+    h('span', { className: 'conn-icon-check' }, h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true' },
+      h('path', { d: 'M20 6 9 17l-5-5', pathLength: 1 }))),
+    h('span', { className: 'conn-icon-alert' }, h(T.Icon, { name: 'alert', size: 16 })));
 }

@@ -2,7 +2,7 @@ import { Frag, React, T, h, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { copyText, cx, dayKey, dayLabel, lastMatch, plural } from '../core/util.js';
 import { accentOf, accentScope } from '../core/colors.js';
 import { ROLE_LONG } from '../core/roles.js';
-import { AccentSwatches, ConnectionBanner, Dialog, MenuButton, groupDraftKey, presenceSr, roleBadge, useApp, useDraft, useLatestCalls, useRightColumn } from '../core/ui.js';
+import { AccentSwatches, Dialog, MenuButton, groupDraftKey, presenceSr, roleBadge, useApp, useDraft, useLatestCalls, useRightColumn } from '../core/ui.js';
 import { badgeChoices, canBanMember, findMsg, groupRights, isHiddenAuthor, isStaffRole, messageBadge, msgFinder, roleOf, sentBadge, shownName, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { MessageEmbeds, MessageRow, canEditGroupMessage, continues, editedId, groupRowFill, joinRow, mentionHandle, quoteOf } from './message.js';
@@ -12,7 +12,7 @@ import { popOutItem } from './pip-window.js';
 import { spacesItem } from './spaces.js';
 import { SharedMediaDialog } from './shared-media.js';
 import { confirmLeave } from './commands.js';
-import { SessionBanner, sessionLost } from './session.js';
+import { ConnectionBanner, SessionBanner, sessionDown } from './session.js';
 import { LIVE } from '../core/env.js';
 import { CHANNELS, channelLabel, chatangoPageUrl, isGuest } from '../core/chatango.js';
 import { MobileNavButton, favoriteItem, paneCloseButton } from './chrome.js';
@@ -241,7 +241,7 @@ export function GroupView(p) {
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       // One banner for a lost connection, in the main pane: it takes the place of the banner of each group.
       inMain ? h(SessionBanner, null) : null,
-      LIVE && g.conn && !sessionLost(app.state) ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
+      LIVE && g.conn && !sessionDown(app.state) ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
     column.open ? h(MembersPanel, { g: g }) : null,
     infoOpen ? h(GroupInfoSheet, { g: g, onClose: function () { setInfoOpen(false); } }) : null,

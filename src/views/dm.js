@@ -1,6 +1,6 @@
 import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { cx, dayKey, dayLabel, fmtTime, lastMatch, warn } from '../core/util.js';
-import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useOutside, useRightColumn, useRowBatches, useStatePart, useWideLayout } from '../core/ui.js';
+import { DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useOutside, useRightColumn, useRowBatches, useStatePart, useWideLayout } from '../core/ui.js';
 import { bidiText } from '../core/rich-text.js';
 import { THREAD_MAX, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, shownName, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
@@ -11,7 +11,7 @@ import { inCurrentSpace, spacesItem } from './spaces.js';
 import { MeetPeople } from './meet.js';
 import { ProfilePanel } from './profile.js';
 import { SharedMediaDialog } from './shared-media.js';
-import { SessionBanner } from './session.js';
+import { ConnectionBanner, SessionBanner, sessionDown } from './session.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, PM_CONNECTION } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
@@ -89,7 +89,7 @@ export function DMView(p) {
  */
 function pmConnBanner(app, inset) {
   var s = app.state;
-  if (!LIVE || !s.pmLoaded || !s.pmConn || s.session) return null;
+  if (!LIVE || !s.pmLoaded || !s.pmConn || sessionDown(s)) return null;
   return h(ConnectionBanner, { name: 'private messages', conn: s.pmConn, retrying: !!s.retrying.private_message, inset: inset, onRetry: function () { app.actions.retryConnection(PM_CONNECTION); } });
 }
 
