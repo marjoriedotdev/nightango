@@ -10,7 +10,7 @@ import { isGuest } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
 import { beep } from '../core/sound.js';
 import { openPipWindow } from '../views/pip-window.js';
-/* ---------- Inbox: messages received and read ---------- */
+// -- Inbox: messages received and read ----------------------------------------
 var MENTION_MAX = 100;
 /**
  * Records for the Mentions page a group message that mentions the user with the newest first.

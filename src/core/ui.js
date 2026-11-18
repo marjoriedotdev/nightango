@@ -1,7 +1,7 @@
 import { Frag, React, T, h, useContext, useEffect, useRef, useState, useSyncExternalStore } from './globals.js';
 import { MIN } from './util.js';
 import { ACCENTS, onAccentOf } from './colors.js';
-/* ---------- Context and UI primitives ---------- */
+// -- Context and UI primitives ------------------------------------------------
 export var Ctx = React.createContext(null);
 export function useApp() { return useContext(Ctx); }
 // The parts of the application context that stay the same object for the whole session.
@@ -69,7 +69,6 @@ export function useLatestCalls(fns) {
 
 /* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
 
-
 export var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
 
 /**
@@ -129,7 +128,6 @@ export function useRowBatches(rootRef, keys, reset) {
   return { limit: limit, sentinel: more ? h('div', { ref: sentinelRef, 'aria-hidden': 'true', style: { height: 1 } }) : null };
 }
 
-
 // Only breakpoint of the right column: app.css does not repeat it, the column is only rendered above it.
 var NARROW_LAYOUT = '(max-width:1180px)';
 /**
@@ -154,8 +152,6 @@ export function useRightColumn(openFull) {
   var b = useState(true), shown = b[0], setShown = b[1];
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
-
-
 
 /* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch, presence}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
 

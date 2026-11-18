@@ -13,7 +13,7 @@ import { AvatarCropDialog } from './avatar-crop.js';
 import { LIVE } from '../core/env.js';
 import { GENDER_LABEL, genderCode } from '../core/chatango.js';
 import { Page, chatangoLink, useBetterChatangoSettings } from './kit.js';
-/* ---------- Account settings in live mode ---------- */
+// -- Profile, privacy, account and Premium pages of live ----------------------
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
 
 var AVATAR_TYPES = 'image/jpeg,image/png,image/gif';
@@ -186,7 +186,6 @@ function MiniBackgroundSection(p) {
             h(T.Checkbox, { label: 'Tile down', checked: st.tileDown, onChange: function (e) { p.onChange('tileDown', e.target.checked); } }),
             h(T.Checkbox, { label: 'Tile across', checked: st.tileAcross, onChange: function (e) { p.onChange('tileAcross', e.target.checked); } }))));
 }
-
 
 var PMR_STATUS = {
   ok: 'vissle sees no restriction on your private messages.',

@@ -5,8 +5,7 @@ import { groupRouteAt, isHiddenAuthor } from '../core/selectors.js';
 import { SessionBanner } from './session.js';
 import { pageHeader } from './chrome.js';
 import { MessageEntry } from './people.js';
-/* ---------- Mentions ---------- */
-
+// -- Mentions -----------------------------------------------------------------
 
 export function MentionsView() {
   var app = useApp(), s = app.state;

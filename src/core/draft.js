@@ -1,4 +1,4 @@
-/* ---------- State drafts: copy on write ---------- */
+// -- State drafts: copy on write ----------------------------------------------
 // Key under which a draft proxy gives its node: a symbol never collides with a state key.
 export var DRAFT = Symbol('draft');
 // Array methods that only move elements: they run on the copy itself, without a draft for each element.

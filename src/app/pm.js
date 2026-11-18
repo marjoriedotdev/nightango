@@ -5,7 +5,7 @@ import { liveBridge } from '../bridge/live-bridge.js';
 import { applyEdit, ensureLiveUser, pmAuthor } from './live-state.js';
 import { LIVE } from '../core/env.js';
 import { MEET_PAGE } from '../core/chatango.js';
-/* ---------- PMs: conversations, unreads and private history ---------- */
+// -- PMs: conversations, unreads and private history --------------------------
 
 /**
  * BetterChatango PM archive in live: BetterChatango writes each PM to it itself, the bridge marks it read and counts the unreads in it.

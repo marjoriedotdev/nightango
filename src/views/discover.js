@@ -5,7 +5,7 @@ import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, chatangoPageUrl, parseGroupName } from '../core/chatango.js';
 import { pageHeader } from './chrome.js';
 import { Dialog } from '../core/layers.js';
-/* ---------- Discover ---------- */
+// -- Discover -----------------------------------------------------------------
 /**
  * Rejects a group missing from the sample data in the prototype.
  * @param {Object} s Application state.

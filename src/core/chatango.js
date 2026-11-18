@@ -35,7 +35,6 @@ export function profileImgSrc(name, file) {
  */
 export function avatarSrc(name, size) { return profileImgSrc(name, (size || 36) <= 24 ? 'thumb' : 'thumb_m'); }
 
-
 /**
  * Builds the address of a Chatango group or profile.
  * @param {string} name Group or account name.

@@ -66,7 +66,6 @@ export function memberLink(app, url, gid, key) {
   return h('a', { key: key, href: url, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', dir: 'ltr', onClick: profile ? onProfileLink(app, url, profile, gid) : warnOnLink(app, url) }, url);
 }
 
-
 // Like BetterChatango's rendering: "@name: `text`" is a quote and does not cross a line break.
 var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
 // The same quote as one group, for splitting plain text.

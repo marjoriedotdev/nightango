@@ -4,7 +4,7 @@ import { paneShown } from '../core/selectors.js';
 import { closePipWindow, pipOpen, renderInPip } from './pip-window.js';
 import { SidePane } from './shell.js';
 import { Layers } from '../core/layers.js';
-// -- Floating conversation -----------------------------------------------------
+// -- Floating conversation ----------------------------------------------------
 
 /**
  * Renders the popped out conversation into the floating window, with the contexts of the application.

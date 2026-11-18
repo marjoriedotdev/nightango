@@ -4,7 +4,7 @@ import { useApp } from '../core/ui.js';
 import { LIVE } from '../core/env.js';
 import { PM_CONNECTION } from '../core/chatango.js';
 import { Dialog } from '../core/layers.js';
-/* ---------- Session loss ---------- */
+// -- Session loss -------------------------------------------------------------
 var SESSION_ATTEMPTS = 3;
 // A lost connection has no dialog: it shows in SessionBanner.
 var SESSION_COPY = {

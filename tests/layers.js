@@ -55,7 +55,7 @@ function Harness() {
     h(ui.Toasts, { toasts, dismiss: id => setToasts(list => list.filter(t => t.id !== id)) }));
 }
 
-/* ---------- Helpers ---------- */
+// -- Helpers ------------------------------------------------------------------
 const flush = () => new Promise(r => setTimeout(r, 30));
 /**
  * Moves the clock forward and runs the timers due on the way.

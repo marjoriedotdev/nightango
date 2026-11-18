@@ -3,7 +3,7 @@ import { isPaneOpen } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SESSION_RANK } from './live-state.js';
 import { PM_CONNECTION } from '../core/chatango.js';
-/* ---------- Reconnection of the live connections ---------- */
+// -- Reconnection of the live connections -------------------------------------
 // Delays of the attempts that follow a connection loss: the first one starts right away, the next ones leave a Chatango restart time to finish.
 var RECONNECT_DELAYS = [0, 10000, 30000];
 /**

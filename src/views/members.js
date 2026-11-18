@@ -97,16 +97,7 @@ export function GroupInfoSheet(p) {
       h(MembersList, { g: g, scrollRef: scrollRef })));
 }
 
-/* ---------- Member profile ---------- */
-
-
-
-
-
-
-
-
-
+// -- Member profile -----------------------------------------------------------
 
 /**
  * Member profile dialog.

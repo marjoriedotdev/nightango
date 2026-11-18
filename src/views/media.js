@@ -2,7 +2,7 @@ import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { cx, downloadJson, plural, readJsonArray } from '../core/util.js';
 import { JsonFileButton, LOAD_BELOW_MARGIN, useApp, useAppApi, useInfiniteScroll, useStatePart } from '../core/ui.js';
 import { waitsForClick } from '../core/rich-text.js';
-/* ---------- BetterChatango media library ---------- */
+// -- BetterChatango media library ---------------------------------------------
 var MEDIA_SORTS = [{ value: 'name', label: 'Name' }, { value: 'url', label: 'Link' }];
 // Like BetterChatango's completion (searchMedia with auto): three media at most.
 var MEDIA_SUGGESTIONS = 3;

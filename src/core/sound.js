@@ -1,5 +1,5 @@
 import { LIVE } from './env.js';
-/* ---------- Sound ---------- */
+// -- Sound --------------------------------------------------------------------
 var audioCtx = null, userInteracted = false;
 ['pointerdown', 'keydown'].forEach(function (ev) { window.addEventListener(ev, function () { userInteracted = true; }, { once: true, capture: true }); });
 export function beep(volume) {

@@ -6,7 +6,7 @@ import { mediaLink } from './message.js';
 import { MediaThumb, mediaThumbShown } from './media.js';
 import { mediaLinks, textLinks } from '../core/message-content.js';
 import { Dialog } from '../core/layers.js';
-/* ---------- Media and links of a conversation ---------- */
+// -- Media and links of a conversation ----------------------------------------
 // Embed kinds by filter: YouTube and TikTok are videos as much as a video file.
 var SHARED_KINDS = { image: 'images', video: 'videos', youtube: 'videos', tiktok: 'videos', audio: 'audio', x: 'posts', link: 'links' };
 var SHARED_FILTERS = [['all', 'All'], ['images', 'Images'], ['videos', 'Videos'], ['audio', 'Audio'], ['posts', 'Posts'], ['links', 'Links']];

@@ -21,7 +21,7 @@ import { ConversationComposer, EDIT_MAX, useComposerMode } from './composer.js';
 import { DraftMark, dmDraftKey, showsDraft, useDraft, useDraftMarks } from '../core/drafts.js';
 import { MenuButton, menuGroups, useOutside } from '../core/layers.js';
 import { Person, presenceSr } from '../core/people-ui.js';
-/* ---------- Private messages ---------- */
+// -- Private messages ---------------------------------------------------------
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };
 export function DMView(p) {

@@ -28,7 +28,7 @@ import { PipHost } from '../views/pip.js';
 import { SEASONS, seasonOf, skyAt } from '../core/season.js';
 import { draftStore } from '../core/drafts.js';
 import { ConfirmDialog, Layers, Toasts } from '../core/layers.js';
-/* ---------- Root ---------- */
+// -- Root ---------------------------------------------------------------------
 /**
  * Returns the first stable version of a list of release tags.
  * @param {Array} tags Tags newest first, untrusted.

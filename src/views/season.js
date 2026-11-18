@@ -3,7 +3,7 @@ import { MIN, cx } from '../core/util.js';
 import { useApp } from '../core/ui.js';
 import { ROOT_EL } from '../core/env.js';
 import { newYearAt } from '../core/season.js';
-// -- Seasonal decorations ------------------------------------------------------
+// -- Seasonal decorations -----------------------------------------------------
 
 var BAT_PATH = 'M22 5 21 1.5 23 3.5h2l2-2L26 5c6-3 14-4 22 1-3 .5-6 1-8 4-2-2-6-2-8 1-2-1-5 0-6 3q-2 4-4 0c-1-3-4-4-6-3-2-3-6-3-8-1-2-3-5-3.5-8-4 8-5 16-4 22-1z';
 var HEART_PATH = 'M6 10.5C2.5 8 0 5.8 0 3.2 0 1.4 1.4 0 3.1 0 4.3 0 5.4.7 6 1.7 6.6.7 7.7 0 8.9 0 10.6 0 12 1.4 12 3.2c0 2.6-2.5 4.8-6 7.3z';

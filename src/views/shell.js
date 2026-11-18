@@ -16,9 +16,7 @@ import { favoriteItem } from './chrome.js';
 import { DraftMark, dmDraftKey, groupDraftKey, showsDraft, useDraftMarks } from '../core/drafts.js';
 import { MenuButton } from '../core/layers.js';
 import { presenceSr } from '../core/people-ui.js';
-/* ---------- Application shell ---------- */
-
-
+// -- Application shell --------------------------------------------------------
 
 // Memoized: Root renders again for its toasts and dialogs, which leave the shell alone.
 export var Shell = React.memo(function Shell() {
@@ -52,7 +50,6 @@ export function SidePane(p) {
   return h('div', { key: key, className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: r.id, role: p.role }));
 }
 
-
 /**
  * Menu entry that opens a conversation beside the main one, absent where two panes do not fit.
  * @param {Object} app Application context.
@@ -62,7 +59,6 @@ export function SidePane(p) {
 function splitItem(app, wide, route) {
   return wide && !isPaneOpen(app.state, route.view, route.id) ? { label: 'Open side by side', icon: 'panel', onSelect: function () { app.actions.openSplit(route); } } : null;
 }
-
 
 // Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames). The startup screen leaves New Year out.
 function BrandMark(p) {

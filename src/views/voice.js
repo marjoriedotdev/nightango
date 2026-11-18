@@ -2,7 +2,7 @@ import { T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
 import { warn } from '../core/util.js';
 import { MenuButton } from '../core/layers.js';
-/* ---------- Voice messages ---------- */
+// -- Voice messages -----------------------------------------------------------
 // 16 kHz mono 16-bit PCM: about 32 KB per second, under 2 MB for the longest message.
 export var VOICE_MAX_S = 60, VOICE_RATE = 16000;
 

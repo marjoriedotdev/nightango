@@ -20,7 +20,7 @@ import { ConversationComposer, EDIT_MAX, useComposerMode } from './composer.js';
 import { groupDraftKey, useDraft } from '../core/drafts.js';
 import { Dialog, MenuButton } from '../core/layers.js';
 import { presenceSr, roleBadge } from '../core/people-ui.js';
-/* ---------- Group ---------- */
+// -- Group --------------------------------------------------------------------
 // BetterChatango's limit for a group, counted on the body it builds and not on the typed text.
 var GROUP_MESSAGE_MAX = 2900;
 // From the @ on, like Discord. A Chatango name has 20 characters at most.
@@ -49,8 +49,6 @@ function ComposerLimit(p) {
   if (!text) return null;
   return h(Frag, null, banned || wait && cd.refused ? h(T.Icon, { name: 'alert', size: 14, className: 'limit-alert' }) : null, text);
 }
-
-
 
 export function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;

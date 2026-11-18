@@ -1,7 +1,7 @@
 import { h, useEffect, useRef, useState } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
 import { LIVE } from '../core/env.js';
-/* ---------- Composer file upload ---------- */
+// -- Composer file upload -----------------------------------------------------
 // Types offered by BetterChatango's Upload window (inject.js:7552).
 var UPLOAD_TYPES = '.png, .apng, .jpg, .jpeg, .gif, .bmp, .webp, .mp3, .ogg, .wav, .mp4, .wmv, .webm';
 var UPLOAD_ICONS = { image: 'image', video: 'play', audio: 'volume' };

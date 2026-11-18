@@ -14,7 +14,7 @@ import { messagePreview } from '../core/message-content.js';
 import { readOwn, writeOwn } from '../core/account-store.js';
 import { setIn } from '../settings/kit.js';
 import { newWorld } from './state.js';
-/* ---------- Live operations: what the bridge emits, applied to the state ---------- */
+// -- Live operations: what the bridge emits, applied to the state -------------
 /**
  * Hands each bridge operation to the handler of the latest render.
  * The operations received after login wait for its first render: until then they would read the signed-out state, without groups, users or route.

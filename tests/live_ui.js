@@ -45,7 +45,7 @@ w.ResizeObserver = function () { return { observe() {}, disconnect() {} }; };
 // The bridge polls BetterChatango's sockets every 2 s: the sign-in also runs a poll at a chosen moment.
 let pollSockets = null;
 
-/* ---------- Fake BetterChatango client ---------- */
+// -- Fake BetterChatango client -----------------------------------------------
 const sent = [], posts = [], calls = [];
 // Archive targets of the sent PMs, read by the bridge on reload.
 const sentPmArchive = [];
@@ -295,7 +295,7 @@ w.localStorage.setItem('torch-skin:marjorie', JSON.stringify({ fav: { test: true
 w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
 
-/* ---------- Clock ---------- */
+// -- Clock --------------------------------------------------------------------
 // The app timers and Date.now follow real time on a clock that skip moves forward. React, loaded above, keeps the real timers.
 // A time the test hands to the app is read on this clock too: Node's own Date.now falls behind it at each skip.
 const nativeSetTimeout = w.setTimeout.bind(w), nativeClearTimeout = w.clearTimeout.bind(w);
@@ -344,7 +344,7 @@ w.clearTimeout = w.clearInterval = id => { const t = timers.get(id); if (t) { na
 w.eval(fs.readFileSync(S + '/torchds/project/components/bundle.js', 'utf8'));
 w.eval(fs.readFileSync(S + '/dist/app.js', 'utf8'));
 
-/* ---------- Helpers ---------- */
+// -- Helpers ------------------------------------------------------------------
 const wait = ms => new Promise(r => setTimeout(r, ms));
 // At the limit, returns without an error: the next step judges and gives its detail.
 const until = async (cond, ms = 5000) => { for (const end = Date.now() + ms; !cond() && Date.now() < end;) await wait(10); };

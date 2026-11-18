@@ -1,7 +1,7 @@
 import { dmNameError } from './new-dm.js';
 import { unknownGroupError } from './discover.js';
 import { parseGroupName } from '../core/chatango.js';
-/* ---------- Composer commands ---------- */
+// -- Composer commands --------------------------------------------------------
 // BetterChatango's /background and /style stay plain messages until #70 and #71 give them an equivalent.
 var COMMANDS = {
   '/join': { usage: '/join <group>', text: 'Joins a group by its name.' },

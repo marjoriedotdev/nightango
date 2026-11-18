@@ -13,7 +13,7 @@ const log = [];
  */
 function step(name, ok, detail) { log.push((ok ? 'ok   ' : 'FAIL ') + name + (ok || detail === undefined ? '' : ' -> ' + JSON.stringify(detail))); }
 
-/* ---------- Call sites of src/ ---------- */
+// -- Call sites of src/ -------------------------------------------------------
 const DOC = fs.readFileSync(path.join(S, 'docs/betterchatango-protocol.md'), 'utf8');
 const LIST = (/^## Allowed HTTP calls\n([\s\S]*?)^#/m.exec(DOC) || [])[1] || '';
 const SOURCES = fs.readdirSync(path.join(S, 'src'), { recursive: true }).sort()
@@ -138,7 +138,7 @@ step('the userscript grants GM_xmlhttpRequest only and connects only to the host
   JSON.stringify(tags('grant')) === '["GM_xmlhttpRequest"]' && JSON.stringify(tags('connect').sort()) === JSON.stringify(Object.keys(CONNECT).sort())
     && Object.values(CONNECT).every(t => LIST.includes(t)), { grant: tags('grant'), connect: tags('connect') });
 
-/* ---------- Post helper of the bridge ---------- */
+// -- Post helper of the bridge ------------------------------------------------
 const posts = [], journal = [];
 const CH = { path: (p, sub) => 'https://' + (sub ? sub + '.' : '') + 'chatango.com/' + p };
 const w = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', virtualConsole: new VirtualConsole() }).window;

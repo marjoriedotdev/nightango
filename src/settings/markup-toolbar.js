@@ -3,7 +3,7 @@ import { plural } from '../core/util.js';
 import { ColorField, useApp } from '../core/ui.js';
 import { FONT_FACES, FONT_STACKS } from '../core/chatango.js';
 import { Dialog, MenuButton } from '../core/layers.js';
-/* ---------- Formatting bar of the profile fields ---------- */
+// -- Formatting bar of the profile fields -------------------------------------
 
 // Sizes in pixels, as BetterChatango reads them (inject.js:656).
 var TEXT_SIZES = [['Small', 11], ['Large', 18], ['Huge', 24]];

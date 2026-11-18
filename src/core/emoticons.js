@@ -1,4 +1,4 @@
-// -- Emoticons ---------------------------------------------------------------
+// -- Emoticons ----------------------------------------------------------------
 
 // BetterChatango emoticons in the order of client.html: sm:// tag name, data-entity shortcuts (the first is the one BetterChatango inserts), system emoji.
 export var EMOTICONS = [

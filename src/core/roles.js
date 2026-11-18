@@ -1,4 +1,4 @@
-/* ---------- Data ---------- */
+// -- Roles and rights ---------------------------------------------------------
 export var PERMS = [
   { key: 'seeCounter', group: 'Visibility', title: 'See the member count', desc: 'Shows how many people are in the group, guests included.' },
   { key: 'seeIps', group: 'Visibility', title: 'See IP addresses', desc: 'Shows the IP behind each message. Needed to ban people who come back under another name.', sensitive: true },

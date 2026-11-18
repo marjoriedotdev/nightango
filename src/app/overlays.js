@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from '../core/globals.js';
 import { uid } from '../core/util.js';
-/* ---------- Overlays: toasts, dialogs and navigation drawer ---------- */
+// -- Overlays: toasts, dialogs and navigation drawer --------------------------
 /**
  * Toasts, dialogs and navigation drawer that the views open through ui.
  * @returns {Object} toast, ui, the navigation drawer, the open dialogs and the toasts with their setters.

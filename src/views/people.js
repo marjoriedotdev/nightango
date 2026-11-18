@@ -8,7 +8,7 @@ import { useApp, useMinute, useShownUsers } from '../core/ui.js';
 import { ago, dayKey, dayLabel, elapsedShort, fmtTime, ownOf } from '../core/util.js';
 import { favoriteItem } from './chrome.js';
 import { developerBadge, premiumBadge, presenceSr, youBadge } from '../core/people-ui.js';
-// -- People --------------------------------------------------------------------
+// -- People -------------------------------------------------------------------
 /**
  * Writes a member's presence with their last online time when it is known.
  * @param {Object} u Member in the state.

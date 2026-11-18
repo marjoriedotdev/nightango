@@ -7,7 +7,7 @@ import { LIVE } from '../core/env.js';
 import { EMOTICONS, EMOTICON_BY_NAME } from '../core/emoticons.js';
 import { readOwn, writeOwn } from '../core/account-store.js';
 import { Portal, useFloating } from '../core/layers.js';
-/* ---------- Composer emoticon and media picker ---------- */
+// -- Composer emoticon and media picker ---------------------------------------
 var EMOJI_SECTIONS = [{ title: 'Classic', premium: false }, { title: 'Premium', premium: true }];
 var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'gif', label: 'GIF' }, { value: 'media', label: 'Media' }];
 var RECENT_EMOJI_MAX = 16;

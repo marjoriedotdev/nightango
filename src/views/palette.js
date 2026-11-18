@@ -3,7 +3,7 @@ import { useApp, useWideLayout } from '../core/ui.js';
 import { listedDms, shownName, statusLabel, userOf } from '../core/selectors.js';
 import { SETTINGS_NAV } from '../settings/shell.js';
 import { Dialog } from '../core/layers.js';
-/* ---------- Command palette ---------- */
+// -- Command palette ----------------------------------------------------------
 export function Palette(p) {
   var app = useApp(), s = app.state, wide = useWideLayout();
   var a = useState(''), q = a[0], setQ = a[1];

@@ -1,6 +1,6 @@
 import { Frag, T, h, useEffect, useLayoutEffect, useRef, useState } from '../core/globals.js';
 import { SkeletonRows, useApp, useInfiniteScroll } from '../core/ui.js';
-/* ---------- Message log ---------- */
+// -- Message log --------------------------------------------------------------
 // Distance from the bottom of a log under which it stays stuck to the bottom.
 var LOG_BOTTOM_SLACK = 48;
 

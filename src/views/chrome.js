@@ -2,7 +2,7 @@ import { T, h } from '../core/globals.js';
 import { unreadTotal } from '../core/selectors.js';
 import { useApp } from '../core/ui.js';
 import { closePipWindow } from './pip-window.js';
-// -- Pane chrome ---------------------------------------------------------------
+// -- Pane chrome --------------------------------------------------------------
 
 /**
  * Close button of a conversation shown beside the main pane or in the floating window, null in the main pane.

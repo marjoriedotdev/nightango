@@ -1,4 +1,4 @@
-/* ---------- Utilities ---------- */
+// -- Utilities ----------------------------------------------------------------
 export var MIN = 60000;
 export var CONFIRM_TIMEOUT = 8000;
 // The same code lives in both repositories, pushed by hand: GitHub first, GitLab kept in step.

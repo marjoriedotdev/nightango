@@ -8,7 +8,7 @@ import { LIVE } from '../core/env.js';
 import { GROUP_FLAG, PM_CONNECTION } from '../core/chatango.js';
 import { blankMirror, cleanAccount, readMirror, writeMirror } from '../core/account-store.js';
 import { newGroup, newUser } from './state.js';
-/* ---------- Live state: session, world and groups built for Root ---------- */
+// -- Live state: session, world and groups built for Root ---------------------
 // A session loss only gives way to a reason of equal or higher rank.
 export var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
 /**

@@ -1,5 +1,5 @@
 import { COLOR } from 'build:tokens';
-/* ---------- Colors ---------- */
+// -- Colors -------------------------------------------------------------------
 export function hexToRgb(hex) {
   var m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || '').trim());
   if (!m) return null;

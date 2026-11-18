@@ -3,7 +3,7 @@ import { pick, uid } from '../core/util.js';
 import { isNotifyingOnline, roleOf, shownName, userOf } from '../core/selectors.js';
 import { beep } from '../core/sound.js';
 import { LINES, MENTION_LINES, dmReply } from './sample-data.js';
-/* ---------- Prototype simulation: activity of the sample world ---------- */
+// -- Prototype simulation: activity of the sample world -----------------------
 /**
  * Simulates activity in the prototype: group messages and mentions, members joining and leaving, PMs, friends going online and offline. It renders nothing.
  * @param {{store: {state: Object, stateRef: Object, update: Function}, inbox: {receiveGroup: Function, receiveDm: Function}, toast: Function, actions: Object}} p

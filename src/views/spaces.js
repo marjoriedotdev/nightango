@@ -3,7 +3,7 @@ import { useApp } from '../core/ui.js';
 import { SPACE_MAX, SPACE_NAME_MAX } from '../core/account-store.js';
 import { Dialog, MenuButton } from '../core/layers.js';
 import { listedDms } from '../core/selectors.js';
-/* ---------- Spaces ---------- */
+// -- Spaces -------------------------------------------------------------------
 
 /**
  * Names a conversation inside a space.

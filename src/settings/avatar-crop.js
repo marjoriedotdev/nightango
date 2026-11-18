@@ -3,7 +3,7 @@ import { useApp } from '../core/ui.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { profileImgSrc } from '../core/chatango.js';
 import { Dialog } from '../core/layers.js';
-/* ---------- Profile picture cropping ---------- */
+// -- Profile picture cropping -------------------------------------------------
 // Smallest square in pixels of full.jpg, unless the image is smaller.
 var CROP_MIN = 32;
 

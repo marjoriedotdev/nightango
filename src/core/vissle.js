@@ -1,4 +1,4 @@
-// -- vissle ------------------------------------------------------------------
+// -- vissle -------------------------------------------------------------------
 // Profile activity that vissle tracks, shared by live and the sample visits of the prototype.
 
 var VISIT_LABEL = { log: 'visited', like: 'liked profile', dislike: 'disliked profile', msg: 'commented on', refer: 'referred by' };
