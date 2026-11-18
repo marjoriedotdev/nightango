@@ -15,7 +15,7 @@ import { NewDmDialog } from '../views/new-dm.js';
 import { CreateGroupDialog } from '../views/discover.js';
 import { Palette } from '../views/palette.js';
 import { SessionOverlay, sessionBlocks } from '../views/session.js';
-import { PREFS_KEY, initialState } from './state.js';
+import { PREFS_KEY, initialState, upgradeSavedState } from './state.js';
 import { IDLE_DELAY, useLocalStore, usePrunedUsers } from './live-state.js';
 import { useLivePms } from './pm.js';
 import { useOverlays } from './overlays.js';
@@ -141,7 +141,7 @@ function appStore(initial) {
  */
 function useAppState(host) {
   var boot = host.state;
-  var store = useState(function () { return appStore(boot && boot.auth ? boot : initialState()); })[0];
+  var store = useState(function () { return appStore(boot && boot.auth ? upgradeSavedState(boot) : initialState()); })[0];
   var state = useSyncExternalStore(store.subscribe, store.shown);
   useEffect(function () {
     if (host.snapshot) host.snapshot(function () { return { state: store.ref.current }; });

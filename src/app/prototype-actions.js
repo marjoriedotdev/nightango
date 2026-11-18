@@ -89,10 +89,11 @@ export function prototypeActions(k) {
       var s0 = stateRef.current, out = [];
       Object.keys(s0.dms).forEach(function (t) {
         // The last received messages are the unread ones, as many as the archive counts (ADR-0012).
-        var c = s0.dms[t], got = c.messages.filter(function (m) { return m.author === t; }), firstUnread = got[got.length - c.unread];
+        // The archive can count more unreads than the log keeps once the log was emptied: every received message is then unread.
+        var c = s0.dms[t], got = c.messages.filter(function (m) { return m.author === t; }), firstUnread = c.unread ? got[Math.max(0, got.length - c.unread)] : null;
         c.messages.forEach(function (m) {
           var ts = m.ts / 1000;
-          out.push({ target: t, ts: ts, data: ['msg', m.author, s0.me, 'unknown', ts, 0, esc(m.text)].join(':'), unread: c.unread && m.author === t && m.ts >= firstUnread.ts ? 1 : 0 });
+          out.push({ target: t, ts: ts, data: ['msg', m.author, s0.me, 'unknown', ts, 0, esc(m.text)].join(':'), unread: firstUnread && m.author === t && m.ts >= firstUnread.ts ? 1 : 0 });
         });
       });
       return Promise.resolve(out.sort(function (a, b) { return a.ts - b.ts; }));

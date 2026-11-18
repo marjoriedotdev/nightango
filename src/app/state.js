@@ -62,5 +62,16 @@ export function newGroup(id, fields) {
  */
 export function newUser(fields) { return Object.assign({ status: 'online', about: '', style: {} }, fields); }
 
+/**
+ * Brings a state the hosted page saved with an earlier version to the current shapes.
+ * @param {Object} s Saved state, changed in place.
+ * @returns {Object} The same state.
+ */
+export function upgradeSavedState(s) {
+  // PM messages named their author from before they took the field of group messages.
+  Object.keys(s.dms || {}).forEach(function (n) { s.dms[n].messages.forEach(function (m) { if (!m.author && m.from) { m.author = m.from; delete m.from; } }); });
+  return s;
+}
+
 export var PREFS_KEY = 'torch-prototype-prefs';
 export function initialState() { return { auth: { loggedIn: false }, prefs: loadPrefs(storageGet(PREFS_KEY)) }; }
