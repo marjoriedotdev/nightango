@@ -17,7 +17,7 @@ import { ACCOUNT_NAME, GROUP_FLAG, MEET_PAGE, PM_CONNECTION, isGuest } from '../
 import { visitorPage } from '../core/vissle.js';
 import { mediaEntryOk, mediaName } from '../core/media-library.js';
 import { GIF_URL } from '../core/message-content.js';
-import { BETTER_CHATANGO_SAVE_FAILED } from '../settings/shell.js';
+import { BETTER_CHATANGO_SAVE_FAILED } from '../settings/kit.js';
 /* ---------- Actions: what the views ask, passed to Chatango by BetterChatango in live ---------- */
 /**
  * Puts the sample world of the prototype into the state with its mentions recorded like those of the live history.

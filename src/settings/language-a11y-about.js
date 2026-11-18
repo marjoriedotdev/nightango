@@ -2,8 +2,8 @@ import { APP_VERSION, RELEASE_NOTES } from 'build:info';
 import { T, h, useEffect, useState } from '../core/globals.js';
 import { REPO_URLS, copyText, downloadFile, pad, plural } from '../core/util.js';
 import { useApp } from '../core/ui.js';
-import { Page, usePref } from './shell.js';
 import { JOURNAL, LIVE } from '../core/env.js';
+import { Page, usePref } from './kit.js';
 export function AccessibilityPage() {
   var app = useApp(), pr = usePref();
   var keys = [['Ctrl K', 'Search or jump to a group, person or setting'], ['Enter', 'Send the message'], ['Shift Enter', 'New line in the message'], ['Up', 'Edit your last message when the message field is empty'], ['Esc', 'Cancel a reply or an edit, close a menu or a dialog'], ['Tab', 'Move between controls']];

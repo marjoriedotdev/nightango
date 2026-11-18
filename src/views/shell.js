@@ -13,6 +13,7 @@ import { Discover } from './discover.js';
 import { SettingsView } from '../settings/shell.js';
 import { GroupSettingsView } from '../settings/group-view.js';
 import { LIVE } from '../core/env.js';
+import { GroupSettingsViewLive } from '../settings/live-group-view.js';
 /* ---------- Application shell ---------- */
 export function MobileNavButton() {
   var app = useApp();
@@ -44,7 +45,7 @@ export var Shell = React.memo(function Shell() {
   useEffect(function () { if (s.split && !split) app.actions.closeSplit(); }, [!!s.split, !!split]);
   // PipHost on every route: without it the floating window stops following the state.
   if (r.view === 'settings') return h(Frag, null, h(SettingsView, { page: r.page }), h(PipHost, null));
-  if (r.view === 'gsettings') return h(Frag, null, h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page }), h(PipHost, null));
+  if (r.view === 'gsettings') return h(Frag, null, h(LIVE ? GroupSettingsViewLive : GroupSettingsView, { key: r.id, gid: r.id, page: r.page }), h(PipHost, null));
   if (LIVE && !s.groupsSeen) main = h(StartupScreen, null);
   else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id, msgId: r.msgId, markerTs: r.markerTs, compact: !!split });
   else if (r.view === 'dm') main = h(DMView, { id: r.id, tab: r.tab, seek: r.seek, compact: !!split });

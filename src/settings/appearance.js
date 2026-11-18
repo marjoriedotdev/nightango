@@ -2,8 +2,8 @@ import { T, h } from '../core/globals.js';
 import { readJsonFile, uid } from '../core/util.js';
 import { accentOf, hexToRgb } from '../core/colors.js';
 import { AccentSwatches, JsonFileButton, useApp } from '../core/ui.js';
-import { Page, useBetterChatangoSettings, usePref } from './shell.js';
 import { COLOR } from 'build:tokens';
+import { Page, useBetterChatangoSettings, usePref } from './kit.js';
 /**
  * Returns the colors of a theme thumbnail: page, sidebar, its lines, borders and composer.
  * @param {Object} c Colors of the theme in the design system.

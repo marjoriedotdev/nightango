@@ -2,10 +2,9 @@ import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { ago, plural } from '../core/util.js';
 import { LOAD_BELOW_MARGIN, Person, SkeletonRows, useApp, useInfiniteScroll } from '../core/ui.js';
 import { banKey, banListOf, roleOf, shownName } from '../core/selectors.js';
-import { Page } from './shell.js';
 import { AutoModFilters, ProxiesRow } from './group-pages.js';
-import { liveSelect, withCurrent } from './live-group-view.js';
 import { ACCOUNT_NAME } from '../core/chatango.js';
+import { Page, liveSelect, withCurrent } from './kit.js';
 export function GSAnnouncementLive(p) {
   var a = p.draft.announcement, loaded = !!p.g.live.annc, owner = p.myRole === 'owner';
   var canEdit = loaded && (owner || p.perms.editAnnouncement), canBroadcast = owner || p.perms.editRestrictions;

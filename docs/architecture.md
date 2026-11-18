@@ -52,7 +52,8 @@ src/
     gif (GIF tab of the emoji and media picker), shared-media (media and links of a group or a PM),
     discover, palette (Ctrl K), live-joined (joined, owned and recent groups), session (session loss dialog, banner of a lost connection)
   settings/   settings
-    shell, profile (Visitors and vissle tracker included), appearance, notifications, privacy (Chatango account PM settings included, and Safety),
+    kit (page frame and navigation, preferences, BetterChatango settings, shared rows), shell (navigation and router: picks the live variant of a page),
+    profile (Visitors and vissle tracker included), appearance, notifications, privacy (Chatango account PM settings included, and Safety),
     language-a11y-about (and Diagnostics)
     group-view, group-pages                                             prototype group settings, Overview shared with live
     group-staff                                                         Staff and roles, Members and Invites pages, shared by live and prototype

@@ -1,9 +1,9 @@
 import { Frag, T, h, useState } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { Page, useBetterChatangoSettings, usePref } from './shell.js';
 import { LIVE } from '../core/env.js';
 import { beep } from '../core/sound.js';
+import { Page, useBetterChatangoSettings, usePref } from './kit.js';
 export function NotificationsPage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
   var perm = 'default';

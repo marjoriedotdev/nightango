@@ -1,25 +1,15 @@
 import { T, h, useEffect, useRef, useState } from '../core/globals.js';
-import { CHATANGO_URL, CONFIRM_TIMEOUT } from '../core/util.js';
+import { CONFIRM_TIMEOUT } from '../core/util.js';
 import { ROLE_LONG } from '../core/roles.js';
 import { useApp } from '../core/ui.js';
 import { groupRights, roleOf } from '../core/selectors.js';
-import { SettingsShell, listedPage } from './shell.js';
 import { GSOverview } from './group-pages.js';
 import { GSInvites, GSMembers, GSStaff } from './group-staff.js';
 import { GSAnnouncementLive, GSAutoModLive, GSBansLive, GSMediaLive } from './live-group-pages.js';
 import { GSAuditLive } from './live-group-staff.js';
+import { SettingsShell, listedPage } from './kit.js';
 /* ---------- Live mode screens: settings wired to Chatango through the BetterChatango client ---------- */
 
-export function liveSelect(id, label, value, options, onChange, disabled) {
-  return h('select', { id: id, className: 'tc-input', style: { width: 'auto' }, 'aria-label': label, value: value, disabled: !!disabled, onChange: function (e) { onChange(+e.target.value); } },
-    options.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); }));
-}
-export function withCurrent(options, value, label) {
-  return value == null || options.some(function (o) { return o[0] === value; }) ? options : options.concat([[value, label(value)]]);
-}
-export function chatangoLink(label) {
-  return h('a', { className: 'tc-btn tc-btn-sm', href: CHATANGO_URL, target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none' } }, label, h(T.Icon, { name: 'external', size: 14 }));
-}
 
 export function GroupSettingsViewLive(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], me = s.me;

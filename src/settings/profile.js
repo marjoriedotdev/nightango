@@ -3,13 +3,10 @@ import { Person, SkeletonRows, useApp } from '../core/ui.js';
 import { RichText } from '../core/rich-text.js';
 import { miniStyleOf, userOf } from '../core/selectors.js';
 import { coverReveal, miniSkin, useMiniCover } from '../views/profile.js';
-import { ActivityRow, Page, setIn } from './shell.js';
 import { useMarkupToolbar } from './markup-toolbar.js';
-import { ProfilePageLive } from './live-account.js';
-import { LIVE } from '../core/env.js';
 import { genderCode } from '../core/chatango.js';
+import { ActivityRow, Page, setIn } from './kit.js';
 export function ProfilePage() {
-  if (LIVE) return h(ProfilePageLive, null);
   var app = useApp(), s = app.state, me = userOf(s, s.me);
   function snapshot() { return { age: me.age || '', gender: me.gender || 'Not specified', location: me.location || '', about: me.about || '', meet: !!s.profile.visibility.meet }; }
   var st = useState(snapshot), draft = st[0], setDraft = st[1];

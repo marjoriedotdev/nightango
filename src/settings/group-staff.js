@@ -4,8 +4,8 @@ import { PERMS, ROLE_DESC, ROLE_LONG, defaultRoles, flagsToPerms, permsToFlags, 
 import { MenuButton, useApp, youBadge } from '../core/ui.js';
 import { guestsOf, shownName, statusLabel, userOf } from '../core/selectors.js';
 import { banItem, viewProfileItem, whoItem } from '../views/members.js';
-import { Page } from './shell.js';
 import { ACCOUNT_NAME, chatangoPageUrl } from '../core/chatango.js';
+import { Page } from './kit.js';
 /**
  * Staff and roles page in live and in the prototype: the owner then each moderator with their Chatango permissions.
  * @param {{g: Object, draft: Object, edit: Function, myRole: ?string, perms: Object}} p Group, settings draft, draft edit, role and permissions of the user.

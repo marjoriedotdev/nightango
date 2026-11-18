@@ -6,14 +6,13 @@ import { miniStyleOf, premiumActive, premiumEndsSoon, userOf } from '../core/sel
 import { miniStyleForm, miniStyleOfForm } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { FullProfileFrame, useFullProfileMedia } from '../views/profile.js';
-import { Page, useBetterChatangoSettings } from './shell.js';
 import { useMarkupToolbar } from './markup-toolbar.js';
 import { ProfilePreviewCard, VisibilitySection, VisitorsSection } from './profile.js';
 import { BrowserTabSection, ChatangoPmSection, NotesSection, PRIVACY_LEDE, PmHistoryRows, StartupSection } from './privacy.js';
-import { chatangoLink } from './live-group-view.js';
 import { AvatarCropDialog } from './avatar-crop.js';
 import { LIVE } from '../core/env.js';
 import { GENDER_LABEL, genderCode } from '../core/chatango.js';
+import { Page, chatangoLink, useBetterChatangoSettings } from './kit.js';
 /* ---------- Account settings in live mode ---------- */
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
 
