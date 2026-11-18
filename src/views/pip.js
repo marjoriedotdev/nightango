@@ -1,7 +1,6 @@
 import { AvatarDecorCtx, ReactDOM, h, useContext, useEffect } from '../core/globals.js';
 import { ApiCtx, Ctx, Layers, useApp, useAppApi } from '../core/ui.js';
-import { isTarget } from '../core/selectors.js';
-import { paneShown } from './shell.js';
+import { isTarget, paneShown } from '../core/selectors.js';
 import { GroupView } from './group.js';
 import { DmThread } from './dm.js';
 import { ROOT_EL } from '../core/env.js';

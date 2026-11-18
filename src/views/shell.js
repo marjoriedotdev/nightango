@@ -2,7 +2,7 @@ import { Frag, React, T, h, useEffect, useMemo, useState } from '../core/globals
 import { cx } from '../core/util.js';
 import { onAccentOf } from '../core/colors.js';
 import { DraftMark, MenuButton, SkeletonRows, dmDraftKey, groupDraftKey, presenceSr, showsDraft, useApp, useDraftMarks, useStatePart, useWideLayout } from '../core/ui.js';
-import { favoritePeople, isPaneOpen, listedDms, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
+import { favoritePeople, isPaneOpen, listedDms, paneShown, shownName, statusLabel, unreadDmCount, userOf } from '../core/selectors.js';
 import { NewYearMark, NewYearSky, SeasonSky, SeasonStar, skyMoves } from './season.js';
 import { GroupView } from './group.js';
 import { DMView, SplitDm } from './dm.js';
@@ -14,27 +14,10 @@ import { SettingsView } from '../settings/shell.js';
 import { GroupSettingsView } from '../settings/group-view.js';
 import { LIVE } from '../core/env.js';
 import { GroupSettingsViewLive } from '../settings/live-group-view.js';
+import { favoriteItem } from './chrome.js';
 /* ---------- Application shell ---------- */
-export function MobileNavButton() {
-  var app = useApp();
-  return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', count: unreadTotal(app.state), onClick: app.ui.openNav });
-}
 
-/**
- * Titled header of a main page with the mobile navigation button.
- * @param {string} title Page title.
- */
-export function pageHeader(title) {
-  return h('header', { className: 'topbar' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, title));
-}
 
-/**
- * Titled header of a right column.
- * @param {string} title Column title.
- */
-export function columnHeader(title) {
-  return h('header', { className: 'topbar col-head' }, h('h2', { className: 'grow' }, title));
-}
 
 // Memoized: Root renders again for its toasts and dialogs, which leave the shell alone.
 export var Shell = React.memo(function Shell() {
@@ -62,12 +45,6 @@ export var Shell = React.memo(function Shell() {
     h(PipHost, null));
 });
 
-/**
- * Tells whether a pane can show its conversation: a joined group or a known PM.
- * @param {Object} s Application state.
- * @param {{view: string, id: string}} t Conversation of the pane.
- */
-export function paneShown(s, t) { return t.view === 'group' ? !!(s.groups[t.id] && s.groups[t.id].joined) : !!s.dms[t.id]; }
 
 /**
  * Menu entry that opens a conversation beside the main one, absent where two panes do not fit.
@@ -79,18 +56,6 @@ function splitItem(app, wide, route) {
   return wide && !isPaneOpen(app.state, route.view, route.id) ? { label: 'Open side by side', icon: 'panel', onSelect: function () { app.actions.openSplit(route); } } : null;
 }
 
-/**
- * Menu entry that adds a group or a person to the favorites, or removes them.
- * @param {Object} app Application context.
- * @param {{view: string, id: string}} route Group, or PM with the person.
- * @param {boolean} on The group or the person is a favorite.
- */
-export function favoriteItem(app, route, on) {
-  return {
-    id: 'favorite', label: on ? 'Remove from favorites' : 'Add to favorites', icon: 'star',
-    onSelect: function () { if (route.view === 'group') app.actions.toggleFavorite(route.id); else app.actions.toggleUser(route.id, 'favorite'); }
-  };
-}
 
 // Tonight's moon, or the fixed phase chosen in Appearance (index in Torch.moonNames). The startup screen leaves New Year out.
 function BrandMark(p) {

@@ -5,12 +5,12 @@ import { Dialog, LayerCtx, Portal, closeModal, developerBadge, openModal, premiu
 import { RichText, bidiText, fullProfileDoc, memberLink, unlinkFullProfile, waitsForClick } from '../core/rich-text.js';
 import { commonGroups, isProfilePending, miniStyleOf, shownName, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { columnHeader } from './shell.js';
 import { useProfileActions } from './members.js';
 import { personAsl, personStatus } from './dm.js';
 import { LIVE } from '../core/env.js';
 import { avatarSrc, chatangoPageUrl, profileImgSrc } from '../core/chatango.js';
 import { NOTE_LABEL_MAX, NOTE_TEXT_MAX } from '../core/account-store.js';
+import { columnHeader } from './chrome.js';
 /**
  * "About" block.
  * It shows formatted Chatango text in live and plain text in the prototype.

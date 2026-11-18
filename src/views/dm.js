@@ -5,7 +5,6 @@ import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftK
 import { bidiText } from '../core/rich-text.js';
 import { THREAD_MAX, isPaneOpen, isProfilePending, listedDms, pmEditTarget, pmShownIndex, roleOf, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { MobileNavButton, favoriteItem } from './shell.js';
 import { COMPOSER_MODES, EDIT_MAX, editsLastOnUp, useComposerMode } from './group.js';
 import { MessageContent, authorName, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton, quoteOf } from './message.js';
 import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
@@ -26,6 +25,7 @@ import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, PM_CONNECTION, genderCode } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
+import { MobileNavButton, favoriteItem } from './chrome.js';
 /* ---------- Private messages ---------- */
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };

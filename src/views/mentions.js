@@ -3,8 +3,8 @@ import { dayKey, dayLabel, fmtTime } from '../core/util.js';
 import { useApp } from '../core/ui.js';
 import { bidiText } from '../core/rich-text.js';
 import { groupRouteAt, isHiddenAuthor, shownName } from '../core/selectors.js';
-import { pageHeader } from './shell.js';
 import { SessionBanner } from './session.js';
+import { pageHeader } from './chrome.js';
 /* ---------- Mentions ---------- */
 /**
  * Dates a message outside its log with the time, preceded by the day unless it is today.

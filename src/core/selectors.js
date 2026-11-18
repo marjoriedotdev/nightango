@@ -255,3 +255,9 @@ export function banKey(b) { return b.unid + ':' + b.ip; }
  * @returns {{rows: Array, page: {loaded: boolean, more: boolean, loading: boolean}}} Loaded rows and list state.
  */
 export function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.live.banPage } : { rows: g.live.unbans, page: g.live.unbanPage }; }
+/**
+ * Tells whether a pane can show its conversation: a joined group or a known PM.
+ * @param {Object} s Application state.
+ * @param {{view: string, id: string}} t Conversation of the pane.
+ */
+export function paneShown(s, t) { return t.view === 'group' ? !!(s.groups[t.id] && s.groups[t.id].joined) : !!s.dms[t.id]; }

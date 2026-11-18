@@ -1,10 +1,10 @@
 import { T, h, useState } from '../core/globals.js';
 import { Dialog, useApp } from '../core/ui.js';
-import { pageHeader } from './shell.js';
 import { JoinedGroups } from './live-joined.js';
 import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, chatangoPageUrl, parseGroupName } from '../core/chatango.js';
+import { pageHeader } from './chrome.js';
 /* ---------- Discover ---------- */
 /**
  * Rejects a group missing from the sample data in the prototype.
