@@ -295,10 +295,10 @@ export var liveBridge = (function () {
     }
   }
   // Frames that BetterChatango does not listen to: we add a handler, which its dispatcher calls like its own.
-  var EXTRA = { group: ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb', 'nlptb', 'show_nlp_tb', 'ratelimited'], private: [] };
+  var GROUP_EXTRA = ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'show_tb', 'tb', 'nlptb', 'show_nlp_tb', 'ratelimited'];
   function wrapTable(table, kind) {
     if (!table) return;
-    EXTRA[kind].forEach(function (name) { if (!(name in table)) table[name] = function () { /* handler added by Nightango */ }; });
+    if (kind === 'group') GROUP_EXTRA.forEach(function (name) { if (!(name in table)) table[name] = function () { /* handler added by Nightango */ }; });
     Object.keys(table).forEach(function (name) {
       var orig = table[name];
       if (typeof orig !== 'function' || orig.__skin) return;
@@ -809,12 +809,28 @@ export var liveBridge = (function () {
     var body = C.sendMessage(esc(text), true, gid);
     if (typeof body !== 'string' || !body) return null;
     var style = parseContent(body).style;
+    var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
+    return { body: withReference(body, head.length, opts, false), style: style };
+  }
+  /**
+   * Inserts the reference of a reply or an edit right after the head of a body, then the plain-text quote.
+   * @param {string} body Body built by BetterChatango.
+   * @param {number} at Index right after the <f …> or <g …> head.
+   * @param {{replyId: ?string, editId: ?string, quote: ?string}} opts Original of a reply or an edit, and plain-text quote.
+   * @param {boolean} pm True for a PM.
+   */
+  function withReference(body, at, opts, pm) {
     // Like BetterChatango, an edit never carries a reply.
     var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
-    var head = /^(<n[^>]*\/>)?(<f [^>]*>)?/.exec(body)[0];
-    body = head + ref + body.slice(head.length);
-    if (opts.quote) body = withQuote(body, head.length, opts.quote, false);
-    return { body: body, style: style };
+    body = body.slice(0, at) + ref + body.slice(at);
+    return opts.quote ? withQuote(body, at + ref.length, opts.quote, pm) : body;
+  }
+  /**
+   * Names what did not leave in the failure that send announces.
+   * @param {{replyId: ?string, editId: ?string, quote: ?string}} opts Original of a reply or an edit, and plain-text quote.
+   */
+  function sendFailure(opts) {
+    return opts.editId ? "Your message wasn't edited." : opts.replyId ? "Your reply wasn't sent." : opts.quote ? "Your quote wasn't sent." : "Your message wasn't sent.";
   }
   /**
    * Inserts a plain-text quote where BetterChatango places it, right before the typed text.
@@ -937,7 +953,6 @@ export var liveBridge = (function () {
   }
 
   return {
-    ok: !!(C && C.event && typeof C.on === 'function'),
     onOp: onOp,
     note: note,
     connName: connName,
@@ -961,10 +976,9 @@ export var liveBridge = (function () {
       var built;
       try { built = groupBody(gid, text, opts); } catch (e) { warn(e); return null; }
       if (!built) return null;
-      var failure = opts.editId ? "Your message wasn't edited." : opts.replyId ? "Your reply wasn't sent." : opts.quote ? "Your quote wasn't sent." : "Your message wasn't sent.";
       // BetterChatango adds the badge of its own picker (inject.js:5175), which Nightango replaces.
       var flag = (CHANNELS[opts.channel] ? CHANNELS[opts.channel].flag : 0) + (BADGE_FLAG[opts.badge] || 0);
-      if (!send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure)) return null;
+      if (!send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, sendFailure(opts))) return null;
       lastSent[gid] = text;
       return built.style;
     },
@@ -996,16 +1010,12 @@ export var liveBridge = (function () {
         // Built once and sent as is: a second build would draw another <i…/> PM key than the one shown.
         var body = C.sendMessage(esc(text), true, PM_CONNECTION, user);
         if (typeof body !== 'string' || !body) return null;
-        var head = /<g [^>]*>/.exec(body), at = head.index + head[0].length;
-        // Like BetterChatango, an edit never carries a reply.
-        var ref = opts.editId ? '<e' + encodeRef(opts.editId) + '/>' : opts.replyId ? '<r' + encodeRef(opts.replyId) + '/>' : '';
-        body = body.slice(0, at) + ref + body.slice(at);
-        if (opts.quote) body = withQuote(body, at + ref.length, opts.quote, true);
-        var failure = opts.editId ? "Your message wasn't edited." : opts.replyId ? "Your reply wasn't sent." : opts.quote ? "Your quote wasn't sent." : "Your message wasn't sent.";
+        var head = /<g [^>]*>/.exec(body);
+        body = withReference(body, head.index + head[0].length, opts, true);
         // BetterChatango archives a sent PM under client.private.focus, not its recipient: an upload can leave after a switch.
         // Without its history database that archive throws once the frame has left, and BetterChatango announces a failure (inject.js:4633-4667).
         C.private.focus = C.database && C.database.pm ? user : false;
-        try { if (!send(PM_CONNECTION, 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
+        try { if (!send(PM_CONNECTION, 'msg:' + user + ':' + body, sendFailure(opts))) return null; } finally { C.private.focus = pmFocus; }
         // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
         return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId, editId: parsed.editId };
