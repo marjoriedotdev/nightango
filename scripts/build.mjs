@@ -75,13 +75,9 @@ export async function bundleForTest(exports, name) {
 
 // Imports only go down these layers (ADR-0017). views/ and settings/ are one layer: the screens.
 const LAYER_RANK = { core: 0, bridge: 1, views: 2, settings: 2, app: 3 };
-// Debt left by the migration to modules: each refactor removes its entries, any other module in a cycle fails the build.
-const KNOWN_CYCLIC = new Set([
-  'views/dm.js', 'views/group.js', 'views/meet.js', 'views/members.js', 'views/message-style.js', 'views/message.js', 'views/profile.js', 'views/shared-media.js'
-]);
 
 /**
- * Refuses an import that goes up the layers, and a module in a cycle beyond the known debt.
+ * Refuses an import that goes up the layers, and a cycle of imports.
  * @param {object} metafile esbuild metafile of an application entry.
  */
 function checkImports(metafile) {
@@ -94,13 +90,7 @@ function checkImports(metafile) {
   for (const [file, imports] of graph) for (const target of imports) {
     if (rank(target) > rank(file)) errors.push(`${file} -> ${target} goes up the layers`);
   }
-  const cyclic = new Set();
-  for (const group of cycles(graph)) for (const file of group) {
-    cyclic.add(file);
-    if (!KNOWN_CYCLIC.has(file)) errors.push(`${file} is in an import cycle with ${group.filter((f) => f !== file).join(', ')}`);
-  }
-  // The debt only shrinks: an entry that no longer holds is removed with the change that fixed it.
-  for (const file of KNOWN_CYCLIC) if (!cyclic.has(file)) errors.push(`${file} is in no cycle any more: remove it from KNOWN_CYCLIC`);
+  for (const group of cycles(graph)) errors.push(`import cycle: ${group.join(', ')}`);
   if (errors.length) throw new Error('Import graph (ADR-0017):\n' + errors.join('\n'));
 }
 

@@ -1,34 +1,12 @@
-import { T, h } from '../core/globals.js';
-import { dayKey, dayLabel, fmtTime } from '../core/util.js';
+import { h } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
 import { bidiText } from '../core/rich-text.js';
-import { groupRouteAt, isHiddenAuthor, shownName } from '../core/selectors.js';
+import { groupRouteAt, isHiddenAuthor } from '../core/selectors.js';
 import { SessionBanner } from './session.js';
 import { pageHeader } from './chrome.js';
+import { MessageEntry } from './people.js';
 /* ---------- Mentions ---------- */
-/**
- * Dates a message outside its log with the time, preceded by the day unless it is today.
- * @param {number} ts Message timestamp.
- * @param {boolean} h24 24-hour format.
- */
-function entryTime(ts, h24) { return (dayKey(ts) === dayKey(Date.now()) ? '' : dayLabel(ts) + ', ') + fmtTime(ts, h24); }
 
-/**
- * Message outside its log that opens the log on click.
- * It is a mention on the Mentions page or a PM search result.
- * @param {{name: string, ts: number, meta: ?string, text: *, onClick: Function}} p Shown member, timestamp, optional context line, text and opening.
- */
-export function MessageEntry(p) {
-  var s = useApp().state, h24 = s.prefs.h24;
-  return h('button', { type: 'button', className: 'conv person', onClick: p.onClick },
-    h(T.Avatar, { name: p.name, size: 28 }),
-    h('span', { className: 'conv-main' },
-      h('span', { className: 'conv-top' },
-        h('span', { className: 'conv-name' }, shownName(s, p.name)),
-        h('time', { className: 'tc-msg-time', dateTime: new Date(p.ts).toISOString(), title: new Date(p.ts).toLocaleString('en-GB') }, entryTime(p.ts, h24))),
-      p.meta ? h('span', { className: 'conv-meta' }, p.meta) : null,
-      h('span', { className: 'conv-about', dir: 'auto' }, p.text)));
-}
 
 export function MentionsView() {
   var app = useApp(), s = app.state;

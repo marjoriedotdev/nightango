@@ -1,18 +1,15 @@
 import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
-import { MIN, ago, cx, dayKey, dayLabel, elapsedShort, fmtTime, lastMatch, warn } from '../core/util.js';
-import { ROLE_LONG } from '../core/roles.js';
-import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useMinute, useOutside, useRightColumn, useRowBatches, useShownUsers, useStatePart, useWideLayout } from '../core/ui.js';
+import { MIN, cx, dayKey, dayLabel, fmtTime, lastMatch, warn } from '../core/util.js';
+import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useOutside, useRightColumn, useRowBatches, useStatePart, useWideLayout } from '../core/ui.js';
 import { bidiText } from '../core/rich-text.js';
-import { THREAD_MAX, isPaneOpen, isProfilePending, listedDms, pmEditTarget, pmShownIndex, roleOf, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
+import { THREAD_MAX, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, shownName, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { COMPOSER_MODES, EDIT_MAX, editsLastOnUp, useComposerMode } from './group.js';
 import { MessageContent, authorName, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton, quoteOf } from './message.js';
 import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
-import { confirmRemoveFriend, notifyOnlineItem, personActionGroups, useFriendRequest, useProfileActions, viewProfileItem, whoItem } from './members.js';
 import { popOutItem } from './pip-window.js';
 import { inCurrentSpace, spacesItem } from './spaces.js';
 import { MeetPeople } from './meet.js';
-import { MessageEntry } from './mentions.js';
 import { ProfilePanel } from './profile.js';
 import { MessageStyleButton } from './message-style.js';
 import { useEmojiPicker } from './emoji-picker.js';
@@ -23,9 +20,10 @@ import { SharedMediaDialog } from './shared-media.js';
 import { runCommand } from './commands.js';
 import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
-import { ACCOUNT_NAME, PM_CONNECTION, genderCode } from '../core/chatango.js';
+import { ACCOUNT_NAME, PM_CONNECTION } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
 import { MobileNavButton, favoriteItem } from './chrome.js';
+import { MessageEntry, PresenceTime, confirmRemoveFriend, notifyOnlineItem, personActionGroups, personAsl, personMetaLine, personStatus, presenceSince, presenceText, useFriendRequest, useProfileActions, useProfiles, viewProfileItem, whoItem } from './people.js';
 /* ---------- Private messages ---------- */
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };
@@ -355,65 +353,6 @@ function DmComposer(p) {
 
 var STATUS_ORDER = { online: 0, idle: 1, offline: 2 };
 function statusRank(st) { return st in STATUS_ORDER ? STATUS_ORDER[st] : 2; }
-/**
- * Writes a member's presence with their last online time when it is known.
- * @param {Object} u Member in the state.
- */
-function presenceText(u) { return u.status === 'offline' && u.lastOn ? 'Last online ' + ago(u.lastOn) : statusLabel(u.status); }
-/**
- * Writes a person's status line.
- * The line holds presence, friend and role in the group the profile is opened from.
- * @param {Object} s Application state.
- * @param {string} name Member name.
- * @param {?string} gid Group the profile is opened from.
- */
-export function personStatus(s, name, gid) {
-  var u = userOf(s, name), role = gid ? roleOf(s.groups[gid], name) : null;
-  return [name === s.me ? statusLabel(s.meStatus) : presenceText(u), u.friend ? 'Friend' : null, role ? ROLE_LONG[role] + ' in #' + gid : null].filter(Boolean).join(' · ');
-}
-/**
- * Writes a person's ASL.
- * @param {Object} u Member in the state.
- */
-export function personAsl(u) {
-  return [u.age || null, genderCode(u.gender), u.location || null].filter(Boolean).join(' · ');
-}
-/**
- * Dates a friend's idle time or last online time.
- * @param {Object} u Member in the state.
- */
-function presenceSince(u) {
-  if (!u.friend) return null;
-  if (u.status === 'idle' && u.idleSince) return { ts: u.idleSince, text: 'Idle ' + elapsedShort(u.idleSince), title: 'Idle since ' };
-  if (u.status === 'offline' && u.lastOn) return { ts: u.lastOn, text: elapsedShort(u.lastOn) + ' ago', title: 'Last online ' };
-  return null;
-}
-/**
- * Idle or offline duration of a friend, refreshed every minute by the clock all relative times share.
- * @param {{user: Object}} p Member in the state.
- */
-function PresenceTime(p) {
-  useMinute();
-  var x = presenceSince(p.user);
-  return x ? h('time', { className: 'tc-msg-time conv-time', dateTime: new Date(x.ts).toISOString(), title: x.title + new Date(x.ts).toLocaleString('en-GB') }, x.text) : null;
-}
-/**
- * Info line of a person.
- * @param {string} n Member name.
- * @param {Object} u Member in the state.
- */
-export function personMetaLine(n, u) {
-  return h('span', { className: 'conv-meta' }, personAsl(u), isProfilePending(n, u) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
-}
-/**
- * Loads the mini profiles of a list of people and keeps them in the state while the list shows them.
- * @param {string[]} names People listed.
- */
-export function useProfiles(names) {
-  var app = useApp();
-  useShownUsers(names);
-  useEffect(function () { app.actions.loadProfiles(names); }, [names.join(',')]);
-}
 /**
  * Row of a person in the Chats and Friends lists.
  * @param {string} n Member name.

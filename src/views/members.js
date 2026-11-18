@@ -1,16 +1,15 @@
 import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
-import { cx, lower, ownOf } from '../core/util.js';
+import { cx, lower } from '../core/util.js';
 import { Dialog, MenuButton, SkeletonRows, developerBadge, menuGroups, presenceSr, roleBadge, useApp, useAppApi, useRowBatches, youBadge } from '../core/ui.js';
 import { bidiText, httpsHost } from '../core/rich-text.js';
-import { canBanMember, guestsOf, isNotifyingOnline, isPaneOpen, miniStyleOf, roleOf, shownName, userOf } from '../core/selectors.js';
+import { guestsOf, miniStyleOf, roleOf, shownName, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SeasonWeb } from './season.js';
-import { useProfiles } from './dm.js';
-import { personCard } from './meet.js';
 import { ProfileSummary, miniSkin } from './profile.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, isGuest } from '../core/chatango.js';
-import { columnHeader, favoriteItem } from './chrome.js';
+import { columnHeader } from './chrome.js';
+import { personActionGroups, personCard, useProfileActions, useProfiles } from './people.js';
 /**
  * Member list of a group.
  * @param {{g: Object, scrollRef: Object}} p Shown group and ref of its scrolling area.
@@ -97,130 +96,15 @@ export function GroupInfoSheet(p) {
 }
 
 /* ---------- Member profile ---------- */
-/**
- * Tracks the friend request sent from a form until Chatango answers.
- */
-export function useFriendRequest() {
-  var app = useApp();
-  var a = useState(null), asked = a[0], setAsked = a[1];
-  return {
-    pending: asked && app.state.friendAdds[asked] ? asked : null,
-    add: function (name) { app.actions.toggleUser(name, 'friend'); setAsked(name); }
-  };
-}
 
-/**
- * Asks for confirmation before removing a friend.
- * @param {Object} app Application context.
- * @param {string} name Friend to remove.
- */
-export function confirmRemoveFriend(app, name) {
-  var who = shownName(app.state, name);
-  app.ui.confirm({ title: 'Remove ' + who + ' from friends?', body: "You'll stop seeing when " + who + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
-}
 
-/**
- * Offers a friend's online alert as a menu or list entry.
- * @param {Object} app Application context.
- * @param {string} name Followed friend.
- */
-export function notifyOnlineItem(app, name) {
-  var notify = isNotifyingOnline(app.state, name);
-  return { id: 'notify', label: notify ? 'Notifying when online' : 'Notify when online', short: notify ? 'Notifying' : 'Notify', icon: 'bell', pressed: notify, onSelect: function () { app.update(function (d) { d.notifyOnline[name] = !notify; }); } };
-}
 
-/**
- * Offers to open a member's profile dialog.
- * @param {Object} app Application context.
- * @param {string} name Member name.
- * @param {?string} gid Group the profile is opened from.
- */
-export function viewProfileItem(app, name, gid) {
-  return { label: 'View profile', icon: 'user', onSelect: function () { app.ui.openProfile(name, gid); } };
-}
 
-/**
- * Offers in live the accounts vissle links to an account, never to a guest.
- * @param {Object} app Application context.
- * @param {string} name Member name.
- */
-export function whoItem(app, name) {
-  return LIVE && ACCOUNT_NAME.test(name) ? { id: 'who', label: 'Who is this', icon: 'users', onSelect: function () { app.ui.openWho(name); } } : null;
-}
 
-/**
- * Offers to ignore a member or to stop ignoring them.
- * @param {Object} app Application context.
- * @param {string} name Member name.
- * @param {boolean} ignored The member is ignored.
- */
-export function ignoreItem(app, name, ignored) {
-  return { id: 'ignore', label: ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } };
-}
 
-/**
- * Offers to hide a member's style or to show it again.
- * @param {Object} app Application context.
- * @param {string} name Member name.
- * @param {boolean} unstyled The member's style is hidden.
- * @param {string} [shown] Member's name as they spell it, for a label that names them in a message menu.
- */
-export function styleItem(app, name, unstyled, shown) {
-  var label = (unstyled ? 'Show ' : 'Hide ') + (shown ? shown + "'s style" : 'style');
-  return { id: 'style', label: label, icon: 'type', onSelect: function () { app.actions.toggleUser(name, 'unstyled'); } };
-}
 
-/**
- * Offers to ban a member from a group.
- * @param {Object} app Application context.
- * @param {string} name Member name.
- * @param {string} gid Group.
- * @param {Object} [msg] Message the ban starts from.
- */
-export function banItem(app, name, gid, msg) {
-  return { id: 'ban', label: 'Ban from #' + gid + '…', icon: 'ban', danger: true, closes: true, onSelect: function () { app.ui.ban(name, gid, msg); } };
-}
 
-/**
- * Splits the actions on a person into the groups of a menu: the relation with them, then what restricts them.
- * @param {Array} actions Actions of useProfileActions.
- */
-export function personActionGroups(actions) {
-  function pick(ids) { return actions.filter(function (it) { return ids.indexOf(it.id) >= 0; }); }
-  return [pick(['message', 'friend', 'notify', 'favorite', 'who']), pick(['style', 'ignore', 'block', 'ban'])];
-}
 
-/**
- * Lists the actions on a person shared by the profile dialog, the panel and a PM menu.
- * An entry marked closes closes the profile dialog that shows it, and buttonLabel is its label as a button.
- * @param {string} name Member name.
- * @param {?string} gid Group the profile is opened from.
- */
-export function useProfileActions(name, gid) {
-  var app = useApp(), s = app.state, u = userOf(s, name), busy = !!ownOf(s.friendAdds, name);
-  var g = gid ? s.groups[gid] : null;
-  var inDm = isPaneOpen(s, 'dm', name);
-  var friendLabel = busy ? 'Adding friend' : u.friend ? 'Remove friend' : 'Add friend';
-  return [
-    inDm ? null : { id: 'message', label: 'Message', icon: 'message', disabled: u.blocked, closes: true, onSelect: function () { app.actions.openDm(name); } },
-    {
-      id: 'friend', label: u.friend ? friendLabel + '…' : friendLabel, buttonLabel: friendLabel, icon: u.friend ? 'user-minus' : 'user-plus', disabled: busy,
-      onSelect: function () { if (u.friend) confirmRemoveFriend(app, name); else app.actions.toggleUser(name, 'friend'); }
-    },
-    u.friend ? notifyOnlineItem(app, name) : null,
-    favoriteItem(app, { view: 'dm', id: name }, u.favorite),
-    whoItem(app, name),
-    styleItem(app, name, u.unstyled),
-    ignoreItem(app, name, u.ignored),
-    {
-      id: 'block', label: u.blocked ? 'Unblock' : 'Block…', icon: 'user-x', danger: !u.blocked, onSelect: function () {
-        if (u.blocked) app.actions.toggleUser(name, 'blocked');
-        else app.ui.confirm({ title: 'Block ' + shownName(app.state, name) + '?', body: shownName(app.state, name) + " won't be able to message you, and their messages are hidden in groups.", confirmLabel: 'Block', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'blocked'); } });
-      }
-    },
-    g && canBanMember(g, s.me, name) ? banItem(app, name, gid) : null
-  ].filter(Boolean);
-}
 
 /**
  * Member profile dialog.

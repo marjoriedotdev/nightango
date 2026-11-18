@@ -1,10 +1,8 @@
 import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { cx } from '../core/util.js';
-import { Dialog, LOAD_BELOW_MARGIN, SkeletonRows, developerBadge, premiumBadge, presenceSr, useApp, useInfiniteScroll, youBadge } from '../core/ui.js';
-import { RichText } from '../core/rich-text.js';
-import { isProfilePending, miniStyleOf, shownName, userOf } from '../core/selectors.js';
-import { personMetaLine, useProfiles } from './dm.js';
+import { Dialog, LOAD_BELOW_MARGIN, SkeletonRows, useApp, useInfiniteScroll } from '../core/ui.js';
 import { GENDER_LABEL } from '../core/chatango.js';
+import { personCard, useProfiles } from './people.js';
 var MEET_DEFAULTS = { query: '', sex: 'B', ageMin: 13, ageMax: 99, online: true, avatar: 0 };
 var PULL_TRIGGER = 64, PULL_MAX = 96;
 /** Filters that differ from BetterChatango's defaults, for the counter and the chips. */
@@ -15,25 +13,6 @@ function meetActive(f) {
   if (+f.avatar) out.push(['avatar', +f.avatar === 1 ? 'Photos' : 'Characters']);
   if (!f.online) out.push(['online', 'Offline included']);
   return out;
-}
-/**
- * Person card in Meet people.
- * @param {Object} s Application state.
- * @param {string} n Member name.
- * @param {string} theme Resolved theme.
- * @param {Function} onClick Opens the card.
- * @param {boolean} [noStatus] True where Nightango has no presence for the account: no dot, neither online nor offline.
- */
-export function personCard(s, n, theme, onClick, noStatus) {
-  var u = userOf(s, n), isMe = n === s.me, status = noStatus ? null : isMe ? s.meStatus : u.status, mini = miniStyleOf(s.prefs, u, theme);
-  var about = u.aboutHtml ? h(RichText, { html: u.aboutHtml, inline: true, bg: mini ? mini.bg : null }) : u.about || null;
-  return h('button', { key: n, type: 'button', className: 'conv person' + (mini ? ' mini-bg' : ''), style: mini ? { backgroundColor: mini.bg, color: mini.text } : null, onClick: onClick },
-    h(T.Avatar, { name: n, size: 44, status: status, ring: mini ? mini.bg : 'var(--panel)' }),
-    h('span', { className: 'conv-main' },
-      h('span', { className: 'conv-top' }, h('span', { className: 'conv-name' }, shownName(s, n)), status ? presenceSr(status) : null, youBadge(isMe), developerBadge(n), premiumBadge(u.premium)),
-      personMetaLine(n, u),
-      isProfilePending(n, u) ? h('span', { className: 'conv-about skel-about' }, h('span', { className: 'tc-sr' }, 'Loading profile'), h(T.Skeleton, { width: 220, height: 10 }), h(T.Skeleton, { width: 130, height: 10 }))
-        : h('span', { className: 'conv-about' }, about || (u.profileMissing ? 'No public profile.' : null))));
 }
 
 /**
