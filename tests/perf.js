@@ -216,7 +216,8 @@ const show = async t => { t.paint(); await nextTask(); };
   await wait(50);
   const burst = { roots: t.count('Root'), rows: t.count('MessageRow'), shown: t.d.body.textContent.includes('Burst ' + (BURST - 1)), perOp };
   step('a burst of messages within one animation frame gives one render', burst.roots === 1 && burst.shown, burst);
-  step('a burst of messages renders only the new rows', burst.rows <= BURST + 2, burst);
+  // At least one row: the zero counts of the steps below then show the counter still counts.
+  step('a burst of messages renders only the new rows', burst.rows > 0 && burst.rows <= BURST + 2, burst);
   step('a burst of messages stays within ' + MS_PER_OP + ' ms per operation', perOp < MS_PER_OP, burst);
 
   /* A history page arrives together: one update, one sort of its group */
