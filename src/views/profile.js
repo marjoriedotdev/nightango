@@ -15,14 +15,16 @@ import { developerBadge, premiumBadge } from '../core/people-ui.js';
 /**
  * "About" block.
  * It shows formatted Chatango text in live and plain text in the prototype.
+ * @param {string} name Member name.
  * @param {Object} u Member in the state.
  * @param {boolean} [skinned] Member background already carried by the container.
  */
-function profileAbout(u, skinned) {
+function profileAbout(name, u, skinned) {
   if (u.profileMissing) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'This account has no public profile.'));
   if (u.aboutHtml) return h(RichAbout, { u: u, skinned: skinned });
   if (u.about) return h('div', { className: 'kv' }, h('p', { className: 'about', dir: 'auto' }, bidiText(u.about)));
-  if (LIVE && !u.profileLoaded) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'Loading profile.'));
+  // A failed load or a guest's profile, never loaded, shows no about.
+  if (isProfilePending(name, u)) return h('div', { className: 'kv' }, h('p', { className: 'about muted' }, 'Loading profile.'));
   return null;
 }
 
@@ -173,7 +175,7 @@ export function ProfileSummary(p) {
       h('span', { className: 'muted profile-line' }, personStatus(s, name, p.gid)),
       profileMeta(s, name),
       p.skin ? coverReveal(cover, p.skin) : null),
-    profileAbout(u, !!p.skin),
+    profileAbout(name, u, !!p.skin),
     p.guest ? null : h('div', { className: 'profile-full' }, h(T.Button, { size: 'sm', variant: 'ghost', icon: 'id-card', onClick: function () { app.ui.openFullProfile(name); } }, 'Full profile')),
     p.guest || name === s.me ? null : h(MemberNote, { key: name, name: name }),
     common.length ? h('div', { className: 'kv' }, h('h3', null, 'Groups in common · ' + common.length),
