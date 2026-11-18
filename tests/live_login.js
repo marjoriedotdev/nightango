@@ -1,9 +1,10 @@
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
-const { concatSources, layerSources } = require('../scripts/build.mjs');
-const live = concatSources(process.argv[2], layerSources('bridge'));
+const { bundleForTest } = require('../scripts/build.mjs');
 const journal = fs.readFileSync(process.argv[2] + '/src/loader/skin-journal.js', 'utf8');
 const react = ['react/umd/react.development.js', 'react-dom/umd/react-dom.development.js'].map(f => fs.readFileSync('node_modules/' + f, 'utf8'));
+// Bridge and operation hook of the application, bundled once for every page.
+let app = null;
 // Starts a page with the journal, a fake BetterChatango and the bridge, its local storage filled from storage (key to value).
 function boot(storage) {
   // BetterChatango's client document holds its PM tab from the start (inject.js:10601).
@@ -16,6 +17,7 @@ function boot(storage) {
   w.__TORCH_SHOW__ = () => { w.shown++; };
   // Like the page code, the diagnostic journal is set up before BetterChatango and the bridge.
   w.eval(journal);
+  react.forEach(code => w.eval(code));
   w.eval(`
     class FakeClient {
       constructor() { this.events = {}; this.user = { name: '' }; this.groups = {}; this.event = { group: {}, private: {} }; }
@@ -26,7 +28,8 @@ function boot(storage) {
     window.client = new FakeClient();
     window.__betterChatangoRefs = { client: window.client, chatango: {} };
   `);
-  w.eval(live + '; window.__bridge = liveBridge;');
+  w.eval(app);
+  w.__bridge = w.__mod.liveBridge;
   return w;
 }
 function run(label, setup) {
@@ -54,6 +57,7 @@ async function signInPage(storage, name, marker) {
   return { texts, storage: kept };
 }
 (async () => {
+  app = await bundleForTest("export { liveBridge } from './src/bridge/live-bridge.js'; export { useBridgeOps } from './src/app/live-ops.js';");
   await run('clientLogin event', async w => { w.client.user.name = 'Marjorie'; w.client.emit('clientLogin', w.client); await wait(50); });
   await run('polling fallback', async w => { w.client.user.name = 'Marjorie'; w.client.groups.foo = {}; await wait(1200); });
   await run('event then poll, no double show', async w => { w.client.user.name = 'x'; w.client.emit('clientLogin', w.client); w.client.groups.foo = {}; await wait(1200); });
@@ -67,13 +71,11 @@ async function signInPage(storage, name, marker) {
   });
 
   await run('operations after sign-in wait for the first render, then each one reaches the latest handler', async w => {
-    react.forEach(code => w.eval(code));
-    w.eval(concatSources(process.argv[2], ['core/globals.js', 'app/live-ops.js']));
     const R = w.React, seen = [];
     // Like Root, the handler reads the account of the render it comes from.
     function Probe() {
       const [me, setMe] = R.useState(null);
-      w.useBridgeOps(op => {
+      w.__mod.useBridgeOps(op => {
         if (['login', 'session', 'online'].indexOf(op.op) < 0) return;
         seen.push(op.op + ' as ' + (me || 'nobody'));
         if (op.op === 'login') setMe(op.me);

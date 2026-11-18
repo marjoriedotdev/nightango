@@ -1,3 +1,10 @@
+import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { cx } from '../core/util.js';
+import { Dialog, LOAD_BELOW_MARGIN, SkeletonRows, developerBadge, premiumBadge, presenceSr, useApp, useInfiniteScroll, youBadge } from '../core/ui.js';
+import { RichText } from '../core/rich-text.js';
+import { GENDER_LABEL, miniStyleOf, shownName, userOf } from '../core/selectors.js';
+import { isProfilePending } from '../bridge/live-model.js';
+import { personMetaLine, useProfiles } from './dm.js';
 var MEET_DEFAULTS = { query: '', sex: 'B', ageMin: 13, ageMax: 99, online: true, avatar: 0 };
 var PULL_TRIGGER = 64, PULL_MAX = 96;
 /** Filters that differ from BetterChatango's defaults, for the counter and the chips. */
@@ -17,7 +24,7 @@ function meetActive(f) {
  * @param {Function} onClick Opens the card.
  * @param {boolean} [noStatus] True where Nightango has no presence for the account: no dot, neither online nor offline.
  */
-function personCard(s, n, theme, onClick, noStatus) {
+export function personCard(s, n, theme, onClick, noStatus) {
   var u = userOf(s, n), isMe = n === s.me, status = noStatus ? null : isMe ? s.meStatus : u.status, mini = miniStyleOf(s.prefs, u, theme);
   var about = u.aboutHtml ? h(RichText, { html: u.aboutHtml, inline: true, bg: mini ? mini.bg : null }) : u.about || null;
   return h('button', { key: n, type: 'button', className: 'conv person' + (mini ? ' mini-bg' : ''), style: mini ? { backgroundColor: mini.bg, color: mini.text } : null, onClick: onClick },
@@ -82,7 +89,7 @@ function MeetFilters(p) {
         h(T.Switch, { checked: !!f.online, onChange: function (e) { set('online', e.target.checked); } }))));
 }
 
-function MeetPeople() {
+export function MeetPeople() {
   var app = useApp(), s = app.state, meet = s.meet || null;
   var a = useState(function () { return Object.assign({}, MEET_DEFAULTS, meet && meet.filters); }), f = a[0], setF = a[1];
   var b = useState(false), filtersOpen = b[0], setFiltersOpen = b[1];

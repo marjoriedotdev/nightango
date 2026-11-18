@@ -1,19 +1,19 @@
 /* ---------- Colors ---------- */
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   var m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || '').trim());
   if (!m) return null;
   var s = m[1].length === 3 ? m[1].split('').map(function (c) { return c + c; }).join('') : m[1];
   var n = parseInt(s, 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
-function rgbToHex(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
+export function rgbToHex(c) { return '#' + c.map(function (v) { return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }).join(''); }
 function lum(c) {
   var a = c.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
   return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 }
 function contrast(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
-function mix(a, b, t) { return [0, 1, 2].map(function (i) { return a[i] + (b[i] - a[i]) * t; }); }
-function ensureContrast(hex, bgHex, min) {
+export function mix(a, b, t) { return [0, 1, 2].map(function (i) { return a[i] + (b[i] - a[i]) * t; }); }
+export function ensureContrast(hex, bgHex, min) {
   var c = hexToRgb(hex), bg = hexToRgb(bgHex);
   if (!c || !bg) return undefined;
   var target = contrast([0, 0, 0], bg) >= contrast([255, 255, 255], bg) ? [0, 0, 0] : [255, 255, 255], t = 0, cur = c;
@@ -43,20 +43,20 @@ var CSS_COLOR_NAMES = Object.create(null);
  * Converts a CSS color to hex.
  * @param {string} value Hex color with or without a hash, named color, rgb() or rgba().
  */
-function cssColor(value) {
+export function cssColor(value) {
   var v = String(value || '').trim().toLowerCase();
   if (hexToRgb(v)) return v.charAt(0) === '#' ? v : '#' + v;
   if (CSS_COLOR_NAMES[v]) return CSS_COLOR_NAMES[v];
   var m = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/.exec(v);
   return m ? rgbToHex([+m[1], +m[2], +m[3]]) : null;
 }
-function rgba(hex, a) { var c = hexToRgb(hex) || [242, 122, 63]; return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + a + ')'; }
+export function rgba(hex, a) { var c = hexToRgb(hex) || [242, 122, 63]; return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + a + ')'; }
 function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToHex(c.map(function (v) { return v * f; })); }
 
 // Copy of the bg, text-body and selected tokens from tokens.json: selected is the surface where the accent as text has the lowest contrast.
-var SURFACE = { dark: { bg: '#0e1629', body: '#d0d7e6', selected: '#202e52' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
+export var SURFACE = { dark: { bg: '#0e1629', body: '#d0d7e6', selected: '#202e52' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
 var EMBER = '#f27a3f', MOONLIGHT = '#fbf6df';
-var ACCENTS = [['Moonlight', MOONLIGHT], ['Ember', EMBER], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
+export var ACCENTS = [['Moonlight', MOONLIGHT], ['Ember', EMBER], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
 // Not one default for both themes: a Moonlight fill disappears on the light surfaces, where it holds 1.06:1.
 var DEFAULT_ACCENTS = { dark: MOONLIGHT, light: EMBER };
 /**
@@ -64,18 +64,18 @@ var DEFAULT_ACCENTS = { dark: MOONLIGHT, light: EMBER };
  * @param {Object} prefs Preferences, whose accent is a hex color or 'auto'.
  * @param {string} theme Resolved theme, dark or light.
  */
-function accentOf(prefs, theme) { return hexToRgb(prefs.accent) ? prefs.accent : DEFAULT_ACCENTS[theme]; }
+export function accentOf(prefs, theme) { return hexToRgb(prefs.accent) ? prefs.accent : DEFAULT_ACCENTS[theme]; }
 /**
  * Returns the text color that holds 4.5:1 on an accent fill.
  * @param {string} hex Accent color.
  */
-function onAccentOf(hex) { return contrast(hexToRgb(hex), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff'; }
+export function onAccentOf(hex) { return contrast(hexToRgb(hex), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff'; }
 /**
  * Returns the accent tokens of a color, with the accent as text corrected for contrast in each theme.
  * @param {string} hex Accent color, Ember if it is not a hex color.
  * @returns {{accent: string, onAccent: string, text: {dark: string, light: string}, soft: {dark: string, light: string}}} Fill, text on the fill, accent as text and soft fill by theme.
  */
-function accentTokens(hex) {
+export function accentTokens(hex) {
   var acc = hexToRgb(hex) ? hex : EMBER;
   return {
     accent: acc, onAccent: onAccentOf(acc),
@@ -88,20 +88,20 @@ function accentTokens(hex) {
  * @param {string} hex Accent color.
  * @param {string} theme Resolved theme, dark or light.
  */
-function accentScope(hex, theme) {
+export function accentScope(hex, theme) {
   // The root declares --accent-text as var(--accent-text-d|l), resolved there: a scope sets the final tokens.
   var t = accentTokens(hex);
   return { '--accent': t.accent, '--on-accent': t.onAccent, '--accent-text': t.text[theme], '--accent-soft': t.soft[theme], '--focus-ring': t.text[theme] };
 }
-var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Comic': '"Comic Sans MS", "Comic Sans", "Chalkboard SE", sans-serif', 'Georgia': 'Georgia, serif', 'Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Impact': 'Impact, sans-serif', 'Palatino': 'Palatino, serif', 'Papyrus': 'Papyrus, cursive', 'Times': 'Times, serif', 'Typewriter': 'Typewriter, "Courier New", monospace' };
+export var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Comic': '"Comic Sans MS", "Comic Sans", "Chalkboard SE", sans-serif', 'Georgia': 'Georgia, serif', 'Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Impact': 'Impact, sans-serif', 'Palatino': 'Palatino, serif', 'Papyrus': 'Papyrus, cursive', 'Times': 'Times, serif', 'Typewriter': 'Typewriter, "Courier New", monospace' };
 /**
  * Converts a Chatango font size to a percentage.
  * @param {number} size Chatango size, 11 equals 100 %.
  */
-function fontPercent(size) { return Math.round(Math.min(200, Math.max(82, size * 100 / 11))); }
-var CHANNELS = { none: { label: 'No channel', color: null }, red: { label: 'Red', color: '#e5484d' }, blue: { label: 'Blue', color: '#3e8bd8' }, mod: { label: 'Staff', color: '#8a8e96' } };
+export function fontPercent(size) { return Math.round(Math.min(200, Math.max(82, size * 100 / 11))); }
+export var CHANNELS = { none: { label: 'No channel', color: null }, red: { label: 'Red', color: '#e5484d' }, blue: { label: 'Blue', color: '#3e8bd8' }, mod: { label: 'Staff', color: '#8a8e96' } };
 /**
  * Names a channel like the send entry of the channel menu.
  * @param {string} k Key in CHANNELS.
  */
-function channelLabel(k) { return k === 'none' ? CHANNELS.none.label : CHANNELS[k].label + ' channel'; }
+export function channelLabel(k) { return k === 'none' ? CHANNELS.none.label : CHANNELS[k].label + ' channel'; }

@@ -1,3 +1,19 @@
+import { useRef, useState } from '../core/globals.js';
+import { copyText, pick, uid } from '../core/util.js';
+import { ROLE_LONG, mkSettings } from '../core/roles.js';
+import { DM_LINES, SAMPLE_TIKTOK_THUMB, SAMPLE_X_POST, sampleMedia, sampleVisits, seedWorld } from '../core/sample-data.js';
+import { BETTER_CHATANGO_SAVE_FAILED } from '../core/prefs.js';
+import { useLatestCalls } from '../core/ui.js';
+import { findMsg, readThrough, sentBadge, shownName, trimThread, userOf } from '../core/selectors.js';
+import { ACCOUNT_NAME, GROUP_FLAG, LIVE, visitorPage } from '../bridge/live-model.js';
+import { GIF_URL, esc, lower, mediaEntryOk, mediaName, pmRecordEntry, screenPmRecords, warn } from '../bridge/live-parse.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { editedId } from '../views/message.js';
+import { closePipWindow } from '../views/pip.js';
+import { uploadKey } from '../views/attach.js';
+import { applyGroupEdit, banListOf, ensureLiveGroup, ensureLiveUser, ensureUnseenUser, groupUpdate, pmAuthor } from './live-state.js';
+import { addSentPm, memoryPmArchive, mergePmHistory, pmConversation, pmMessage, readPm, syncPmUnread, unreadPm } from './pm.js';
+import { dropMentions, logMention } from './inbox.js';
 /* ---------- Actions: what the views ask, passed to Chatango by BetterChatango in live ---------- */
 /**
  * Puts the sample world of the prototype into the state with its mentions recorded like those of the live history.
@@ -52,7 +68,7 @@ function wordList(v) { return String(v || '').split(/[,\n]/).map(function (x) { 
  *   reconnection (useReconnection) and live PMs (useLivePms).
  * @returns {{actions: Object, uploads: Object}} Actions, and the name of the file being sent to each group or PM.
  */
-function useActions(k) {
+export function useActions(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast, setNavOpen = k.setNavOpen;
   var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, openSplit = k.inbox.openSplit, closeSplit = k.inbox.closeSplit, openPip = k.inbox.openPip, receiveGroup = k.inbox.receiveGroup, receiveDm = k.inbox.receiveDm;
   var drafts = k.drafts, localRef = k.localRef, reconnection = k.reconnection, pms = k.pms;

@@ -1,3 +1,8 @@
+import { ReactDOM, T, h, useState } from '../core/globals.js';
+import { plural } from '../core/util.js';
+import { FONT_STACKS } from '../core/colors.js';
+import { ColorField, Dialog, MenuButton, useApp } from '../core/ui.js';
+import { FONT_FACES } from '../bridge/live-model.js';
 /* ---------- Formatting bar of the profile fields ---------- */
 
 // Sizes in pixels, as BetterChatango reads them (inject.js:656).
@@ -20,7 +25,7 @@ var MARKUP_URL = /^https?:\/\/[^\s"<>]+$/i;
  * @param {string} close Closing tag.
  * @returns {{from: number, to: number, text: string, selStart: number, selEnd: number}} Replaced range, inserted text and the selection that follows.
  */
-function wrapMarkup(value, start, end, open, close) {
+export function wrapMarkup(value, start, end, open, close) {
   var sel = value.slice(start, end);
   if (sel && start >= open.length && value.slice(start - open.length, start) === open && value.slice(end, end + close.length) === close)
     return { from: start - open.length, to: end + close.length, text: sel, selStart: start - open.length, selEnd: end - open.length };
@@ -42,7 +47,7 @@ var FONT_CLOSE = '</font>';
  * @param {string} val Value of the attribute.
  * @returns {{from: number, to: number, text: string, selStart: number, selEnd: number}} Replaced range, inserted text and the selection that follows.
  */
-function fontMarkup(value, start, end, name, val) {
+export function fontMarkup(value, start, end, name, val) {
   var sel = value.slice(start, end), m = FONT_OPEN_BEFORE.exec(value.slice(0, start));
   // A font tag inside the selection could be the one the following </font> closes.
   if (!m || value.slice(end, end + FONT_CLOSE.length).toLowerCase() !== FONT_CLOSE || /<\/?font\b/i.test(sel))
@@ -110,7 +115,7 @@ function MarkupDialog(p) {
  * @param {boolean} [disabled] Bar disabled along with the field.
  * @returns {{toolbar: Object, onKeyDown: Function}} Bar to pass to the TextField and shortcut handler of the textarea.
  */
-function useMarkupToolbar(inputRef, fieldId, disabled) {
+export function useMarkupToolbar(inputRef, fieldId, disabled) {
   var app = useApp();
   var d = useState(null), dialog = d[0], setDialog = d[1];
   var c = useState('#e5484d'), lastColor = c[0], setLastColor = c[1];

@@ -1,3 +1,15 @@
+import { useCallback, useRef } from '../core/globals.js';
+import { isGuest, uid } from '../core/util.js';
+import { messagePreview } from '../core/rich-text.js';
+import { groupRouteAt, isDmInView, isGroupInView, isHiddenAuthor, isPaneOpen, mentionsMe, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
+import { LIVE } from '../bridge/live-model.js';
+import { warn } from '../bridge/live-parse.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { openPipWindow } from '../views/pip.js';
+import { quietOutsideSpace } from '../views/spaces.js';
+import { beep } from './sound.js';
+import { withReply } from './live-state.js';
+import { betterChatangoPmArchive, memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
 /* ---------- Inbox: messages received and read ---------- */
 var MENTION_MAX = 100;
 /**
@@ -6,7 +18,7 @@ var MENTION_MAX = 100;
  * @param {string} gid Group of the message.
  * @param {Object} m Received message.
  */
-function logMention(d, gid, m) {
+export function logMention(d, gid, m) {
   // An edit shown on its own joins its original when the original arrives: only the original enters the list.
   if (m.kind !== 'msg' || m.editId || m.author === d.me || userOf(d, m.author).ignored || !mentionsMe(d.me, m.text)) return;
   if (d.mentionLog.some(function (x) { return x.gid === gid && x.id === m.id; })) return;
@@ -20,7 +32,7 @@ function logMention(d, gid, m) {
  * @param {string} gid Target group.
  * @param {?string[]} ids Removed messages, null for the whole group.
  */
-function dropMentions(d, gid, ids) {
+export function dropMentions(d, gid, ids) {
   d.mentionLog = d.mentionLog.filter(function (x) { return x.gid !== gid || (ids && ids.indexOf(x.id) < 0); });
 }
 
@@ -46,7 +58,7 @@ function sameConversation(a, b) { return !!a && !!b && a.view === b.view && a.id
  * @returns {{pmArchive: Object, nav: Function, readInView: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification
  *   of an event and of a PM, and reception.
  */
-function useInbox(stateRef, update, toast, setNavOpen) {
+export function useInbox(stateRef, update, toast, setNavOpen) {
   // Only source of PM unreads: the BetterChatango database in live, an in-memory archive in the prototype or when that database is missing.
   var pmArchive = useRef(null);
   if (!pmArchive.current) pmArchive.current = LIVE ? betterChatangoPmArchive() : memoryPmArchive();

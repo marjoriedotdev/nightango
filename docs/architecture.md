@@ -1,6 +1,6 @@
 # Architecture
 
-Nightango is a single React 18 application written in ES5 JavaScript, without JSX or a bundler. The same code serves two targets: the userscript wired to the running BetterChatango client, and a hosted prototype with simulated data.
+Nightango is a single React 18 application written in ES5 JavaScript with ES modules, without JSX, bundled by esbuild ([ADR-0017](adr/0017-es-modules.md)). The same code serves two targets: the userscript wired to the running BetterChatango client, and a hosted prototype with simulated data.
 
 ## File tree
 
@@ -81,7 +81,7 @@ src/
     app.css          application styles
     login.css        BetterChatango sign-in screen in Nightango colors, put in the document by skin-page.js
 scripts/
-  build.mjs          Node build (concatenation, userscript assembly, esbuild minification)
+  build.mjs          Node build (esbuild bundle, import graph check, userscript assembly, minification)
   changelog.mjs      reads CHANGELOG.md, for the build (What's new) and the GitLab release notes
   release.mjs        GitLab release of the tested userscripts, run by the release job of .gitlab-ci.yml
   ds-components.mjs  regenerates README.md and preview.html of the design system components
@@ -92,17 +92,20 @@ dist/                build outputs, not versioned
 
 `bridge/live-parse.js` contains only functions that read neither the BetterChatango client, nor `emit`, nor any variable of the bridge closure. A function that depends on this closure stays in `bridge/live-bridge.js`. The bridge keeps the steps specific to BetterChatango: waiting for Chatango's replies and their delays, requesting the announcement and reading a group's info after `inited`, the mention sound of a PM, the temporary `k:` message ids. It emits only facts to `Root`. Each listener receives an operation on its own: one that throws is logged to the console, so to the diagnostic journal, and stops neither the other listeners nor the step that emits, sign-in included (`deliverOp`). `useLiveOps` (`app/live-ops.js`) applies them to the state, with `app/pm.js` for PMs and `app/live-state.js` for the live state it builds. The operations received after `login` wait for its first render, then go through `deliverOp` in their order: until then, they would read the signed-out state, which has no groups, users or route. `useLiveOps` subscribes once, and each operation runs the handler of the latest render (`useBridgeOps`): a handler that reads the state directly still sees the current one.
 
-## Concatenation
+## Modules
 
-`scripts/build.mjs` concatenates the files of `src/` into a single IIFE, in the order of `APP_SOURCES`. It is the only place that declares this list. All files therefore share one scope: a new file is added to `APP_SOURCES`, at its place in the order.
+Each file of `src/` is an ES module: it imports every name it reads from another file and exports only the names other files read ([ADR-0017](adr/0017-es-modules.md)). `scripts/build.mjs` bundles two entries with esbuild (`bundle`, `format: 'esm'`, `target: 'es5'`) and wraps each bundle in a strict mode IIFE:
 
-The build opens the IIFE with two names: `APP_VERSION`, the `@version` of `src/loader/skin-loader.js`, and `RELEASE_NOTES`, the sections of `CHANGELOG.md` read in the Keep a Changelog format (`{ version, date, groups: [{ title, items }] }`, most recent first). The prototype and the userscript therefore get the same version and the same notes. The build rejects a malformed `CHANGELOG.md` or one whose first section is not the `@version` one.
+- `src/main.js`, the userscript: the interface starts without a host.
+- `src/main-hosted.js`, the hosted prototype (`dist/app.js`, `dist/nightango.html`): its page can hand a saved state and read the state back through `window.claude.hot`, and it gets `window.showNewYear` and `window.showSkyAt` for review. The userscript entry never imports it, since any script on st.chatango.com could define this hook. The host reaches the interface as the `host` argument of `start` (`app/start.js`), read by `useAppState` (`app/root.js`).
 
-`bridge/live-parse.js` sits right before `bridge/live-bridge.js`, after `bridge/live-model.js` whose `FONT_FACES` it reads. Its functions become names of the single scope, shared with every file: a name that duplicates another replaces the first one without an error.
+The `build:info` module, provided by the build, exports `APP_VERSION`, the `@version` of `src/loader/skin-loader.js`, and `RELEASE_NOTES`, the sections of `CHANGELOG.md` read in the Keep a Changelog format (`{ version, date, groups: [{ title, items }] }`, most recent first). The prototype and the userscript therefore get the same version and the same notes. The build rejects a malformed `CHANGELOG.md` or one whose first section is not the `@version` one.
 
-Code between `/*PROTOTYPE*/` and `/*END PROTOTYPE*/` belongs to the hosted prototype only: its hook `window.claude.hot`, through which the hosted page starts the interface, can hand it a saved state and reads its state back (`app/start.js`, `app/root.js`). The build leaves these blocks out of the userscripts, since any script on st.chatango.com could define this hook. `dist/app.js` keeps them, like `dist/nightango.html`.
+Imports only go down the layers `core/`, `bridge/`, the screens (`views/` and `settings/`), then `app/`, and no module is in an import cycle. The build reads the import graph from the esbuild metafile and refuses any other import (`checkImports`). The imports left by the migration that break this rule are listed in `KNOWN_UPWARD` and `KNOWN_CYCLIC`, which only shrink.
 
-The build rejects application sources that declare the same top-level name twice, app code or a bundle that contains `</script`, a userscript stylesheet that still targets `:root` or `html,body{`, and a sign-in screen stylesheet that contains `url(` or `@import`.
+The evaluation order follows the imports: a module whose top level runs code (the bridge, global listeners) runs after the modules it imports. esbuild renames a function named like another top-level name of the bundle (`MessageRow2`): its `name` property carries the suffix.
+
+The build rejects app code or a bundle that contains `</script`, a userscript stylesheet that still targets `:root` or `html,body{`, and a sign-in screen stylesheet that contains `url(` or `@import`.
 
 ## Userscript in two contexts
 
@@ -193,7 +196,7 @@ See [ADR-0004](adr/0004-member-html-never-injected.md).
 - `components/bundle.js` and `bundle.css` are maintained by hand. The `README.md` and `preview.html` of each component are generated by `pnpm build:ds`.
 - The build produces the token stylesheet from `tokens.json`: dark theme by default, light theme by system preference or by explicit choice.
 - The type scale of `tokens.json` (`type.groups`) reaches the stylesheets as one `--font-size-<style>` variable per style (`--font-size-body`, `--font-size-control`...), on the sign-in screen too. The three stylesheets take their font sizes from these variables.
-- New Year: `newYearAt` (`core/util.js`) reads the device time around local midnight on January 1: the countdown in the last minute of December 31, the fireworks in the first minute of January 1. `useNewYear` (`views/season.js`) renders again when that changes, with a timer of an hour at most the rest of the year. While `sky.season` is on, `NewYearMark` shows the countdown under the moon of `BrandMark`, then "Happy New Year", the only text announced (once, through a live region that exists from the countdown on). `NewYearSky`, first in the shell, draws the fireworks in the sky behind the panels and sets the `season-new-year` class of their tokens on the root. `NewYearMark` adds a few bursts on the sky band. No fireworks with Calm sky or reduced motion. The prototype plays the last ten seconds of the year on demand with `window.showNewYear()`, in a `PROTOTYPE` block left out of the userscripts.
+- New Year: `newYearAt` (`core/util.js`) reads the device time around local midnight on January 1: the countdown in the last minute of December 31, the fireworks in the first minute of January 1. `useNewYear` (`views/season.js`) renders again when that changes, with a timer of an hour at most the rest of the year. While `sky.season` is on, `NewYearMark` shows the countdown under the moon of `BrandMark`, then "Happy New Year", the only text announced (once, through a live region that exists from the countdown on). `NewYearSky`, first in the shell, draws the fireworks in the sky behind the panels and sets the `season-new-year` class of their tokens on the root. `NewYearMark` adds a few bursts on the sky band. No fireworks with Calm sky or reduced motion. The hosted prototype plays the last ten seconds of the year on demand with `window.showNewYear()` (`reviewNewYear`), published by its entry only.
 
 ## Build outputs
 
@@ -201,7 +204,7 @@ See [ADR-0004](adr/0004-member-html-never-injected.md).
 - `dist/nightango.user.js`: readable version, for debugging and audit.
 - `dist/nightango.html` and `dist/app.js`: hosted prototype.
 
-Both userscripts come out of the same `userscript()` function, which describes the assembly steps only once. esbuild is used only for minification: the concatenation stays the one in `build.mjs`.
+Both userscripts come out of the same `userscript()` function, which describes the assembly steps only once. The readable version keeps the code and its names, not its comments: esbuild drops them.
 
 ## Tests
 
@@ -210,13 +213,13 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build. The runner sta
 - `smoke`: hosted prototype, loaded from `dist/nightango.html` and started through its hook.
 - `live_ui`: live mode with a fake BetterChatango client, on `dist/app.js` and the design system bundle. It records every frame sent and checks its exact format. The app timers and `Date.now` follow real time on a clock the suite moves forward: `skip` jumps over a delay and `skipUntil` jumps from one app timer to the next until a condition holds, so the 2 s socket poll, the connection timeout and the reconnection delays cost no real wait. React keeps the real timers, and each timer run that way is followed by a short real pause for the render.
 - `loader`: userscript, BetterChatango startup, ignored pages, double start, vissle, TikTok and X bridges, diagnostic journal, recovery screen, prototype hook left out. Run on `dist/nightango.user.js` then on `dist/nightango.min.user.js`. It is the only suite that runs the userscripts.
-- `layers`: menus, dialogs and toasts of `core/ui.js` in a Shadow DOM, as in live, on the sources of `src/core/` and the design system bundle. The cases move the clock of the app timers forward themselves.
-- `pm`: PM unreads, private history reading, merge, import and pages up to the cap, on the sources of `src/core/`, `src/bridge/` and `src/app/pm.js`, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
+- `layers`: menus, dialogs and toasts of `core/ui.js` in a Shadow DOM, as in live, on the modules of `src/core/` bundled by the suite and the design system bundle. The cases move the clock of the app timers forward themselves.
+- `pm`: PM unreads, private history reading, merge, import and pages up to the cap, on the modules of the bridge and `src/app/pm.js` bundled by the suite, with the fake history database of `tests/fake-pm-db.js`, shared with `live_ui`.
 - `draft`: copy-on-write drafts of the state, on `src/core/draft.js` alone: what a change copies and what it shares, array moves, a draft held at a second place or inside a given object, `plainOf`, a write after the update and an update that throws.
-- `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the sources of `src/core/` and `src/bridge/`.
+- `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the modules of `src/bridge/live-parse.js` and `src/core/rich-text.js`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
-- `live_login`: sign-in detection, a listener that throws and the diagnostic journal kept per account, on the concatenation of the sources of `src/bridge/`, after the diagnostic journal. Then the operations after sign-in, held until the first render and handed to the latest handler (`useBridgeOps`), with React, `core/globals.js` and `app/live-ops.js`.
-- `avatar`: avatars, on the design system bundle, the sources of `src/bridge/` and the `T` wrapper at the top of `src/core/globals.js`.
+- `live_login`: sign-in detection, a listener that throws and the diagnostic journal kept per account, on the bridge bundled by the suite with `app/live-ops.js`, after the diagnostic journal. Then the operations after sign-in, held until the first render and handed to the latest handler (`useBridgeOps`).
+- `avatar`: avatars, on the design system bundle, `avatarSrc` (`src/bridge/live-model.js`) and the `T` wrapper of `src/core/globals.js`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle, then the season dates at their boundaries in both hemispheres and the sky by the hour at its keyframes, between them and across midnight, on `src/core/util.js`.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.
 - `perf`: cost of the live operations on a busy state (four groups, three at their message cap, hundreds of members, thousands of known users), started in live mode through the prototype hook that `dist/app.js` keeps, with a fake BetterChatango client and the animation frames run by the test. It counts what an operation shares with the previous state, the renders of a burst of operations within one animation frame, the sorts of a history page, the rows rendered again, the members dropped and those kept while a dialog shows them, and the minute timers, with a time budget per operation. The counts carry the checks: the budget leaves a wide margin for slow machines.
@@ -224,6 +227,8 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build. The runner sta
 - `new_year`: the countdown and fireworks minutes around local midnight on January 1, at their boundaries, and the delay until what is shown changes, on `src/core/util.js`.
 - `voice`: the WAV file of a voice message (header, sizes, 16-bit samples clipped), the downmix of a stereo recording and its cut at the length limit, on `src/views/voice.js`.
 - `release`: what `scripts/release.mjs` publishes from a `@version` and a branch (stable from `main`, betas from `beta`, a beta refused on `main`), the release notes of a version, and the `CHANGELOG.md` formats that `scripts/changelog.mjs` refuses. No network: the script only publishes when run as the entry point.
+
+The suites that read modules bundle them with `bundleForTest` (`scripts/build.mjs`), which exposes the names a suite needs under one global name.
 
 Test policy: [ADR-0009](adr/0009-test-only-complex-behaviour.md) and `docs/coding-conventions.md`.
 
@@ -239,7 +244,7 @@ The code is pushed by hand to GitHub and to GitLab, with no automatic mirroring.
 
 ## BetterChatango reference copy
 
-`reference/torch/` contains BetterChatango's code as served by vissle.me on 2026-10-19, read-only. Neither `scripts/build.mjs` nor the tests read it: the build only takes the files listed in `APP_SOURCES` and `torchds/project/`.
+`reference/torch/` contains BetterChatango's code as served by vissle.me on 2026-10-19, read-only. Neither `scripts/build.mjs` nor the tests read it: the build only takes the modules its entries import and `torchds/project/`.
 
 ## Published artifacts
 

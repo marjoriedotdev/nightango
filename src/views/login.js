@@ -1,5 +1,8 @@
+import { APP_VERSION } from 'build:info';
+import { T, h, useState } from '../core/globals.js';
+import { useApp } from '../core/ui.js';
 /* ---------- Sign-in ---------- */
-function Login() {
+export function Login() {
   var app = useApp();
   var a = useState('orrin'), user = a[0], setUser = a[1];
   var b = useState(''), pass = b[0], setPass = b[1];

@@ -1,12 +1,35 @@
+import { Frag, React, T, h, useEffect, useLayoutEffect, useMemo, useRef, useState } from '../core/globals.js';
+import { MIN, copyText, cx, dayKey, dayLabel, isGuest, lastMatch, plural } from '../core/util.js';
+import { CHANNELS, accentOf, accentScope, channelLabel } from '../core/colors.js';
+import { ROLE_LONG } from '../core/roles.js';
+import { AccentSwatches, ConnectionBanner, Dialog, MenuButton, groupDraftKey, presenceSr, roleBadge, useApp, useDraft, useLatestCalls, useRightColumn } from '../core/ui.js';
+import { messagePreview } from '../core/rich-text.js';
+import { badgeChoices, canBanMember, findMsg, groupRights, isHiddenAuthor, isStaffRole, messageBadge, msgFinder, roleOf, sentBadge, shownName, userOf } from '../core/selectors.js';
+import { LIVE } from '../bridge/live-model.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { MobileNavButton, favoriteItem } from './shell.js';
+import { MessageEmbeds, MessageRow, canEditGroupMessage, editedId, groupRowFill, joinRow, mentionHandle, quoteOf } from './message.js';
+import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
+import { GroupInfoSheet, MembersPanel } from './members.js';
+import { popOutItem } from './pip.js';
+import { spacesItem } from './spaces.js';
+import { MessageStyleButton } from './message-style.js';
+import { useEmojiPicker } from './emoji-picker.js';
+import { uploadKey, useAttachMedia } from './attach.js';
+import { attachMenu, useVoiceRecorder } from './voice.js';
+import { useMediaCompletion } from './media.js';
+import { SharedMediaDialog } from './shared-media.js';
+import { runCommand } from './commands.js';
+import { SessionBanner, sessionLost } from './session.js';
 /* ---------- Group ---------- */
 // BetterChatango rejects the tenth edit of a message.
-var EDIT_MAX = 9;
+export var EDIT_MAX = 9;
 // BetterChatango's limit for a group, counted on the body it builds and not on the typed text.
 var GROUP_MESSAGE_MAX = 2900;
 // From the @ on, like Discord. A Chatango name has 20 characters at most.
 var MENTION_TOKEN = /(?:^|\s)@([A-Za-z0-9_-]{0,20})$/;
 var MENTION_SUGGESTIONS = 8;
-var COMPOSER_MODES = {
+export var COMPOSER_MODES = {
   // BetterChatango renders replies and edits too (inject.js:5407, 5514), other Chatango apps show a new message.
   reply: { icon: 'reply', verb: 'Replying to', cancelLabel: 'Cancel reply', note: 'Only people on Nightango or BetterChatango see this.' },
   edit: { icon: 'edit', verb: 'Editing', cancelLabel: 'Cancel edit', note: 'Only people on Nightango or BetterChatango see this.' },
@@ -42,7 +65,7 @@ function ComposerLimit(p) {
  * @param {Array} draft useDraft result of the composer.
  * @returns {{mode: ?{kind: string, m: Object}, setMode: Function, close: Function, enter: function(string): Function, edit: function(Object, number)}} Mode and its transitions.
  */
-function useComposerMode(draft) {
+export function useComposerMode(draft) {
   var app = useApp();
   var st = useState(null), mode = st[0], setMode = st[1], stash = useRef('');
   if (mode && mode.kind === 'edit') draft[2].current = stash.current;
@@ -65,11 +88,11 @@ function useComposerMode(draft) {
  * @param {string} draft Composer text.
  * @param {?Object} mode Reply, edit or quote mode of the composer.
  */
-function editsLastOnUp(e, draft, mode) {
+export function editsLastOnUp(e, draft, mode) {
   return e.key === 'ArrowUp' && !draft && !mode && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey;
 }
 
-function GroupView(p) {
+export function GroupView(p) {
   var app = useApp(), s = app.state, g = s.groups[p.gid], prefs = s.prefs, me = s.me;
   var a2 = useState(null), search = a2[0], setSearch = a2[1];
   var a6 = useState({}), revealed = a6[0], setRevealed = a6[1];
@@ -474,6 +497,6 @@ function AnnouncementText(p) {
  * @param {Object} app Application context.
  * @param {string} gid Group to leave.
  */
-function confirmLeave(app, gid) {
+export function confirmLeave(app, gid) {
   app.ui.confirm({ title: 'Leave #' + gid + '?', body: 'You can join again from Discover at any time.', confirmLabel: 'Leave group', danger: true, onConfirm: function () { app.actions.leaveGroup(gid); } });
 }

@@ -1,3 +1,15 @@
+import { Frag, T, h, useContext, useEffect, useMemo, useRef, useState } from '../core/globals.js';
+import { cx, ownOf } from '../core/util.js';
+import { ensureContrast, hexToRgb, mix, rgbToHex, rgba } from '../core/colors.js';
+import { Dialog, LayerCtx, Portal, closeModal, developerBadge, openModal, premiumBadge, useApp, useShownUsers, useStatePart } from '../core/ui.js';
+import { RichText, bidiText, fullProfileDoc, memberLink, unlinkFullProfile, waitsForClick } from '../core/rich-text.js';
+import { commonGroups, miniStyleOf, shownName, userOf } from '../core/selectors.js';
+import { LIVE, avatarSrc, isProfilePending, profileImgSrc } from '../bridge/live-model.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { columnHeader } from './shell.js';
+import { useProfileActions } from './members.js';
+import { personAsl, personStatus } from './dm.js';
+import { NOTE_LABEL_MAX, NOTE_TEXT_MAX } from '../app/live-state.js';
 /**
  * "About" block.
  * It shows formatted Chatango text in live and plain text in the prototype.
@@ -16,7 +28,7 @@ function profileAbout(u, skinned) {
  * Tracks whether the Premium background image shows under the media settings and trusted hosts.
  * @param {?Object} mini Member background as returned by miniStyleOf.
  */
-function useMiniCover(mini) {
+export function useMiniCover(mini) {
   var safety = useApp().state.prefs.safety;
   var r = useState(null), revealed = r[0], setRevealed = r[1];
   var image = mini && mini.image && safety.embedImages ? mini.image : null;
@@ -28,7 +40,7 @@ function useMiniCover(mini) {
  * @param {Object} cover Background image as returned by useMiniCover.
  * @param {Object} mini Member background as returned by miniStyleOf.
  */
-function coverReveal(cover, mini) {
+export function coverReveal(cover, mini) {
   return cover.image && !cover.shown ? h('button', { type: 'button', className: 'linkbtn', style: { color: mini.link }, onClick: cover.reveal }, 'Show background') : null;
 }
 
@@ -36,7 +48,7 @@ function coverReveal(cover, mini) {
  * Remaps a container's color tokens onto a member's Premium background.
  * @param {Object} mini Member background as returned by miniStyleOf.
  */
-function miniSkin(mini) {
+export function miniSkin(mini) {
   var soft = ensureContrast(rgbToHex(mix(hexToRgb(mini.text), hexToRgb(mini.bg), 0.3)), mini.bg, 4.5);
   return {
     backgroundColor: mini.bg, color: mini.text, '--raised': mini.bg, '--text': mini.text, '--text-body': mini.text, '--text-2': soft, '--text-3': soft,
@@ -144,7 +156,7 @@ function profileBadges(name, u) {
  * @param {Function} p.nav Navigation to a group in common.
  * @param {boolean} [p.focusHeading] The name gets the focus when a dialog opens.
  */
-function ProfileSummary(p) {
+export function ProfileSummary(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), cover = useMiniCover(p.skin);
   var common = commonGroups(s, name);
   useShownUsers([name]);
@@ -193,7 +205,7 @@ function MemberNote(p) {
  * Holds back the images of a full profile while the media settings ask for it.
  * @returns {{on: boolean, button: ?Object}} Whether images are allowed, and the button that loads them.
  */
-function useFullProfileMedia() {
+export function useFullProfileMedia() {
   var safety = useApp().state.prefs.safety;
   var c = useState(!safety.proxyMedia && safety.embedImages), on = c[0], setOn = c[1];
   return { on: on, button: on ? null : h(T.Button, { key: 'm', variant: 'ghost', onClick: function () { setOn(true); } }, 'Load images') };
@@ -206,7 +218,7 @@ function useFullProfileMedia() {
  * @param {string} p.html HTML written by the member.
  * @param {boolean} p.media Whether images are allowed, as given by useFullProfileMedia.
  */
-function FullProfileFrame(p) {
+export function FullProfileFrame(p) {
   var app = useApp(), mini = miniStyleOf(app.state.prefs, userOf(app.state, p.name), app.theme);
   var page = useMemo(function () { return unlinkFullProfile(p.html); }, [p.html]);
   return h(Frag, null,
@@ -216,7 +228,7 @@ function FullProfileFrame(p) {
 }
 
 /** Full profile: the member's HTML page shown in an isolated frame without scripts. */
-function FullProfileDialog(p) {
+export function FullProfileDialog(p) {
   var app = useApp(), s = app.state, u = userOf(s, p.name), media = useFullProfileMedia();
   var a = useState(LIVE ? null : ''), html = a[0], setHtml = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
@@ -244,7 +256,7 @@ function FullProfileDialog(p) {
             : h(FullProfileFrame, { name: p.name, html: content, media: media.on })));
 }
 
-function ProfilePanel(p) {
+export function ProfilePanel(p) {
   var app = useApp(), name = p.name;
   var actions = useProfileActions(name, null);
   var mini = miniStyleOf(app.state.prefs, userOf(app.state, name), app.theme);

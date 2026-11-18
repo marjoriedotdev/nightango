@@ -1,12 +1,23 @@
+import { useCallback, useEffect, useRef } from '../core/globals.js';
+import { MIN, kindOf, ownOf, storageGet, storageMerge, storageSet } from '../core/util.js';
+import { plainOf } from '../core/draft.js';
+import { hexToRgb } from '../core/colors.js';
+import { mkSettings, roleOfFlags } from '../core/roles.js';
+import { favoritePeople, findMsg } from '../core/selectors.js';
+import { ACCOUNT_NAME, BADGE_FLAG, GROUP_FLAG, LIVE, skinKey } from '../bridge/live-model.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { SPACE_MAX, SPACE_NAME_MAX } from '../views/spaces.js';
+import { applyEdit } from './pm.js';
+import { IDLE_DELAY } from './root.js';
 /* ---------- Live state: session, world and groups built for Root ---------- */
 // A session loss only gives way to a reason of equal or higher rank.
-var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
+export var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
 /**
  * Tracks the session loss after a connection state change.
  * @param {Object} d Application state.
  * @param {{gid: string, state: string}} op Connection and its new state.
  */
-function sessionAfterConn(d, op) {
+export function sessionAfterConn(d, op) {
   var s = d.session;
   if (op.state === 'open') {
     if (s && s.reason === 'kicked') return op.gid === 'private_message' ? null : s;
@@ -20,7 +31,7 @@ function sessionAfterConn(d, op) {
   return down ? { reason: 'lost', attempts: 0 } : s;
 }
 
-function liveWorld(me) {
+export function liveWorld(me) {
   var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
   return {
     me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
@@ -44,12 +55,12 @@ function storedLocal(stored) {
   Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
   return out;
 }
-var NOTE_LABEL_MAX = 24, NOTE_TEXT_MAX = 500;
+export var NOTE_LABEL_MAX = 24, NOTE_TEXT_MAX = 500;
 /**
  * Returns the private notes kept in this browser without the entries of another shape.
  * @param {Object} stored Notes by member name, untrusted.
  */
-function storedNotes(stored) {
+export function storedNotes(stored) {
   var out = {};
   Object.keys(stored).forEach(function (n) {
     var x = stored[n];
@@ -63,7 +74,7 @@ function storedNotes(stored) {
  * Returns the favorite people kept in this browser without the entries that are not an account name.
  * @param {Array} stored Member names, untrusted.
  */
-function storedFavoritePeople(stored) {
+export function storedFavoritePeople(stored) {
   return stored.filter(function (n) { return typeof n === 'string' && ACCOUNT_NAME.test(n); });
 }
 var SPACE_MEMBER = /^(group|dm):[a-z0-9_-]{1,20}$/;
@@ -71,7 +82,7 @@ var SPACE_MEMBER = /^(group|dm):[a-z0-9_-]{1,20}$/;
  * Returns the spaces kept in this browser without the entries of another shape.
  * @param {Array} stored Spaces, untrusted.
  */
-function storedSpaces(stored) {
+export function storedSpaces(stored) {
   return stored.filter(function (x) {
     return kindOf(x) === 'object' && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim() && kindOf(x.members) === 'array';
   }).slice(0, SPACE_MAX).map(function (x) {
@@ -94,7 +105,7 @@ function newestReads(reads) {
  * @param {Object} state Application state.
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
-function useLocalStore(state) {
+export function useLocalStore(state) {
   var localRef = useRef(blankLocal()), pending = useRef(null);
   function flush() {
     var p = pending.current;
@@ -165,15 +176,15 @@ function useLocalStore(state) {
   return { ref: localRef, restore: restore };
 }
 /** Key of a ban list entry: unid and IP, like removeblock. */
-function banKey(b) { return b.unid + ':' + b.ip; }
-function blankBanPage() { return { loaded: false, more: false, loading: false }; }
+export function banKey(b) { return b.unid + ':' + b.ip; }
+export function blankBanPage() { return { loaded: false, more: false, loading: false }; }
 /**
  * Returns a BetterChatango list loaded by pages: bans (block) or unbans (unblock).
  * @param {Object} g Live group.
  * @param {string} kind block or unblock.
  * @returns {{rows: Array, page: {loaded: boolean, more: boolean, loading: boolean}}} Loaded rows and list state.
  */
-function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.live.banPage } : { rows: g.live.unbans, page: g.live.unbanPage }; }
+export function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.live.banPage } : { rows: g.live.unbans, page: g.live.unbanPage }; }
 function liveGroup(id, title) {
   var t = title || id;
   return {
@@ -192,14 +203,14 @@ function liveGroup(id, title) {
  * @param {string} gid Target group.
  * @param {function(Object, Object)} fn Change of the group, with the state being modified.
  */
-function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
+export function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth.loggedIn) return; var g = d.groups[gid]; if (g) fn(g, d); }); }
 /**
  * Returns a live group, created if needed with its BetterChatango favorite and mute and its hidden and sending channels, color, read position and member roles kept in this browser.
  * @param {Object} d State being modified.
  * @param {string} gid Target group.
  * @param {Object} local Account data kept in this browser.
  */
-function ensureLiveGroup(d, gid, local) {
+export function ensureLiveGroup(d, gid, local) {
   var g = d.groups[gid];
   if (!g) {
     g = d.groups[gid] = liveGroup(gid, gid);
@@ -221,7 +232,7 @@ function ensureLiveGroup(d, gid, local) {
  * @param {string} name Target member.
  * @param {Object} local Account data kept in this browser.
  */
-function ensureLiveUser(d, name, local) {
+export function ensureLiveUser(d, name, local) {
   // Assigning __proto__ would replace the prototype of the map: this name gets a member that is never kept.
   if (name === '__proto__') return { status: 'offline', about: '', style: {} };
   var u = ownOf(d.users, name);
@@ -238,7 +249,7 @@ function ensureLiveUser(d, name, local) {
  * @param {string} name Target member.
  * @param {Object} local Account data kept in this browser.
  */
-function ensureUnseenUser(d, name, local) {
+export function ensureUnseenUser(d, name, local) {
   if (!d.users[name]) ensureLiveUser(d, name, local).status = 'offline';
 }
 /**
@@ -247,7 +258,7 @@ function ensureUnseenUser(d, name, local) {
  * @param {string} name Target member.
  * @param {Object} local Account data kept in this browser.
  */
-function ensurePresentUser(d, name, local) {
+export function ensurePresentUser(d, name, local) {
   var u = ensureLiveUser(d, name, local);
   if (u.status === 'offline' && !u.friend) u.status = 'online';
 }
@@ -281,7 +292,7 @@ function referencedUsers(s, shown) {
  * @param {boolean} loggedIn Signed in.
  * @returns {function(string[]): Function} Keeps members while a view shows them, and returns their release (useShownUsers).
  */
-function usePrunedUsers(store, loggedIn) {
+export function usePrunedUsers(store, loggedIn) {
   // Number of views showing each member: two views can show the same one, the first to close must not release it.
   var shown = useRef(null);
   if (!shown.current) shown.current = Object.create(null);
@@ -305,7 +316,7 @@ function usePrunedUsers(store, loggedIn) {
  * @param {Object} u Member in the state.
  * @param {{status: string, lastOn: number, idleSince: number}} x Received presence.
  */
-function applyPresence(u, x) {
+export function applyPresence(u, x) {
   // Before IDLE_DELAY, an idle member stays shown as online: only idleSince keeps the inactivity.
   u.idleSince = x.status === 'idle' ? x.idleSince || u.idleSince || Date.now() : 0;
   u.status = x.status === 'idle' && Date.now() - u.idleSince < IDLE_DELAY ? 'online' : x.status;
@@ -317,7 +328,7 @@ function applyPresence(u, x) {
  * @param {?Object} style Style read in the message.
  * @param {number} ts Message timestamp in milliseconds.
  */
-function mergeStyle(u, style, ts) {
+export function mergeStyle(u, style, ts) {
   if (!style || ts <= u.styleTs) return;
   // The time moves with the style only: a message that keeps the style leaves the member, and the users map, as they are.
   if (Object.keys(style).every(function (k) { return u.style[k] === style[k]; })) return;
@@ -330,7 +341,7 @@ function mergeStyle(u, style, ts) {
  * @param {?string} spelling Name with its capitals, null for a message that carries none.
  * @param {number} ts Message timestamp.
  */
-function mergeSpelling(u, spelling, ts) {
+export function mergeSpelling(u, spelling, ts) {
   // Like the style, the time moves with the spelling only: a message that keeps it leaves the member as they are.
   if (!spelling || ts <= u.spellingTs || spelling === u.spelling) return;
   u.spelling = spelling;
@@ -341,7 +352,7 @@ function mergeSpelling(u, spelling, ts) {
  * @param {Object} d State being modified.
  * @param {Object} local Account data kept in this browser.
  */
-function pmAuthor(d, local) {
+export function pmAuthor(d, local) {
   return function (x) { var u = ensureLiveUser(d, x.from, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
 }
 /**
@@ -351,7 +362,7 @@ function pmAuthor(d, local) {
  * @param {?string} badge Role of the badge, as returned by badgeRoleOf.
  * @param {number} ts Message timestamp.
  */
-function noteBadge(g, name, badge, ts) {
+export function noteBadge(g, name, badge, ts) {
   var seen = g.live.badges[name];
   // History pages arrive from newest to oldest: an older message never overrides a newer badge.
   if (seen && seen.ts >= ts) return;
@@ -384,7 +395,7 @@ function groupRoles(g) {
   return r;
 }
 /** Translates the Chatango state of a group (flags, moderators, announcement) into the interface model. */
-function deriveLive(g) {
+export function deriveLive(g) {
   var L = g.live, F = GROUP_FLAG, f = L.flags, s = g.settings;
   s.staff = staffOf(L);
   s.modFlags = Object.assign({}, L.mods);
@@ -400,19 +411,19 @@ function deriveLive(g) {
     L.annc ? { enabled: L.annc.enabled, text: L.annc.text, displayText: L.annc.displayText, embeds: L.annc.embeds, interval: Math.round(L.annc.interval / 60), intervalSec: L.annc.interval } : null);
   g.closed = !!(f & F.IS_CLOSED);
 }
-function withReply(g, m) {
+export function withReply(g, m) {
   if (m.replyId) { var o = findMsg(g, m.replyId); m.replyTo = { id: o ? o.id : m.replyId }; }
   delete m.replyId;
   return m;
 }
-function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
+export function editTarget(g, m) { var o = m.editId ? findMsg(g, m.editId) : null; return o && o.author === m.author ? o : null; }
 /**
  * Applies a group edit to the original while keeping its count and its ids.
  * @param {Object} o Original message.
  * @param {{id: string, text: string, parts: ?Array, embeds: ?Array}} m Edit message.
  * @param {boolean=} keepText True to count the edit without replacing the text.
  */
-function applyGroupEdit(o, m, keepText) {
+export function applyGroupEdit(o, m, keepText) {
   o.editCount = (o.editCount || 0) + 1;
   o.editIds = (o.editIds || []).concat([m.id]);
   if (!keepText) applyEdit(o, m);
@@ -422,7 +433,7 @@ function applyGroupEdit(o, m, keepText) {
  * @param {Object} g Group in the state.
  * @param {Object} o Original message, not in the message log yet.
  */
-function mergeEdits(g, o) {
+export function mergeEdits(g, o) {
   function isEdit(x) { return x.editId === o.id && x.author === o.author; }
   var edits = plainOf(g.messages).filter(isEdit);
   if (!edits.length) return;
@@ -434,7 +445,7 @@ function mergeEdits(g, o) {
  * @param {{rows: Array, page: Object}} list List read by banListOf, updated in place.
  * @param {{list: Array, more: boolean}} op Page received from the bridge.
  */
-function receiveBanPage(list, op) {
+export function receiveBanPage(list, op) {
   // Only the next page requested by Nightango is appended: a BetterChatango reload starts again from the first page.
   var next = list.page.loading, known = {};
   if (!next) list.rows.splice(0);

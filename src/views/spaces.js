@@ -1,19 +1,21 @@
+import { T, h, useState } from '../core/globals.js';
+import { Dialog, MenuButton, useApp } from '../core/ui.js';
 /* ---------- Spaces ---------- */
-var SPACE_MAX = 12, SPACE_NAME_MAX = 24;
+export var SPACE_MAX = 12, SPACE_NAME_MAX = 24;
 
 /**
  * Names a conversation inside a space.
  * @param {{view: string, id: string}} route Group or PM.
  */
 function spaceKey(route) { return route.view + ':' + route.id; }
-function currentSpace(s) { return s.space ? s.spaces.filter(function (x) { return x.id === s.space; })[0] || null : null; }
+export function currentSpace(s) { return s.space ? s.spaces.filter(function (x) { return x.id === s.space; })[0] || null : null; }
 /**
  * Tells whether the chosen space shows a conversation. Without a chosen space, every conversation shows.
  * @param {Object} s Application state.
  * @param {string} view group or dm.
  * @param {string} id Group or conversation member.
  */
-function inCurrentSpace(s, view, id) {
+export function inCurrentSpace(s, view, id) {
   var sp = currentSpace(s);
   return !sp || sp.members.indexOf(view + ':' + id) >= 0;
 }
@@ -36,7 +38,7 @@ function spaceUnread(s, sp) {
  * @param {Object} s Application state.
  * @param {string} name Sender.
  */
-function quietOutsideSpace(s, name) {
+export function quietOutsideSpace(s, name) {
   var sp = currentSpace(s);
   return !!sp && sp.quiet && sp.members.indexOf('dm:' + name) < 0;
 }
@@ -44,7 +46,7 @@ function quietOutsideSpace(s, name) {
 /**
  * Space switcher of the sidebar: All, then each space with its unread conversations.
  */
-function SpaceBar() {
+export function SpaceBar() {
   var app = useApp(), s = app.state, sp = currentSpace(s);
   var items = [{ id: null, name: 'All', count: 0 }].concat(s.spaces.map(function (x) { return { id: x.id, name: x.name, count: spaceUnread(s, x) }; }));
   return h('div', { className: 'space-bar', role: 'group', 'aria-label': 'Spaces' },
@@ -65,7 +67,7 @@ function SpaceBar() {
  * Creates or edits a space: name, private messages from outside it, deletion.
  * @param {{id: ?string, add: ?Object, onClose: Function}} p Edited space, null for a new one, conversation a new space starts with, and close.
  */
-function SpaceEditorDialog(p) {
+export function SpaceEditorDialog(p) {
   var app = useApp(), sp = p.id ? app.state.spaces.filter(function (x) { return x.id === p.id; })[0] : null;
   var a = useState(sp ? sp.name : ''), name = a[0], setName = a[1];
   var b = useState(sp ? sp.quiet : false), quiet = b[0], setQuiet = b[1];
@@ -98,7 +100,7 @@ function SpaceEditorDialog(p) {
  * Puts a group or a PM in spaces, by a checkbox per space.
  * @param {{route: {view: string, id: string}, onClose: Function}} p Conversation and close.
  */
-function ConversationSpacesDialog(p) {
+export function ConversationSpacesDialog(p) {
   var app = useApp(), key = spaceKey(p.route), spaces = app.state.spaces;
   var label = p.route.view === 'group' ? '#' + p.route.id : p.route.id;
   return h(Dialog, {
@@ -118,4 +120,4 @@ function ConversationSpacesDialog(p) {
  * @param {Object} app Application context.
  * @param {{view: string, id: string}} route Group or PM.
  */
-function spacesItem(app, route) { return { label: 'Spaces…', icon: 'list', onSelect: function () { app.ui.openSpaces(route); } }; }
+export function spacesItem(app, route) { return { label: 'Spaces…', icon: 'list', onSelect: function () { app.ui.openSpaces(route); } }; }

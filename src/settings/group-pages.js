@@ -1,4 +1,10 @@
-function GSOverview(p) {
+import { T, h, useState } from '../core/globals.js';
+import { ago, plural } from '../core/util.js';
+import { Person, useApp } from '../core/ui.js';
+import { roleOf, shownName } from '../core/selectors.js';
+import { LIVE } from '../bridge/live-model.js';
+import { ActivityRow, Page } from './shell.js';
+export function GSOverview(p) {
   var app = useApp(), g = p.g, o = g.settings.overview, owner = p.myRole === 'owner';
   return h(Page, { title: 'Overview', lede: 'How #' + g.id + ' appears on Chatango.' },
     g.closed ? h(T.Banner, { tone: 'warning', icon: 'lock', action: p.perms.closeGroup ? h(T.Button, { size: 'sm', onClick: function () { app.actions.setClosed(g.id, false); } }, 'Reopen') : null }, 'This group is closed. Nobody can post.') : null,
@@ -16,7 +22,7 @@ function GSOverview(p) {
       })) : null);
 }
 
-function GSAnnouncement(p) {
+export function GSAnnouncement(p) {
   var a = p.draft.announcement;
   function set(k, v) { p.edit(function (d) { d.announcement[k] = v; }); }
   return h(Page, { title: 'Announcement', lede: 'Pinned above the conversation. Each member can dismiss it.' },
@@ -37,7 +43,7 @@ function GSAnnouncement(p) {
  * AutoMod message filters.
  * @param {{filters: Object, disabled: boolean, onChange: Function}} p Draft filters, switches locked, receives the key and the new value.
  */
-function AutoModFilters(p) {
+export function AutoModFilters(p) {
   var f = p.filters;
   return h(T.SettingsSection, { title: 'Message filters' },
     h(T.SettingRow, {
@@ -53,11 +59,11 @@ function AutoModFilters(p) {
  * Switch for blocking proxies and VPNs.
  * @param {{on: boolean, disabled: boolean, onChange: Function}} p Blocking on, switch locked, receives the new value.
  */
-function ProxiesRow(p) {
+export function ProxiesRow(p) {
   return h(T.SettingRow, { title: 'Block proxies and VPNs', description: 'Members connecting through a known proxy or VPN can read but not post.', control: h(T.Switch, { checked: !!p.on, disabled: p.disabled, onChange: function (e) { p.onChange(e.target.checked); } }) });
 }
 
-function GSAutoMod(p) {
+export function GSAutoMod(p) {
   var am = p.draft.automod, canEdit = p.manage || p.perms.automod;
   return h(Page, { title: 'AutoMod', lede: 'Filters messages before they reach the group. Staff with Bypass AutoMod are exempt.' },
     !canEdit ? h(T.Banner, { icon: 'lock' }, 'Your role can view AutoMod but not change it.') : null,
@@ -66,7 +72,7 @@ function GSAutoMod(p) {
       h(ProxiesRow, { on: am.proxies, disabled: !canEdit, onChange: function (v) { p.edit(function (d) { d.automod.proxies = v; }); } })));
 }
 
-function GSMedia(p) {
+export function GSMedia(p) {
   var m = p.draft.media;
   return h(Page, { title: 'Media and links', lede: 'What members can share in #' + p.g.id + ". Staff aren't restricted." },
     h(T.SettingsSection, null, [['links', 'Allow links'], ['images', 'Allow images'], ['videos', 'Allow videos']].map(function (r) {
@@ -74,7 +80,7 @@ function GSMedia(p) {
     })));
 }
 
-function GSBans(p) {
+export function GSBans(p) {
   var app = useApp(), g = p.g;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
@@ -105,7 +111,7 @@ function GSBans(p) {
       }) : h('p', { className: 'pal-empty' }, 'Nobody is banned.')));
 }
 
-function GSAudit(p) {
+export function GSAudit(p) {
   var g = p.g, s = useApp().state;
   var a = useState('all'), actor = a[0], setActor = a[1];
   var actors = Object.keys(g.audit.reduce(function (o, x) { o[x.actor] = 1; return o; }, {}));

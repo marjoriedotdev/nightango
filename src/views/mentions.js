@@ -1,3 +1,10 @@
+import { T, h } from '../core/globals.js';
+import { dayKey, dayLabel, fmtTime } from '../core/util.js';
+import { useApp } from '../core/ui.js';
+import { bidiText } from '../core/rich-text.js';
+import { groupRouteAt, isHiddenAuthor, shownName } from '../core/selectors.js';
+import { pageHeader } from './shell.js';
+import { SessionBanner } from './session.js';
 /* ---------- Mentions ---------- */
 /**
  * Dates a message outside its log with the time, preceded by the day unless it is today.
@@ -11,7 +18,7 @@ function entryTime(ts, h24) { return (dayKey(ts) === dayKey(Date.now()) ? '' : d
  * It is a mention on the Mentions page or a PM search result.
  * @param {{name: string, ts: number, meta: ?string, text: *, onClick: Function}} p Shown member, timestamp, optional context line, text and opening.
  */
-function MessageEntry(p) {
+export function MessageEntry(p) {
   var s = useApp().state, h24 = s.prefs.h24;
   return h('button', { type: 'button', className: 'conv person', onClick: p.onClick },
     h(T.Avatar, { name: p.name, size: 28 }),
@@ -23,7 +30,7 @@ function MessageEntry(p) {
       h('span', { className: 'conv-about', dir: 'auto' }, p.text)));
 }
 
-function MentionsView() {
+export function MentionsView() {
   var app = useApp(), s = app.state;
   var shown = s.mentionLog.filter(function (e) { return !isHiddenAuthor(s, e.author); });
   function open(e) {

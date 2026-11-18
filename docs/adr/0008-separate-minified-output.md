@@ -3,6 +3,8 @@ status: accepted
 date: 2026-10
 ---
 
+Amended on 2026-11-18 by [ADR-0017](0017-es-modules.md): esbuild also bundles the ES modules of `src/`, the concatenation is gone.
+
 # Separate esbuild minified output, readable version kept
 
 ## Context

@@ -1,17 +1,30 @@
+import { Frag, T, h } from '../core/globals.js';
+import { ago, cx } from '../core/util.js';
+import { BETTER_CHATANGO_PREFS, BETTER_CHATANGO_SAVE_FAILED } from '../core/prefs.js';
+import { useApp } from '../core/ui.js';
+import { JOURNAL, LIVE } from '../bridge/live-model.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { SessionBanner } from '../views/session.js';
+import { ProfilePage } from './profile.js';
+import { AppearancePage } from './appearance.js';
+import { NotificationsPage } from './notifications.js';
+import { PrivacyPage, SafetyPage } from './privacy.js';
+import { AboutPage, AccessibilityPage, DiagnosticsPage, WhatsNewPage } from './language-a11y-about.js';
+import { AccountPage, PremiumPage } from './live-account.js';
 /* ---------- User settings ---------- */
-var SETTINGS_NAV = [
+export var SETTINGS_NAV = [
   { title: 'Account', items: [['profile', 'Profile'], ['privacy', 'Privacy'], ['safety', 'Safety'], ['account', 'Password and email'], ['premium', 'Chatango Premium']] },
   { title: 'App', items: [['appearance', 'Appearance'], ['notifications', 'Notifications'], ['accessibility', 'Accessibility']] },
   { title: 'Support', items: [['whatsnew', "What's new"], ['diagnostics', 'Diagnostics'], ['about', 'About Nightango']].filter(function (it) { return JOURNAL || it[0] !== 'diagnostics'; }) }
 ];
 
-function setIn(obj, path, value) {
+export function setIn(obj, path, value) {
   var keys = path.split('.'), o = obj;
   for (var i = 0; i < keys.length - 1; i++) o = o[keys[i]];
   o[keys[keys.length - 1]] = value;
 }
 function getIn(obj, path) { return path.split('.').reduce(function (o, k) { return o == null ? o : o[k]; }, obj); }
-function usePref() {
+export function usePref() {
   var app = useApp();
   return {
     get: function (path) { return getIn(app.state.prefs, path); },
@@ -31,13 +44,13 @@ function usePref() {
  * @param {boolean|number} value New value.
  * @returns {boolean} True if BetterChatango saved it.
  */
-function saveBetterChatangoSetting(app, write, key, value) {
+export function saveBetterChatangoSetting(app, write, key, value) {
   if (write(key, value)) return true;
   app.ui.toast(BETTER_CHATANGO_SAVE_FAILED, { tone: 'error' });
   return false;
 }
 
-function SettingsShell(p) {
+export function SettingsShell(p) {
   var app = useApp();
   return h('div', { className: 'settings' },
     h('nav', { className: 'snav', 'aria-label': p.navLabel },
@@ -66,12 +79,12 @@ function SettingsShell(p) {
  * @param {string} page Page requested by the route.
  * @param {string} [fallback] Fallback page, the first listed one by default.
  */
-function listedPage(sections, page, fallback) {
+export function listedPage(sections, page, fallback) {
   var ids = [].concat.apply([], sections.map(function (sec) { return sec.items.map(function (it) { return it[0]; }); }));
   return ids.indexOf(page) >= 0 ? page : fallback || ids[0];
 }
 
-function Page(p) {
+export function Page(p) {
   return h('div', { className: cx('spage-inner', p.wide && 'wide') },
     h('div', { className: p.aside ? 'page-head' : null },
       h('div', null, h('h1', null, p.title), p.lede ? h('p', { className: 'lede' }, p.lede) : null),
@@ -83,14 +96,14 @@ function Page(p) {
  * Activity row: who did what and when.
  * @param {{first: boolean, lead: *, sub: ?string, at: ?number}} p First row of the section, icon before the text, secondary line, date of the action.
  */
-function ActivityRow(p) {
+export function ActivityRow(p) {
   return h('div', { className: 'lrow', style: p.first ? { borderTop: 0 } : null },
     p.lead,
     h('span', { className: 'grow' }, h('span', { className: 'lrow-title lrow-activity' }, p.children), p.sub ? h('span', { className: 'lrow-sub person-sub' }, p.sub) : null),
     p.at ? h('time', { className: 'tc-msg-time', title: new Date(p.at).toLocaleString('en-GB') }, ago(p.at)) : null);
 }
 
-function SettingsView(p) {
+export function SettingsView(p) {
   var app = useApp();
   var map = { profile: ProfilePage, privacy: PrivacyPage, safety: SafetyPage, account: AccountPage, premium: PremiumPage, appearance: AppearancePage, notifications: NotificationsPage, accessibility: AccessibilityPage, whatsnew: WhatsNewPage, diagnostics: DiagnosticsPage, about: AboutPage };
   var page = listedPage(SETTINGS_NAV, p.page, 'appearance'), Comp = map[page];

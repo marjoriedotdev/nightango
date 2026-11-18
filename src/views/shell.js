@@ -1,5 +1,20 @@
+import { Frag, React, T, h, useEffect, useMemo, useState } from '../core/globals.js';
+import { cx } from '../core/util.js';
+import { onAccentOf } from '../core/colors.js';
+import { DraftMark, MenuButton, SkeletonRows, dmDraftKey, groupDraftKey, presenceSr, showsDraft, useApp, useDraftMarks, useStatePart, useWideLayout } from '../core/ui.js';
+import { favoritePeople, isPaneOpen, listedDms, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
+import { LIVE } from '../bridge/live-model.js';
+import { NewYearMark, NewYearSky, SeasonSky, SeasonStar, skyMoves } from './season.js';
+import { GroupView } from './group.js';
+import { DMView, SplitDm } from './dm.js';
+import { PipHost } from './pip.js';
+import { SpaceBar, currentSpace, inCurrentSpace, spacesItem } from './spaces.js';
+import { MentionsView } from './mentions.js';
+import { Discover } from './discover.js';
+import { SettingsView } from '../settings/shell.js';
+import { GroupSettingsView } from '../settings/group-view.js';
 /* ---------- Application shell ---------- */
-function MobileNavButton() {
+export function MobileNavButton() {
   var app = useApp();
   return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', count: unreadTotal(app.state), onClick: app.ui.openNav });
 }
@@ -8,7 +23,7 @@ function MobileNavButton() {
  * Titled header of a main page with the mobile navigation button.
  * @param {string} title Page title.
  */
-function pageHeader(title) {
+export function pageHeader(title) {
   return h('header', { className: 'topbar' }, h(MobileNavButton, null), h('h1', { className: 'grow' }, title));
 }
 
@@ -16,12 +31,12 @@ function pageHeader(title) {
  * Titled header of a right column.
  * @param {string} title Column title.
  */
-function columnHeader(title) {
+export function columnHeader(title) {
   return h('header', { className: 'topbar col-head' }, h('h2', { className: 'grow' }, title));
 }
 
 // Memoized: Root renders again for its toasts and dialogs, which leave the shell alone.
-var Shell = React.memo(function Shell() {
+export var Shell = React.memo(function Shell() {
   var app = useApp(), s = app.state, r = s.route, main;
   var wide = useWideLayout();
   var split = wide && s.split && paneShown(s, s.split) ? s.split : null;
@@ -51,7 +66,7 @@ var Shell = React.memo(function Shell() {
  * @param {Object} s Application state.
  * @param {{view: string, id: string}} t Conversation of the pane.
  */
-function paneShown(s, t) { return t.view === 'group' ? !!(s.groups[t.id] && s.groups[t.id].joined) : !!s.dms[t.id]; }
+export function paneShown(s, t) { return t.view === 'group' ? !!(s.groups[t.id] && s.groups[t.id].joined) : !!s.dms[t.id]; }
 
 /**
  * Menu entry that opens a conversation beside the main one, absent where two panes do not fit.
@@ -69,7 +84,7 @@ function splitItem(app, wide, route) {
  * @param {{view: string, id: string}} route Group, or PM with the person.
  * @param {boolean} on The group or the person is a favorite.
  */
-function favoriteItem(app, route, on) {
+export function favoriteItem(app, route, on) {
   return {
     id: 'favorite', label: on ? 'Remove from favorites' : 'Add to favorites', icon: 'star',
     onSelect: function () { if (route.view === 'group') app.actions.toggleFavorite(route.id); else app.actions.toggleUser(route.id, 'favorite'); }

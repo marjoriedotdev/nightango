@@ -1,3 +1,16 @@
+import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { cx, ownOf } from '../core/util.js';
+import { Dialog, MenuButton, SkeletonRows, developerBadge, menuGroups, presenceSr, roleBadge, useApp, useAppApi, useRowBatches, youBadge } from '../core/ui.js';
+import { bidiText, httpsHost } from '../core/rich-text.js';
+import { canBanMember, guestsOf, isNotifyingOnline, isPaneOpen, miniStyleOf, roleOf, shownName, userOf } from '../core/selectors.js';
+import { ACCOUNT_NAME, LIVE } from '../bridge/live-model.js';
+import { lower } from '../bridge/live-parse.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { SeasonWeb } from './season.js';
+import { columnHeader, favoriteItem } from './shell.js';
+import { useProfiles } from './dm.js';
+import { personCard } from './meet.js';
+import { ProfileSummary, miniSkin } from './profile.js';
 /**
  * Member list of a group.
  * @param {{g: Object, scrollRef: Object}} p Shown group and ref of its scrolling area.
@@ -59,7 +72,7 @@ function GroupDescription(p) {
  * Member column of a group, under the group's description.
  * @param {{g: Object}} p Shown group.
  */
-function MembersPanel(p) {
+export function MembersPanel(p) {
   var scrollRef = useRef(null);
   return h('aside', { className: 'col members', 'aria-label': 'Members of ' + p.g.id },
     useApp().season === 'halloween' ? h(SeasonWeb) : null,
@@ -71,7 +84,7 @@ function MembersPanel(p) {
  * Full-screen sheet that shows a group's description and members.
  * @param {{g: Object, onClose: Function}} p Shown group and closing of the sheet.
  */
-function GroupInfoSheet(p) {
+export function GroupInfoSheet(p) {
   var g = p.g, scrollRef = useRef(null);
   return h(Dialog, { label: 'About #' + g.id, sheet: true, onClose: p.onClose },
     h('div', { className: 'topbar' },
@@ -87,7 +100,7 @@ function GroupInfoSheet(p) {
 /**
  * Tracks the friend request sent from a form until Chatango answers.
  */
-function useFriendRequest() {
+export function useFriendRequest() {
   var app = useApp();
   var a = useState(null), asked = a[0], setAsked = a[1];
   return {
@@ -101,7 +114,7 @@ function useFriendRequest() {
  * @param {Object} app Application context.
  * @param {string} name Friend to remove.
  */
-function confirmRemoveFriend(app, name) {
+export function confirmRemoveFriend(app, name) {
   var who = shownName(app.state, name);
   app.ui.confirm({ title: 'Remove ' + who + ' from friends?', body: "You'll stop seeing when " + who + ' is online. You can add them again by username.', confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.toggleUser(name, 'friend'); } });
 }
@@ -111,7 +124,7 @@ function confirmRemoveFriend(app, name) {
  * @param {Object} app Application context.
  * @param {string} name Followed friend.
  */
-function notifyOnlineItem(app, name) {
+export function notifyOnlineItem(app, name) {
   var notify = isNotifyingOnline(app.state, name);
   return { id: 'notify', label: notify ? 'Notifying when online' : 'Notify when online', short: notify ? 'Notifying' : 'Notify', icon: 'bell', pressed: notify, onSelect: function () { app.update(function (d) { d.notifyOnline[name] = !notify; }); } };
 }
@@ -122,7 +135,7 @@ function notifyOnlineItem(app, name) {
  * @param {string} name Member name.
  * @param {?string} gid Group the profile is opened from.
  */
-function viewProfileItem(app, name, gid) {
+export function viewProfileItem(app, name, gid) {
   return { label: 'View profile', icon: 'user', onSelect: function () { app.ui.openProfile(name, gid); } };
 }
 
@@ -131,7 +144,7 @@ function viewProfileItem(app, name, gid) {
  * @param {Object} app Application context.
  * @param {string} name Member name.
  */
-function whoItem(app, name) {
+export function whoItem(app, name) {
   return LIVE && ACCOUNT_NAME.test(name) ? { id: 'who', label: 'Who is this', icon: 'users', onSelect: function () { app.ui.openWho(name); } } : null;
 }
 
@@ -141,7 +154,7 @@ function whoItem(app, name) {
  * @param {string} name Member name.
  * @param {boolean} ignored The member is ignored.
  */
-function ignoreItem(app, name, ignored) {
+export function ignoreItem(app, name, ignored) {
   return { id: 'ignore', label: ignored ? 'Stop ignoring' : 'Ignore', icon: 'eye-off', onSelect: function () { app.actions.toggleUser(name, 'ignored'); } };
 }
 
@@ -152,7 +165,7 @@ function ignoreItem(app, name, ignored) {
  * @param {boolean} unstyled The member's style is hidden.
  * @param {string} [shown] Member's name as they spell it, for a label that names them in a message menu.
  */
-function styleItem(app, name, unstyled, shown) {
+export function styleItem(app, name, unstyled, shown) {
   var label = (unstyled ? 'Show ' : 'Hide ') + (shown ? shown + "'s style" : 'style');
   return { id: 'style', label: label, icon: 'type', onSelect: function () { app.actions.toggleUser(name, 'unstyled'); } };
 }
@@ -164,7 +177,7 @@ function styleItem(app, name, unstyled, shown) {
  * @param {string} gid Group.
  * @param {Object} [msg] Message the ban starts from.
  */
-function banItem(app, name, gid, msg) {
+export function banItem(app, name, gid, msg) {
   return { id: 'ban', label: 'Ban from #' + gid + '…', icon: 'ban', danger: true, closes: true, onSelect: function () { app.ui.ban(name, gid, msg); } };
 }
 
@@ -172,7 +185,7 @@ function banItem(app, name, gid, msg) {
  * Splits the actions on a person into the groups of a menu: the relation with them, then what restricts them.
  * @param {Array} actions Actions of useProfileActions.
  */
-function personActionGroups(actions) {
+export function personActionGroups(actions) {
   function pick(ids) { return actions.filter(function (it) { return ids.indexOf(it.id) >= 0; }); }
   return [pick(['message', 'friend', 'notify', 'favorite', 'who']), pick(['style', 'ignore', 'block', 'ban'])];
 }
@@ -183,7 +196,7 @@ function personActionGroups(actions) {
  * @param {string} name Member name.
  * @param {?string} gid Group the profile is opened from.
  */
-function useProfileActions(name, gid) {
+export function useProfileActions(name, gid) {
   var app = useApp(), s = app.state, u = userOf(s, name), busy = !!ownOf(s.friendAdds, name);
   var g = gid ? s.groups[gid] : null;
   var inDm = isPaneOpen(s, 'dm', name);
@@ -213,7 +226,7 @@ function useProfileActions(name, gid) {
  * Member profile dialog.
  * @param {{name: string, gid: ?string, onClose: Function, onDone: ?Function}} p Member, group the profile is opened from, dialog closing, and closing after an action carried out elsewhere (defaults to the dialog closing).
  */
-function ProfileDialog(p) {
+export function ProfileDialog(p) {
   var app = useApp(), s = app.state, name = p.name, u = userOf(s, name), isMe = name === s.me;
   var guest = /^[!#]/.test(name);
   var done = p.onDone || p.onClose;
@@ -238,7 +251,7 @@ function ProfileDialog(p) {
  * Each account has its mini profile card, and its profile opens over the list.
  * @param {{name: string, onClose: Function, onDone: Function}} p Target account, dialog closing, and closing after a profile action carried out elsewhere.
  */
-function WhoDialog(p) {
+export function WhoDialog(p) {
   var app = useApp(), s = app.state;
   var st = useState(null), res = st[0], setRes = st[1];
   var o = useState(null), open = o[0], setOpen = o[1];
@@ -268,7 +281,7 @@ function WhoDialog(p) {
     open ? h(ProfileDialog, { name: open, gid: null, onClose: function () { setOpen(null); }, onDone: p.onDone }) : null);
 }
 
-function BanDialog(p) {
+export function BanDialog(p) {
   var app = useApp();
   var dl = useState(false), wipe = dl[0], setWipe = dl[1];
   if (LIVE) {
@@ -305,7 +318,7 @@ function linkAddress(url) {
  * It offers to trust the link's host, or to stop warning if BetterChatango's list is unreadable.
  * @param {{url: string, onClose: Function}} p Link address and dialog closing.
  */
-function LinkDialog(p) {
+export function LinkDialog(p) {
   var app = useApp(), hosts = app.state.prefs.safety.trustedHosts, host = httpsHost(p.url);
   var t = useState(false), trust = t[0], setTrust = t[1];
   // Only an https link offers trust: isTrustedUrl ignores the others.
@@ -320,7 +333,7 @@ function LinkDialog(p) {
   }, h('div', { className: 'dialog-body' }, linkAddress(p.url), choice));
 }
 
-function ProfileLinkDialog(p) {
+export function ProfileLinkDialog(p) {
   var app = useApp(), link = p.link;
   return h(Dialog, {
     title: link.name + '.chatango.com', description: 'This address can lead to a Chatango profile or group.', onClose: p.onClose,

@@ -1,9 +1,11 @@
+import { useCallback, useMemo, useState } from '../core/globals.js';
+import { uid } from '../core/util.js';
 /* ---------- Overlays: toasts, dialogs and navigation drawer ---------- */
 /**
  * Toasts, dialogs and navigation drawer that the views open through ui.
  * @returns {Object} toast, ui, the navigation drawer, the open dialogs and the toasts with their setters.
  */
-function useOverlays() {
+export function useOverlays() {
   var u1 = useState([]), toasts = u1[0], setToasts = u1[1];
   var u2 = useState(null), confirmCfg = u2[0], setConfirm = u2[1];
   var u3 = useState(null), profile = u3[0], setProfile = u3[1];

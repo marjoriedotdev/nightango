@@ -1,3 +1,9 @@
+import { useEffect } from '../core/globals.js';
+import { pick, uid } from '../core/util.js';
+import { DM_LINES, LINES, MENTION_LINES } from '../core/sample-data.js';
+import { isNotifyingOnline, roleOf, shownName, userOf } from '../core/selectors.js';
+import { LIVE } from '../bridge/live-model.js';
+import { beep } from './sound.js';
 /* ---------- Prototype simulation: activity of the sample world ---------- */
 /**
  * Simulates activity in the prototype: group messages and mentions, members joining and leaving, PMs, friends going online and offline.
@@ -6,7 +12,7 @@
  * @param {Function} toast Shows a notification.
  * @param {Object} actions Actions, for the Message button of a friend who comes online.
  */
-function useSimulation(store, inbox, toast, actions) {
+export function useSimulation(store, inbox, toast, actions) {
   var state = store.state, prefs = state.prefs, stateRef = store.stateRef, update = store.update, receiveGroup = inbox.receiveGroup, receiveDm = inbox.receiveDm;
   useEffect(function () {
     if (LIVE || !state.auth.loggedIn || !prefs.simulate) return;

@@ -1,3 +1,7 @@
+import { Frag, T, h } from '../core/globals.js';
+import { useApp } from '../core/ui.js';
+import { LIVE } from '../bridge/live-model.js';
+import { GroupJoinButton } from './discover.js';
 function GroupSection(p) {
   var s = useApp().state;
   return h('section', { 'aria-labelledby': p.id, style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },
@@ -7,7 +11,7 @@ function GroupSection(p) {
         h('span', { className: 'card-title' }, h('strong', { title: k }, k), h('span', null, s.groups[k].title)), h(GroupJoinButton, { group: s.groups[k] }));
     })) : h('p', { className: 'muted', style: { margin: 0 } }, p.empty));
 }
-function JoinedGroups() {
+export function JoinedGroups() {
   var s = useApp().state;
   var names = Object.keys(s.groups);
   var joined = names.filter(function (k) { return s.groups[k].joined; });

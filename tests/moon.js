@@ -1,4 +1,5 @@
 const fs = require('fs'), vm = require('vm');
+const { bundleForTest } = require('../scripts/build.mjs');
 const React = require('react'), Server = require('react-dom/server');
 const ctx = { window: { React }, React, console };
 vm.createContext(ctx);
@@ -27,8 +28,10 @@ check(limb(svg('2024-04-15T19:13Z')) === '1' && limb(svg('2024-05-01T11:27Z')) =
 check(svg('2024-04-23T23:49Z').includes('aria-label="Full moon, 100% lit"') && !Server.renderToStaticMarkup(React.createElement(T.Moon, null)).includes('aria-label'), 'named only when asked');
 
 /* Season dates, read on the local date: the first and last second of each season and the seconds around it, in both hemispheres */
-const util = {};
-vm.runInNewContext(fs.readFileSync(process.argv[2] + '/src/core/util.js', 'utf8'), util);
+(async () => {
+const loaded = {};
+vm.runInNewContext(await bundleForTest("export { seasonOf, skyAt } from './src/core/util.js';"), loaded);
+const util = loaded.__mod;
 const seasonAt = (south) => ([y, m, d, hh, mm, ss]) => util.seasonOf(new Date(y, m - 1, d, hh, mm, ss), south);
 /* Each range with the season around it: Christmas cuts the northern winter in two and stands alone in the south */
 const ranges = [
@@ -70,3 +73,4 @@ const shown = ([e, l]) => [e * (100 - l) / 100, l];
 const everyMinute = ['dark', 'light'].map((theme) => Array.from({ length: 1440 }, (_, m) => sky(theme, m / 60)));
 check(everyMinute.every((day) => day.every((at, m) => at.every((v) => v >= 0 && v <= 100) && shown(at).every((v, i) => Math.abs(v - shown(day[(m + 1) % 1440])[i]) < 2))),
   'sky: no share leaves 0 to 100, and what shows of each sky never jumps from one minute to the next, midnight included');
+})().catch((e) => console.log('CRASH ' + e.stack));

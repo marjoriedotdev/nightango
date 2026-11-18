@@ -1,3 +1,10 @@
+import { Frag, T, h, useLayoutEffect, useRef, useState } from '../core/globals.js';
+import { kindOf, storageGet, storageMerge } from '../core/util.js';
+import { Portal, useFloating, useStatePart } from '../core/ui.js';
+import { EMOTICONS, EMOTICON_BY_NAME, LIVE, skinKey } from '../bridge/live-model.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { MediaPanel } from './media.js';
+import { GifPanel } from './gif.js';
 /* ---------- Composer emoticon and media picker ---------- */
 var EMOJI_SECTIONS = [{ title: 'Classic', premium: false }, { title: 'Premium', premium: true }];
 var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'gif', label: 'GIF' }, { value: 'media', label: 'Media' }];
@@ -28,7 +35,7 @@ function keepRecentEmoji(me, name) {
  * @param {function(string)} setValue Writes the field text.
  * @returns {{onEmoji: Function, picker: ?Object}} Emoji button action and picker to render next to the composer.
  */
-function useEmojiPicker(inputRef, setValue) {
+export function useEmojiPicker(inputRef, setValue) {
   var st = useState(false), open = st[0], setOpen = st[1];
   var tb = useState('emoji'), tab = tb[0], setTab = tb[1];
   var anchorRef = useRef(null), caret = useRef(null);

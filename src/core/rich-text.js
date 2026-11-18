@@ -1,10 +1,16 @@
-var EMBED_LABEL = { youtube: 'Video', tiktok: 'Video', x: 'Post', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
+import { Frag, h, useState } from './globals.js';
+import { trimEnd } from './util.js';
+import { SURFACE, cssColor, ensureContrast } from './colors.js';
+import { useApp, useAppApi } from './ui.js';
+import { ACCOUNT_NAME } from '../bridge/live-model.js';
+import { mediaLinks } from '../bridge/live-parse.js';
+export var EMBED_LABEL = { youtube: 'Video', tiktok: 'Video', x: 'Post', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
 /**
  * Returns the text segments of a message as shown, without the links it already shows as a media.
  * @param {{text: string, parts: ?Array, embeds: ?Array}} m Message read by parseContent.
  * @returns {Array} Non-empty segments {text, b, i, u, s}.
  */
-function shownParts(m) {
+export function shownParts(m) {
   var links = mediaLinks(m), parts = m.parts || [{ text: m.text || '' }];
   if (!links.length) return m.text ? parts : [];
   var shown = parts.map(function (part) {
@@ -23,7 +29,7 @@ function shownParts(m) {
   shown[shown.length - 1].text = trimEnd(shown[shown.length - 1].text);
   return shown.filter(function (part) { return part.text; });
 }
-function messagePreview(m) {
+export function messagePreview(m) {
   var e = m.embeds && m.embeds[0], text = shownParts(m).map(function (part) { return part.text; }).join('');
   return text || (e ? EMBED_LABEL[e.kind] : '');
 }
@@ -32,7 +38,7 @@ function messagePreview(m) {
  * @param {string} url URL read.
  * @returns {?string} Lowercase host, null for an unreadable URL or one that is not https.
  */
-function httpsHost(url) {
+export function httpsHost(url) {
   // new URL rather than a regex: the host of https://a.example@b.example/ is b.example.
   try { var u = new URL(url); return u.protocol === 'https:' ? u.host.toLowerCase() : null; } catch (e) { return null; }
 }
@@ -48,8 +54,8 @@ function isTrustedUrl(url, hosts) { var host = httpsHost(url); return !!host && 
  * @param {string} kind Media type read by parseContent.
  * @param {string} url URL the media would load.
  */
-function waitsForClick(safety, kind, url) { return !isTrustedUrl(url, safety.trustedHosts) && (kind === 'video' || kind === 'audio' || safety.proxyMedia); }
-function warnOnLink(app, url) {
+export function waitsForClick(safety, kind, url) { return !isTrustedUrl(url, safety.trustedHosts) && (kind === 'video' || kind === 'audio' || safety.proxyMedia); }
+export function warnOnLink(app, url) {
   return function (e) {
     var safety = app.state.prefs.safety;
     if (safety.warnLinks && !isTrustedUrl(url, safety.trustedHosts)) { e.preventDefault(); app.ui.openLink(url); }
@@ -85,12 +91,12 @@ function onProfileLink(app, url, name, gid) {
  * @param {?string} gid Group of the message, null elsewhere.
  * @param {*} [key] React key.
  */
-function memberLink(app, url, gid, key) {
+export function memberLink(app, url, gid, key) {
   var profile = profileOfLink(url);
   return h('a', { key: key, href: url, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', dir: 'ltr', onClick: profile ? onProfileLink(app, url, profile, gid) : warnOnLink(app, url) }, url);
 }
 
-var EMPHASIS = ['b', 'i', 'u', 's'];
+export var EMPHASIS = ['b', 'i', 'u', 's'];
 
 // Like BetterChatango's rendering: "@name: `text`" is a quote and does not cross a line break.
 var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;
@@ -104,7 +110,7 @@ var NAME_OR_LINK = /(@[A-Za-z0-9_!-]+|https?:\/\/[^\s]+)/;
  * @param {string} text Shown text.
  * @param {Array<number>} [hit] Start and end of a highlighted search term.
  */
-function bidiText(text, hit) {
+export function bidiText(text, hit) {
   var end = 0;
   function run(text) {
     return text.split(NAME_OR_LINK).map(function (s, i) {
@@ -123,7 +129,7 @@ function bidiText(text, hit) {
 }
 
 /* Message text: emphasis (parseContent segments, absent without emphasis), quotes, mentions and links */
-function MessageText(p) {
+export function MessageText(p) {
   var app = useAppApi();
   // Hidden style (plain): like BetterChatango, bold, italic and underline drop but strikethrough stays.
   var marks = p.plain ? ['s'] : EMPHASIS;
@@ -220,7 +226,7 @@ function richNodes(node, ctx, key) {
  * @param {string} [p.bg] Background on which the text colors stay readable.
  * @param {string} [p.link] Link color.
  */
-function RichText(p) {
+export function RichText(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var r = useState(false), revealed = r[0], setRevealed = r[1];
   var html = String(p.html || '').replace(/\r\n|\r|\n/g, '<br>');
@@ -235,10 +241,10 @@ function RichText(p) {
   var nodes = richNodes(body, ctx, 'r');
   return p.inline ? h.apply(null, [Frag, null].concat(nodes)) : h.apply(null, ['div', { className: 'about rich', dir: 'auto' }].concat(nodes));
 }
-var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
+export var BACKGROUND_REPEAT = /^(?:no-repeat|repeat-x|repeat-y|repeat)$/;
 var HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 // No < and no parenthesis: the URL ends up in a CSS background, in the full profile as in custom_profile.css.
-var SAFE_IMAGE_URL = /^https:\/\/[^<>"'\\()\s]+$/;
+export var SAFE_IMAGE_URL = /^https:\/\/[^<>"'\\()\s]+$/;
 var MATHML_NS = 'http://www.w3.org/1998/Math/MathML', SVG_NS = 'http://www.w3.org/2000/svg';
 /**
  * Tells whether an element of a full profile can make a link only once the frame parses or shows it.
@@ -256,7 +262,7 @@ function makesLinkLater(el) {
  * @param {string} html HTML written by the member.
  * @returns {{html: string, links: Array<string>}} HTML whose links keep only their content, and their distinct http(s) addresses in page order.
  */
-function unlinkFullProfile(html) {
+export function unlinkFullProfile(html) {
   var links = [], body = richBody(html), out;
   function unlink() {
     var found = false;
@@ -286,7 +292,7 @@ function unlinkFullProfile(html) {
  * @param {boolean} allowMedia Allows images, the member background included.
  * @param {?Object} [style] Member background as returned by miniStyleOf.
  */
-function fullProfileDoc(html, allowMedia, style) {
+export function fullProfileDoc(html, allowMedia, style) {
   var csp = allowMedia
     ? "default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline' https: http:; font-src https: http: data:; media-src https:"
     : "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:";

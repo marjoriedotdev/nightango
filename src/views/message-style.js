@@ -1,8 +1,14 @@
+import { Frag, T, h, useState } from '../core/globals.js';
+import { FONT_STACKS, fontPercent } from '../core/colors.js';
+import { ColorField, Dialog, useApp } from '../core/ui.js';
+import { FONT_FACES, LIVE } from '../bridge/live-model.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { memberStyles } from './message.js';
 /* ---------- Own message style ---------- */
-var DEFAULT_MESSAGE_STYLE = { face: '0', size: 11, textColor: '#000000', nameColor: '#000000', bold: false, italic: false, underline: false, strike: false };
+export var DEFAULT_MESSAGE_STYLE = { face: '0', size: 11, textColor: '#000000', nameColor: '#000000', bold: false, italic: false, underline: false, strike: false };
 var MESSAGE_STYLE_SIZES = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 
-function MessageStyleButton() {
+export function MessageStyleButton() {
   var st = useState(false), open = st[0], setOpen = st[1];
   return h(Frag, null,
     h(T.IconButton, { icon: 'type', label: 'Message style', onClick: function () { setOpen(true); } }),

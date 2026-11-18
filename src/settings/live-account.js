@@ -1,3 +1,18 @@
+import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { shortDate } from '../core/util.js';
+import { ColorField, useApp } from '../core/ui.js';
+import { SAFE_IMAGE_URL } from '../core/rich-text.js';
+import { GENDER_LABEL, genderShort, miniStyleOf, premiumActive, premiumEndsSoon, userOf } from '../core/selectors.js';
+import { LIVE } from '../bridge/live-model.js';
+import { miniStyleForm, miniStyleOfForm } from '../bridge/live-parse.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { FullProfileFrame, useFullProfileMedia } from '../views/profile.js';
+import { Page, saveBetterChatangoSetting } from './shell.js';
+import { useMarkupToolbar } from './markup-toolbar.js';
+import { ProfilePreviewCard, VisibilitySection, VisitorsSection } from './profile.js';
+import { BrowserTabSection, ChatangoPmSection, NotesSection, PRIVACY_LEDE, PmHistoryRows, StartupSection } from './privacy.js';
+import { chatangoLink } from './live-group-view.js';
+import { AvatarCropDialog } from './avatar-crop.js';
 /* ---------- Account settings in live mode ---------- */
 var GENDER_CODE = { Male: 'M', Female: 'F' };
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
@@ -11,7 +26,7 @@ var BANNER_TYPES = '.png, .apng, .jpg, .jpeg, .gif, .bmp, .webp';
  */
 function ownMiniStyle(u) { return !u.profileLoaded ? null : u.premium ? miniStyleForm(u.miniStyle) : false; }
 
-function ProfilePageLive() {
+export function ProfilePageLive() {
   var app = useApp(), s = app.state, me = userOf(s, s.me);
   // Empty field: full profile empty or not yet read back by BetterChatango, null until mod2.xml is read.
   function load() { var r = liveBridge.readProfile(); return { loaded: r.loaded, age: r.age, gender: GENDER_LABEL[r.gender] || 'Not specified', location: r.location, about: r.about, dir: r.dir, full: r.full || null, style: ownMiniStyle(me) }; }
@@ -174,7 +189,7 @@ function MiniBackgroundSection(p) {
 }
 
 // The interface changes only if BetterChatango saved the value, otherwise a toast says so.
-function useBetterChatangoSettings(read, write) {
+export function useBetterChatangoSettings(read, write) {
   var app = useApp();
   var st = useState(read), value = st[0], setValue = st[1];
   function set(key, v) {
@@ -191,7 +206,7 @@ var PMR_STATUS = {
 };
 function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === null ? null : { pmrCheck: v }; }
 
-function PrivacyPageLive() {
+export function PrivacyPageLive() {
   var app = useApp();
   var st = useBetterChatangoSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
   var pc = useBetterChatangoSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
@@ -215,13 +230,13 @@ function PrivacyPageLive() {
     startup ? h(StartupSection, { value: startup, onChange: setStartupSetting }) : null);
 }
 
-function AccountPage() {
+export function AccountPage() {
   return h(Page, { title: 'Password and email', lede: 'Login details for your Chatango account.' },
     h(T.Banner, { icon: 'lock', title: 'Managed on chatango.com', action: chatangoLink('Open chatango.com') },
       "Nightango never handles your password, so it can't change it, change your email or delete your account. Do it on chatango.com."));
 }
 
-function PremiumPage() {
+export function PremiumPage() {
   var s = useApp().state, p = s.premium, now = Date.now();
   // Read from the premium frame of the private connection: nothing shows before it or while that connection is down.
   var known = !!p && (!LIVE || s.pmConn === 'open');

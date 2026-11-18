@@ -1,26 +1,26 @@
 /* ---------- Utilities ---------- */
-var MIN = 60000;
-var CONFIRM_TIMEOUT = 8000;
+export var MIN = 60000;
+export var CONFIRM_TIMEOUT = 8000;
 // The same code lives in both repositories, pushed by hand: GitHub first, GitLab kept in step.
-var REPO_URLS = { github: 'https://github.com/marjoriedotdev/nightango', gitlab: 'https://gitlab.com/marjoriedotdev/nightango' };
-var CHATANGO_URL = 'https://chatango.com';
-function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
-function uid() { return Math.random().toString(36).slice(2, 10); }
-function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
-function pad(n) { return n < 10 ? '0' + n : String(n); }
-function fmtTime(ts, h24) {
+export var REPO_URLS = { github: 'https://github.com/marjoriedotdev/nightango', gitlab: 'https://gitlab.com/marjoriedotdev/nightango' };
+export var CHATANGO_URL = 'https://chatango.com';
+export function cx() { var o = []; for (var i = 0; i < arguments.length; i++) if (arguments[i]) o.push(arguments[i]); return o.join(' '); }
+export function uid() { return Math.random().toString(36).slice(2, 10); }
+export function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+export function pad(n) { return n < 10 ? '0' + n : String(n); }
+export function fmtTime(ts, h24) {
   var d = new Date(ts), H = d.getHours(), M = d.getMinutes();
   if (h24) return pad(H) + ':' + pad(M);
   return (H % 12 || 12) + ':' + pad(M) + ' ' + (H >= 12 ? 'PM' : 'AM');
 }
-function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+export function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
 /**
  * Returns a date as 12 Dec, or 12 Dec 2026 with its year.
  * @param {number} ts Time in milliseconds.
  * @param {boolean} [withYear] Adds the year.
  */
-function shortDate(ts, withYear) { return new Date(ts).toLocaleDateString('en-GB', withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); }
-function dayLabel(ts) {
+export function shortDate(ts, withYear) { return new Date(ts).toLocaleDateString('en-GB', withYear ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }); }
+export function dayLabel(ts) {
   var d = new Date(ts), n = new Date();
   var a = new Date(d.getFullYear(), d.getMonth(), d.getDate()), b = new Date(n.getFullYear(), n.getMonth(), n.getDate());
   var diff = Math.round((b - a) / 86400000);
@@ -28,7 +28,7 @@ function dayLabel(ts) {
   if (diff === 1) return 'Yesterday';
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
-function ago(ts) {
+export function ago(ts) {
   var m = Math.round((Date.now() - ts) / MIN);
   if (m < 1) return 'just now';
   if (m < 60) return m + ' min ago';
@@ -37,7 +37,7 @@ function ago(ts) {
   var span = daySpan(Math.round(hrs / 24));
   return plural(span.n, span.unit, span.unit + 's') + ' ago';
 }
-function elapsedShort(ts) {
+export function elapsedShort(ts) {
   var m = Math.floor((Date.now() - ts) / MIN);
   if (m < 60) return Math.max(m, 1) + ' min';
   if (m < 1440) return Math.floor(m / 60) + ' h';
@@ -56,7 +56,7 @@ function daySpan(days) {
   if (months < 12) return { n: months, unit: 'month' };
   return { n: Math.round(days / 365.25), unit: 'year' };
 }
-var SEASONS = ['halloween', 'winter', 'christmas', 'valentine'];
+export var SEASONS = ['halloween', 'winter', 'christmas', 'valentine'];
 /**
  * Returns the season of a local date, or null outside every season: Halloween from October 24 to November 2,
  * winter from December 1 to January 6 (June 1 to July 6 in the southern hemisphere), Christmas from December 18 to 26
@@ -64,7 +64,7 @@ var SEASONS = ['halloween', 'winter', 'christmas', 'valentine'];
  * @param {Date} d Date read on the device.
  * @param {boolean} south Sky seen from the southern hemisphere.
  */
-function seasonOf(d, south) {
+export function seasonOf(d, south) {
   var m = d.getMonth(), day = d.getDate(), winter = south ? 5 : 11;
   if ((m === 9 && day >= 24) || (m === 10 && day <= 2)) return 'halloween';
   if (m === 11 && day >= 18 && day <= 26) return 'christmas';
@@ -84,7 +84,7 @@ var SKY_HOURS = {
  * @param {number} hour Local hour from 0 to 24, minutes as its fraction.
  * @returns {{early: number, late: number}} Percent of the late sky, and percent of the early sky in what the late sky leaves.
  */
-function skyAt(theme, hour) {
+export function skyAt(theme, hour) {
   var keys = SKY_HOURS[theme], i = 1;
   while (keys[i][0] < hour) i++;
   var a = keys[i - 1], b = keys[i], t = (hour - a[0]) / (b[0] - a[0]);
@@ -98,13 +98,13 @@ function skyAt(theme, hour) {
  * @param {string} a Compared version.
  * @param {string} b Reference version.
  */
-function isNewerVersion(a, b) {
+export function isNewerVersion(a, b) {
   var x = a.split('.'), y = b.split('-')[0].split('.');
   for (var i = 0; i < 3; i++) if (+x[i] !== +y[i]) return +x[i] > +y[i];
   // A release comes after its own betas.
   return b.indexOf('-') !== -1;
 }
-function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many); }
+export function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many); }
 /**
  * Returns where a local time stands around New Year's midnight: the countdown in the last minute of December 31,
  * the fireworks in the first minute of January 1, or nothing.
@@ -112,7 +112,7 @@ function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 
  * @returns {{phase: ?string, seconds: (number|undefined), next: number}} Phase, seconds left in the countdown,
  *   and the delay until what is shown changes.
  */
-function newYearAt(ts) {
+export function newYearAt(ts) {
   var year = new Date(ts).getFullYear(), midnight = new Date(year + 1, 0, 1).getTime(), started = new Date(year, 0, 1).getTime();
   var left = midnight - ts;
   if (left <= MIN) {
@@ -126,39 +126,39 @@ function newYearAt(ts) {
  * Returns a text without its trailing white space.
  * @param {string} text Text to trim.
  */
-function trimEnd(text) {
+export function trimEnd(text) {
   var end = text.length;
   // A loop rather than replace(/\s+$/, ''): that pattern starts again from each space of a long run.
   while (end && /\s/.test(text.charAt(end - 1))) end--;
   return text.slice(0, end);
 }
-function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
+export function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
 // Own key only: a name such as constructor is also a key of every object.
-function ownOf(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
-function isGuest(name) { return /^[!#]/.test(name); }
+export function ownOf(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
+export function isGuest(name) { return /^[!#]/.test(name); }
 /**
  * Returns the last element of a list that passes a test.
  * @param {Array} list List searched from its end.
  * @param {function(*): boolean} test Test of an element.
  */
-function lastMatch(list, test) {
+export function lastMatch(list, test) {
   for (var i = list.length - 1; i >= 0; i--) if (test(list[i])) return list[i];
   return null;
 }
-function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
-function storageMerge(key, patch) { return storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
+export function storageGet(key) { try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+export function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } }
+export function storageMerge(key, patch) { return storageSet(key, Object.assign(storageGet(key) || {}, patch)); }
 /**
  * Returns the kind of a stored JSON value: null, array, object, string, number or boolean.
  * @param {*} v Value read from the storage.
  */
-function kindOf(v) { return v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
+export function kindOf(v) { return v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
 /**
  * Reads a JSON file chosen by the user.
  * @param {File} file Chosen file.
  * @returns {Promise} Parsed content, rejected if the file is unreadable or is not JSON.
  */
-function readJsonFile(file) {
+export function readJsonFile(file) {
   return new Promise(function (resolve, reject) {
     var reader = new FileReader();
     reader.onload = function () { try { resolve(JSON.parse(reader.result)); } catch (e) { reject(e); } };
@@ -171,14 +171,14 @@ function readJsonFile(file) {
  * @param {File} file Chosen file.
  * @returns {Promise<?Array>} Array read, null if the file is unreadable or holds no array.
  */
-function readJsonArray(file) { return readJsonFile(file).then(function (v) { return Array.isArray(v) ? v : null; }, function () { return null; }); }
+export function readJsonArray(file) { return readJsonFile(file).then(function (v) { return Array.isArray(v) ? v : null; }, function () { return null; }); }
 /**
  * Downloads a text as a file.
  * @param {string} name File name.
  * @param {string} text File content.
  * @param {string} type MIME type of the file.
  */
-function downloadFile(name, text, type) {
+export function downloadFile(name, text, type) {
   var link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([text], { type: type }));
   link.download = name;
@@ -191,8 +191,8 @@ function downloadFile(name, text, type) {
  * @param {string} name File name.
  * @param {*} value Value written by JSON.stringify.
  */
-function downloadJson(name, value) { downloadFile(name, JSON.stringify(value), 'text/json'); }
-function copyText(text, onDone) {
+export function downloadJson(name, value) { downloadFile(name, JSON.stringify(value), 'text/json'); }
+export function copyText(text, onDone) {
   function fallback() {
     var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select();

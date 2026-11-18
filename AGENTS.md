@@ -12,13 +12,14 @@ Rules 1, 2, 4 and 6 have their ADR under `docs/adr/`, linked at the end of the r
 2. **Sourced frame or nothing.** Every Chatango frame sent comes from BetterChatango's code, from a reference library (chadango, chatango-lib, ch.py) or from the official client as currently served, cited by build id, with no file of it copied into the repo. Without a source, the feature stays marked "not wired" and the interface says so. [ADR-0002](docs/adr/0002-no-invented-frames.md)
 3. **No fake success in live.** An action that is not actually sent is hidden or shown as unavailable.
 4. **Member HTML rebuilt, never injected.** Mini profile: `RichText` (allowlist rebuilt as React elements). Full profile: `sandbox` `iframe` without `allow-scripts` or `allow-same-origin`, CSP in a `<meta>` (`fullProfileDoc`). Mini profile CSS: parsed, never injected. [ADR-0004](docs/adr/0004-member-html-never-injected.md)
-5. **Pinned dependencies.** Any new dependency waits for the user's explicit approval. React 18.3.1 loads from cdnjs with SRI (hashes checked against npm). Approved dev dependencies: jsdom, react, react-dom (tests), esbuild (minification).
+5. **Pinned dependencies.** Any new dependency waits for the user's explicit approval. React 18.3.1 loads from cdnjs with SRI (hashes checked against npm). Approved dev dependencies: jsdom, react, react-dom (tests), esbuild (bundling and minification).
 6. **Visitors: own profile only.** The loader bridge ignores any `profile` sent by the page and reads `client.user.name`. No lookup of another profile's activity. [ADR-0005](docs/adr/0005-visitors-own-profile-only.md)
 
 Decisions that follow from these and must not be "fixed":
 - the own message style stays local to the browser ([ADR-0006](docs/adr/0006-local-message-style.md))
 - linked accounts (`/api/v1/who`) are requested only on click and shown to the user only, never stored or logged ([ADR-0010](docs/adr/0010-linked-accounts-on-request.md))
 - the loader runs in two contexts, sandbox and page ([ADR-0003](docs/adr/0003-two-context-loader.md))
+- the sources are ES modules bundled by esbuild, whose imports go down the layers without a cycle; the build refuses any other import ([ADR-0017](docs/adr/0017-es-modules.md))
 - the diagnostic journal stays in the browser and observes neither socket sends nor frame contents ([ADR-0011](docs/adr/0011-diagnostic-journal.md))
 - PM unreads come only from BetterChatango's private history, the state keeps only a copy read back from it ([ADR-0012](docs/adr/0012-pm-unread-from-history.md)).
 - private notes on members stay in this browser, per account, and are never sent or logged ([ADR-0016](docs/adr/0016-private-member-notes.md)).
@@ -51,7 +52,7 @@ Outputs of `pnpm build` (not versioned):
 - `dist/nightango.user.js`: same assembly, readable, for debugging and audit
 - `dist/nightango.html` and `dist/app.js`: hosted prototype.
 
-Only the `loader` suite runs the userscripts, both of them. The others read `dist/nightango.html`, `dist/app.js`, sources from `src/` or the design system bundle (details in `docs/architecture.md`, section Tests).
+Only the `loader` suite runs the userscripts, both of them. The others read `dist/nightango.html`, `dist/app.js`, modules of `src/` they bundle themselves (`bundleForTest`) or the design system bundle (details in `docs/architecture.md`, section Tests).
 
 The runner `tests/run.mjs` judges each suite on its exit code and on its output (`FAIL`, `CRASH` lines, non-empty `ERRORS:`): some suites exit with 0 despite a failure. Read the output, not only the exit code.
 
@@ -77,10 +78,10 @@ The CI refuses a `-beta` `@version` on `main` and in any pull request to `main`.
 ## Docs map
 
 - `GLOSSARY.md`: domain vocabulary (BetterChatango, bridge, frame, PM, mini profile, presence...). Read it before naming a concept in code, an issue or a test.
-- `docs/architecture.md`: role of each folder in `src/`, concatenation order, loader contexts, live / prototype, React state, Shadow DOM, design system, tests. Read it before adding a file or touching the build.
+- `docs/architecture.md`: role of each folder in `src/`, modules and import layers, loader contexts, live / prototype, React state, Shadow DOM, design system, tests. Read it before adding a file or touching the build.
 - `docs/betterchatango-protocol.md`: how BetterChatango and Chatango work, checked in their code, frames with their source, presence formats, allowed endpoints, public files, vissle. Read it before sending or reading a frame, calling an endpoint or touching the bridge.
 - `reference/torch/`: read-only copy of BetterChatango's code (MIT licence), downloaded on 2026-10-19. The `inject.js:NNNN` references in the docs point to this copy. Never modify it and never load it in the build or in the tests (see its `README.md`).
-- `docs/coding-conventions.md`: ES5 style, comments, text, state, tests, design system, things never to do.
+- `docs/coding-conventions.md`: ES5 modules style, comments, text, state, tests, design system, things never to do.
 - `docs/adr/`: decisions and their reason.
 - `CHANGELOG.md`: release notes shown to the user in What's new.
 - `README.md`: overview for a human, installation in Tampermonkey.

@@ -1,21 +1,24 @@
+import { Frag, React, ReactDOM, T, h, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from './globals.js';
+import { MIN, cx } from './util.js';
+import { ACCENTS, onAccentOf } from './colors.js';
+import { ROLE_LABEL } from './roles.js';
+import { shownName, statusLabel } from './selectors.js';
 /* ---------- Context and UI primitives ---------- */
-var Ctx = React.createContext(null);
-function useApp() { return useContext(Ctx); }
+export var Ctx = React.createContext(null);
+export function useApp() { return useContext(Ctx); }
 // The parts of the application context that stay the same object for the whole session.
-var ApiCtx = React.createContext(null);
-// Season whose decorations are shown, apart: an avatar reads it without rendering again on every state change.
-var SeasonCtx = React.createContext(null);
+export var ApiCtx = React.createContext(null);
 /**
  * Returns the parts of the application context that never change: actions, ui, nav, update, drafts, the state store, the minute clock and keepUsers (useShownUsers).
  * A component that reads only them renders again for its own props and state only. Its state is the shown state at the time it is read, for handlers:
  * a render takes what it shows from its props or useStatePart.
  */
-function useAppApi() { return useContext(ApiCtx); }
+export function useAppApi() { return useContext(ApiCtx); }
 /**
  * Returns a part of the shown state and renders again only when that part changes.
  * @param {function(Object): *} part Reads the part: a value of the state, never an object built on each call.
  */
-function useStatePart(part) {
+export function useStatePart(part) {
   var store = useAppApi().store;
   return useSyncExternalStore(store.subscribe, function () { return part(store.shown()); });
 }
@@ -23,7 +26,7 @@ function useStatePart(part) {
  * Clock that ticks every minute on a single timer, running while something listens to it.
  * @returns {{subscribe: function(Function): Function, now: function(): number}} Subscription, and time of the last tick.
  */
-function minuteClock() {
+export function minuteClock() {
   var listeners = [], timer = null, now = Date.now();
   return {
     now: function () { return now; },
@@ -40,7 +43,7 @@ function minuteClock() {
 /**
  * Renders again on each tick of the minute clock of the application, which all relative times share.
  */
-function useMinute() {
+export function useMinute() {
   var clock = useAppApi().clock;
   useSyncExternalStore(clock.subscribe, clock.now);
 }
@@ -48,7 +51,7 @@ function useMinute() {
  * Keeps the members a component shows in the state while it shows them, even when nothing in the state refers to them (usePrunedUsers).
  * @param {string[]} names Members shown.
  */
-function useShownUsers(names) {
+export function useShownUsers(names) {
   var keep = useAppApi().keepUsers;
   useEffect(function () { return keep(names); }, [names.join(',')]);
 }
@@ -56,7 +59,7 @@ function useShownUsers(names) {
  * Returns functions that keep their identity from one render to the next and call those of the latest render.
  * @param {Object<string, Function>} fns Functions of this render, always the same keys.
  */
-function useLatestCalls(fns) {
+export function useLatestCalls(fns) {
   var latest = useRef(fns), calls = useRef(null);
   latest.current = fns;
   if (!calls.current) {
@@ -67,13 +70,13 @@ function useLatestCalls(fns) {
 }
 
 /* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
-var LayerCtx = React.createContext(null);
+export var LayerCtx = React.createContext(null);
 function appMount() { return window.__TORCH_MOUNT__ || document.getElementById('app'); }
 /**
  * Gives the interface inside it its layer node and its stack of open dialogs.
  * @param {{mount: ?Element, children: *}} p Mount point of this interface when it is not the application's, such as a floating window, and interface.
  */
-function Layers(p) {
+export function Layers(p) {
   var ref = useRef(null);
   if (!ref.current) ref.current = { node: null, dialogs: [], mount: p.mount || null };
   return h(LayerCtx.Provider, { value: ref.current }, p.children);
@@ -90,9 +93,9 @@ function layerRoot(layer) {
   (mountEl && mountEl.parentNode ? mountEl.parentNode : doc.body).appendChild(layer.node);
   return layer.node;
 }
-function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot(useContext(LayerCtx))); }
+export function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot(useContext(LayerCtx))); }
 
-function useOutside(ref, open, onClose, extraRef) {
+export function useOutside(ref, open, onClose, extraRef) {
   useEffect(function () {
     if (!open) return;
     function onDown(e) {
@@ -109,7 +112,7 @@ function useOutside(ref, open, onClose, extraRef) {
   }, [open]);
 }
 
-var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
+export var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
 
 /**
  * Requests the next page when a sentinel approaches the visible area.
@@ -119,7 +122,7 @@ var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
  * @param {Function} onReach Request for the next page.
  * @param {string} margin Approach margin in rootMargin format.
  */
-function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
+export function useInfiniteScroll(rootRef, sentinelRef, enabled, onReach, margin) {
   useEffect(function () {
     if (!enabled) return;
     var io = new IntersectionObserver(function (entries) {
@@ -139,7 +142,7 @@ var ROW_BATCH = 100;
  * @param {string} reset Search, filter or tab of the list: a new value renders the first batch again.
  * @returns {{limit: number, sentinel: ?Object}} Rows to render, and the element to place after them while rows are left.
  */
-function useRowBatches(rootRef, keys, reset) {
+export function useRowBatches(rootRef, keys, reset) {
   var st = useState({ reset: reset, limit: ROW_BATCH }), batch = st[0], setBatch = st[1];
   var sentinelRef = useRef(null), lastRef = useRef(null);
   if (batch.reset !== reset) { batch = { reset: reset, limit: ROW_BATCH }; setBatch(batch); }
@@ -178,7 +181,7 @@ var FLOAT_UNPLACED = { position: 'fixed', visibility: 'hidden', top: 0, left: 0 
  * @param {{up: boolean, align: string, at: ?{x: number, y: number}}} o Opening upward, alignment on the left edge of the trigger, anchor point that replaces the trigger.
  * @returns {Object} Position style, hidden until the layer is measured.
  */
-function useFloating(anchorRef, floatRef, open, onClose, o) {
+export function useFloating(anchorRef, floatRef, open, onClose, o) {
   useOutside(anchorRef, open, onClose, floatRef);
   var ps = useState(null), place = ps[0], setPlace = ps[1];
   // Fixed position computed from the trigger, flipped up or down if the layer would leave the screen.
@@ -216,7 +219,7 @@ var NARROW_LAYOUT = '(max-width:1180px)';
 /**
  * Tells whether the window is wide enough for a right column or two conversations side by side, and follows its changes.
  */
-function useWideLayout() {
+export function useWideLayout() {
   var a = useState(function () { return !window.matchMedia(NARROW_LAYOUT).matches; }), wide = a[0], setWide = a[1];
   useEffect(function () {
     var mq = window.matchMedia(NARROW_LAYOUT);
@@ -230,7 +233,7 @@ function useWideLayout() {
  * Toggles the right column when the window leaves room for it and otherwise opens its content full screen.
  * @param {Function} openFull Opens the same content full screen.
  */
-function useRightColumn(openFull) {
+export function useRightColumn(openFull) {
   var fits = useWideLayout();
   var b = useState(true), shown = b[0], setShown = b[1];
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
@@ -242,7 +245,7 @@ function useRightColumn(openFull) {
  * @returns {{current: Object, marked: Object, subscribe: function(Function): Function, keep: function(string, string), clear: Function}} Texts by key, keys with a draft,
  *   subscription to marked, saving of a text on leaving, and emptying.
  */
-function draftStore() {
+export function draftStore() {
   var listeners = [];
   function changed() { listeners.forEach(function (l) { l(); }); }
   var s = {
@@ -268,7 +271,7 @@ function draftStore() {
  * @param {string} key Conversation, as group:<id> or dm:<name>.
  * @returns {Array} Text, its setter, and a ref to the text saved on leaving, which the view may replace after the call.
  */
-function useDraft(key) {
+export function useDraft(key) {
   var drafts = useApp().drafts;
   var a = useState(function () { return drafts.current[key] || ''; }), kept = useRef('');
   kept.current = a[0];
@@ -277,13 +280,13 @@ function useDraft(key) {
   }, [key]);
   return [a[0], a[1], kept];
 }
-function groupDraftKey(id) { return 'group:' + id; }
-function dmDraftKey(name) { return 'dm:' + name; }
+export function groupDraftKey(id) { return 'group:' + id; }
+export function dmDraftKey(name) { return 'dm:' + name; }
 /**
  * Returns a part of the conversations that keep a draft and renders again only when that part changes.
  * @param {function(Object): *} part Reads the part from the keys of the conversations with a draft.
  */
-function useDraftMarks(part) {
+export function useDraftMarks(part) {
   var drafts = useAppApi().drafts;
   return useSyncExternalStore(drafts.subscribe, function () { return part(drafts.marked); });
 }
@@ -293,14 +296,14 @@ function useDraftMarks(part) {
  * @param {string} key Draft key of the conversation.
  * @param {boolean} active The conversation is in view.
  */
-function showsDraft(marked, key, active) {
+export function showsDraft(marked, key, active) {
   // The conversation in view still holds the draft it opened with until it is left.
   return !!marked[key] && !active;
 }
 /**
  * Draft marker of a conversation row.
  */
-function DraftMark() {
+export function DraftMark() {
   // Isolated: dir="auto" on the preview reads the direction of the message, not of this label.
   return h('bdi', { className: 'draft-mark' }, h('span', { className: 'tc-sr' }, ', '), h(T.Icon, { name: 'edit', size: 12 }), 'Draft');
 }
@@ -309,7 +312,7 @@ function DraftMark() {
  * Joins groups of menu entries with a divider between them, without the missing entries or the empty groups.
  * @param {Array<Array>} groups Entries of each group, null for a missing one.
  */
-function menuGroups(groups) {
+export function menuGroups(groups) {
   var out = [];
   groups.forEach(function (g) {
     var items = g.filter(Boolean);
@@ -319,7 +322,7 @@ function menuGroups(groups) {
 }
 
 /* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch, presence}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
-function MenuButton(p) {
+export function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);
   function setOpen(n) { if (p.open == null) st[1](n); if (p.onOpenChange) p.onOpenChange(n); }
@@ -365,7 +368,7 @@ function MenuButton(p) {
  * Color field with its hex value.
  * @param {{id: string, label: string, value: string, onChange: function(string)}} p Id, label, #rrggbb color and change callback.
  */
-function ColorField(p) {
+export function ColorField(p) {
   return h('div', { className: 'tc-field' },
     h('label', { className: 'tc-label', htmlFor: p.id }, p.label),
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
@@ -377,7 +380,7 @@ function ColorField(p) {
  * Accent color swatches followed by a custom color.
  * @param {{label: string, value: ?string, fallback: string, onChange: function(string)}} p Group label, chosen #rrggbb color or null for none, color of the custom field without a choice, and change callback.
  */
-function AccentSwatches(p) {
+export function AccentSwatches(p) {
   var custom = p.value != null && !ACCENTS.some(function (a) { return a[1] === p.value; });
   return h('div', { className: 'swatches', role: 'radiogroup', 'aria-label': p.label },
     ACCENTS.map(function (a) {
@@ -395,7 +398,7 @@ function AccentSwatches(p) {
  * Button that opens the JSON file picker.
  * @param {{onFile: function(File), icon: ?string, size: ?string, children: *}} p Callback for the chosen file, icon, size and button label.
  */
-function JsonFileButton(p) {
+export function JsonFileButton(p) {
   var ref = useRef(null);
   function change(e) {
     var file = e.target.files && e.target.files[0];
@@ -413,7 +416,7 @@ var SKELETON_WIDTHS = ['62%', '44%', '70%', '52%', '66%', '40%'];
  * Placeholder rows shaped like a list.
  * @param {{count: number, avatar: number, square: boolean, twoLines: boolean, label: string}} p Row count, avatar size, group avatar, second text line and announcement read by screen readers.
  */
-function SkeletonRows(p) {
+export function SkeletonRows(p) {
   var rows = [];
   for (var i = 0; i < p.count; i++) {
     rows.push(h('div', { key: i, className: 'skel-row' },
@@ -441,15 +444,15 @@ function syncInert(layer) {
  * @param {{dialogs: Array}} layer Layer given by Layers.
  * @param {Object} ref Ref of the layer overlay or of an element inside it.
  */
-function openModal(layer, ref) { layer.dialogs.push(ref); syncInert(layer); }
+export function openModal(layer, ref) { layer.dialogs.push(ref); syncInert(layer); }
 /**
  * Takes a modal layer out of the open dialogs.
  * It comes before the focus goes back to where it was, since an element in an inert app takes no focus.
  * @param {{dialogs: Array}} layer Layer given by Layers.
  * @param {Object} ref Ref given to openModal.
  */
-function closeModal(layer, ref) { layer.dialogs.splice(layer.dialogs.indexOf(ref), 1); syncInert(layer); }
-function Dialog(p) {
+export function closeModal(layer, ref) { layer.dialogs.splice(layer.dialogs.indexOf(ref), 1); syncInert(layer); }
+export function Dialog(p) {
   var ref = useRef(null), layer = useContext(LayerCtx);
   useEffect(function () {
     var rootNode = ref.current ? ref.current.getRootNode() : document;
@@ -490,7 +493,7 @@ function Dialog(p) {
       p.footer ? h('div', { className: 'dialog-foot' }, p.footer) : null)));
 }
 
-function ConfirmDialog(p) {
+export function ConfirmDialog(p) {
   var c = p.confirm;
   return h(Dialog, {
     title: c.title, description: c.body, onClose: p.onClose,
@@ -517,7 +520,7 @@ function toastDelay(t) {
  * Stack of notifications.
  * @param {{toasts: Array, dismiss: function(string), under: boolean=}} p Notifications, their closing by id, and true to put them under the dialogs.
  */
-function Toasts(p) {
+export function Toasts(p) {
   return h(Portal, null, h('div', { className: cx('toasts', p.under && 'toasts-under'), role: 'status', 'aria-live': 'polite' },
     p.toasts.map(function (t) { return h(Toast, { key: t.id, toast: t, dismiss: p.dismiss }); })));
 }
@@ -569,7 +572,7 @@ function Toast(p) {
     h(T.IconButton, { icon: 'x', label: 'Dismiss', size: 28, iconSize: 14, className: 'toast-close', onClick: function () { setLeaving(true); } }));
 }
 
-var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;
+export var CONN_DONE_MS = 2000, CONN_LEAVE_MS = 150;
 var CONN_COPY = {
   trying: { title: 'Reconnecting to ', text: 'Messages you send now may not arrive.' },
   done: { title: 'Reconnected to ', text: null },
@@ -592,7 +595,7 @@ function connPhase(p, phase) {
  * Banner of a lost live connection: one block whose icon and text change in place from reconnecting to reconnected, then folds away, or to failed.
  * @param {{name: string, conn: string, retrying: boolean, onRetry: Function, inset: number=}} p Named connection (#group or private messages), its state, its automatic attempts, a new sequence of attempts and the side margin.
  */
-function ConnectionBanner(p) {
+export function ConnectionBanner(p) {
   var st = useState(function () { return connPhase(p, null); }), phase = st[0], setPhase = st[1];
   var next = connPhase(p, phase);
   if (next !== phase) setPhase(next);
@@ -628,12 +631,12 @@ function ConnectionIcon() {
  * Shows the short role of a member as a badge next to their name.
  * @param {?string} role Role of the member in the group.
  */
-function roleBadge(role) { return role ? h(T.Badge, role === 'owner' ? { tone: 'moon', icon: 'crown' } : { tone: 'moon-quiet', icon: 'shield' }, ROLE_LABEL[role]) : null; }
+export function roleBadge(role) { return role ? h(T.Badge, role === 'owner' ? { tone: 'moon', icon: 'crown' } : { tone: 'moon-quiet', icon: 'shield' }, ROLE_LABEL[role]) : null; }
 /**
  * Marks the user's own row in a list.
  * @param {boolean} isMe Row of the signed-in user.
  */
-function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
+export function youBadge(isMe) { return isMe ? h(T.Badge, null, 'You') : null; }
 // Registered accounts only: a guest carries a # before their name and cannot impersonate it.
 var DEVELOPERS = ['marjorie'];
 /**
@@ -641,13 +644,13 @@ var DEVELOPERS = ['marjorie'];
  * @param {string} name Member name, in lowercase.
  * @param {boolean} [full] Shows the text, in the open profile.
  */
-function developerBadge(name, full) { return DEVELOPERS.indexOf(name) !== -1 ? traitBadge('code', 'Nightango developer', full) : null; }
+export function developerBadge(name, full) { return DEVELOPERS.indexOf(name) !== -1 ? traitBadge('code', 'Nightango developer', full) : null; }
 /**
  * Marks a Chatango Premium account next to its name, as an icon in lists.
  * @param {boolean} premium Premium active according to the mini profile.
  * @param {boolean} [full] Shows the text, in the open profile.
  */
-function premiumBadge(premium, full) { return premium ? traitBadge('gem', 'Premium', full) : null; }
+export function premiumBadge(premium, full) { return premium ? traitBadge('gem', 'Premium', full) : null; }
 /**
  * Badge of a trait of a person, icon only unless the text is asked for.
  * @param {string} icon Icon name.
@@ -659,12 +662,12 @@ function traitBadge(icon, label, full) { return full ? h(T.Badge, { tone: 'moon'
  * Gives the presence of a list row to screen readers while the avatar dot stays visual only.
  * @param {string} status Member presence.
  */
-function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + statusLabel(status)); }
+export function presenceSr(status) { return h('span', { className: 'tc-sr' }, ', ' + statusLabel(status)); }
 /**
  * Avatar and name of a person in a single button that opens their profile card.
  * @param {{name: string, label: string, gid: string, size: number, status: string, ring: string, avatarOnly: boolean, inert: boolean}} p Account name, name to show instead of the member's spelling, group the card opens from, avatar size, presence and outline of its dot, avatar without the name, plain text for someone without an account.
  */
-function Person(p) {
+export function Person(p) {
   var app = useAppApi(), shown = useStatePart(function (s) { return shownName(s, p.name); }), label = p.label || shown;
   var avatar = h(T.Avatar, { name: p.name, size: p.size, status: p.status, ring: p.ring }), text = p.avatarOnly ? null : h('span', { className: 'namebtn' }, label);
   if (p.inert) return h('span', { className: 'person-tag' }, avatar, text);

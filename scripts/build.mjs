@@ -1,113 +1,127 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { Script } from 'node:vm';
-import { transform } from 'esbuild';
+import { build as esbuild, transform } from 'esbuild';
 import { parseChangelog } from './changelog.mjs';
 
 // -- Sources ------------------------------------------------------------------
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
-// Order matters: the files share the single scope of the application IIFE.
-export const APP_SOURCES = [
-  'core/globals.js',
-  'core/util.js',
-  'core/draft.js',
-  'core/colors.js',
-  'core/roles.js',
-  'core/sample-data.js',
-  'core/prefs.js',
-  'core/ui.js',
-  'core/rich-text.js',
-  'core/selectors.js',
-  'bridge/live-model.js',
-  'bridge/live-parse.js',
-  'bridge/live-bridge.js',
-  'views/login.js',
-  'views/season.js',
-  'views/shell.js',
-  'views/group.js',
-  'views/message.js',
-  'views/message-log.js',
-  'views/members.js',
-  'views/dm.js',
-  'views/pip.js',
-  'views/spaces.js',
-  'views/meet.js',
-  'views/mentions.js',
-  'views/profile.js',
-  'views/new-dm.js',
-  'views/message-style.js',
-  'views/emoji-picker.js',
-  'views/attach.js',
-  'views/voice.js',
-  'views/media.js',
-  'views/gif.js',
-  'views/shared-media.js',
-  'views/commands.js',
-  'views/discover.js',
-  'views/palette.js',
-  'views/live-joined.js',
-  'views/session.js',
-  'settings/shell.js',
-  'settings/markup-toolbar.js',
-  'settings/profile.js',
-  'settings/appearance.js',
-  'settings/notifications.js',
-  'settings/privacy.js',
-  'settings/language-a11y-about.js',
-  'settings/group-view.js',
-  'settings/group-pages.js',
-  'settings/group-staff.js',
-  'settings/live-group-view.js',
-  'settings/live-group-pages.js',
-  'settings/live-group-staff.js',
-  'settings/avatar-crop.js',
-  'settings/live-account.js',
-  'app/sound.js',
-  'app/state.js',
-  'app/live-state.js',
-  'app/pm.js',
-  'app/overlays.js',
-  'app/inbox.js',
-  'app/actions.js',
-  'app/reconnection.js',
-  'app/simulation.js',
-  'app/live-ops.js',
-  'app/root.js',
-  'app/start.js'
-];
-
 /**
- * Lists the sources of a layer.
- * @param {string} layer Folder of src.
+ * Provides the build:info module: the version of the userscript and the release notes, the same for every target.
+ * @param {{version: string, notes: object[]}} info Version and release notes.
  */
-export function layerSources(layer) {
-  return APP_SOURCES.filter((file) => file.startsWith(layer + '/'));
+function buildInfo(info) {
+  return {
+    name: 'build-info',
+    setup(build) {
+      build.onResolve({ filter: /^build:info$/ }, () => ({ path: 'build:info', namespace: 'build-info' }));
+      build.onLoad({ filter: /.*/, namespace: 'build-info' }, () => ({
+        contents: `export var APP_VERSION = ${JSON.stringify(info.version)};\nexport var RELEASE_NOTES = ${JSON.stringify(info.notes)};\n`,
+        loader: 'js'
+      }));
+    }
+  };
 }
 
 /**
- * Concatenates application sources.
- * @param {string} root Repository root.
- * @param {string[]} files Paths relative to src.
+ * Bundles application modules into ES5 code with one scope.
+ * @param {object} input esbuild entry: entryPoints, or stdin with its resolveDir.
+ * @param {{version: string, notes: object[]}} info Version and release notes for build:info.
+ * @param {object} [options] Further esbuild options.
+ * @returns {Promise<object>} esbuild result, the code in outputFiles[0].
  */
-export function concatSources(root, files) {
-  return files.map((file) => readFileSync(join(root, 'src', file), 'utf8')).join('\n');
+function bundle(input, info, options) {
+  return esbuild(Object.assign({ bundle: true, format: 'esm', target: 'es5', charset: 'utf8', write: false, logLevel: 'silent', absWorkingDir: ROOT, plugins: [buildInfo(info)] }, input, options));
 }
-
-// -- Shared scope -------------------------------------------------------------
 
 /**
- * Returns the compile error of the sources once their top-level declarations are let.
- * Two files that declare the same name share one scope where the second silently replaces the first: declared with let they do not compile.
- * @param {string} code Concatenated application sources.
- * @returns {?string} Message that names the identifier declared twice or null.
+ * Bundles an application entry into the strict mode IIFE the pages run, once its imports are checked.
+ * @param {string} entry Entry file relative to src.
+ * @param {{version: string, notes: object[]}} info Version and release notes for build:info.
  */
-function redeclared(code) {
-  const strict = code.replace(/^var /gm, 'let ').replace(/^function\s+([A-Za-z_$][\w$]*)/gm, 'let $1 = function $1');
-  try { new Script('(function () {\n"use strict";\n' + strict + '\n})'); return null; } catch (e) { return e.message; }
+async function appBundle(entry, info) {
+  const result = await bundle({ entryPoints: [join(ROOT, 'src', entry)] }, info, { metafile: true });
+  checkImports(result.metafile);
+  return "(function () {\n'use strict';\n" + result.outputFiles[0].text + '\n})();\n';
 }
+
+/**
+ * Bundles the modules a suite reads into an IIFE that exposes them under one global name.
+ * @param {string} exports Code of the entry, export statements with paths relative to the repository root.
+ * @param {string} [name] Global variable that receives the exports.
+ */
+export async function bundleForTest(exports, name) {
+  const result = await bundle({ stdin: { contents: exports, resolveDir: ROOT, loader: 'js' } }, { version: '0.0.0-test', notes: [] },
+    { format: 'iife', globalName: name || '__mod' });
+  return result.outputFiles[0].text;
+}
+
+// -- Import graph -------------------------------------------------------------
+
+// Imports only go down these layers (ADR-0017). views/ and settings/ are one layer: the screens.
+const LAYER_RANK = { core: 0, bridge: 1, views: 2, settings: 2, app: 3 };
+// Debt left by the migration to modules: each refactor removes its entries, any other upward import or cycle fails the build.
+const KNOWN_UPWARD = new Set([
+  'core/globals.js -> bridge/live-model.js', 'core/selectors.js -> bridge/live-model.js', 'core/rich-text.js -> bridge/live-model.js',
+  'core/rich-text.js -> bridge/live-parse.js', 'core/sample-data.js -> bridge/live-model.js', 'core/sample-data.js -> bridge/live-parse.js',
+  'views/season.js -> app/state.js', 'views/pip.js -> app/state.js', 'views/session.js -> app/reconnection.js', 'views/profile.js -> app/live-state.js',
+  'settings/live-group-pages.js -> app/live-state.js', 'settings/notifications.js -> app/sound.js'
+]);
+const KNOWN_CYCLIC = new Set([
+  'bridge/live-parse.js', 'core/rich-text.js',
+  'app/actions.js', 'app/inbox.js', 'app/live-ops.js', 'app/live-state.js', 'app/pm.js', 'app/reconnection.js', 'app/root.js',
+  'settings/appearance.js', 'settings/group-pages.js', 'settings/group-staff.js', 'settings/group-view.js', 'settings/language-a11y-about.js',
+  'settings/live-account.js', 'settings/live-group-pages.js', 'settings/live-group-staff.js', 'settings/live-group-view.js', 'settings/notifications.js',
+  'settings/privacy.js', 'settings/profile.js', 'settings/shell.js',
+  'views/commands.js', 'views/discover.js', 'views/dm.js', 'views/group.js', 'views/live-joined.js', 'views/meet.js', 'views/members.js', 'views/mentions.js',
+  'views/message-style.js', 'views/message.js', 'views/palette.js', 'views/pip.js', 'views/profile.js', 'views/session.js', 'views/shared-media.js', 'views/shell.js'
+]);
+
+/**
+ * Refuses an import that goes up the layers and a module that joins a cycle, beyond the known debt.
+ * @param {object} metafile esbuild metafile of an application entry.
+ */
+function checkImports(metafile) {
+  const graph = new Map();
+  for (const [path, input] of Object.entries(metafile.inputs)) {
+    if (path.startsWith('src/')) graph.set(path.slice(4), input.imports.map((i) => i.path).filter((p) => p.startsWith('src/')).map((p) => p.slice(4)));
+  }
+  const rank = (file) => LAYER_RANK[file.split('/')[0]] ?? Infinity;
+  const errors = [];
+  for (const [file, imports] of graph) for (const target of imports) {
+    const edge = `${file} -> ${target}`;
+    if (rank(target) > rank(file) && !KNOWN_UPWARD.has(edge)) errors.push(`${edge} goes up the layers`);
+  }
+  for (const group of cycles(graph)) for (const file of group) {
+    if (!KNOWN_CYCLIC.has(file)) errors.push(`${file} is in an import cycle with ${group.filter((f) => f !== file).join(', ')}`);
+  }
+  if (errors.length) throw new Error('Import graph (ADR-0017):\n' + errors.join('\n'));
+}
+
+/**
+ * Lists the groups of modules that import each other, directly or not.
+ * @param {Map<string, string[]>} graph Imports of each module.
+ */
+function cycles(graph) {
+  let next = 0;
+  const index = new Map(), low = new Map(), stack = [], onStack = new Set(), groups = [];
+  const visit = (v) => {
+    index.set(v, next); low.set(v, next++); stack.push(v); onStack.add(v);
+    for (const w of graph.get(v) || []) {
+      if (!index.has(w)) { visit(w); low.set(v, Math.min(low.get(v), low.get(w))); } else if (onStack.has(w)) low.set(v, Math.min(low.get(v), index.get(w)));
+    }
+    if (low.get(v) !== index.get(v)) return;
+    const group = [];
+    let w;
+    do { w = stack.pop(); onStack.delete(w); group.push(w); } while (w !== v);
+    if (group.length > 1) groups.push(group);
+  };
+  for (const v of graph.keys()) if (!index.has(v)) visit(v);
+  return groups;
+}
+
 
 // -- Design system tokens -----------------------------------------------------
 
@@ -210,8 +224,6 @@ const SHADOW_SELECTORS = [
   [':root {', ':host {']
 ];
 const JSON_ESCAPES = { '\\': '\\\\', '"': '\\"', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t' };
-// The hosted prototype hook hands the interface a state and reads it back: any script on st.chatango.com could define it.
-const PROTOTYPE_CODE = /[ \t]*\/\*PROTOTYPE\*\/[\s\S]*?\/\*END PROTOTYPE\*\/\r?\n/g;
 
 /**
  * Writes a JSON string literal limited to ASCII.
@@ -300,13 +312,10 @@ async function build() {
   const version = /@version\s+(\S+)/.exec(loader)[1];
   const releaseNotes = parseChangelog(read('CHANGELOG.md'));
   if (releaseNotes[0]?.version !== version) throw new Error(`CHANGELOG.md must start with the notes of @version ${version}.`);
-  const sources = concatSources(ROOT, APP_SOURCES);
-  const twice = redeclared(sources);
-  if (twice) throw new Error(`The files of src/ share one scope and a top-level name is declared twice: ${twice}.`);
-  const appJs = "(function () {\n'use strict';\n" +
-    `var APP_VERSION = ${JSON.stringify(version)}, RELEASE_NOTES = ${JSON.stringify(releaseNotes)};\n` +
-    sources + '\n})();\n';
-  for (const [name, src] of [['bundle', bundleJs], ['app', appJs]]) {
+  const info = { version, notes: releaseNotes };
+  // The hosted prototype hook hands the interface a state and reads it back: any script on st.chatango.com could define it, so only the hosted entry reads it.
+  const [appJs, userscriptAppJs] = await Promise.all([appBundle('main-hosted.js', info), appBundle('main.js', info)]);
+  for (const [name, src] of [['bundle', bundleJs], ['app', appJs], ['userscript app', userscriptAppJs]]) {
     if (src.toLowerCase().includes('</script')) throw new Error(`${name} contains </script`);
   }
   const css = tokensCss(tokens);
@@ -340,7 +349,7 @@ ${appJs}
     loginCss: loginCss(tokens, read('src', 'styles', 'login.css')),
     fontsLicense: read('torchds', 'project', 'fonts', 'OFL.txt'),
     bundleJs,
-    appJs: appJs.replace(PROTOTYPE_CODE, '')
+    appJs: userscriptAppJs
   };
 
   mkdirSync(join(ROOT, 'dist'), { recursive: true });

@@ -1,7 +1,8 @@
+import { LIVE } from '../bridge/live-model.js';
 /* ---------- Sound ---------- */
 var audioCtx = null, userInteracted = false;
 ['pointerdown', 'keydown'].forEach(function (ev) { window.addEventListener(ev, function () { userInteracted = true; }, { once: true, capture: true }); });
-function beep(volume, force) {
+export function beep(volume, force) {
   if (LIVE || !userInteracted || !volume) return;
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();

@@ -1,3 +1,7 @@
+import { T, h, useEffect, useMemo, useRef, useState } from '../core/globals.js';
+import { useApp } from '../core/ui.js';
+import { GIF_URL } from '../bridge/live-parse.js';
+import { MediaStar, MediaStarButton, mediaThumbShown } from './media.js';
 /* ---------- GIF tab of the composer picker ---------- */
 var RECENT_GIFS_MAX = 24;
 
@@ -61,7 +65,7 @@ function GifGrid(p) {
  * Nothing is fetched beyond the GIFs shown under the message image rules.
  * @param {{onPick: function(string)}} p Insertion of the chosen address.
  */
-function GifPanel(p) {
+export function GifPanel(p) {
   var app = useApp(), s = app.state, safety = s.prefs.safety;
   var a = useState(''), link = a[0], setLink = a[1];
   var r = useState(false), revealed = r[0], setRevealed = r[1];

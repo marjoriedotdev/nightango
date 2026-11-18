@@ -1,7 +1,34 @@
+import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { MIN, ago, cx, dayKey, dayLabel, elapsedShort, fmtTime, lastMatch } from '../core/util.js';
+import { ROLE_LONG } from '../core/roles.js';
+import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useMinute, useOutside, useRightColumn, useRowBatches, useShownUsers, useStatePart, useWideLayout } from '../core/ui.js';
+import { bidiText, messagePreview } from '../core/rich-text.js';
+import { THREAD_MAX, genderShort, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, roleOf, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
+import { ACCOUNT_NAME, LIVE, isProfilePending } from '../bridge/live-model.js';
+import { warn } from '../bridge/live-parse.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { MobileNavButton, favoriteItem } from './shell.js';
+import { COMPOSER_MODES, EDIT_MAX, editsLastOnUp, useComposerMode } from './group.js';
+import { MessageContent, authorName, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton, quoteOf } from './message.js';
+import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
+import { confirmRemoveFriend, notifyOnlineItem, personActionGroups, useFriendRequest, useProfileActions, viewProfileItem, whoItem } from './members.js';
+import { popOutItem } from './pip.js';
+import { inCurrentSpace, spacesItem } from './spaces.js';
+import { MeetPeople } from './meet.js';
+import { MessageEntry } from './mentions.js';
+import { ProfilePanel } from './profile.js';
+import { MessageStyleButton } from './message-style.js';
+import { useEmojiPicker } from './emoji-picker.js';
+import { uploadKey, useAttachMedia } from './attach.js';
+import { attachMenu, useVoiceRecorder } from './voice.js';
+import { useMediaCompletion } from './media.js';
+import { SharedMediaDialog } from './shared-media.js';
+import { runCommand } from './commands.js';
+import { SessionBanner } from './session.js';
 /* ---------- Private messages ---------- */
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };
-function DMView(p) {
+export function DMView(p) {
   var app = useApp(), s = app.state, id = p.id;
   var a1 = useState('all'), tab = a1[0], setTab = a1[1];
   var a2 = useState(''), q = a2[0], setQ = a2[1];
@@ -162,7 +189,7 @@ function dmHitMessage(c, hit) {
  * Message log of a private conversation, mounted fresh for each correspondent.
  * @param {{id: string, tab: ?string, column: Object, seek: ?Object}} p Correspondent, list tab, profile column (useRightColumn) and search result to show.
  */
-function DmThread(p) {
+export function DmThread(p) {
   var app = useApp(), s = app.state, id = p.id, convo = s.dms[id];
   var asked = useRef(false);
   var len = convo.messages.length;
@@ -243,7 +270,7 @@ function dmAuthorOf(m) { return m.from; }
  * Private conversation in the pane beside the main one.
  * @param {{id: string}} p Conversation member.
  */
-function SplitDm(p) {
+export function SplitDm(p) {
   var app = useApp();
   var column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(p.id, null); } };
   return h('div', { className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: p.id, column: column, onClose: app.actions.closeSplit, closeLabel: 'Close the conversation with ' + p.id + ' side by side' }));
@@ -339,7 +366,7 @@ function presenceText(u) { return u.status === 'offline' && u.lastOn ? 'Last onl
  * @param {string} name Member name.
  * @param {?string} gid Group the profile is opened from.
  */
-function personStatus(s, name, gid) {
+export function personStatus(s, name, gid) {
   var u = userOf(s, name), role = gid ? roleOf(s.groups[gid], name) : null;
   return [name === s.me ? statusLabel(s.meStatus) : presenceText(u), u.friend ? 'Friend' : null, role ? ROLE_LONG[role] + ' in #' + gid : null].filter(Boolean).join(' · ');
 }
@@ -347,7 +374,7 @@ function personStatus(s, name, gid) {
  * Writes a person's ASL.
  * @param {Object} u Member in the state.
  */
-function personAsl(u) {
+export function personAsl(u) {
   return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
 /**
@@ -374,14 +401,14 @@ function PresenceTime(p) {
  * @param {string} n Member name.
  * @param {Object} u Member in the state.
  */
-function personMetaLine(n, u) {
+export function personMetaLine(n, u) {
   return h('span', { className: 'conv-meta' }, personAsl(u), isProfilePending(n, u) ? h(T.Skeleton, { width: 72, height: 10 }) : null);
 }
 /**
  * Loads the mini profiles of a list of people and keeps them in the state while the list shows them.
  * @param {string[]} names People listed.
  */
-function useProfiles(names) {
+export function useProfiles(names) {
   var app = useApp();
   useShownUsers(names);
   useEffect(function () { app.actions.loadProfiles(names); }, [names.join(',')]);

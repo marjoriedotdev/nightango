@@ -1,5 +1,11 @@
+import { T, h, useState } from '../core/globals.js';
+import { Dialog, useApp } from '../core/ui.js';
+import { ACCOUNT_NAME, LIVE } from '../bridge/live-model.js';
+import { pageHeader } from './shell.js';
+import { JoinedGroups } from './live-joined.js';
+import { SessionBanner } from './session.js';
 /* ---------- Discover ---------- */
-function parseGroupName(v) {
+export function parseGroupName(v) {
   return String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^client\.chatango\.com\/q\?/, '').replace(/\.chatango\.com.*$/, '').replace(/\/.*$/, '').replace(/^#/, '');
 }
 /**
@@ -7,14 +13,14 @@ function parseGroupName(v) {
  * @param {Object} s Application state.
  * @param {string} id Group name read by parseGroupName.
  */
-function unknownGroupError(s, id) { return s.groups[id] || LIVE ? '' : 'No group named ' + id + '. Check the spelling.'; }
-function GroupJoinButton(p) {
+export function unknownGroupError(s, id) { return s.groups[id] || LIVE ? '' : 'No group named ' + id + '. Check the spelling.'; }
+export function GroupJoinButton(p) {
   var app = useApp(), g = p.group;
   return g.joined
     ? h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.nav({ view: 'group', id: g.id }); } }, 'Open')
     : h(T.Button, { size: 'sm', onClick: function () { app.actions.joinGroup(g.id); } }, 'Join');
 }
-function Discover() {
+export function Discover() {
   var app = useApp(), s = app.state;
   var a = useState(''), joinName = a[0], setJoinName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
@@ -42,7 +48,7 @@ function Discover() {
         h(JoinedGroups, null))));
 }
 
-function CreateGroupDialog(p) {
+export function CreateGroupDialog(p) {
   var app = useApp(), s = app.state;
   var a = useState(p.prefill || ''), name = a[0], setName = a[1];
   var b = useState(''), title = b[0], setTitle = b[1];

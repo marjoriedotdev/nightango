@@ -1,3 +1,6 @@
+import { confirmLeave } from './group.js';
+import { dmNameError } from './new-dm.js';
+import { parseGroupName, unknownGroupError } from './discover.js';
 /* ---------- Composer commands ---------- */
 // BetterChatango's /background and /style stay plain messages until #70 and #71 give them an equivalent.
 var COMMANDS = {
@@ -16,7 +19,7 @@ function commandList() { return 'Commands: ' + Object.keys(COMMANDS).map(functio
  * @param {?string} gid Open group, null in a PM.
  * @returns {boolean} True if the text was a command, which is then not sent.
  */
-function runCommand(app, text, gid) {
+export function runCommand(app, text, gid) {
   var words = text.split(/\s+/), cmd = words[0].toLowerCase(), arg = (words[1] || '').toLowerCase();
   // Own properties only: otherwise a "constructor" message would find the one on Object.
   if (!Object.prototype.hasOwnProperty.call(COMMANDS, cmd)) return false;

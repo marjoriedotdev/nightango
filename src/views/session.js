@@ -1,3 +1,8 @@
+import { T, h, useEffect, useState } from '../core/globals.js';
+import { cx } from '../core/util.js';
+import { CONN_DONE_MS, CONN_LEAVE_MS, Dialog, useApp } from '../core/ui.js';
+import { LIVE } from '../bridge/live-model.js';
+import { RECONNECT_DELAYS } from '../app/reconnection.js';
 /* ---------- Session loss ---------- */
 var SESSION_ATTEMPTS = 3;
 // A lost connection has no dialog: it shows in SessionBanner.
@@ -30,18 +35,18 @@ function anyConnecting(s) {
  * Tells whether the connection to Chatango is lost, which SessionBanner shows without blocking the interface.
  * @param {Object} s Application state.
  */
-function sessionLost(s) { return !!(LIVE && s.auth.loggedIn && s.session && s.session.reason === 'lost'); }
+export function sessionLost(s) { return !!(LIVE && s.auth.loggedIn && s.session && s.session.reason === 'lost'); }
 /**
  * Tells whether the session loss blocks the interface with its dialog.
  * @param {Object} s Application state.
  */
-function sessionBlocks(s) { return !!(s.auth.loggedIn && s.session && s.session.reason !== 'lost'); }
+export function sessionBlocks(s) { return !!(s.auth.loggedIn && s.session && s.session.reason !== 'lost'); }
 
 /**
  * Blocking session loss dialog: signed in somewhere else, session expired, offline.
  * @param {{session: {reason: string}}} p Reason of the loss.
  */
-function SessionOverlay(p) {
+export function SessionOverlay(p) {
   var app = useApp(), s = p.session, copy = SESSION_COPY[s.reason], busy = anyConnecting(app.state);
   /**
    * Builds the Reload button.
@@ -78,7 +83,7 @@ function lostPhase(s, now) {
  * then Reconnected before it folds away. The interface stays open meanwhile: a send fails with its notification.
  * @param {{inset: number=, className: string=}} p Side margin and class given by the page that holds it.
  */
-function SessionBanner(p) {
+export function SessionBanner(p) {
   var app = useApp(), s = app.state, now = Date.now();
   var lost = sessionLost(s) ? lostPhase(s, now) : null;
   var st = useState(lost), phase = st[0], setPhase = st[1];

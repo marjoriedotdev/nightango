@@ -1,5 +1,32 @@
+import { APP_VERSION } from 'build:info';
+import { AvatarDecorCtx, h, useEffect, useMemo, useRef, useState, useSyncExternalStore } from '../core/globals.js';
+import { MIN, REPO_URLS, SEASONS, isNewerVersion, seasonOf, skyAt, storageSet } from '../core/util.js';
+import { openDraft } from '../core/draft.js';
+import { accentOf, accentTokens } from '../core/colors.js';
+import { ApiCtx, ConfirmDialog, Ctx, Layers, Toasts, draftStore, minuteClock } from '../core/ui.js';
+import { resolvedTheme, shownName, unreadTotal } from '../core/selectors.js';
+import { JOURNAL, LIVE } from '../bridge/live-model.js';
+import { Login } from '../views/login.js';
+import { Shell } from '../views/shell.js';
+import { avatarDecor } from '../views/season.js';
+import { BanDialog, LinkDialog, ProfileDialog, ProfileLinkDialog, WhoDialog } from '../views/members.js';
+import { ConversationSpacesDialog, SpaceEditorDialog } from '../views/spaces.js';
+import { FullProfileDialog } from '../views/profile.js';
+import { NewDmDialog } from '../views/new-dm.js';
+import { CreateGroupDialog } from '../views/discover.js';
+import { Palette } from '../views/palette.js';
+import { SessionOverlay, sessionBlocks } from '../views/session.js';
+import { PREFS_KEY, ROOT_EL, VIEWER_THEME, initialState } from './state.js';
+import { useLocalStore, usePrunedUsers } from './live-state.js';
+import { useLivePms } from './pm.js';
+import { useOverlays } from './overlays.js';
+import { useInbox } from './inbox.js';
+import { useActions } from './actions.js';
+import { useReconnection } from './reconnection.js';
+import { useSimulation } from './simulation.js';
+import { useLiveOps } from './live-ops.js';
 /* ---------- Root ---------- */
-var IDLE_DELAY = 3 * MIN;
+export var IDLE_DELAY = 3 * MIN;
 /**
  * Returns the first stable version of a list of release tags.
  * @param {Array} tags Tags newest first, untrusted.
@@ -105,20 +132,18 @@ function appStore(initial) {
 
 /**
  * Application state, with a ref to the latest state that handlers read and its update.
- * @param {?Object} boot State handed by the prototype hook.
+ * @param {{state: ?Object, snapshot: ?function(Function)}} host Page that starts the interface: the hosted prototype hands a saved state and reads the state back.
  * @returns {{state: Object, stateRef: Object, update: function(function(Object)), inAnimationFrame: function(Function), atFrame: function(Function), store: Object}}
  *   State of this render, ref to the latest state, update, scope whose updates wait for the next animation frame, work held until it,
  *   and the store (appStore).
  */
-function useAppState(boot) {
+function useAppState(host) {
+  var boot = host.state;
   var store = useState(function () { return appStore(boot && boot.auth ? boot : initialState()); })[0];
   var state = useSyncExternalStore(store.subscribe, store.shown);
-  /*PROTOTYPE*/
   useEffect(function () {
-    var hot = window.claude && window.claude.hot;
-    if (hot && hot.snapshot) hot.snapshot(function () { return { state: store.ref.current }; });
+    if (host.snapshot) host.snapshot(function () { return { state: store.ref.current }; });
   }, []);
-  /*END PROTOTYPE*/
   return { state: state, stateRef: store.ref, update: store.update, inAnimationFrame: store.inAnimationFrame, atFrame: store.atFrame, store: store };
 }
 
@@ -224,14 +249,16 @@ function useUpdateCheck(loggedIn, toast) {
   }, [loggedIn]);
 }
 
-function skyHour() { var d = new Date(); return d.getHours() + d.getMinutes() / 60; }
-/*PROTOTYPE*/
-// Review of the hosted prototype: holds the sky at an hour of the day, minutes as its fraction, until the page reloads.
-window.showSkyAt = function (hour) {
-  skyHour = function () { return hour; };
-  window.dispatchEvent(new Event('torch-sky'));
-};
-/*END PROTOTYPE*/
+var heldSkyHour = null, skyPainters = [];
+function skyHour() { var d = new Date(); return heldSkyHour !== null ? heldSkyHour : d.getHours() + d.getMinutes() / 60; }
+/**
+ * Holds the sky at an hour of the day, minutes as its fraction, until the page reloads: review of the hosted prototype.
+ * @param {number} hour Hour to show.
+ */
+export function holdSkyAt(hour) {
+  heldSkyHour = hour;
+  skyPainters.forEach(function (paint) { paint(); });
+}
 
 /**
  * Keeps the sky on the device hour: sets on the root the shares of the early and late skies (skyAt), which the stylesheet mixes into the base sky.
@@ -254,29 +281,26 @@ function useSkyHour(clock, theme, calm) {
     }
     paint();
     var stop = clock.subscribe(paint);
-    /*PROTOTYPE*/
-    window.addEventListener('torch-sky', paint);
-    /*END PROTOTYPE*/
+    skyPainters.push(paint);
     return function () {
       stop();
-      /*PROTOTYPE*/
-      window.removeEventListener('torch-sky', paint);
-      /*END PROTOTYPE*/
+      skyPainters.splice(skyPainters.indexOf(paint), 1);
     };
   }, [theme, calm]);
 }
 
 /**
  * Interface root: composes the hooks of the application and renders the shell, the dialogs and the toasts.
- * @param {{boot: ?Object}} props State handed by the prototype hook.
+ * @param {{host: Object}} props Page that starts the interface (useAppState).
  */
-function Root(props) {
-  var store = useAppState(props.boot), state = store.state;
+export function Root(props) {
+  var store = useAppState(props.host), state = store.state;
   // Composer drafts by conversation, in memory only: a reload, which is also how live signs out, drops every draft.
   var drafts = useState(draftStore)[0];
   var o = useOverlays();
   var inbox = useInbox(store.stateRef, store.update, o.toast, o.setNavOpen);
   var season = useDisplayPrefs(state.prefs);
+  var decor = useMemo(function () { return avatarDecor(season); }, [season]);
   useIdleStatus(state.users, store.update);
   useTabTitle(state);
   useShortcuts(store.stateRef, o.setPalette);
@@ -298,7 +322,7 @@ function Root(props) {
   var app = useMemo(function () {
     return { state: state, update: store.update, nav: inbox.nav, actions: act.actions, ui: o.ui, navOpen: o.navOpen, uploads: act.uploads, drafts: drafts, theme: theme, season: season };
   }, [state, o.navOpen, act.uploads, theme, season]);
-  return h(Layers, null, h(ApiCtx.Provider, { value: api }, h(SeasonCtx.Provider, { value: season }, h(Ctx.Provider, { value: app },
+  return h(Layers, null, h(ApiCtx.Provider, { value: api }, h(AvatarDecorCtx.Provider, { value: decor }, h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
     state.auth.loggedIn && o.profile ? h(ProfileDialog, { name: o.profile.name, gid: o.profile.gid, onClose: function () { o.setProfile(null); } }) : null,
     state.auth.loggedIn && o.banCfg ? h(BanDialog, { name: o.banCfg.name, gid: o.banCfg.gid, msg: o.banCfg.msg, onClose: function () { o.setBan(null); } }) : null,

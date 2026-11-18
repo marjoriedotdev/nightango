@@ -1,3 +1,7 @@
+import { Frag, T, h, useMemo, useRef, useState } from '../core/globals.js';
+import { Dialog, useApp } from '../core/ui.js';
+import { profileImgSrc } from '../bridge/live-model.js';
+import { liveBridge } from '../bridge/live-bridge.js';
 /* ---------- Profile picture cropping ---------- */
 // Smallest square in pixels of full.jpg, unless the image is smaller.
 var CROP_MIN = 32;
@@ -52,7 +56,7 @@ function CropPreview(p) {
  * @param {Function} p.onClose Close without saving.
  * @param {Function} p.onSaved Close after saving.
  */
-function AvatarCropDialog(p) {
+export function AvatarCropDialog(p) {
   var app = useApp(), src = useMemo(function () { return profileImgSrc(p.name, 'full'); }, []);
   var a = useState(null), natural = a[0], setNatural = a[1];
   var b = useState(null), box = b[0], setBox = b[1];

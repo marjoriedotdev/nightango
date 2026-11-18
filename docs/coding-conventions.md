@@ -3,10 +3,10 @@
 ## JavaScript
 
 - Code identifiers in English (variables, functions, files, state keys). Comments, JSDoc and docs are in English too.
-- All code in `src/` is ES5: `var`, functions, no arrow functions and no classes.
-- Elements are created with `h = React.createElement`. No JSX, no bundler.
+- All code in `src/` is ES5 with ES modules: `var`, functions, `import` and `export`, no arrow functions and no classes ([ADR-0017](adr/0017-es-modules.md)).
+- A file imports every name it reads from another file and exports only the names other files read. Imports go down the layers `core/`, `bridge/`, `views/` and `settings/`, `app/`, without a cycle: the build refuses any other.
+- Elements are created with `h = React.createElement`. No JSX.
 - Design system components are called as `T.<Component>` (namespace `window.Torch`).
-- A new file is added to `APP_SOURCES` in `scripts/build.mjs`, at its place in the concatenation order (see `docs/architecture.md`).
 - Live-only code is guarded by `if (LIVE)`. The prototype and live share everything else.
 - Node scripts (`scripts/`, `tests/run.mjs`) are in modern JavaScript (ES modules).
 

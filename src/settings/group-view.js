@@ -1,5 +1,14 @@
+import { T, h, useState } from '../core/globals.js';
+import { ROLE_LONG } from '../core/roles.js';
+import { useApp } from '../core/ui.js';
+import { groupRights, roleOf } from '../core/selectors.js';
+import { LIVE } from '../bridge/live-model.js';
+import { SettingsShell, listedPage } from './shell.js';
+import { GSAnnouncement, GSAudit, GSAutoMod, GSBans, GSMedia, GSOverview } from './group-pages.js';
+import { GSInvites, GSMembers, GSStaff } from './group-staff.js';
+import { GroupSettingsViewLive } from './live-group-view.js';
 /* ---------- Group settings ---------- */
-function GroupSettingsView(p) {
+export function GroupSettingsView(p) {
   if (LIVE) return h(GroupSettingsViewLive, p);
   var app = useApp(), s = app.state, g = s.groups[p.gid], me = s.me;
   var a = useState(function () { return g ? JSON.parse(JSON.stringify(g.settings)) : null; }), draft = a[0], setDraft = a[1];

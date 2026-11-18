@@ -1,4 +1,13 @@
-function ProfilePage() {
+import { T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { Person, SkeletonRows, useApp } from '../core/ui.js';
+import { RichText } from '../core/rich-text.js';
+import { genderShort, miniStyleOf, userOf } from '../core/selectors.js';
+import { LIVE } from '../bridge/live-model.js';
+import { coverReveal, miniSkin, useMiniCover } from '../views/profile.js';
+import { ActivityRow, Page, setIn } from './shell.js';
+import { useMarkupToolbar } from './markup-toolbar.js';
+import { ProfilePageLive } from './live-account.js';
+export function ProfilePage() {
   if (LIVE) return h(ProfilePageLive, null);
   var app = useApp(), s = app.state, me = userOf(s, s.me);
   function snapshot() { return { age: me.age || '', gender: me.gender || 'Not specified', location: me.location || '', about: me.about || '', meet: !!s.profile.visibility.meet }; }
@@ -39,7 +48,7 @@ function ProfilePage() {
  * Visibility of the user's own profile in Meet people.
  * @param {{meet: boolean, disabled: boolean, onChange: Function}} p Profile listed in Meet people, switch locked, receives the new value.
  */
-function VisibilitySection(p) {
+export function VisibilitySection(p) {
   return h(T.SettingsSection, { title: 'Visibility' },
     h(T.SettingRow, { title: 'Appear in Meet people', description: 'Lets other people on Chatango find you by age and location.', control: h(T.Switch, { checked: !!p.meet, disabled: p.disabled, onChange: function (e) { p.onChange(e.target.checked); } }) }));
 }
@@ -51,7 +60,7 @@ function VisibilitySection(p) {
  * @param {string} p.about Draft bio.
  * @param {?Object} p.mini Background as miniStyleOf returns it.
  */
-function ProfilePreviewCard(p) {
+export function ProfilePreviewCard(p) {
   var mini = p.mini, cover = useMiniCover(mini);
   // Same markup as ProfileSummary: the preview has to look like the card other members open.
   return h('div', { className: 'profile-preview', style: mini ? miniSkin(mini) : null },
@@ -95,7 +104,7 @@ function visitorRow(r) {
  * @param {Function} p.onDraft Receives the new draft bio.
  * @param {boolean} [p.disabled] Tracker buttons disabled.
  */
-function VisitorsSection(p) {
+export function VisitorsSection(p) {
   var app = useApp(), v = app.state.visitors;
   var get = v ? v.get : 'all', rows = v ? v.rows : [], loading = !v || v.loading;
   var tracked = vissleTrackerOf(p.bio) !== null, drafted = vissleTrackerOf(p.draft) !== null;

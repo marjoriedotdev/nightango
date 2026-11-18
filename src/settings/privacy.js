@@ -1,4 +1,11 @@
-function PrivacyPage() {
+import { Frag, T, h, useState } from '../core/globals.js';
+import { downloadJson, plural, readJsonArray } from '../core/util.js';
+import { JsonFileButton, Person, useApp } from '../core/ui.js';
+import { httpsHost } from '../core/rich-text.js';
+import { LIVE } from '../bridge/live-model.js';
+import { Page, usePref } from './shell.js';
+import { PrivacyPageLive } from './live-account.js';
+export function PrivacyPage() {
   if (LIVE) return h(PrivacyPageLive, null);
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
   return h(Page, { title: 'Privacy', lede: PRIVACY_LEDE },
@@ -17,7 +24,7 @@ function PrivacyPage() {
 /**
  * Private notes on members kept for this account (ADR-0016).
  */
-function NotesSection() {
+export function NotesSection() {
   var app = useApp(), count = Object.keys(app.state.notes).length;
   return h(T.SettingsSection, { title: 'Private notes' },
     h(T.SettingRow, {
@@ -26,7 +33,7 @@ function NotesSection() {
     }));
 }
 
-var PRIVACY_LEDE = 'Who can reach you, and what Nightango keeps in this browser.';
+export var PRIVACY_LEDE = 'Who can reach you, and what Nightango keeps in this browser.';
 // Labels checked by the owner on a real account before 0.36.0 (#83).
 var CHATANGO_PM_ROWS = [
   ['hideIdle', 'Hide your idle time', "People don't see how long you've been away."],
@@ -37,7 +44,7 @@ var CHATANGO_PM_ROWS = [
 /**
  * PM settings saved on the Chatango account, each switch showing only what Chatango confirmed.
  */
-function ChatangoPmSection() {
+export function ChatangoPmSection() {
   var app = useApp(), values = app.state.pmSettings, save = app.state.pmSettingSave;
   var pending = !!save && !save.failed;
   return h(T.SettingsSection, { title: 'Chatango account', description: 'Saved on your Chatango account. They apply wherever you use Chatango.' },
@@ -51,7 +58,7 @@ function ChatangoPmSection() {
     }) : h('p', { className: 'pal-empty' }, 'Loads once private messages are connected.'));
 }
 
-function BrowserTabSection() {
+export function BrowserTabSection() {
   var pr = usePref();
   return h(T.SettingsSection, { title: 'Browser tab' },
     h(T.SettingRow, { title: 'Show your username in the tab title', description: 'Tells tabs apart when you use several accounts.', control: pr.sw('privacy.usernameInTitle') }));
@@ -60,7 +67,7 @@ function BrowserTabSection() {
 /**
  * Export and import of the private history in the BetterChatango file format (exportMessages and importMessages).
  */
-function PmHistoryRows() {
+export function PmHistoryRows() {
   var app = useApp(), toast = app.ui.toast;
   function exportFile() {
     app.actions.exportDms().then(function (records) {
@@ -87,7 +94,7 @@ var STARTUP_ROWS = [['joinOwned', 'Join groups you own'], ['joinRecent', 'Join r
  * BetterChatango startup settings.
  * @param {{value: Object, onChange: function}} p value holds the three switches, onChange receives the key and the new value.
  */
-function StartupSection(p) {
+export function StartupSection(p) {
   return h(T.SettingsSection, { title: 'On startup', description: 'Takes effect the next time BetterChatango loads.' },
     STARTUP_ROWS.map(function (r) {
       return h(T.SettingRow, { key: r[0], title: r[1], control: h(T.Switch, { checked: !!p.value[r[0]], onChange: function (e) { p.onChange(r[0], e.target.checked); } }) });
@@ -147,7 +154,7 @@ function TrustedSites(p) {
     safetyRows(p.hosts, function (host) { return h('span', { className: 'trust-host' }, host); }, 'Remove', function (host) { app.actions.setTrustedHost(host, false); }, 'No trusted sites.'));
 }
 
-function SafetyPage() {
+export function SafetyPage() {
   var app = useApp(), s = app.state, pr = usePref(), prefs = s.prefs;
   var blocked = Object.keys(s.users).filter(function (n) { return s.users[n].blocked; });
   var ignored = Object.keys(s.users).filter(function (n) { return s.users[n].ignored; });

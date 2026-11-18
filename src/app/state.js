@@ -1,3 +1,5 @@
+import { kindOf, storageGet } from '../core/util.js';
+import { defaultPrefs } from '../core/prefs.js';
 /**
  * Merges stored values into the defaults: a value of another kind than its default is dropped, a key without a default is kept.
  * @param {Object} base Defaults.
@@ -24,7 +26,7 @@ function loadPrefs(stored) {
   if (stored && stored.sky && typeof stored.sky.moon === 'number') prefs.sky.moon = stored.sky.moon;
   return prefs;
 }
-var PREFS_KEY = 'torch-prototype-prefs';
-var ROOT_EL = window.__TORCH_ROOT__ || document.documentElement;
-var VIEWER_THEME = ROOT_EL.getAttribute('data-theme');
-function initialState() { return { auth: { loggedIn: false }, prefs: loadPrefs(storageGet(PREFS_KEY)) }; }
+export var PREFS_KEY = 'torch-prototype-prefs';
+export var ROOT_EL = window.__TORCH_ROOT__ || document.documentElement;
+export var VIEWER_THEME = ROOT_EL.getAttribute('data-theme');
+export function initialState() { return { auth: { loggedIn: false }, prefs: loadPrefs(storageGet(PREFS_KEY)) }; }

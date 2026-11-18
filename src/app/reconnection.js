@@ -1,6 +1,10 @@
+import { useRef } from '../core/globals.js';
+import { isPaneOpen } from '../core/selectors.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { SESSION_RANK } from './live-state.js';
 /* ---------- Reconnection of the live connections ---------- */
 // Delays of the attempts that follow a connection loss: the first one starts right away, the next ones leave a Chatango restart time to finish.
-var RECONNECT_DELAYS = [0, 10000, 30000];
+export var RECONNECT_DELAYS = [0, 10000, 30000];
 /**
  * Returns the state of a tracked connection: the private connection or a joined group.
  * @param {Object} s Application state.
@@ -24,7 +28,7 @@ function canRetry(s) { return (!s.session || s.session.reason === 'lost') && doc
  * @param {Function} update State update.
  * @returns {{reconnect: function(string, boolean), startRetries: function(string), reconnectClosed: Function, follow: function(Object)}} Reconnections and the follow-up of a connection state.
  */
-function useReconnection(stateRef, update) {
+export function useReconnection(stateRef, update) {
   // Automatic reconnections in progress, by connection: attempts made and timer of the next one.
   var retries = useRef({});
   /**

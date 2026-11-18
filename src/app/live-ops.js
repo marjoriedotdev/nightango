@@ -1,3 +1,16 @@
+import { useEffect, useRef } from '../core/globals.js';
+import { CHATANGO_URL, MIN, dayKey, plural, shortDate, storageGet, storageMerge, uid, unknownUserText } from '../core/util.js';
+import { plainOf } from '../core/draft.js';
+import { BETTER_CHATANGO_PREFS } from '../core/prefs.js';
+import { messagePreview } from '../core/rich-text.js';
+import { isDmInView, isGroupInView, isNotifyingOnline, mentionsMe, pmEditTarget, premiumEndsSoon, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
+import { JOURNAL, LIVE, skinKey } from '../bridge/live-model.js';
+import { deliverOp, liveBridge } from '../bridge/live-bridge.js';
+import { DEFAULT_MESSAGE_STYLE } from '../views/message-style.js';
+import { setIn } from '../settings/shell.js';
+import { SESSION_RANK, applyGroupEdit, applyPresence, banListOf, blankBanPage, deriveLive, editTarget, ensureLiveGroup, ensureLiveUser, ensurePresentUser, ensureUnseenUser, groupUpdate, liveWorld, mergeEdits, mergeSpelling, mergeStyle, noteBadge, receiveBanPage, sessionAfterConn, storedFavoritePeople, storedNotes, storedSpaces, withReply } from './live-state.js';
+import { memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
+import { dropMentions, logMention } from './inbox.js';
 /* ---------- Live operations: what the bridge emits, applied to the state ---------- */
 /**
  * Hands each bridge operation to the handler of the latest render.
@@ -5,7 +18,7 @@
  * @param {function(Object)} handle Handler of this render.
  * @param {boolean} loggedIn The state of this render is signed in.
  */
-function useBridgeOps(handle, loggedIn) {
+export function useBridgeOps(handle, loggedIn) {
   var latest = useRef(handle), held = useRef(null);
   latest.current = handle;
   useEffect(function () {
@@ -59,7 +72,7 @@ function addHistory(d, op, local) {
  *   Application state with its ref and update, notifications, inbox (useInbox), actions (useActions), account data kept in this browser (useLocalStore),
  *   reconnection (useReconnection) and live PMs (useLivePms).
  */
-function useLiveOps(k) {
+export function useLiveOps(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast;
   var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, notify = k.inbox.notify, notifyPm = k.inbox.notifyPm, receiveGroup = k.inbox.receiveGroup;
   var actions = k.actions, local = k.local, localRef = k.local.ref, reconnection = k.reconnection, pms = k.pms;

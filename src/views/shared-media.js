@@ -1,3 +1,10 @@
+import { T, h, useMemo, useState } from '../core/globals.js';
+import { ago } from '../core/util.js';
+import { Dialog, useApp } from '../core/ui.js';
+import { shownName } from '../core/selectors.js';
+import { mediaLinks, textLinks } from '../bridge/live-parse.js';
+import { mediaLink } from './message.js';
+import { MediaThumb, mediaThumbShown } from './media.js';
 /* ---------- Media and links of a conversation ---------- */
 // Embed kinds by filter: YouTube and TikTok are videos as much as a video file.
 var SHARED_KINDS = { image: 'images', video: 'videos', youtube: 'videos', tiktok: 'videos', audio: 'audio', x: 'posts', link: 'links' };
@@ -47,7 +54,7 @@ function sharedTitle(it) {
  * A click on an item closes the dialog and jumps to its message.
  * @param {{where: string, messages: Array, authorOf: Function, onJump: function(string), onClose: Function}} p Conversation name as shown, its visible messages, author of a message, jump to a message and close.
  */
-function SharedMediaDialog(p) {
+export function SharedMediaDialog(p) {
   var app = useApp(), safety = app.state.prefs.safety;
   var a = useState('all'), filter = a[0], setFilter = a[1];
   var r = useState(false), revealed = r[0], setRevealed = r[1];

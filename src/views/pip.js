@@ -1,3 +1,10 @@
+import { AvatarDecorCtx, ReactDOM, h, useContext, useEffect } from '../core/globals.js';
+import { ApiCtx, Ctx, Layers, useApp, useAppApi } from '../core/ui.js';
+import { isTarget } from '../core/selectors.js';
+import { paneShown } from './shell.js';
+import { GroupView } from './group.js';
+import { DmThread } from './dm.js';
+import { ROOT_EL } from '../app/state.js';
 /* ---------- Floating conversation (Document Picture-in-Picture) ---------- */
 // One floating window at a time: the browser closes the previous one when a new one opens.
 var PIP = { win: null, mount: null, root: null, observer: null };
@@ -9,7 +16,7 @@ function canPopOut() { return 'documentPictureInPicture' in window; }
  * @param {function()} onGone Called once this window closes, by the user or by a newer one.
  * @returns {Promise} Settles once the window is ready.
  */
-function openPipWindow(onGone) {
+export function openPipWindow(onGone) {
   return window.documentPictureInPicture.requestWindow({ width: 420, height: 640 }).then(function (win) {
     unmountPip();
     var doc = win.document, shadow = ROOT_EL.shadowRoot, mount = doc.createElement('div'), mirror;
@@ -53,14 +60,14 @@ function unmountPip() {
   if (PIP.observer) PIP.observer.disconnect();
   PIP.root = null; PIP.mount = null; PIP.observer = null;
 }
-function closePipWindow() { if (PIP.win) PIP.win.close(); }
+export function closePipWindow() { if (PIP.win) PIP.win.close(); }
 
 /**
  * Menu entry that pops a conversation out into the floating window, absent where the browser has none or when it already shows there.
  * @param {Object} app Application context.
  * @param {{view: string, id: string}} route Conversation to pop out.
  */
-function popOutItem(app, route) {
+export function popOutItem(app, route) {
   return canPopOut() && !isTarget(app.state.pip, route.view, route.id) ? { label: 'Pop out', icon: 'external', onSelect: function () { app.actions.openPip(route); } } : null;
 }
 
@@ -68,14 +75,14 @@ function popOutItem(app, route) {
  * Renders the popped out conversation into the floating window, with the contexts of the application.
  * It renders nothing in the page.
  */
-function PipHost() {
-  var app = useApp(), api = useAppApi(), season = useContext(SeasonCtx), target = app.state.pip;
+export function PipHost() {
+  var app = useApp(), api = useAppApi(), decor = useContext(AvatarDecorCtx), target = app.state.pip;
   useEffect(function () {
     // Signed out, or the conversation went away: the window closes.
     if (!target || !paneShown(app.state, target)) { if (PIP.win) closePipWindow(); return; }
     if (!PIP.mount) return;
     if (!PIP.root) PIP.root = ReactDOM.createRoot(PIP.mount);
-    PIP.root.render(h(Layers, { mount: PIP.mount }, h(ApiCtx.Provider, { value: api }, h(SeasonCtx.Provider, { value: season }, h(Ctx.Provider, { value: app },
+    PIP.root.render(h(Layers, { mount: PIP.mount }, h(ApiCtx.Provider, { value: api }, h(AvatarDecorCtx.Provider, { value: decor }, h(Ctx.Provider, { value: app },
       h('div', { className: 'pip' }, target.view === 'group'
         ? h(GroupView, { key: 'pip:' + target.id, gid: target.id, markerTs: target.markerTs, compact: true, onClose: closePipWindow, closeLabel: 'Close the floating window' })
         : h('div', { key: 'pip:' + target.id, className: 'main', style: { flexDirection: 'row' } },

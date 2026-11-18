@@ -1,3 +1,7 @@
+import { React, ReactDOM, T, h } from '../core/globals.js';
+import { LIVE } from '../bridge/live-model.js';
+import { liveBridge } from '../bridge/live-bridge.js';
+import { Root } from './root.js';
 // -- Recovery screen ----------------------------------------------------------
 // Plain elements and design system buttons only: nothing from Root, which may be what failed.
 function RecoveryScreen() {
@@ -33,16 +37,11 @@ Recovery.prototype.componentDidCatch = function (error) {
 Recovery.prototype.render = function () { return this.state.failed ? h(RecoveryScreen, null) : this.props.children; };
 
 // -- Mounting -----------------------------------------------------------------
-function start(data) {
-  ReactDOM.createRoot(window.__TORCH_MOUNT__ || document.getElementById('app')).render(h(Recovery, null, h(Root, { boot: data && data.state })));
+
+/**
+ * Mounts the interface.
+ * @param {{state: ?Object, snapshot: ?function(Function)}} host Page that starts the interface (useAppState).
+ */
+export function start(host) {
+  ReactDOM.createRoot(window.__TORCH_MOUNT__ || document.getElementById('app')).render(h(Recovery, null, h(Root, { host: host })));
 }
-// The build leaves PROTOTYPE blocks out of the userscripts: only the hosted prototype starts from its hook.
-function mount() {
-  /*PROTOTYPE*/
-  var hotApi = window.claude && window.claude.hot;
-  if (hotApi && hotApi.ready) return hotApi.ready(start);
-  if (hotApi) return start(hotApi.data || {});
-  /*END PROTOTYPE*/
-  start({});
-}
-mount();

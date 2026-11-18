@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
-const { concatSources, layerSources } = require('../scripts/build.mjs');
+const { bundleForTest } = require('../scripts/build.mjs');
 const S = process.argv[2];
 const log = [];
 /**
@@ -156,7 +156,6 @@ w.__betterChatangoRefs = {
     }
   }
 };
-w.eval(concatSources(S, layerSources('bridge')) + '; window.__bridge = liveBridge;');
 /**
  * Lists the cases where postRefusal does not give the expected verdict.
  * @param {Array<[string, Object, string]>} cases URL, options and refused or allowed.
@@ -168,6 +167,10 @@ function wrongVerdicts(cases) {
 const PROFILE = 'https://chatango.com/updateprofile', UPLOAD = 'https://vissle.me/chatango/upload';
 
 (async () => {
+  // The bridge module reads React through the shared base, as in the page.
+  ['react/umd/react.development.js', 'react-dom/umd/react-dom.development.js'].forEach(f => w.eval(fs.readFileSync('node_modules/' + f, 'utf8')));
+  w.eval(await bundleForTest("export { liveBridge } from './src/bridge/live-bridge.js'; export { postRefusal } from './src/bridge/live-parse.js';"));
+  w.__bridge = w.__mod.liveBridge; w.postRefusal = w.__mod.postRefusal;
   const B = w.__bridge, file = new w.File(['moon'], 'moon.png', { type: 'image/png' });
   const settle = p => p.then(() => 'sent', e => 'refused: ' + e.message);
   const current = [

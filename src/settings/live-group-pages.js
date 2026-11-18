@@ -1,4 +1,13 @@
-function GSAnnouncementLive(p) {
+import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { ago, plural } from '../core/util.js';
+import { LOAD_BELOW_MARGIN, Person, SkeletonRows, useApp, useInfiniteScroll } from '../core/ui.js';
+import { roleOf, shownName } from '../core/selectors.js';
+import { ACCOUNT_NAME } from '../bridge/live-model.js';
+import { Page } from './shell.js';
+import { AutoModFilters, ProxiesRow } from './group-pages.js';
+import { liveSelect, withCurrent } from './live-group-view.js';
+import { banKey, banListOf } from '../app/live-state.js';
+export function GSAnnouncementLive(p) {
   var a = p.draft.announcement, loaded = !!p.g.live.annc, owner = p.myRole === 'owner';
   var canEdit = loaded && (owner || p.perms.editAnnouncement), canBroadcast = owner || p.perms.editRestrictions;
   function set(k, v) { p.edit(function (d) { d.announcement[k] = v; if (k === 'enabled' && v && !d.announcement.interval) d.announcement.interval = 15; }); }
@@ -14,7 +23,7 @@ function GSAnnouncementLive(p) {
     a.text ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } }, h('h2', { className: 'side-label' }, 'Preview'), h(T.Banner, { title: 'Announcement' }, a.text)) : null);
 }
 
-function GSAutoModLive(p) {
+export function GSAutoModLive(p) {
   var am = p.draft.automod, owner = p.myRole === 'owner';
   var canNlp = owner || p.perms.automod, canBw = owner || p.perms.bannedWords, canRes = owner || p.perms.editRestrictions;
   var slowOptions = withCurrent([[0, 'Off'], [5, '5 seconds'], [10, '10 seconds'], [30, '30 seconds'], [60, '1 minute']], am.slowMode, function (v) { return plural(v, 'second', 'seconds'); });
@@ -33,7 +42,7 @@ function GSAutoModLive(p) {
         : h('p', { className: 'muted', style: { margin: 0, fontSize: 'var(--font-size-body-sm)' } }, 'Loading banned words from Chatango.')));
 }
 
-function GSMediaLive(p) {
+export function GSMediaLive(p) {
   var m = p.draft.media, can = p.myRole === 'owner' || p.perms.editRestrictions;
   return h(Page, { title: 'Media and links', lede: 'What members can share in #' + p.g.id + ". Staff aren't restricted." },
     can ? null : h(T.Banner, { icon: 'lock' }, 'Your permissions let you view these rules but not change them.'),
@@ -83,7 +92,7 @@ function BanPages(p) {
     page.more ? h('div', { ref: sentinelRef, className: 'list-more' }, page.loading ? h(T.Spinner, { label: text.more }) : null) : null);
 }
 
-function GSBansLive(p) {
+export function GSBansLive(p) {
   var app = useApp(), g = p.g, owner = p.myRole === 'owner', search = g.live.banSearch;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];

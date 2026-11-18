@@ -1,7 +1,10 @@
 // New Year: the last-minute countdown and the fireworks minute around local midnight, on src/core/util.js.
-const fs = require('fs'), vm = require('vm');
-const util = {};
-vm.runInNewContext(fs.readFileSync(process.argv[2] + '/src/core/util.js', 'utf8'), util);
+const vm = require('vm');
+const { bundleForTest } = require('../scripts/build.mjs');
+(async () => {
+const ctx = {};
+vm.runInNewContext(await bundleForTest("export { newYearAt } from './src/core/util.js';"), ctx);
+const util = ctx.__mod;
 const check = (c, msg, detail) => console.log((c ? 'ok  ' : 'FAIL') + ' ' + msg + (c || !detail ? '' : ' ' + JSON.stringify(detail)));
 const at = (y, mo, d, h, mi, s, ms) => util.newYearAt(new Date(y, mo - 1, d, h, mi, s, ms).getTime());
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -22,3 +25,4 @@ const next = (y, mo, d, h, mi) => new Date(y, 11, 31, 23, 59).getTime() - new Da
 check(same(at(2027, 1, 1, 0, 1, 0, 0), { phase: null, next: next(2027, 1, 1, 0, 1) }), 'nothing from 00:01, the next countdown due at the end of the year', at(2027, 1, 1, 0, 1, 0, 0));
 check(same(at(2027, 6, 15, 12, 0, 0, 0), { phase: null, next: next(2027, 6, 15, 12, 0) }), 'nothing in June', at(2027, 6, 15, 12, 0, 0, 0));
 check(at(2026, 1, 1, 23, 59, 30, 0).phase === null && at(2026, 12, 30, 23, 59, 30, 0).phase === null && at(2026, 12, 31, 0, 0, 30, 0).phase === null, 'no countdown on another day at 23:59 nor fireworks at 00:00 on December 31');
+})().catch((e) => console.log('CRASH ' + e.stack));

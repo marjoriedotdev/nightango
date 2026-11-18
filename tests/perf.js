@@ -94,15 +94,17 @@ function page(o) {
   // Counts the renders of the components named in COUNTED, plain or memoized: the app reads createElement and memo when it loads.
   const renders = {};
   const R = w.React, createElement = R.createElement, memo = R.memo, counted = new Map();
+  // esbuild suffixes a function named like a top-level name of the bundle: MessageRow2 is the component MessageRow.
+  const nameOf = type => type.name.replace(/\d+$/, '');
   function counting(type) {
-    if (!counted.has(type)) counted.set(type, function (props) { renders[type.name] = (renders[type.name] || 0) + 1; return type(props); });
+    if (!counted.has(type)) counted.set(type, function (props) { renders[nameOf(type)] = (renders[nameOf(type)] || 0) + 1; return type(props); });
     return counted.get(type);
   }
   R.createElement = function (type) {
-    if (typeof type === 'function' && !(type.prototype && type.prototype.isReactComponent) && COUNTED.includes(type.name)) arguments[0] = counting(type);
+    if (typeof type === 'function' && !(type.prototype && type.prototype.isReactComponent) && COUNTED.includes(nameOf(type))) arguments[0] = counting(type);
     return createElement.apply(this, arguments);
   };
-  R.memo = function (type, compare) { return memo(COUNTED.includes(type.name) ? counting(type) : type, compare); };
+  R.memo = function (type, compare) { return memo(COUNTED.includes(nameOf(type)) ? counting(type) : type, compare); };
   w.eval(app);
   return {
     w, d, C, intervals,

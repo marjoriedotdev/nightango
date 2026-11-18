@@ -1,6 +1,9 @@
+import { T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { MenuButton, useApp } from '../core/ui.js';
+import { warn } from '../bridge/live-parse.js';
 /* ---------- Voice messages ---------- */
 // 16 kHz mono 16-bit PCM: about 32 KB per second, under 2 MB for the longest message.
-var VOICE_MAX_S = 60, VOICE_RATE = 16000;
+export var VOICE_MAX_S = 60, VOICE_RATE = 16000;
 
 function canRecordVoice() {
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder && window.OfflineAudioContext);
@@ -11,7 +14,7 @@ function canRecordVoice() {
  * @param {Float32Array} samples Samples between -1 and 1.
  * @param {number} rate Sample rate in Hz.
  */
-function wavBlob(samples, rate) {
+export function wavBlob(samples, rate) {
   var size = samples.length * 2, v = new DataView(new ArrayBuffer(44 + size));
   function ascii(at, s) { for (var i = 0; i < s.length; i++) v.setUint8(at + i, s.charCodeAt(i)); }
   ascii(0, 'RIFF'); v.setUint32(4, 36 + size, true); ascii(8, 'WAVE');
@@ -31,7 +34,7 @@ function wavBlob(samples, rate) {
  * @param {Blob} recording What MediaRecorder produced.
  * @returns {Promise<Blob>} WAV file.
  */
-function recordingToWav(recording) {
+export function recordingToWav(recording) {
   return recording.arrayBuffer().then(function (data) {
     // A context at 16 kHz decodes the recording already resampled.
     return new OfflineAudioContext(1, 1, VOICE_RATE).decodeAudioData(data);
@@ -54,7 +57,7 @@ function voiceClock(s) { return Math.floor(s / 60) + ':' + ('0' + Math.floor(s %
  * @param {?function(Array<File>)} onFiles File intake of the composer, null while it takes none.
  * @returns {{start: Function, busy: boolean, panel: ?Object}} Start of a recording, whether one is under way, and recording panel to render in composer-wrap.
  */
-function useVoiceRecorder(key, onFiles) {
+export function useVoiceRecorder(key, onFiles) {
   var app = useApp();
   var st = useState(null), rec = st[0], setRec = st[1];
   var live = useRef(null);
@@ -148,7 +151,7 @@ function useVoiceRecorder(key, onFiles) {
  * @param {{onAttach: ?Function, onFiles: ?Function}} attach File picker of the composer.
  * @param {{start: Function, busy: boolean}} voice Voice recorder of the composer.
  */
-function attachMenu(attach, voice) {
+export function attachMenu(attach, voice) {
   if (!canRecordVoice()) return null;
   return h(MenuButton, {
     icon: 'plus', label: 'Add to your message', up: true, align: 'left',

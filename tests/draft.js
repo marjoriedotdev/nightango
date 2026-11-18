@@ -1,7 +1,10 @@
 // State drafts: copy on write, sharing, drafts held at a second place and writes after the update, on src/core/draft.js.
-const fs = require('fs'), vm = require('vm');
+const vm = require('vm');
+const { bundleForTest } = require('../scripts/build.mjs');
+(async () => {
 const ctx = {};
-vm.runInNewContext(fs.readFileSync(process.argv[2] + '/src/core/draft.js', 'utf8'), ctx);
+vm.runInNewContext(await bundleForTest("export { openDraft, plainOf, DRAFT } from './src/core/draft.js';"), ctx);
+Object.assign(ctx, ctx.__mod);
 const check = (c, msg, detail) => console.log((c ? 'ok  ' : 'FAIL') + ' ' + msg + (c || detail === undefined ? '' : ' ' + JSON.stringify(detail)));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 /**
@@ -57,3 +60,4 @@ check(threw === 'State changed outside update' && out.groups.a.unread === 1, 'a 
 const d2 = ctx.openDraft(base);
 try { d2.root.groups.a.unread = 9; throw new Error('handler failed'); } catch (e) { d2.finish(); }
 check(JSON.stringify(base) === frozen, 'an update that throws leaves the previous state as it was');
+})().catch((e) => console.log('CRASH ' + e.stack));
