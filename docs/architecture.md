@@ -59,11 +59,11 @@ src/
     kit (page frame and navigation, preferences, BetterChatango settings, shared rows), shell (navigation and router: picks the live variant of a page),
     profile (Visitors and vissle tracker included), appearance, notifications, privacy (Chatango account PM settings included, and Safety),
     language-a11y-about (and Diagnostics)
-    group-view, group-pages                                             prototype group settings, Overview shared with live
+    group-view, group-pages                                             group settings of both modes (group-view), prototype pages and the Overview shared with live
     group-staff                                                         Staff and roles, Members and Invites pages, shared by live and prototype
     markup-toolbar                                                      formatting toolbar of the bio and the full profile
     avatar-crop                                                         cropping of one's own profile picture (live)
-    live-group-view, live-group-pages, live-group-staff (audit log), live-account   live variants (live-account: Password and email and Chatango Premium pages shared with the prototype)
+    live-group-pages, live-group-staff (audit log), live-account   live variants (live-account: Password and email and Chatango Premium pages shared with the prototype)
   app/        root
     state.js         persisted preferences
     live-state.js    live state built for Root: world at login, group, ban lists, session loss, account data kept in this browser (useLocalStore),

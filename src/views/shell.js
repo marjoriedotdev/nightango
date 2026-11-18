@@ -12,7 +12,6 @@ import { Discover } from './discover.js';
 import { SettingsView } from '../settings/shell.js';
 import { GroupSettingsView } from '../settings/group-view.js';
 import { LIVE } from '../core/env.js';
-import { GroupSettingsViewLive } from '../settings/live-group-view.js';
 import { favoriteItem } from './chrome.js';
 import { DraftMark, dmDraftKey, groupDraftKey, showsDraft, useDraftMarks } from '../core/drafts.js';
 import { MenuButton } from '../core/layers.js';
@@ -29,7 +28,7 @@ export var Shell = React.memo(function Shell() {
   // A window too narrow for two panes, or a conversation that went away, closes the pane beside.
   useEffect(function () { if (s.split && !split) app.actions.closeSplit(); }, [!!s.split, !!split]);
   if (r.view === 'settings') return h(SettingsView, { page: r.page });
-  if (r.view === 'gsettings') return h(LIVE ? GroupSettingsViewLive : GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
+  if (r.view === 'gsettings') return h(GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
   if (LIVE && !s.groupsSeen) main = h(StartupScreen, null);
   else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id, role: 'main', msgId: r.msgId, markerTs: r.markerTs, compact: !!split });
   else if (r.view === 'dm') main = h(DMView, { id: r.id, tab: r.tab, seek: r.seek, compact: !!split });

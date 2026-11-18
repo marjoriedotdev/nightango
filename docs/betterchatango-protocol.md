@@ -524,7 +524,7 @@ Received frames only: nothing is sent. BetterChatango has no handler for them, t
 
 ### Saving group settings
 
-- The settings screen (`settings/live-group-view.js`) sends only the differences between the draft and the server version it was built on. Changes made in the meantime by another moderator are preserved.
+- The settings screen (`settings/group-view.js`) sends only the differences between the draft and the server version it was built on. Changes made in the meantime by another moderator are preserved.
 - It then waits for the Chatango confirmation ("Waiting for Chatango to confirm your changes."). Without a full confirmation, it says so and shows the current settings of the group.
 
 ### Flags
