@@ -27,12 +27,12 @@ export function betterChatangoPmArchive() {
 export function memoryPmArchive(seed) {
   var entries = (seed || []).slice();
   return {
-    record: function (target, m, unread) { entries.push({ target: target, from: m.from, unread: !!unread, edit: !!m.editId }); },
+    record: function (target, m, unread) { entries.push({ target: target, author: m.author, unread: !!unread, edit: !!m.editId }); },
     markRead: function (target) { entries.forEach(function (e) { if (e.target === target) e.unread = false; }); return Promise.resolve(); },
     markUnread: function (target) {
       for (var i = entries.length - 1; i >= 0; i--) {
         var e = entries[i];
-        if (e.target === target && e.from === target && !e.edit) { e.unread = true; return Promise.resolve(true); }
+        if (e.target === target && e.author === target && !e.edit) { e.unread = true; return Promise.resolve(true); }
       }
       return Promise.resolve(false);
     },
@@ -88,7 +88,7 @@ export function pmConversation(d, name, extra) {
  */
 export function pmMessage(x) {
   // Edit without a loaded original: it takes the key of the original, which the archive and later edits target.
-  var m = { id: uid(), from: x.from, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
+  var m = { id: uid(), author: x.author, key: x.editId || x.key, text: x.text, parts: x.parts, embeds: x.embeds, ts: x.ts, archiveTs: x.archiveTs };
   if (x.editId) { m.edited = true; m.editKeys = x.key ? [x.key] : []; m.editTs = x.ts; m.editOnly = true; }
   if (x.replyId) m.replyTo = { key: x.replyId };
   return m;
@@ -126,7 +126,7 @@ export function addSentPm(d, name, x) {
  * @returns {boolean} True if the message was an applied edit.
  */
 export function receivePm(d, x) {
-  var c = pmConversation(d, x.from, { lastReadTs: 0 }), o = pmEditTarget(c, x);
+  var c = pmConversation(d, x.author, { lastReadTs: 0 }), o = pmEditTarget(c, x);
   if (o) { applyPmEdit(o, x); return true; }
   c.closed = false;
   c.messages.push(pmMessage(x));
@@ -150,7 +150,7 @@ export function mergePmHistory(c, list, onEntry) {
     var m = pmMessage(x), i = pmShownIndex(shown, m);
     if (i >= 0) { shown[i].archiveTs = m.archiveTs; shown.splice(i, 1); return; }
     // An edit read on a newer page stands for its original until an older page brings it: the original takes its place and keeps the edited text.
-    var e = x.editId ? null : c.messages.find(function (y) { return y.editOnly && y.key === m.key && y.from === m.from; });
+    var e = x.editId ? null : c.messages.find(function (y) { return y.editOnly && y.key === m.key && y.author === m.author; });
     if (e) { delete e.editOnly; e.ts = m.ts; e.archiveTs = m.archiveTs; if (m.replyTo) e.replyTo = m.replyTo; return; }
     c.messages.push(m);
   });

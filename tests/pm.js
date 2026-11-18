@@ -93,7 +93,7 @@ function load(records, opts = {}) {
   step('browser without BetterChatango history reported', saved === false && t.d.dms.gus.unread === 0, { saved, unread: t.d.dms.gus.unread });
 
   /* In-memory archive: initial unreads, an edit does not count, a read touches only its own conversation */
-  const memory = t.m.memoryPmArchive([{ target: 'kim', from: 'kim', unread: true, edit: false }, { target: 'kim', from: 'kim', unread: true, edit: false }]);
+  const memory = t.m.memoryPmArchive([{ target: 'kim', author: 'kim', unread: true, edit: false }, { target: 'kim', author: 'kim', unread: true, edit: false }]);
   memory.record('kim', { editId: 'x' }, true);
   memory.record('lou', {}, true);
   memory.record('lou', {}, false);
@@ -107,7 +107,7 @@ function load(records, opts = {}) {
   const entries = [records[0], records[1]].map(r => t.m.pmRecordEntry(r));
   const shown = Object.assign({}, entries[0], { id: 'live1', archiveTs: undefined, ts: entries[0].ts + 30000 });
   const c = { messages: [shown] }, authors = [];
-  t.m.mergePmHistory(c, entries, x => authors.push(x.from));
+  t.m.mergePmHistory(c, entries, x => authors.push(x.author));
   step('history merged once into a shown message, edit applied to its original',
     c.messages.length === 1 && c.messages[0].id === 'live1' && c.messages[0].archiveTs === records[0].ts && c.messages[0].text === 'First, fixed' && c.messages[0].edited && authors.length === 2,
     c.messages);
@@ -194,8 +194,8 @@ function load(records, opts = {}) {
     sizes.push(una.messages.length);
   }
   const scrolled = una.messages.map(m => m.text);
-  t.m.receivePm(t.d, { from: 'una', key: 'new00001=', text: 'una received', ts: Date.now(), archiveTs: Date.now() / 1000 });
-  t.m.addSentPm(t.d, 'una', { from: ME, key: 'new00002=', text: 'una sent', ts: Date.now() + 1 });
+  t.m.receivePm(t.d, { author: 'una', key: 'new00001=', text: 'una received', ts: Date.now(), archiveTs: Date.now() / 1000 });
+  t.m.addSentPm(t.d, 'una', { author: ME, key: 'new00002=', text: 'una sent', ts: Date.now() + 1 });
   const after = una.messages.map(m => m.text);
   await t.m.syncPmUnread(t.m.betterChatangoPmArchive(), t.update, ['una']);
   step('long pm conversation loads older pages up to the cap, then drops its oldest messages and keeps its unread count',

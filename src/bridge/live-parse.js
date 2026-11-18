@@ -23,8 +23,8 @@ export function spellingOf(name, written) { return written !== name && lower(wri
 export function pmRecordEntry(v) {
   var parts = String(v.data || '').split(':').slice(1);
   if (parts.length <= 5) return null;
-  var body = parsePm(parts), from = lower(parts[0]);
-  return { from: from, spelling: spellingOf(from, body.written), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
+  var body = parsePm(parts), author = lower(parts[0]);
+  return { author: author, spelling: spellingOf(author, body.written), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
 }
 /**
  * Screens the records of an imported private history before any write.

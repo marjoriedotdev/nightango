@@ -111,7 +111,7 @@ function searchDms(s, query) {
   if (LIVE) return liveBridge.searchPm(query, DM_SEARCH_MAX);
   var q = query.toLowerCase(), list = [];
   Object.keys(s.dms).forEach(function (t) {
-    s.dms[t].messages.forEach(function (m) { if (m.text.toLowerCase().indexOf(q) >= 0) list.push({ target: t, from: m.from, ts: m.ts, id: m.id, text: m.text }); });
+    s.dms[t].messages.forEach(function (m) { if (m.text.toLowerCase().indexOf(q) >= 0) list.push({ target: t, author: m.author, ts: m.ts, id: m.id, text: m.text }); });
   });
   list.sort(function (a, b) { return b.ts - a.ts; });
   return Promise.resolve({ list: list.slice(0, DM_SEARCH_MAX), more: list.length > DM_SEARCH_MAX });
@@ -166,7 +166,7 @@ function DmSearchHits(p) {
   else if (!found.list.length) body = h('p', { className: 'pal-empty' }, 'No message matches.');
   else body = h(Frag, null, found.list.map(function (hit) {
     return h(MessageEntry, {
-      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, ownLabel(hit.from === me), hitExcerpt(hit.text, found.query)),
+      key: hit.id || hit.archiveTs, name: hit.target, ts: hit.ts, text: h(Frag, null, ownLabel(hit.author === me), hitExcerpt(hit.text, found.query)),
       onClick: function () { app.nav({ view: 'dm', id: hit.target, seek: hit }); }
     });
   }), found.more ? h('p', { className: 'pal-empty' }, 'Showing the ' + DM_SEARCH_MAX + ' most recent matches. Refine your search to see others.') : null);
@@ -222,12 +222,12 @@ export function DmThread(p) {
   var rows = [], prev = null, lastRow = null, lastDay = null, byKey = Object.create(null);
   convo.messages.forEach(function (m) { if (m.key && !byKey[m.key]) byKey[m.key] = m; });
   convo.messages.forEach(function (m) {
-    var dk = dayKey(m.ts), a = userOf(s, m.from);
+    var dk = dayKey(m.ts), a = userOf(s, m.author);
     if (dk !== lastDay) { rows.push(h(T.DayDivider, { key: 'd' + m.id, date: m.ts }, dayLabel(m.ts))); lastDay = dk; prev = null; }
     var original = m.replyTo ? byKey[m.replyTo.key] || null : null;
     lastRow = joinRow(prev && lastRow, {
-      key: m.id, m: m, shown: shownName(s, m.from), peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, avatarV: a.avatarV,
-      continued: !!prev && prev.from === m.from && !m.replyTo && m.ts - prev.ts < 5 * MIN, joinPrev: false, joinNext: false, highlight: log.targetId === m.id,
+      key: m.id, m: m, shown: shownName(s, m.author), peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, avatarV: a.avatarV,
+      continued: !!prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN, joinPrev: false, joinNext: false, highlight: log.targetId === m.id,
       original: original, onJump: calls.jump, onReply: u.blocked ? null : calls.reply, onQuote: u.blocked ? null : calls.quote, onEdit: u.blocked ? null : calls.edit
     }, dmRowFill(m, a, s.prefs, app.theme));
     rows.push(lastRow);
@@ -263,7 +263,7 @@ export function DmThread(p) {
     sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + shownName(s, id), messages: convo.messages, authorOf: dmAuthorOf, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
 }
 
-function dmAuthorOf(m) { return m.from; }
+function dmAuthorOf(m) { return m.author; }
 
 /**
  * Private conversation in the pane beside the main one.
@@ -280,7 +280,7 @@ export function SplitDm(p) {
  * @param {Object} m PM.
  * @param {string} me Signed-in user.
  */
-function canEditPm(m, me) { return m.from === me && !!m.key; }
+function canEditPm(m, me) { return m.author === me && !!m.key; }
 
 /**
  * Private message row with its Reply button and its action menu, rendered again only when its props change.
@@ -298,23 +298,23 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
   var joined = joinedRow(p, prefs.density === 'compact', ms.row);
   // A sent PM gets its archive key only at the next OK: its remove entry appears only after that.
   var canRemove = !LIVE || !!m.archiveTs;
-  var canEdit = !!p.onEdit && canEditPm(m, me), canQuote = !!p.onQuote && !!m.text && !!mentionHandle(m.from);
+  var canEdit = !!p.onEdit && canEditPm(m, me), canQuote = !!p.onQuote && !!m.text && !!mentionHandle(m.author);
   var items = [canEdit ? { label: 'Edit message', icon: 'edit', onSelect: function () { p.onEdit(m); } } : null,
     canQuote ? { label: 'Quote message', icon: 'quote', onSelect: function () { p.onQuote(m); } } : null,
-    copyTextItem(app, m), m.from !== me ? viewProfileItem(app, m.from, null) : null, whoItem(app, m.from),
+    copyTextItem(app, m), m.author !== me ? viewProfileItem(app, m.author, null) : null, whoItem(app, m.author),
     canRemove ? { divider: true } : null,
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
       app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(shownName(app.state, p.peer), LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
     } } : null];
   var o = p.original;
-  var reply = o ? { author: h(Person, { name: o.from, size: 16 }), text: messagePreview(o), onJump: function () { p.onJump(o); } }
+  var reply = o ? { author: h(Person, { name: o.author, size: 16 }), text: messagePreview(o), onJump: function () { p.onJump(o); } }
     : m.replyTo ? { text: 'Original message not loaded' } : null;
   var actions = h(Frag, null,
     p.onReply && m.key ? h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: function () { p.onReply(m); } }) : null,
     moreActionsButton(items, setMenuOpen));
   return h(T.Message, {
     compact: prefs.density === 'compact', continued: p.continued, time: fmtTime(m.ts, prefs.h24),
-    avatar: h(Person, { name: m.from, avatarOnly: true }), author: authorName(p.shown, ms.name), style: joined.style, reply: reply,
+    avatar: h(Person, { name: m.author, avatarOnly: true }), author: authorName(p.shown, ms.name), style: joined.style, reply: reply,
     actions: actions, msgId: m.id, highlight: p.highlight, className: cx(menuOpen && 'menu-open', joined.className)
   }, h(MessageContent, { m: m, style: ms.text, plain: ms.plain }));
 });
@@ -339,11 +339,11 @@ function DmComposer(p) {
     placeholder: 'Message ' + shownName(app.state, id), value: draft, onChange: setDraft, onKeyDown: onKeyDown, inputRef: inputRef, onEmoji: emoji.onEmoji, status: attach.status, canSend: kind === 'edit' || !attach.busy,
     // An edit changes only the text: the picked file waits for the next message.
     onAttach: kind === 'edit' ? null : attach.onAttach, onFiles: kind === 'edit' ? null : attach.onFiles, attachment: kind === 'edit' ? null : attach.attachment,
-    context: mode ? Object.assign({ author: shownName(app.state, mode.m.from), text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
+    context: mode ? Object.assign({ author: shownName(app.state, mode.m.author), text: messagePreview(mode.m) }, COMPOSER_MODES[kind]) : null, onCancelContext: p.onCancelMode,
     onSend: function (text) {
       if (kind === 'edit') { if (text !== mode.m.text && !app.actions.sendDm(id, text, { editKey: mode.m.key })) { setDraft(text); return; } p.onCancelMode(); return; }
       if (runCommand(app, text, null)) return;
-      var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(shownName(app.state, mode.m.from), mode.m.text) : null };
+      var opts = { replyTo: kind === 'reply' ? { key: mode.m.key } : null, quote: kind === 'quote' ? quoteOf(shownName(app.state, mode.m.author), mode.m.text) : null };
       if (attach.file) { attach.send(text, opts, p.onCancelMode); return; }
       if (!app.actions.sendDm(id, text, opts)) { setDraft(text); return; }
       p.onCancelMode();
@@ -372,7 +372,7 @@ function personRow(n, u, c, me, onClick, active, draft) {
       presenceSince(u) ? h(PresenceTime, { user: u }) : null,
       u.favorite ? h(T.Icon, { name: 'star', size: 14, label: 'Favorite', className: 'conv-fav' }) : null,
       personMetaLine(n, u),
-      c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.from === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
+      c ? h('span', { className: 'conv-prev', dir: 'auto' }, draft ? h(Frag, null, h(DraftMark), h('span', { className: 'tc-sr' }, ': ')) : null, last ? h(Frag, null, ownLabel(last.author === me), bidiText(messagePreview(last))) : 'No messages yet') : null,
       c ? h(T.CountBadge, { count: c.unread }) : null));
 }
 
@@ -392,7 +392,7 @@ function keptCopyText(name, betterChatango) {
  * @param {Object} c Conversation in the state.
  */
 function convActions(app, name, c) {
-  var received = c.messages.some(function (m) { return m.from === name; });
+  var received = c.messages.some(function (m) { return m.author === name; });
   return [
     received && !c.unread ? { label: 'Mark as unread', short: 'Unread', icon: 'message', onSelect: function () { app.actions.markDmUnread(name); } } : null,
     { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },

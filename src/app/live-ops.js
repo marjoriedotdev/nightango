@@ -298,22 +298,22 @@ export function useLiveOps(k) {
       case 'alert': if (!stateRef.current.session) toast(op.text, op.button && op.action ? { tone: 'error', action: { label: op.button, run: op.action } } : { tone: 'error' }); break;
       case 'pm': {
         var s0 = stateRef.current;
-        var focused = isDmInView(s0, op.from);
+        var focused = isDmInView(s0, op.author);
         // Like in BetterChatango, the PM of an ignored member is received and archived without an alert.
-        var ignored = !!userOf(s0, op.from).ignored;
-        var edit = !!(s0.dms[op.from] && pmEditTarget(s0.dms[op.from], op));
+        var ignored = !!userOf(s0, op.author).ignored;
+        var edit = !!(s0.dms[op.author] && pmEditTarget(s0.dms[op.author], op));
         update(function (d) {
           if (!d.auth.loggedIn) return;
-          var pu = ensureLiveUser(d, op.from, localRef.current);
+          var pu = ensureLiveUser(d, op.author, localRef.current);
           mergeStyle(pu, op.style, op.ts);
           mergeSpelling(pu, op.spelling, op.ts);
           receivePm(d, op);
         });
-        pmArchive.current.record(op.from, op, true);
+        pmArchive.current.record(op.author, op, true);
         // Read created after the current stack: BetterChatango archives a received PM only after pm is emitted.
-        if (focused) readPm(pmArchive.current, update, op.from); else syncPmUnread(pmArchive.current, update, [op.from]);
+        if (focused) readPm(pmArchive.current, update, op.author); else syncPmUnread(pmArchive.current, update, [op.author]);
         if (edit) break;
-        if (!focused && !op.offline && !ignored) notifyPm(op.from, messagePreview(op));
+        if (!focused && !op.offline && !ignored) notifyPm(op.author, messagePreview(op));
         // msgoff frames arrive in a burst right after the connection: a single notification for the whole burst.
         if (op.offline && !ignored && !offlineCount.current++) setTimeout(function () {
           var n = offlineCount.current;

@@ -294,7 +294,7 @@ export function mergeSpelling(u, spelling, ts) {
  * @param {Object} local Account data kept in this browser.
  */
 export function pmAuthor(d, local) {
-  return function (x) { var u = ensureLiveUser(d, x.from, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
+  return function (x) { var u = ensureLiveUser(d, x.author, local); mergeStyle(u, x.style, x.ts); mergeSpelling(u, x.spelling, x.ts); };
 }
 /**
  * Records the role shown by the badge of a member's latest group message, a message without a badge included.

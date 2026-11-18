@@ -86,7 +86,7 @@ export function groupRowFill(m, me, u, prefs, theme) {
  * @param {string} theme Resolved theme.
  */
 export function dmRowFill(m, u, prefs, theme) {
-  return memberStyles(u, prefs.styles, theme, false).row ? 'member:' + m.from : null;
+  return memberStyles(u, prefs.styles, theme, false).row ? 'member:' + m.author : null;
 }
 
 /**

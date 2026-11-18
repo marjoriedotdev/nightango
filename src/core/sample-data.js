@@ -132,7 +132,7 @@ export function seedWorld(me) {
     });
   });
 
-  function dm(from, text, m, extra) { return Object.assign({ id: uid(), key: uid(), from: from, text: text, ts: t(m) }, extra); }
+  function dm(author, text, m, extra) { return Object.assign({ id: uid(), key: uid(), author: author, text: text, ts: t(m) }, extra); }
   var backdrop = dm('sable', 'Quick question: does it keep the backdrop color, or only the palette?', 7);
   var dms = {
     sable: { messages: [dm('sable', 'Hey, saw your theme export change. Clean work.', 7), backdrop, dm(me, 'Both. The backdrop is stored with the palette in the same JSON file.', 6, { replyTo: { key: backdrop.key } }), dm('sable', "Perfect. I'll check the s12 logs tonight and tell you whether it's the client or Chatango.", 5)], unread: 1, lastReadTs: t(6) },

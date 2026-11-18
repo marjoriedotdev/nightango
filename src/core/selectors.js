@@ -214,7 +214,7 @@ function pmContentKey(m) {
   var media = (m.embeds || []).map(function (e) { return e.kind === 'youtube' ? 'yt:' + e.id : e.url; });
   return String(m.text).split(/\s+/).concat(media).filter(Boolean).sort().filter(function (v, i, a) { return v !== a[i - 1]; }).join(' ');
 }
-export function pmEditTarget(c, m) { return m.editId ? c.messages.find(function (x) { return x.key === m.editId && x.from === m.from; }) : null; }
+export function pmEditTarget(c, m) { return m.editId ? c.messages.find(function (x) { return x.key === m.editId && x.author === m.author; }) : null; }
 /**
  * Finds the shown message that covers a private history entry other than an applied edit.
  * @param {Array} list Shown messages.
@@ -225,7 +225,7 @@ export function pmShownIndex(list, x) {
   // An edit without a loaded original is shown under the key of the original.
   var key = x.editId || x.key, k = pmContentKey(x), i = list.findIndex(function (y) { return y.archiveTs === x.archiveTs; });
   // A message that already carries an archive key is another entry. Same PM key = same message, even if an edit changed its text.
-  return i >= 0 ? i : list.findIndex(function (y) { return !y.archiveTs && (key && y.key ? y.key === key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000); });
+  return i >= 0 ? i : list.findIndex(function (y) { return !y.archiveTs && (key && y.key ? y.key === key : y.author === x.author && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000); });
 }
 export function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
 /**

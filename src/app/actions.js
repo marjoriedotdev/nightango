@@ -83,8 +83,8 @@ export function useActions(k) {
   function sampleWorld(me) {
     var world = seedWorld(me), entries = [];
     Object.keys(world.dms).forEach(function (n) {
-      var got = world.dms[n].messages.filter(function (m) { return m.from === n; });
-      got.forEach(function (m, i) { entries.push({ target: n, from: n, unread: i >= got.length - world.dms[n].unread, edit: false }); });
+      var got = world.dms[n].messages.filter(function (m) { return m.author === n; });
+      got.forEach(function (m, i) { entries.push({ target: n, author: n, unread: i >= got.length - world.dms[n].unread, edit: false }); });
     });
     pmArchive.current = memoryPmArchive(entries);
     return world;
@@ -165,7 +165,7 @@ export function useActions(k) {
     sendDm: function (name, text, opts) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
-      update(function (d) { addSentPm(d, name, { from: me, key: uid(), replyId: replyKey, editId: opts.editKey, text: (opts.quote || '') + text, ts: Date.now() }); });
+      update(function (d) { addSentPm(d, name, { author: me, key: uid(), replyId: replyKey, editId: opts.editKey, text: (opts.quote || '') + text, ts: Date.now() }); });
       var u = userOf(stateRef.current, name);
       if (!opts.editKey && u.status !== 'offline' && !u.blocked) setTimeout(function () { receiveDm(name, pick(DM_LINES[name] || DM_LINES.default)); }, 2400 + Math.random() * 1500);
       return true;
@@ -225,7 +225,7 @@ export function useActions(k) {
         var c = s0.dms[t];
         c.messages.forEach(function (m) {
           var ts = m.ts / 1000;
-          out.push({ target: t, ts: ts, data: ['msg', m.from, s0.me, 'unknown', ts, 0, esc(m.text)].join(':'), unread: m.from !== s0.me && m.ts > c.lastReadTs ? 1 : 0 });
+          out.push({ target: t, ts: ts, data: ['msg', m.author, s0.me, 'unknown', ts, 0, esc(m.text)].join(':'), unread: m.author !== s0.me && m.ts > c.lastReadTs ? 1 : 0 });
         });
       });
       return Promise.resolve(out.sort(function (a, b) { return a.ts - b.ts; }));
@@ -528,7 +528,7 @@ export function useActions(k) {
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, { replyId: replyKey, editId: opts.editKey, quote: opts.quote });
       if (!sent) { if (!opts.quiet) messageFailed(PM_CONNECTION, opts.editKey ? 'Message not edited.' : 'Private message not sent.'); return false; }
-      update(function (d) { addSentPm(d, name, { from: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
+      update(function (d) { addSentPm(d, name, { author: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
       return true;
     };

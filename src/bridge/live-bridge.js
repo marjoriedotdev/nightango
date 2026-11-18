@@ -224,7 +224,7 @@ export var liveBridge = (function () {
     switch (name) {
       case 'msg': case 'msgoff': {
         var p2 = parsePm(data);
-        emit({ op: 'pm', from: lower(data[0]), spelling: spellingOf(lower(data[0]), p2.written), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, replyId: p2.replyId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
+        emit({ op: 'pm', author: lower(data[0]), spelling: spellingOf(lower(data[0]), p2.written), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, replyId: p2.replyId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
         // BetterChatango plays the sound itself for the PM of client.private.focus, reset to false on each private connection: the bridge plays it for the others, like BetterChatango, except for edits and ignored members.
         var from = lower(data[0]);
         if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
@@ -636,10 +636,10 @@ export var liveBridge = (function () {
   /**
    * Tells whether a private history entry is a shown message.
    * @param {Object} x Entry read by pmRecordEntry.
-   * @param {{from: string, text: string, key: ?string}} m Shown message.
+   * @param {{author: string, text: string, key: ?string}} m Shown message.
    */
   function isPmOf(x, m) {
-    if (x.from !== m.from) return false;
+    if (x.author !== m.author) return false;
     // An applied edit changes the shown text: the PM key, when it has one, designates the original and its edits.
     return m.key ? x.key === m.key || x.editId === m.key : x.text === m.text;
   }
@@ -1230,7 +1230,7 @@ export var liveBridge = (function () {
         return cursorPage(db.transaction(['messages'], 'readonly').objectStore('messages').openCursor(null, 'prev'), limit, function (v) {
           var target = lower(v.target), x = target !== me && pmRecordEntry(v);
           // Key, edit reference and media let the message log find the shown message (dmHitMessage).
-          return x && lower(x.text).indexOf(q) >= 0 ? { target: target, from: x.from, ts: x.ts, archiveTs: x.archiveTs, text: x.text, key: x.key, editId: x.editId, embeds: x.embeds } : null;
+          return x && lower(x.text).indexOf(q) >= 0 ? { target: target, author: x.author, ts: x.ts, archiveTs: x.archiveTs, text: x.text, key: x.key, editId: x.editId, embeds: x.embeds } : null;
         });
       });
     },
@@ -1383,7 +1383,7 @@ export var liveBridge = (function () {
           var cur = e.target.result;
           if (!cur) return;
           var x = pmRecordEntry(cur.value);
-          if (x && !x.editId && x.from === name) { cur.update(Object.assign(cur.value, { unread: 1 })); flagged = true; return; }
+          if (x && !x.editId && x.author === name) { cur.update(Object.assign(cur.value, { unread: 1 })); flagged = true; return; }
           cur.continue();
         };
         tx.oncomplete = function () { resolve(flagged); };
@@ -1417,7 +1417,7 @@ export var liveBridge = (function () {
     /**
      * Removes a PM from the private history like the BetterChatango remove entry after reading its record again.
      * @param {string} target Member of the conversation.
-     * @param {{from: string, archiveTs: number, text: string, key: ?string}} entry Shown message.
+     * @param {{author: string, archiveTs: number, text: string, key: ?string}} entry Shown message.
      * @returns {Promise<boolean>} True at the end of the transaction that deleted it, false if the record is not this message or without a database.
      */
     removePm: function (target, entry) {

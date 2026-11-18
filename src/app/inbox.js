@@ -197,7 +197,7 @@ export function useInbox(stateRef, update, toast, setNavOpen) {
    * @param {string} text Message text.
    */
   function receiveDm(from, text) {
-    var s0 = stateRef.current, m = { from: from, key: uid(), text: text, ts: Date.now() };
+    var s0 = stateRef.current, m = { author: from, key: uid(), text: text, ts: Date.now() };
     var focused = isDmInView(s0, from);
     update(function (d) {
       receivePm(d, m);
