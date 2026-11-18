@@ -23,8 +23,16 @@ export function spellingOf(name, written) { return written !== name && lower(wri
 export function pmRecordEntry(v) {
   var parts = String(v.data || '').split(':').slice(1);
   if (parts.length <= 5) return null;
+  return Object.assign(pmFrame(parts), { archiveTs: v.ts, unread: !!v.unread });
+}
+/**
+ * Reads a msg or msgoff frame of the private connection, as received or as kept in the private history.
+ * @param {Array<string>} parts Frame split on :, from the author on.
+ * @returns {Object} Message: author, spelling, sent time (0 if unreadable), body read by parsePm, PM key and references.
+ */
+export function pmFrame(parts) {
   var body = parsePm(parts), author = lower(parts[0]);
-  return { author: author, spelling: spellingOf(author, body.written), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
+  return { author: author, spelling: spellingOf(author, body.written), ts: epochMs(parts[3]), text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId };
 }
 /**
  * Screens the records of an imported private history before any write.
@@ -104,9 +112,21 @@ export function parseBans(data) {
   return raw.split(';').map(function (x) {
     var t = x.split(':');
     // Cursor converted like BetterChatango, which reads the timestamp with + before sending it back.
-    return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], ts: String(+t[3]), at: Math.round(parseFloat(t[3]) * 1000) || Date.now(), by: lower(t[4]) };
+    return Object.assign(banEntry(t, t[4], epochMs(t[3]) || Date.now()), { ts: String(+t[3]) });
   }).filter(function (b) { return b.unid; });
 }
+/**
+ * Builds a ban from the fields unid:ip:name that every ban frame starts with. A ban without a name bans a guest.
+ * @param {Array<string>} t Fields unid, IP and name.
+ * @param {string} by Author of the ban.
+ * @param {number} at Ban time in ms.
+ */
+function banEntry(t, by, at) { return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], by: lower(by), at: at }; }
+/**
+ * Reads the blocked frame: the ban of a member, dated at reception.
+ * @param {Array<string>} data Frame split on :, unid, IP, name and author.
+ */
+export function parseBlocked(data) { return banEntry(data, data[3], Date.now()); }
 /**
  * Reads the unblocked frame like BetterChatango.
  * @param {Array<string>} data Frame split on :, entries unid:ip:name separated by semicolons, author in the second-to-last field.
@@ -114,10 +134,7 @@ export function parseBans(data) {
  */
 export function parseUnbanned(data) {
   var by = lower(data.slice(-2)[0]), at = Date.now();
-  return data.join(':').split(';').map(function (x) {
-    var t = x.split(':');
-    return { unid: t[0], ip: t[1], name: lower(t[2]) || '!anon', guest: !t[2], by: by, at: at };
-  }).filter(function (b) { return b.unid; });
+  return data.join(':').split(';').map(function (x) { return banEntry(x.split(':'), by, at); }).filter(function (b) { return b.unid; });
 }
 /**
  * Reads the BetterChatango bansearchresult reply.
@@ -129,7 +146,7 @@ export function parseBanSearch(data) {
   if (!data[1] && !data[3]) return null;
   // Like BetterChatango, the date is read in fixed Pacific time. On its own, GMT-0800 passes for a year: the date is validated without it.
   var date = data.slice(5).join(':'), at = isNaN(new Date(date).getTime()) ? 0 : new Date(date + ' GMT-0800').getTime();
-  return { unid: data[3], ip: data[2], name: lower(data[1]) || '!anon', guest: !data[1], by: lower(data[4]), at: at, includes: data[0] ? data[0].split(';').filter(Boolean).map(lower) : [] };
+  return Object.assign(banEntry([data[3], data[2], data[1]], data[4], at), { includes: data[0] ? data[0].split(';').filter(Boolean).map(lower) : [] });
 }
 export function parseModLog(data) {
   var raw = data.join(':');
@@ -331,6 +348,19 @@ export function epochMs(v) { return Math.round(parseFloat(v) * 1000) || 0; }
 export function friendPresence(name, state, ts, minutes) {
   var status = presenceOf(state, minutes);
   return { name: lower(name), status: status, lastOn: state === 'off' ? epochMs(ts) : 0, idleSince: status === 'idle' ? Date.now() - minutes * MIN : 0 };
+}
+/**
+ * Reads the presence frame: name, minutes and state of each person.
+ * When offline, the minutes are not idle time: they serve as an approximate last online time.
+ * @param {Array<string>} data Frame split on :, three fields per person.
+ */
+export function parsePresence(data) {
+  var people = [], now = Date.now();
+  for (var j = 0; j + 2 < data.length; j += 3) if (data[j]) {
+    var on = data[j + 2] === 'online' || data[j + 2] === 'app', idle = on && +data[j + 1] > 0, since = now - data[j + 1] * MIN;
+    people.push({ name: lower(data[j]), status: idle ? 'idle' : on ? 'online' : 'offline', lastOn: !on && +data[j + 1] ? since : 0, idleSince: idle ? since : 0 });
+  }
+  return people;
 }
 export function stateOf(sock) { return !sock ? 'closed' : sock.readyState === 1 ? 'open' : sock.readyState === 0 ? 'connecting' : 'closed'; }
 

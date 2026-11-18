@@ -1,9 +1,9 @@
-import { CONFIRM_TIMEOUT, MIN, esc, lower, uid, unquote, warn } from '../core/util.js';
-import { MINI_CSS_MAX_LENGTH, PM_SETTING_NAMES, VISSLE_UPLOAD, epochMs, friendPresence, miniStyleOfForm, notNone, parseBanSearch, parseBans, parseMiniCss, parseModLog, parseMods, parseMsgBg, parseParticipants, parsePmSettings, parseProfileReply, parseUnbanned, parseVisits, parseWho, pmRecordEntry, postRefusal, screenPmRecords, sessionOf, spellingOf, stateOf } from './live-parse.js';
+import { CONFIRM_TIMEOUT, esc, lower, uid, unquote, warn } from '../core/util.js';
+import { MINI_CSS_MAX_LENGTH, PM_SETTING_NAMES, VISSLE_UPLOAD, epochMs, friendPresence, miniStyleOfForm, notNone, parseBanSearch, parseBans, parseBlocked, parseMiniCss, parseModLog, parseMods, parseMsgBg, parseParticipants, parsePmSettings, parsePresence, parseProfileReply, parseUnbanned, parseVisits, parseWho, pmFrame, pmRecordEntry, postRefusal, screenPmRecords, sessionOf, spellingOf, stateOf } from './live-parse.js';
 import { JOURNAL, LIVE, betterChatangoRefs, showInterface } from '../core/env.js';
 import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNELS, GENDER_LABEL, MEET_PAGE, MSG_FLAG, PM_CONNECTION, badgeRoleOf, channelOf, isGuest, isTempMsgId, tempMsgId } from '../core/chatango.js';
 import { MEDIA_PAGE, mediaEntryOk, mediaMatch, screenMediaEntries } from '../core/media-library.js';
-import { encodeRef, parseContent, parsePm } from '../core/message-content.js';
+import { encodeRef, parseContent } from '../core/message-content.js';
 import { readOwn, writeOwn } from '../core/account-store.js';
 import { LOADER_TEXT, LOADER_WAIT, X_HANDLE, X_IMAGE, X_LINK, X_PICTURE, X_VIDEO, loaderEvent } from '../core/loader-contract.js';
 /**
@@ -193,7 +193,7 @@ export var liveBridge = (function () {
       }
       case 'blocklist': banPage(room, 'block', data); break;
       case 'unblocklist': banPage(room, 'unblock', data); break;
-      case 'blocked': emit({ op: 'banned', gid: room, ban: { unid: data[0], ip: data[1], name: lower(data[2]) || '!anon', guest: !data[2], by: lower(data[3]), at: Date.now() } }); break;
+      case 'blocked': emit({ op: 'banned', gid: room, ban: parseBlocked(data) }); break;
       case 'unblocked': emit({ op: 'unbanned', gid: room, list: parseUnbanned(data) }); break;
       case 'bansearchresult': gotReply('searchban:' + room); emit({ op: 'banSearch', gid: room, ban: parseBanSearch(data) }); break;
       case 'badbansearchstring': gotReply('searchban:' + room); emit({ op: 'banSearchRefused', gid: room, code: data[0] }); break;
@@ -223,11 +223,10 @@ export var liveBridge = (function () {
   function tapPrivate(name, data) {
     switch (name) {
       case 'msg': case 'msgoff': {
-        var p2 = parsePm(data);
-        emit({ op: 'pm', author: lower(data[0]), spelling: spellingOf(lower(data[0]), p2.written), text: p2.text, parts: p2.parts, style: p2.style, embeds: p2.embeds, key: p2.key, editId: p2.editId, replyId: p2.replyId, ts: Math.round(parseFloat(data[3]) * 1000) || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' });
+        var pm = pmFrame(data);
+        emit(Object.assign({ op: 'pm' }, pm, { ts: pm.ts || Date.now(), archiveTs: parseFloat(data[3]), offline: name === 'msgoff' }));
         // BetterChatango plays the sound itself for the PM of client.private.focus, reset to false on each private connection: the bridge plays it for the others, like BetterChatango, except for edits and ignored members.
-        var from = lower(data[0]);
-        if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
+        if (name === 'msg' && !pm.editId && pm.author !== lower(C.user.name) && pm.author !== C.private.focus && (readList('ignored') || []).indexOf(pm.author) < 0) {
           // Playback refused by the browser: intended silence, no toast.
           if (readSetting('playMention')) playSound('mention').then(null, function () {});
         }
@@ -259,16 +258,7 @@ export var liveBridge = (function () {
         if (state || !data[0] || data[2] === 'invalid' || data[2] === 'nouser') emit({ op: 'pmChecked', name: target, found: !!state, asked: gotReply('connect:' + target) });
         break;
       }
-      case 'presence': {
-        var people = [];
-        // When offline, the minutes are not idle time: they serve as an approximate last online time.
-        for (var j = 0; j + 2 < data.length; j += 3) if (data[j]) {
-          var on = data[j + 2] === 'online' || data[j + 2] === 'app', idle = on && +data[j + 1] > 0;
-          people.push({ name: lower(data[j]), status: idle ? 'idle' : on ? 'online' : 'offline', lastOn: !on && +data[j + 1] ? Date.now() - data[j + 1] * MIN : 0, idleSince: idle ? Date.now() - data[j + 1] * MIN : 0 });
-        }
-        emit({ op: 'people', list: people });
-        break;
-      }
+      case 'presence': emit({ op: 'people', list: parsePresence(data) }); break;
       case 'reload_profile': profileChanged(data[0]); break;
       // BetterChatango reads the end time in seconds (inject.js:3301-3302).
       case 'premium': emit({ op: 'premium', status: parseInt(data[0], 10) || 0, until: epochMs(data[1]) }); break;
