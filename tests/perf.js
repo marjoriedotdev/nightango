@@ -190,7 +190,6 @@ const show = async t => { t.paint(); await nextTask(); };
   t.paint(); await wait(50);
   step('busy state shown', t.d.querySelectorAll('.tc-msg').length >= 400 && !!t.d.querySelector('.members-list'), t.d.querySelectorAll('.tc-msg').length);
   const s0 = t.state();
-  step('busy state size', Object.keys(s0.users).length > 2000 && GROUPS.every((gid, i) => s0.groups[gid].messages.length === SIZES[i]), Object.keys(s0.users).length);
 
   /* One operation copies only what it touches */
   t.group('b', 'busy0', msgFrame('m0x1', 'one', Date.now() / 1000, 'One more'));

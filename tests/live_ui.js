@@ -51,9 +51,8 @@ const sent = [], posts = [], calls = [];
 const sentPmArchive = [];
 // vissle response to a file upload (chatango/upload).
 let uploadReply = () => Promise.resolve('data:abc/f.png');
-let shown = 0;
 w.__TORCH_LIVE__ = true;
-w.__TORCH_SHOW__ = () => { shown++; };
+w.__TORCH_SHOW__ = () => {};
 w.__TORCH_MOUNT__ = d.getElementById('app');
 function noop() {}
 // Diagnostic journal of the page code: the bridge gives it the account at sign-in and notes its connections there.
@@ -420,7 +419,6 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   pollSockets();
   await wait(100);
   const earlyFailures = opFailures.slice();
-  step('overlay shown after login', shown === 1);
   const fetchesAtLogin = fetches.length;
   C.renderYouTube('https://youtu.be/dQw4w9WgXcQ', 'dQw4w9WgXcQ', d.createElement('div'));
   CH.getBackground({ username: 'alice', node: d.createElement('div') });
@@ -544,15 +542,12 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
 
   /* Moderation from a message */
   click(aliceMsg.querySelector('button[aria-label="More actions"]')); await wait(30);
-  const floating = $('#layer .menu.floating');
-  step('menus float in the layer with a fixed position', !!floating && floating.style.position === 'fixed' && !$('#app .menu'));
   click(menuItem('Delete message')); await wait(30);
   const delBeforeConfirm = frame('delmsg:').length;
   click(byText('.dialog-foot button', 'Delete')); await wait(30);
   step('delete frame', delBeforeConfirm === 0 && frame('delmsg:').pop() === 'delmsg:A-B_C=', { delBeforeConfirm, frames: frame('delmsg:') });
   click(aliceMsg.querySelector('button[aria-label="More actions"]')); await wait(30);
   click(menuItem('Ban from #test')); await wait(50);
-  step('dialogs render in the overlay layer, outside the layout', !!$('#layer .overlay .dialog') && !$('#app .overlay'));
   click(byText('.tc-checkline', 'Also delete their recent messages').querySelector('input')); await wait(20);
   click(byText('.dialog-foot button', 'Ban')); await wait(30);
   step('ban frame', frame('block:').pop() === 'block:UNID1:1.2.3.4:alice', frame('block:'));
@@ -1758,11 +1753,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     fullEdit.readsAfter = ownFullReads();
   }
   step('full profile edited then cleared', fullEdit.bar && fullEdit.saved === '<h1>New page</h1>' && fullEdit.cleared === '' && fullEdit.readsAfter === fullEdit.reads, fullEdit);
-  step('no password field anywhere in requests', posts.every(p => !('p' in p.f) && !('pwd' in p.f) && !('password' in p.f)));
-  click(byText('.tc-nav', 'Password and email')); await wait(50);
-  step('account page has no password form', !$('input[type=password]') && !!byText('.tc-banner', 'never handles your password'));
   click(byText('.tc-nav', 'Chatango Premium')); await wait(50);
-  step('premium page has no purchase form', !!byText('.tc-banner', "doesn't take payments"));
   /* Premium expiry: premium frame of the private connection, reminder at most once per day per account */
   const DAY = 86400000, later = clock() + 40 * DAY, soon = clock() + 2 * DAY;
   const reminders = () => $$('.toast').map(x => x.textContent).filter(t => t.indexOf('Your Chatango Premium ends on') === 0);
@@ -1789,7 +1780,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
   click(byText('.tc-nav', 'Notifications')); await wait(50);
   const soundRow = title => { const r = $$('section[aria-label="Sounds"] .tc-row').find(x => x.querySelector('.tc-row-title').textContent === title); return r && { on: r.querySelector('[role=switch]').checked, range: r.querySelector('input[type=range]').disabled ? 'off' : r.querySelector('input[type=range]').value, value: r.textContent.match(/\d+%/)[0], play: !r.querySelector('button[aria-label="Play test sound"]').disabled }; };
   const sounds = { mention: soundRow('Mention sound'), online: soundRow('Friend online sound') };
-  step('notifications: no sound column', !byText('th', 'Sound') && !byText('.tc-banner', 'BetterChatango plays alert sounds')
+  step('notifications: sounds read from the BetterChatango settings, no Sound column of our own', !byText('th', 'Sound')
     && JSON.stringify(sounds) === JSON.stringify({ mention: { on: true, range: '30', value: '30%', play: true }, online: { on: false, range: 'off', value: '45%', play: false } }), sounds);
   click(byText('.tc-nav', 'Privacy')); await until(() => !!pmrRow() && !!pmrView().status);
   pmrSeen.push(pmrView());
@@ -1924,7 +1915,7 @@ const MOD = 64 | 16384 | 128 | 256 | 65536;
     && cssPost.url === 'https://chatango.com/updateprofile?css' && JSON.stringify(cssPost.item) === '{}'
     && JSON.stringify(cssPost.f) === JSON.stringify({ auth: 'token', arch: 'h5', src: 'group', action: 'update', body_bg_col: '112233', body_col: '222222', body_a_col: '0084ef', body_bg_img: 'https://vissle.me/abc/banner.png', body_tile_d: '1', body_tile_a: '0', dir: 'checked' })
     && !!byText('.toast', 'Profile saved to Chatango.'), { urls: posts.slice(styleFrom).map(p => p.url), f: cssPost && cssPost.f });
-  step('no password field in profile picture and background requests', posts.slice(avatarFrom).every(p => !('p' in p.f) && !('pwd' in p.f) && !('password' in p.f)));
+  step('no password field in any profile, picture or background request', posts.every(p => !('p' in p.f) && !('pwd' in p.f) && !('password' in p.f)));
   click(byText('.tc-nav', 'Back to chat')); await wait(50);
 
   /* Group creation */

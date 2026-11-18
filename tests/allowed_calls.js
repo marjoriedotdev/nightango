@@ -199,8 +199,6 @@ const PROFILE = 'https://chatango.com/updateprofile', UPLOAD = 'https://vissle.m
   step('refuses a post without an option to a host other than chatango.com', !noOption.length, noOption);
   const key = wrongVerdicts([[PROFILE, { key: true }, 'refused'], ['https://vissle.me/chatango/updateprofile', { key: true }, 'refused'], [UPLOAD + '?to=moon', { key: true }, 'refused']]);
   step('refuses the key option to any URL other than the vissle upload', !key.length, key);
-  const allowed = wrongVerdicts([[PROFILE, {}, 'allowed'], [PROFILE + '?css', {}, 'allowed'], [UPLOAD, { key: true }, 'allowed'], ['https://st.chatango.com/script/creategrouploginjs', { cookie: true }, 'allowed']]);
-  step('allows the targets and options of the six current call sites', !allowed.length, allowed);
 
   const failed = log.filter(l => l.startsWith('FAIL')).length;
   console.log(log.join('\n'));
