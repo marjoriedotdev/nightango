@@ -17,12 +17,7 @@ test:
     - corepack enable
     - pnpm install --frozen-lockfile
     # Every user is told about a release from main: a beta must not reach it, even through a merge request.
-    - |
-      target="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_COMMIT_BRANCH}"
-      if [ "$target" = main ] && grep -Eq '^// @version[[:space:]]+[^[:space:]]*-' src/loader/skin-loader.js; then
-        echo "main publishes stable releases only: set @version to X.Y.Z in src/loader/skin-loader.js."
-        exit 1
-      fi
+    - node scripts/release.mjs check "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_COMMIT_BRANCH}"
     - pnpm test
     # The release job publishes these exact files, checked against these checksums.
     - (cd dist && sha256sum nightango.min.user.js nightango.user.js > SHA256SUMS)
@@ -39,4 +34,4 @@ release:
   resource_group: release
   script:
     - (cd dist && sha256sum --check --strict SHA256SUMS)
-    - node scripts/release.mjs
+    - node scripts/release.mjs gitlab

@@ -3,6 +3,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build as esbuild, transform } from 'esbuild';
 import { parseChangelog } from './changelog.mjs';
+import { versionOf } from './release.mjs';
 
 // -- Sources ------------------------------------------------------------------
 
@@ -339,7 +340,7 @@ async function build() {
   const bundleCss = read('torchds', 'project', 'components', 'bundle.css');
   const appCss = read('src', 'styles', 'app.css');
   const loader = read('src', 'loader', 'skin-loader.js');
-  const version = /@version\s+(\S+)/.exec(loader)[1];
+  const version = versionOf(loader);
   const releaseNotes = parseChangelog(read('CHANGELOG.md'));
   if (releaseNotes[0]?.version !== version) throw new Error(`CHANGELOG.md must start with the notes of @version ${version}.`);
   const info = { version, notes: releaseNotes };
