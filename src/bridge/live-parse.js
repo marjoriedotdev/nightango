@@ -1,7 +1,8 @@
 import { MIN, trimEnd } from '../core/util.js';
-import { cssColor, fontPercent, hexToRgb, rgbToHex } from '../core/colors.js';
+import { cssColor, hexToRgb, rgbToHex } from '../core/colors.js';
 import { BACKGROUND_REPEAT, EMPHASIS } from '../core/rich-text.js';
-import { EMOTICON_BY_NAME, FONT_FACES, MSG_FLAG } from './live-model.js';
+import { ACCOUNT_NAME, FONT_FACES, MSG_FLAG, fontPercent } from '../core/chatango.js';
+import { EMOTICON_BY_NAME } from '../core/emoticons.js';
 // -- Text and references ------------------------------------------------------
 
 export function warn(e) { try { console.warn('[torch-skin]', e); } catch (x) { /* console unavailable */ } }
@@ -145,7 +146,6 @@ export function pmRecordEntry(v) {
   var body = parsePm(parts), from = lower(parts[0]);
   return { from: from, spelling: spellingOf(from, body.written), ts: Math.round(parseFloat(parts[3]) * 1000) || 0, archiveTs: v.ts, text: body.text, parts: body.parts, style: body.style, embeds: body.embeds, key: body.key, editId: body.editId, replyId: body.replyId, unread: !!v.unread };
 }
-var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
 /**
  * Screens the records of an imported private history before any write.
  * @param {Array} records File content, untrusted.
@@ -155,7 +155,7 @@ var PM_TARGET = /^[A-Za-z0-9_-]{1,20}$/;
 export function screenPmRecords(records, me) {
   var valid = [], skipped = 0, foreign = 0;
   records.forEach(function (r) {
-    var ok = !!r && typeof r.target === 'string' && PM_TARGET.test(r.target) && typeof r.ts === 'number' && isFinite(r.ts) && r.ts > 0
+    var ok = !!r && typeof r.target === 'string' && ACCOUNT_NAME.test(r.target.toLowerCase()) && typeof r.ts === 'number' && isFinite(r.ts) && r.ts > 0
       && typeof r.data === 'string' && r.data.indexOf('msg:') === 0;
     var fields = ok ? r.data.split(':') : [];
     if (fields.length < 7) { skipped++; return; }

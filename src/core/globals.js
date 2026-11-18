@@ -1,4 +1,4 @@
-import { avatarSrc } from '../bridge/live-model.js';
+import { avatarSrc } from './chatango.js';
 export var React = window.React, ReactDOM = window.ReactDOM, h = React.createElement;
 // Decoration an avatar wears, as a function of its props, or null: the costume of the season, provided by Root.
 export var AvatarDecorCtx = React.createContext(null);

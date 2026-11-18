@@ -3,6 +3,7 @@ import { cx } from '../core/util.js';
 import { CONN_DONE_MS, CONN_LEAVE_MS, Dialog, useApp } from '../core/ui.js';
 import { RECONNECT_DELAYS } from '../app/reconnection.js';
 import { LIVE } from '../core/env.js';
+import { PM_CONNECTION } from '../core/chatango.js';
 /* ---------- Session loss ---------- */
 var SESSION_ATTEMPTS = 3;
 // A lost connection has no dialog: it shows in SessionBanner.
@@ -53,7 +54,7 @@ export function SessionOverlay(p) {
    * @param {string} variant Button variant.
    */
   function reload(variant) { return h(T.Button, { key: 'reload', variant: variant, onClick: function () { location.reload(); } }, 'Reload'); }
-  var footer = s.reason === 'kicked' ? [h(T.Button, { key: 'here', variant: 'ghost', disabled: busy, onClick: function () { app.actions.reconnect('private_message'); } }, 'Reconnect here'), reload('primary')]
+  var footer = s.reason === 'kicked' ? [h(T.Button, { key: 'here', variant: 'ghost', disabled: busy, onClick: function () { app.actions.reconnect(PM_CONNECTION); } }, 'Reconnect here'), reload('primary')]
     // Offline, a reload would lose the page: the automatic reconnection is the way back.
     : s.reason === 'offline' ? [reload('secondary')]
     : [reload('primary')];

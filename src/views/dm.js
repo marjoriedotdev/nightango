@@ -3,8 +3,7 @@ import { MIN, ago, cx, dayKey, dayLabel, elapsedShort, fmtTime, lastMatch } from
 import { ROLE_LONG } from '../core/roles.js';
 import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useMinute, useOutside, useRightColumn, useRowBatches, useShownUsers, useStatePart, useWideLayout } from '../core/ui.js';
 import { bidiText, messagePreview } from '../core/rich-text.js';
-import { THREAD_MAX, genderShort, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, roleOf, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
-import { ACCOUNT_NAME, isProfilePending } from '../bridge/live-model.js';
+import { THREAD_MAX, isPaneOpen, isProfilePending, listedDms, pmEditTarget, pmShownIndex, roleOf, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
 import { warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { MobileNavButton, favoriteItem } from './shell.js';
@@ -26,6 +25,7 @@ import { SharedMediaDialog } from './shared-media.js';
 import { runCommand } from './commands.js';
 import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
+import { ACCOUNT_NAME, PM_CONNECTION, genderCode } from '../core/chatango.js';
 /* ---------- Private messages ---------- */
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };
@@ -98,7 +98,7 @@ export function DMView(p) {
 function pmConnBanner(app, inset) {
   var s = app.state;
   if (!LIVE || !s.pmLoaded || !s.pmConn || s.session) return null;
-  return h(ConnectionBanner, { name: 'private messages', conn: s.pmConn, retrying: !!s.retrying.private_message, inset: inset, onRetry: function () { app.actions.retryConnection('private_message'); } });
+  return h(ConnectionBanner, { name: 'private messages', conn: s.pmConn, retrying: !!s.retrying.private_message, inset: inset, onRetry: function () { app.actions.retryConnection(PM_CONNECTION); } });
 }
 
 var DM_SEARCH_MIN = 2, DM_SEARCH_MAX = 50, DM_SEARCH_DELAY = 300;
@@ -376,7 +376,7 @@ export function personStatus(s, name, gid) {
  * @param {Object} u Member in the state.
  */
 export function personAsl(u) {
-  return [u.age || null, genderShort(u.gender), u.location || null].filter(Boolean).join(' · ');
+  return [u.age || null, genderCode(u.gender), u.location || null].filter(Boolean).join(' · ');
 }
 /**
  * Dates a friend's idle time or last online time.

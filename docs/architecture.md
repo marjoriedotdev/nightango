@@ -11,8 +11,12 @@ src/
     globals.js       React aliases, T wrapper (live avatars), hooks
     util.js          time, local storage, copy, reading a JSON file, downloading a JSON file, trailing white space trim
     draft.js         copy-on-write drafts of the state (openDraft), plain object behind a draft for the scans that only read (plainOf)
-    colors.js        colors and contrast, fonts, channels
-    roles.js         permissions, roles (owner, admin, mod), Chatango rights bits (PERM_FLAG), default rights of a role, default group settings
+    colors.js        colors and contrast
+    chatango.js      facts of Chatango shared by both modes: account names and guests (ACCOUNT_NAME, isGuest), profile pictures (avatarSrc, AVATAR_VERSION), page addresses (chatangoPageUrl, parseGroupName),
+                     temporary message ids, the private connection (PM_CONNECTION), Meet people page size, bits (GROUP_FLAG, MSG_FLAG, BADGE_FLAG), fonts, channels, genders
+    emoticons.js     emoticon table (EMOTICONS)
+    vissle.js        pages of the profile activity vissle tracks (visitorPage)
+    roles.js         permissions, roles (owner, admin, mod), Chatango rights bits (PERM_FLAG, IS_STAFF_RIGHT), default rights of a role, default group settings
     sample-data.js   prototype sample data, simulated visits, in-memory sample media library
     prefs.js         default preferences
     ui.js            React contexts (useApp, and useAppApi with useStatePart for the memoized rows), minute clock of the relative times (useMinute), members a view shows kept in the state (useShownUsers),
@@ -24,8 +28,6 @@ src/
     selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry,
                      message cap of a group or a conversation (THREAD_MAX, trimThread)
   bridge/     the bridge to BetterChatango
-    live-model.js    avatarSrc (and photo version of one's own account), vissle pagination, Chatango bits (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
-                     emoticon table (EMOTICONS)
     live-parse.js    pure bridge functions: message content (parseContent, media), group frames,
                      Premium background (parseMiniCss, background form), allowed client.post calls (postRefusal), updateprofile response, message background (parseMsgBg), vissle activity replies (parseVisits), linked accounts (parseWho), presence, timestamps,
                      message references, private history records (reading, sorting an import),
@@ -220,7 +222,7 @@ jsdom suites in `tests/`, run by `tests/run.mjs` after the build. The runner sta
 - `member_content`: member content read by the bridge and the interface (Premium background file, trimming of message text), its guards and its cost on large input, on the modules of `src/bridge/live-parse.js` and `src/core/rich-text.js`.
 - `markup`: profile formatting toolbar, tags around the selection and merging of `<font>` attributes, on `src/settings/markup-toolbar.js`.
 - `live_login`: sign-in detection, a listener that throws and the diagnostic journal kept per account, on the bridge bundled by the suite with `app/live-ops.js`, after the diagnostic journal. Then the operations after sign-in, held until the first render and handed to the latest handler (`useBridgeOps`).
-- `avatar`: avatars, on the design system bundle, `avatarSrc` (`src/bridge/live-model.js`) and the `T` wrapper of `src/core/globals.js`.
+- `avatar`: avatars, on the design system bundle, `avatarSrc` (`src/core/chatango.js`) and the `T` wrapper of `src/core/globals.js`.
 - `moon`: moon phase compared with published dates and drawing direction, on the design system bundle, then the season dates at their boundaries in both hemispheres and the sky by the hour at its keyframes, between them and across midnight, on `src/core/util.js`.
 - `check_ds`: rendering of the design system previews, on `torchds/project/components/bundle.js`.
 - `perf`: cost of the live operations on a busy state (four groups, three at their message cap, hundreds of members, thousands of known users), started in live mode through the prototype hook that `dist/app.js` keeps, with a fake BetterChatango client and the animation frames run by the test. It counts what an operation shares with the previous state, the renders of a burst of operations within one animation frame, the sorts of a history page, the rows rendered again, the members dropped and those kept while a dialog shows them, and the minute timers, with a time budget per operation. The counts carry the checks: the budget leaves a wide margin for slow machines.

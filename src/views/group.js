@@ -1,6 +1,6 @@
 import { Frag, React, T, h, useEffect, useLayoutEffect, useMemo, useRef, useState } from '../core/globals.js';
-import { MIN, copyText, cx, dayKey, dayLabel, isGuest, lastMatch, plural } from '../core/util.js';
-import { CHANNELS, accentOf, accentScope, channelLabel } from '../core/colors.js';
+import { MIN, copyText, cx, dayKey, dayLabel, lastMatch, plural } from '../core/util.js';
+import { accentOf, accentScope } from '../core/colors.js';
 import { ROLE_LONG } from '../core/roles.js';
 import { AccentSwatches, ConnectionBanner, Dialog, MenuButton, groupDraftKey, presenceSr, roleBadge, useApp, useDraft, useLatestCalls, useRightColumn } from '../core/ui.js';
 import { messagePreview } from '../core/rich-text.js';
@@ -21,6 +21,7 @@ import { SharedMediaDialog } from './shared-media.js';
 import { runCommand } from './commands.js';
 import { SessionBanner, sessionLost } from './session.js';
 import { LIVE } from '../core/env.js';
+import { CHANNELS, channelLabel, chatangoPageUrl, isGuest } from '../core/chatango.js';
 /* ---------- Group ---------- */
 // BetterChatango rejects the tenth edit of a message.
 export var EDIT_MAX = 9;
@@ -283,7 +284,7 @@ export function GroupView(p) {
             spacesItem(app, { view: 'group', id: g.id }),
             { label: 'Group color…', icon: 'palette', onSelect: function () { setColorOpen(true); } },
             LIVE && staff ? { label: 'Your badge…', icon: 'shield', onSelect: function () { setBadgeOpen(true); } } : null,
-            { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText('https://' + g.id + '.chatango.com', function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com', { tone: ok ? 'success' : 'error' }); }); } },
+            { label: 'Copy invite link', icon: 'link', onSelect: function () { copyText(chatangoPageUrl(g.id), function (ok) { app.ui.toast(ok ? 'Invite link copied.' : 'Copy failed. The link is ' + g.id + '.chatango.com', { tone: ok ? 'success' : 'error' }); }); } },
             { divider: true },
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
           ]

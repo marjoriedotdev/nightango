@@ -3,9 +3,9 @@ import { copyText, plural } from '../core/util.js';
 import { PERMS, ROLE_DESC, ROLE_LONG, defaultRoles, flagsToPerms, permsToFlags, roleOfFlags } from '../core/roles.js';
 import { MenuButton, useApp, youBadge } from '../core/ui.js';
 import { guestsOf, shownName, statusLabel, userOf } from '../core/selectors.js';
-import { ACCOUNT_NAME } from '../bridge/live-model.js';
 import { banItem, viewProfileItem, whoItem } from '../views/members.js';
 import { Page } from './shell.js';
+import { ACCOUNT_NAME, chatangoPageUrl } from '../core/chatango.js';
 /**
  * Staff and roles page in live and in the prototype: the owner then each moderator with their Chatango permissions.
  * @param {{g: Object, draft: Object, edit: Function, myRole: ?string, perms: Object}} p Group, settings draft, draft edit, role and permissions of the user.
@@ -96,7 +96,7 @@ export function GSMembers(p) {
 }
 
 export function GSInvites(p) {
-  var app = useApp(), link = 'https://' + p.g.id + '.chatango.com';
+  var app = useApp(), link = chatangoPageUrl(p.g.id);
   return h(Page, { title: 'Invites', lede: "Anyone with the link can join. Banned members still can't." },
     h(T.SettingsSection, { title: 'Invite link', padded: true },
       h('div', { style: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 } },

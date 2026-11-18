@@ -1,7 +1,7 @@
-import { CONFIRM_TIMEOUT, MIN, storageGet, storageMerge, uid } from '../core/util.js';
-import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNEL_FLAG, MSG_FLAG, badgeRoleOf, channelOf, skinKey } from './live-model.js';
+import { CONFIRM_TIMEOUT, MIN, skinKey, storageGet, storageMerge, uid } from '../core/util.js';
 import { MEDIA_PAGE, MINI_CSS_MAX_LENGTH, PM_SETTING_NAMES, VISSLE_UPLOAD, encodeRef, epochMs, esc, friendPresence, lower, mediaEntryOk, mediaMatch, miniStyleOfForm, notNone, parseBanSearch, parseBans, parseContent, parseMiniCss, parseModLog, parseMods, parseMsgBg, parseParticipants, parsePm, parsePmSettings, parseProfileReply, parseUnbanned, parseVisits, parseWho, pmRecordEntry, postRefusal, screenMediaEntries, screenPmRecords, sessionOf, spellingOf, stateOf, unquote, warn } from './live-parse.js';
 import { JOURNAL, LIVE, betterChatangoRefs, showInterface } from '../core/env.js';
+import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNELS, GENDER_LABEL, MEET_PAGE, MSG_FLAG, PM_CONNECTION, badgeRoleOf, channelOf, isGuest, isTempMsgId, tempMsgId } from '../core/chatango.js';
 /**
  * Gives an operation to a listener: one that throws stops neither the other listeners nor the sequence that emits, sign-in included.
  * @param {function(Object)} fn Listener.
@@ -16,7 +16,6 @@ export var liveBridge = (function () {
   var C = refs.client, CH = refs.chatango, SB = refs.sidebar;
   var ENV = refs.torch && refs.torch.environment;
   var listeners = [], queue = [];
-  var GENDERS = { M: 'Male', F: 'Female' };
   var SETTINGS = {
     joinOwned: ['privacy', 'groups', 'connect_own'], joinRecent: ['privacy', 'groups', 'connect_recent'], joinFavorites: ['privacy', 'groups', 'connect_favorite'],
     markdown: ['appearance', 'messages', 'parse_markdown'], guestMessages: ['safety', 'messages', 'show_guest'], announcements: ['appearance', 'messages', 'show_annc'],
@@ -33,13 +32,12 @@ export var liveBridge = (function () {
   // Size of the audit log pages requested by chadango (GetModActions).
   var MODLOG_PAGE = 50;
 
-  // A message shown before its final id keeps the temporary id k:{key}, which Chatango refers to by the key alone.
-  function withTempIds(ids) { return ids.concat(ids.map(function (id) { return 'k:' + id; })); }
+  function withTempIds(ids) { return ids.concat(ids.map(tempMsgId)); }
   function emit(op) { if (listeners.length) listeners.forEach(function (f) { deliverOp(f, op); }); else queue.push(op); }
   function onOp(fn) { listeners.push(fn); var q = queue; queue = []; q.forEach(function (op) { deliverOp(fn, op); }); return function () { listeners = listeners.filter(function (x) { return x !== fn; }); }; }
   function note(text) { if (JOURNAL) JOURNAL.add('app', text); }
   var CHATANGO_TROUBLE = 'Chatango is having trouble right now. Try again in a moment.';
-  function connName(gid) { return gid === 'private_message' ? 'private messages' : '#' + gid; }
+  function connName(gid) { return gid === PM_CONNECTION ? 'private messages' : '#' + gid; }
   /**
    * Forwards a page of the ban list (block) or the unban list (unblock).
    * @param {string} room Group.
@@ -62,7 +60,7 @@ export var liveBridge = (function () {
     var premium = !!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner);
     var parsed = parseContent(data.slice(9).join(':'), false, premium);
     return {
-      id: (temp ? 'k:' : '') + data[5], kind: 'msg', author: name, spelling: spellingOf(name, data[1] || '#' + data[2]), text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
+      id: temp ? tempMsgId(data[5]) : data[5], kind: 'msg', author: name, spelling: spellingOf(name, data[1] || '#' + data[2]), text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
       style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags),
       badge: badgeRoleOf(flags), bg: !!(flags & MSG_FLAG.BG_ON) && premium
     };
@@ -141,7 +139,7 @@ export var liveBridge = (function () {
       case 'i': emit({ op: 'hist', gid: room, msg: toMsg(room, data, false) }); break;
       case 'u': {
         var ku = room + '|' + data[0];
-        if (waitingIds[ku]) { delete waitingIds[ku]; emit({ op: 'msgid', gid: room, tmp: 'k:' + data[0], id: data[1] }); } else earlyIds[ku] = data[1];
+        if (waitingIds[ku]) { delete waitingIds[ku]; emit({ op: 'msgid', gid: room, tmp: tempMsgId(data[0]), id: data[1] }); } else earlyIds[ku] = data[1];
         break;
       }
       case 'delete': emit({ op: 'del', gid: room, ids: withTempIds([data[0]]) }); break;
@@ -284,9 +282,9 @@ export var liveBridge = (function () {
         break;
       case 'kickingoff': emit({ op: 'session', reason: 'kicked' }); break;
       case 'DENIED': emit({ op: 'session', reason: 'denied' }); break;
-      case 'show_fw': emit({ op: 'notice', gid: 'private_message', text: "You're sending messages too fast. Slow down, or Chatango may disconnect your private messages.", tone: 'error' }); break;
-      case 'toofast': emit({ op: 'notice', gid: 'private_message', text: "You're sending private messages too fast.", tone: 'error' }); break;
-      case 'show_offline_limit': emit({ op: 'notice', gid: 'private_message', text: 'This person has too many offline messages. Try again later.', tone: 'error' }); break;
+      case 'show_fw': emit({ op: 'notice', gid: PM_CONNECTION, text: "You're sending messages too fast. Slow down, or Chatango may disconnect your private messages.", tone: 'error' }); break;
+      case 'toofast': emit({ op: 'notice', gid: PM_CONNECTION, text: "You're sending private messages too fast.", tone: 'error' }); break;
+      case 'show_offline_limit': emit({ op: 'notice', gid: PM_CONNECTION, text: 'This person has too many offline messages. Try again later.', tone: 'error' }); break;
       default: break;
     }
   }
@@ -382,7 +380,7 @@ export var liveBridge = (function () {
         });
         var pm = C.private && C.private.socket;
         var pst = pm ? stateOf(pm) : 'closed';
-        if (pmState !== pst) { pmState = pst; note(connName('private_message') + ' is ' + pst); emit({ op: 'conn', gid: 'private_message', state: pst }); }
+        if (pmState !== pst) { pmState = pst; note(connName(PM_CONNECTION) + ' is ' + pst); emit({ op: 'conn', gid: PM_CONNECTION, state: pst }); }
       } catch (e) { warn(e); }
     }, 2000);
   }
@@ -417,7 +415,7 @@ export var liveBridge = (function () {
       delete attempts[gid];
       forget();
       // Without a new socket, the observed state does not change: we force it to be emitted again to leave "connecting", including for a group that BetterChatango removed.
-      if (gid === 'private_message') pmState = null; else connState[gid] = 'connecting';
+      if (gid === PM_CONNECTION) pmState = null; else connState[gid] = 'connecting';
     }
     function attempt() {
       forget();
@@ -428,7 +426,7 @@ export var liveBridge = (function () {
     }
     // Like BetterChatango, the history database opens before the private connection: the msgoff frames, delivered only once right after OK, are archived there.
     note('Connecting to ' + connName(gid));
-    var sock = gid === 'private_message' ? openPmDb().then(attempt) : attempt();
+    var sock = gid === PM_CONNECTION ? openPmDb().then(attempt) : attempt();
     a.done = Promise.race([sock, cancelled]).then(function (s) { settle(); note('Connected to ' + connName(gid)); return s; }, function (e) {
       settle();
       var g = C.groups && C.groups[gid];
@@ -457,10 +455,10 @@ export var liveBridge = (function () {
    * @param {string} gid Group or private_message.
    */
   function opened(gid) {
-    var c = gid === 'private_message' ? C.private : C.groups && C.groups[gid];
+    var c = gid === PM_CONNECTION ? C.private : C.groups && C.groups[gid];
     return !!(c && c.socket && c.socket.readyState === 1);
   }
-  function pmOpen() { return opened('private_message'); }
+  function pmOpen() { return opened(PM_CONNECTION); }
   // Group the user opened while its socket was closed: its reconnection focuses it even when started in the background.
   var pendingFocus = null;
   function focusGroup(gid, reload) {
@@ -524,7 +522,7 @@ export var liveBridge = (function () {
    */
   function connectPm(name) {
     var n = lower(name);
-    if (!pmOpen() || !send('private_message', 'connect:' + n, "Couldn't open the conversation with " + n + '.')) return false;
+    if (!pmOpen() || !send(PM_CONNECTION, 'connect:' + n, "Couldn't open the conversation with " + n + '.')) return false;
     connectTarget = n;
     return true;
   }
@@ -913,11 +911,11 @@ export var liveBridge = (function () {
       if (pmOpen()) {
         // Session already open: the friend list and the history were received before us, so we request them again.
         emit({ op: 'pmReady' });
-        send('private_message', 'settings', '');
-        send('private_message', 'wl', '');
-        send('private_message', 'getblock', '');
+        send(PM_CONNECTION, 'settings', '');
+        send(PM_CONNECTION, 'wl', '');
+        send(PM_CONNECTION, 'getblock', '');
       } else {
-        setTimeout(function () { if (!pmOpen()) { try { connect('private_message').catch(warn); } catch (e) { warn(e); } } }, 2500);
+        setTimeout(function () { if (!pmOpen()) { try { connect(PM_CONNECTION).catch(warn); } catch (e) { warn(e); } } }, 2500);
       }
     };
     // client.on receives a CustomEvent from the document, not the client: we read the state again on C.
@@ -953,7 +951,7 @@ export var liveBridge = (function () {
      * Tells whether a message already has the final id that replying to it or editing or deleting it waits for.
      * @param {string} id Message id in the state.
      */
-    delivered: function (id) { return !!id && String(id).indexOf('k:') !== 0; },
+    delivered: function (id) { return !!id && !isTempMsgId(id); },
     /**
      * Sends a group message or the edit of a message.
      * @param {string} gid Target group.
@@ -970,7 +968,7 @@ export var liveBridge = (function () {
       if (!built) return null;
       var failure = opts.editId ? "Your message wasn't edited." : opts.replyId ? "Your reply wasn't sent." : opts.quote ? "Your quote wasn't sent." : "Your message wasn't sent.";
       // BetterChatango adds the badge of its own picker (inject.js:5175), which Nightango replaces.
-      var flag = (CHANNEL_FLAG[opts.channel] || 0) + (BADGE_FLAG[opts.badge] || 0);
+      var flag = (CHANNELS[opts.channel] ? CHANNELS[opts.channel].flag : 0) + (BADGE_FLAG[opts.badge] || 0);
       if (!send(gid, 'bm:' + Math.round(15E5 * Math.random()).toString(36) + ':' + flag + ':' + built.body, failure)) return null;
       lastSent[gid] = text;
       return built.style;
@@ -1001,7 +999,7 @@ export var liveBridge = (function () {
       try {
         applyStyle(style);
         // Built once and sent as is: a second build would draw another <i…/> PM key than the one shown.
-        var body = C.sendMessage(esc(text), true, 'private_message', user);
+        var body = C.sendMessage(esc(text), true, PM_CONNECTION, user);
         if (typeof body !== 'string' || !body) return null;
         var head = /<g [^>]*>/.exec(body), at = head.index + head[0].length;
         // Like BetterChatango, an edit never carries a reply.
@@ -1012,7 +1010,7 @@ export var liveBridge = (function () {
         // BetterChatango archives a sent PM under client.private.focus, not its recipient: an upload can leave after a switch.
         // Without its history database that archive throws once the frame has left, and BetterChatango announces a failure (inject.js:4633-4667).
         C.private.focus = C.database && C.database.pm ? user : false;
-        try { if (!send('private_message', 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
+        try { if (!send(PM_CONNECTION, 'msg:' + user + ':' + body, failure)) return null; } finally { C.private.focus = pmFocus; }
         // BetterChatango only writes a Premium tag for a Premium account: every tag of this body is shown.
         var parsed = parseContent(body, false, true);
         return { style: parsed.style, text: parsed.text, parts: parsed.parts, embeds: parsed.embeds, key: parsed.key, replyId: parsed.replyId, editId: parsed.editId };
@@ -1037,7 +1035,7 @@ export var liveBridge = (function () {
      * @param {string[]} names Target correspondents. The reply arrives as a people op.
      * @returns {boolean} True if the frame was sent.
      */
-    refreshPresence: function (names) { return pmOpen() && send('private_message', 'getpresence:' + names.join(';'), ''); },
+    refreshPresence: function (names) { return pmOpen() && send(PM_CONNECTION, 'getpresence:' + names.join(';'), ''); },
     /**
      * Tells whether the account is Premium like BetterChatango before writing a Premium emoticon.
      * @returns {boolean} Status 200 or 210 of the premium frame, false while the private connection is not open.
@@ -1072,7 +1070,7 @@ export var liveBridge = (function () {
      * @param {boolean=} background True for a group that is not shown: the BetterChatango focus stays on the shown group.
      */
     reconnect: function (gid, background) {
-      connectThen(gid, function () { if (gid !== 'private_message' && (!background || pendingFocus === gid)) focusGroup(gid, true); });
+      connectThen(gid, function () { if (gid !== PM_CONNECTION && (!background || pendingFocus === gid)) focusGroup(gid, true); });
     },
     loadMore: function (gid) {
       var g = C.groups && C.groups[gid];
@@ -1081,8 +1079,8 @@ export var liveBridge = (function () {
     },
     /* Moderation: frames identical to the BetterChatango ones */
     deleteMessage: function (gid, id) { return send(gid, 'delmsg:' + id, "Couldn't delete the message."); },
-    deleteAllFrom: function (gid, m) { return send(gid, 'delallmsg:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), "Couldn't delete the messages."); },
-    ban: function (gid, m) { return send(gid, 'block:' + m.unid + ':' + m.ip + ':' + (/^[!#]/.test(m.author) ? '' : m.author), "The ban didn't go through."); },
+    deleteAllFrom: function (gid, m) { return send(gid, 'delallmsg:' + m.unid + ':' + m.ip + ':' + (isGuest(m.author) ? '' : m.author), "Couldn't delete the messages."); },
+    ban: function (gid, m) { return send(gid, 'block:' + m.unid + ':' + m.ip + ':' + (isGuest(m.author) ? '' : m.author), "The ban didn't go through."); },
     unban: function (gid, b) { return send(gid, 'removeblock:' + b.unid + ':' + b.ip, "The unban didn't go through."); },
     unbanAll: function (gid) { return send(gid, 'unbanall', "The unban didn't go through."); },
     /**
@@ -1129,15 +1127,15 @@ export var liveBridge = (function () {
     setMod: function (gid, name, flags) { return send(gid, 'addmod:' + name + ':' + flags, "Couldn't save this moderator."); },
     removeMod: function (gid, name) { return send(gid, 'removemod:' + name, "Couldn't remove this moderator."); },
     /* Private messages */
-    setStatus: function (status) { return send('private_message', 'idle:' + (status === 'idle' ? 0 : 1), "Couldn't change your status."); },
+    setStatus: function (status) { return send(PM_CONNECTION, 'idle:' + (status === 'idle' ? 0 : 1), "Couldn't change your status."); },
     addFriend: function (name) {
-      if (!send('private_message', 'wladd:' + name, "Couldn't add this friend.")) return false;
+      if (!send(PM_CONNECTION, 'wladd:' + name, "Couldn't add this friend.")) return false;
       awaitReply('wladd:' + lower(name), CONFIRM_TIMEOUT, { op: 'friendTimeout', name: lower(name) });
       return true;
     },
-    removeFriend: function (name) { return send('private_message', 'wldelete:' + name, "Couldn't remove this friend."); },
-    block: function (name) { return send('private_message', 'block:' + name + ':' + name + ':S', "The block didn't go through."); },
-    unblock: function (name) { return send('private_message', 'unblock:' + name, "The unblock didn't go through."); },
+    removeFriend: function (name) { return send(PM_CONNECTION, 'wldelete:' + name, "Couldn't remove this friend."); },
+    block: function (name) { return send(PM_CONNECTION, 'block:' + name + ':' + name + ':S', "The block didn't go through."); },
+    unblock: function (name) { return send(PM_CONNECTION, 'unblock:' + name, "The unblock didn't go through."); },
     /**
      * Changes a PM setting of the Chatango account then asks for the settings again to confirm it.
      * @param {string} key PM_SETTING_NAMES key.
@@ -1145,9 +1143,9 @@ export var liveBridge = (function () {
      * @returns {boolean} True if the frames were handed to BetterChatango.
      */
     setPmSetting: function (key, on) {
-      if (!send('private_message', 'setsettings:' + PM_SETTING_NAMES[key] + ':' + (on ? 'on' : 'off'), "Couldn't save your Chatango setting.")) return false;
+      if (!send(PM_CONNECTION, 'setsettings:' + PM_SETTING_NAMES[key] + ':' + (on ? 'on' : 'off'), "Couldn't save your Chatango setting.")) return false;
       // chadango sends setsettings without waiting for a reply: only the settings reply tells the new value.
-      send('private_message', 'settings', '');
+      send(PM_CONNECTION, 'settings', '');
       awaitReply('settings', CONFIRM_TIMEOUT, { op: 'pmSettingsTimeout' });
       return true;
     },
@@ -1300,12 +1298,12 @@ export var liveBridge = (function () {
         if (o.online) form.set('o', 1);
         form.set('h5', 1);
         form.set('f', o.from || 0);
-        form.set('t', o.to || 40);
+        form.set('t', o.to || MEET_PAGE);
         return fetch(CH.path('search'), { method: 'POST', body: form, credentials: 'include' });
       }).then(function (r) { return r.text(); }).then(function (text) {
         if (text.indexOf('h=') === 0) {
           var names = text.slice(2).split(':').map(function (x) { return lower(x.split(';')[0]); }).filter(Boolean);
-          if (names.length) send('private_message', 'getpresence:' + names.join(';'), "Couldn't load people.");
+          if (names.length) send(PM_CONNECTION, 'getpresence:' + names.join(';'), "Couldn't load people.");
           return names;
         }
         var reason = { overload: 'Chatango is overloaded. Meet people is limited to Premium members right now.', unsafe: "Chatango doesn't allow this search.", None: '', unauthed: 'Your Chatango session expired. Reload the page and log in again.' };
@@ -1332,7 +1330,7 @@ export var liveBridge = (function () {
           var birth = new Date(q('b')).getFullYear();
           var data = {
             missing: false, age: isNaN(birth) ? '' : String(new Date().getFullYear() - birth),
-            gender: GENDERS[q('s')] || '', location: q('l'), about: unquote(q('body')),
+            gender: GENDER_LABEL[q('s')] || '', location: q('l'), about: unquote(q('body')),
             premium: (parseInt(q('d'), 10) || 0) * 1000 > Date.now(), mini: null
           };
           if (!data.premium) return data;
@@ -1735,7 +1733,7 @@ export var liveBridge = (function () {
         var data = profileReply(resp, ['age', 'sex', 'loc']);
         // mod1.xml and mod2.xml can come back from the HTTP cache without the saved version: the local cache serves the version sent.
         var prev = profileCache[me] ? profileCache[me].data : {};
-        profileCache[me] = { at: Date.now(), data: Object.assign({}, prev, { missing: false, age: String(p.age), gender: GENDERS[p.gender] || '', location: p.location, about: p.about }) };
+        profileCache[me] = { at: Date.now(), data: Object.assign({}, prev, { missing: false, age: String(p.age), gender: GENDER_LABEL[p.gender] || '', location: p.location, about: p.about }) };
         fullProfileCache[me] = { at: Date.now(), data: sentFull };
         return data;
       });

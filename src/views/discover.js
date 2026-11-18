@@ -1,14 +1,11 @@
 import { T, h, useState } from '../core/globals.js';
 import { Dialog, useApp } from '../core/ui.js';
-import { ACCOUNT_NAME } from '../bridge/live-model.js';
 import { pageHeader } from './shell.js';
 import { JoinedGroups } from './live-joined.js';
 import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
+import { ACCOUNT_NAME, chatangoPageUrl, parseGroupName } from '../core/chatango.js';
 /* ---------- Discover ---------- */
-export function parseGroupName(v) {
-  return String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^client\.chatango\.com\/q\?/, '').replace(/\.chatango\.com.*$/, '').replace(/\/.*$/, '').replace(/^#/, '');
-}
 /**
  * Rejects a group missing from the sample data in the prototype.
  * @param {Object} s Application state.
@@ -72,7 +69,7 @@ export function CreateGroupDialog(p) {
     footer: [h(T.Button, { key: 'c', variant: 'ghost', onClick: p.onClose }, 'Cancel'), h(T.Button, { key: 'k', variant: 'primary', disabled: busy, onClick: create }, busy ? 'Creating group' : 'Create group')]
   },
     h('div', { className: 'dialog-body' },
-      h(T.TextField, { id: 'cg-name', label: 'Group name', value: name, error: err.name, hint: name ? 'https://' + (parseGroupName(name) || 'name') + '.chatango.com' : 'Lowercase letters, numbers and dashes.', onChange: function (ev) { setName(ev.target.value); setErr({}); } }),
+      h(T.TextField, { id: 'cg-name', label: 'Group name', value: name, error: err.name, hint: name ? chatangoPageUrl(parseGroupName(name) || 'name') : 'Lowercase letters, numbers and dashes.', onChange: function (ev) { setName(ev.target.value); setErr({}); } }),
       h(T.TextField, { id: 'cg-title', label: 'Title', value: title, error: err.title, placeholder: 'Shown under the name in Discover', onChange: function (ev) { setTitle(ev.target.value); } }),
       h(T.TextField, { id: 'cg-desc', label: 'Description', multiline: true, rows: 3, value: desc, labelAside: h('span', { className: 'tc-msg-time' }, desc.length + ' / 300'), maxLength: 300, onChange: function (ev) { setDesc(ev.target.value); } }),
       h('label', { className: 'tc-checkline', style: { justifyContent: 'space-between', width: '100%' } }, h('span', null, 'Show in Discover'), h(T.Switch, { checked: listed, onChange: function (ev) { setListed(ev.target.checked); } }))));

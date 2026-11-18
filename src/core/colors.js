@@ -93,15 +93,3 @@ export function accentScope(hex, theme) {
   var t = accentTokens(hex);
   return { '--accent': t.accent, '--on-accent': t.onAccent, '--accent-text': t.text[theme], '--accent-soft': t.soft[theme], '--focus-ring': t.text[theme] };
 }
-export var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Comic': '"Comic Sans MS", "Comic Sans", "Chalkboard SE", sans-serif', 'Georgia': 'Georgia, serif', 'Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Impact': 'Impact, sans-serif', 'Palatino': 'Palatino, serif', 'Papyrus': 'Papyrus, cursive', 'Times': 'Times, serif', 'Typewriter': 'Typewriter, "Courier New", monospace' };
-/**
- * Converts a Chatango font size to a percentage.
- * @param {number} size Chatango size, 11 equals 100 %.
- */
-export function fontPercent(size) { return Math.round(Math.min(200, Math.max(82, size * 100 / 11))); }
-export var CHANNELS = { none: { label: 'No channel', color: null }, red: { label: 'Red', color: '#e5484d' }, blue: { label: 'Blue', color: '#3e8bd8' }, mod: { label: 'Staff', color: '#8a8e96' } };
-/**
- * Names a channel like the send entry of the channel menu.
- * @param {string} k Key in CHANNELS.
- */
-export function channelLabel(k) { return k === 'none' ? CHANNELS.none.label : CHANNELS[k].label + ' channel'; }

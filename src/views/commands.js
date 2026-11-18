@@ -1,6 +1,7 @@
 import { confirmLeave } from './group.js';
 import { dmNameError } from './new-dm.js';
-import { parseGroupName, unknownGroupError } from './discover.js';
+import { unknownGroupError } from './discover.js';
+import { parseGroupName } from '../core/chatango.js';
 /* ---------- Composer commands ---------- */
 // BetterChatango's /background and /style stay plain messages until #70 and #71 give them an equivalent.
 var COMMANDS = {

@@ -135,7 +135,6 @@ export function trimEnd(text) {
 export function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
 // Own key only: a name such as constructor is also a key of every object.
 export function ownOf(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
-export function isGuest(name) { return /^[!#]/.test(name); }
 /**
  * Returns the last element of a list that passes a test.
  * @param {Array} list List searched from its end.
@@ -201,3 +200,9 @@ export function copyText(text, onDone) {
   }
   try { navigator.clipboard.writeText(text).then(function () { onDone(true); }, fallback); } catch (e) { fallback(); }
 }
+
+/**
+ * Names the local storage key for the data of one account.
+ * @param {string} me Lowercase username.
+ */
+export function skinKey(me) { return 'torch-skin:' + me; }

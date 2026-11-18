@@ -1,6 +1,6 @@
 import { Frag, React, T, h, useEffect, useState } from '../core/globals.js';
 import { copyText, cx, fmtTime } from '../core/util.js';
-import { CHANNELS, FONT_STACKS, SURFACE, ensureContrast, hexToRgb, mix, rgbToHex } from '../core/colors.js';
+import { SURFACE, ensureContrast, hexToRgb, mix, rgbToHex } from '../core/colors.js';
 import { MenuButton, Person, developerBadge, roleBadge, useAppApi, useStatePart } from '../core/ui.js';
 import { EMBED_LABEL, MessageText, httpsHost, messagePreview, shownParts, waitsForClick, warnOnLink } from '../core/rich-text.js';
 import { mentionsMe } from '../core/selectors.js';
@@ -9,6 +9,7 @@ import { liveBridge } from '../bridge/live-bridge.js';
 import { banItem, ignoreItem, styleItem, viewProfileItem, whoItem } from './members.js';
 import { MediaStar } from './media.js';
 import { LIVE } from '../core/env.js';
+import { CHANNELS, FONT_STACKS } from '../core/chatango.js';
 var UNSTYLED = { names: false, fonts: false, backgrounds: false };
 
 /**

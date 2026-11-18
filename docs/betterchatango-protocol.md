@@ -107,7 +107,7 @@ This list is closed. It covers the calls that the application code (bridge, load
 - `client.post('https://vissle.me/chatango/upload', form, { key: true })`, and this URL only: file upload through vissle. BetterChatango adds the vissle session key to the form (`inject.js:4744-4745`), which our code never reads. Never the `progress` option, whose branch posts the link itself in `client.focus` (`inject.js:4758-4787`). Source of the call: `inject.js:7551`, `inject.js:11048-11067`. Details in File uploads (vissle).
 - Never the `credential` option, which adds the password.
 - `GET https://api.vissle.me/v1/pmr/{name}` through `fetch`, without cookie or credential, `{name}` read by the bridge from `client.user.name`, only if `client.settings.privacy.private_messages.check_pmr` is on: PM restriction of one's own account (see PM restriction). Source: `inject.js:10631-10643`.
-- `GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential, `{name}` validated by `ACCOUNT_NAME` (`src/bridge/live-model.js`), one call per click on "Who is this": linked accounts of an account, shown to the user only ([ADR-0010](adr/0010-linked-accounts-on-request.md), see Linked accounts (vissle)). Source: `inject.js:7452-7477`.
+- `GET https://vissle.me/api/v1/who/{name}` through `fetch`, without cookie or credential, `{name}` validated by `ACCOUNT_NAME` (`src/core/chatango.js`), one call per click on "Who is this": linked accounts of an account, shown to the user only ([ADR-0010](adr/0010-linked-accounts-on-request.md), see Linked accounts (vissle)). Source: `inject.js:7452-7477`.
 - The public GETs on `ust.chatango.com`: `mod1.xml`, `mod2.xml`, `custom_profile.css`, `msgbg.xml`.
 - The search `chatango.com/search` with `credentials: 'include'`, as BetterChatango does.
 - `POST https://vissle.me/track1/activity`, through the loader's `GM_xmlhttpRequest` bridge, with `anonymous: true`, for the signed-in profile only and with the values the Visitors screen sends (see Profile activity (vissle)).
@@ -303,7 +303,7 @@ On the private connection. Timestamps are in seconds. `None` or 0 means unknown.
 - Tag `<i s="sm://{name}" w="16" h="16"/>`. Like BetterChatango, the bridge reads `s` at any position among the attributes. BetterChatango takes the name from the `emoji-item-{name}` class of its 66 SVGs (`client.html:31-97`), not from the shortcut: `*werewolf*` goes out as `sm://warewolf` (`inject.js:12503-12509`).
 - BetterChatango turns shortcuts into tags only in PMs (`parseEmoji`, `inject.js:5215` and `6889-6918`). In groups, it sends the shortcut as text.
 - A `data-premium` emoticon is shown only if the message carries the `PREMIUM` flag, bit `1 << 2` (`renderEmoji`, `inject.js:6930-6934`), read in `data[7]` in groups and in `data[4]` in PMs (`inject.js:4057-4061`). The group owner has it by default (`inject.js:7810-7812`), and so does an announcement (`inject.js:3810` and `3834`).
-- Nightango shows the system emoji that the `EMOTICONS` table (`src/bridge/live-model.js`) maps to the name, without image or request. A Premium emoticon without the flag becomes its first shortcut, `sm://stripes` the text `*stripes*`. A name missing from the table stays alone as text if it is made of 1 to 32 characters `[a-z0-9_-]`, otherwise it disappears. One's own sent PMs show the emoji of each known tag. Shortcuts typed as text stay text.
+- Nightango shows the system emoji that the `EMOTICONS` table (`src/core/emoticons.js`) maps to the name, without image or request. A Premium emoticon without the flag becomes its first shortcut, `sm://stripes` the text `*stripes*`. A name missing from the table stays alone as text if it is made of 1 to 32 characters `[a-z0-9_-]`, otherwise it disappears. One's own sent PMs show the emoji of each known tag. Shortcuts typed as text stay text.
 - Composer picker, group and PM: like the BetterChatango one (`inject.js:11963-12011`), it sorts the `EMOTICONS` entries into Classic and Premium, except those without an emoji. On click, BetterChatango adds the first shortcut of `data-entity`, surrounded by spaces, at the end of the field (`inject.js:11999-12005`). Nightango inserts it at the cursor, preceded by a space if the previous character is not one and followed by a space, without the `+N` scale. The Premium section appears only if `client.private.premium.status` is 200 or 210 (`premium` frame, `inject.js:4177`, read as in `inject.js:6900`). The text goes out as is through `client.sendMessage`: no new frame, no call to `parseEmoji`.
 
 ### Media library
@@ -529,7 +529,7 @@ Received frames only: nothing is sent. BetterChatango has no handler for them, t
 
 ### Flags
 
-The bits of the group flags, moderator rights, channels and messages are in `src/bridge/live-model.js` (`GROUP_FLAG`, `CHANNEL_FLAG`, `MSG_FLAG`), except those of the moderator rights, in `src/core/roles.js` (`PERM_FLAG`) because the prototype uses them too. They were taken from the BetterChatango `chatango.flags`.
+The bits of the group flags, channels and messages are in `src/core/chatango.js` (`GROUP_FLAG`, `CHANNELS`, `MSG_FLAG`, `BADGE_FLAG`), those of the moderator rights in `src/core/roles.js` (`PERM_FLAG`, `IS_STAFF_RIGHT`, and `EDIT_MOD_VISIBILITY` inside `ADMIN_MASK`). They were taken from the BetterChatango `chatango.flags`.
 
 ## BetterChatango startup settings
 

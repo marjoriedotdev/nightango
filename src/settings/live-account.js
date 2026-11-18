@@ -2,7 +2,7 @@ import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { shortDate } from '../core/util.js';
 import { ColorField, useApp } from '../core/ui.js';
 import { SAFE_IMAGE_URL } from '../core/rich-text.js';
-import { GENDER_LABEL, genderShort, miniStyleOf, premiumActive, premiumEndsSoon, userOf } from '../core/selectors.js';
+import { miniStyleOf, premiumActive, premiumEndsSoon, userOf } from '../core/selectors.js';
 import { miniStyleForm, miniStyleOfForm } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { FullProfileFrame, useFullProfileMedia } from '../views/profile.js';
@@ -13,8 +13,8 @@ import { BrowserTabSection, ChatangoPmSection, NotesSection, PRIVACY_LEDE, PmHis
 import { chatangoLink } from './live-group-view.js';
 import { AvatarCropDialog } from './avatar-crop.js';
 import { LIVE } from '../core/env.js';
+import { GENDER_LABEL, genderCode } from '../core/chatango.js';
 /* ---------- Account settings in live mode ---------- */
-var GENDER_CODE = { Male: 'M', Female: 'F' };
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];
 
 var AVATAR_TYPES = 'image/jpeg,image/png,image/gif';
@@ -71,7 +71,7 @@ export function ProfilePageLive() {
     var styleDirty = !!sent.style && JSON.stringify(sent.style) !== JSON.stringify(base.style);
     setSaving(true);
     // BetterChatango accepts only one request at a time: the background is sent after the profile.
-    (profileDirty ? liveBridge.saveProfile({ age: sent.age, gender: GENDER_CODE[sent.gender] || '?', location: sent.location, about: sent.about, dir: sent.dir, full: sent.full }).then(function () {
+    (profileDirty ? liveBridge.saveProfile({ age: sent.age, gender: genderCode(sent.gender) || '?', location: sent.location, about: sent.about, dir: sent.dir, full: sent.full }).then(function () {
       setBase(function (x) { return Object.assign({}, x, fields(sent)); });
       app.update(function (d) { var u = d.users[d.me]; if (u) { u.age = sent.age === '' ? '' : +sent.age; u.location = sent.location; u.about = sent.about; u.aboutHtml = sent.about; u.gender = sent.gender; } });
     }) : Promise.resolve()).then(function () {
@@ -113,7 +113,7 @@ export function ProfilePageLive() {
       }
     });
   }
-  var meta = [draft.age, genderShort(draft.gender), draft.location].filter(Boolean).join(' · ');
+  var meta = [draft.age, genderCode(draft.gender), draft.location].filter(Boolean).join(' · ');
   var preview = draft.style ? miniStyleOf(s.prefs, { miniStyle: miniStyleOfForm(draft.style) }, app.theme) : miniStyleOf(s.prefs, me, app.theme);
   var locked = !base.loaded || saving;
   var bioMarkup = useMarkupToolbar(bioInput, 'pf-bio'), fullMarkup = useMarkupToolbar(fullInput, 'pf-full', locked || draft.full === null);

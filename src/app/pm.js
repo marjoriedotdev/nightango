@@ -5,6 +5,7 @@ import { warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { ensureLiveUser, pmAuthor } from './live-state.js';
 import { LIVE } from '../core/env.js';
+import { MEET_PAGE } from '../core/chatango.js';
 /* ---------- PMs: conversations, unreads and private history ---------- */
 
 /**
@@ -162,8 +163,6 @@ export function mergePmHistory(c, list, onEntry) {
 // -- Private messages in live -------------------------------------------------
 // Chatango pushes no presence for a correspondent who is neither a friend nor connected since the last private connection.
 var PRESENCE_REFRESH = 5 * MIN;
-// Names per presence request, the page size of BetterChatango's Meet people.
-var PRESENCE_MAX = 40;
 /**
  * Merges the BetterChatango private history into the conversations and keeps the presence of their correspondents up to date.
  * @param {{state: Object, stateRef: Object, update: Function}} store Application state, its ref and its update.
@@ -208,7 +207,7 @@ export function useLivePms(store, localRef, pmArchive) {
     if (!s0.pmLoaded || !s0.friendsLoaded || (ifStale && Date.now() - presenceAt.current < PRESENCE_REFRESH)) return;
     // The shown conversation follows its presence through connect, whose last online time is exact.
     var names = favoritePeople(s0).concat(listedDms(s0).filter(function (n) { return !userOf(s0, n).favorite; }))
-      .filter(function (n) { return n !== s0.me && !isPaneOpen(s0, 'dm', n) && !userOf(s0, n).friend; }).slice(0, PRESENCE_MAX);
+      .filter(function (n) { return n !== s0.me && !isPaneOpen(s0, 'dm', n) && !userOf(s0, n).friend; }).slice(0, MEET_PAGE);
     if (names.length && liveBridge.refreshPresence(names)) presenceAt.current = Date.now();
   }
   useEffect(function () { if (LIVE && state.pmHistoryRev) refreshPmPresence(false); }, [state.pmHistoryRev, state.friendsLoaded]);

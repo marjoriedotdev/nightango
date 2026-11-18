@@ -25,8 +25,11 @@ export var ROLE_DESC = {
 /* Permission bits of a Chatango moderator, read from the BetterChatango client (chatango.flags) and cross-checked with chadango and chatango-lib. */
 var PERM_FLAG = { seeCounter: 64, seeIps: 16384, staffChannel: 128, modLog: 256, broadcast: 65536, bypass: 8192, bannedWords: 8, automod: 512, unbanAll: 1048576, editGroup: 32, editAnnouncement: 1024, editRestrictions: 16, manageMods: 2, closeGroup: 32768 };
 var PERM_MASK = Object.keys(PERM_FLAG).reduce(function (n, k) { return n | PERM_FLAG[k]; }, 0);
-// Permissions that make a moderator an administrator in Chatango terms.
-var ADMIN_MASK = 2 | 4 | 16 | 32 | 1024 | 32768;
+// Rights outside the permissions of the interface: EDIT_MOD_VISIBILITY shows or hides staff badges, IS_STAFF makes BetterChatango offer the administrator badge.
+var EDIT_MOD_VISIBILITY = 4;
+export var IS_STAFF_RIGHT = 262144;
+// Rights that make a moderator an administrator in Chatango terms.
+var ADMIN_MASK = PERM_FLAG.manageMods | EDIT_MOD_VISIBILITY | PERM_FLAG.editRestrictions | PERM_FLAG.editGroup | PERM_FLAG.editAnnouncement | PERM_FLAG.closeGroup;
 export function allPerms(v) { var o = {}; PERMS.forEach(function (p) { o[p.key] = v; }); return o; }
 export function defaultRoles() {
   var mod = allPerms(false); mod.seeCounter = mod.seeIps = mod.staffChannel = mod.modLog = mod.broadcast = true;

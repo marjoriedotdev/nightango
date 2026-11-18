@@ -2,6 +2,7 @@ import { useRef } from '../core/globals.js';
 import { isPaneOpen } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SESSION_RANK } from './live-state.js';
+import { PM_CONNECTION } from '../core/chatango.js';
 /* ---------- Reconnection of the live connections ---------- */
 // Delays of the attempts that follow a connection loss: the first one starts right away, the next ones leave a Chatango restart time to finish.
 export var RECONNECT_DELAYS = [0, 10000, 30000];
@@ -12,7 +13,7 @@ export var RECONNECT_DELAYS = [0, 10000, 30000];
  * @returns {?string} open, connecting or closed, null for a left or unknown group.
  */
 function connOf(s, gid) {
-  if (gid === 'private_message') return s.pmConn || null;
+  if (gid === PM_CONNECTION) return s.pmConn || null;
   var g = s.groups[gid];
   return g && g.joined ? g.conn : null;
 }
@@ -38,7 +39,7 @@ export function useReconnection(stateRef, update) {
    */
   function reconnect(gid, background) {
     liveBridge.reconnect(gid, background);
-    update(function (d) { var g = d.groups[gid]; if (g) g.conn = 'connecting'; if (gid === 'private_message') d.pmConn = 'connecting'; });
+    update(function (d) { var g = d.groups[gid]; if (g) g.conn = 'connecting'; if (gid === PM_CONNECTION) d.pmConn = 'connecting'; });
   }
   /**
    * Restarts the closed connections with automatic attempts for each one that fails.
@@ -47,7 +48,7 @@ export function useReconnection(stateRef, update) {
     var s0 = stateRef.current, held = s0.session && SESSION_RANK[s0.session.reason] >= SESSION_RANK.kicked;
     if (!s0.auth.loggedIn) return;
     var gids = Object.keys(s0.groups).filter(function (gid) { var g = s0.groups[gid]; return g.joined && g.conn === 'closed'; });
-    if (s0.pmConn === 'closed' && !held) gids.push('private_message');
+    if (s0.pmConn === 'closed' && !held) gids.push(PM_CONNECTION);
     gids.forEach(startRetries);
   }
   /**
@@ -55,7 +56,7 @@ export function useReconnection(stateRef, update) {
    * @param {string} gid Group or private_message.
    */
   function reconnectAuto(gid) {
-    reconnect(gid, gid !== 'private_message' && !isPaneOpen(stateRef.current, 'group', gid));
+    reconnect(gid, gid !== PM_CONNECTION && !isPaneOpen(stateRef.current, 'group', gid));
   }
   /**
    * Starts a sequence of automatic attempts with an immediate first one.

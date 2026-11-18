@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef } from '../core/globals.js';
-import { MIN, kindOf, ownOf, storageGet, storageMerge, storageSet } from '../core/util.js';
+import { MIN, kindOf, ownOf, skinKey, storageGet, storageMerge, storageSet } from '../core/util.js';
 import { plainOf } from '../core/draft.js';
 import { hexToRgb } from '../core/colors.js';
 import { mkSettings, roleOfFlags } from '../core/roles.js';
 import { favoritePeople, findMsg } from '../core/selectors.js';
-import { ACCOUNT_NAME, BADGE_FLAG, GROUP_FLAG, skinKey } from '../bridge/live-model.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SPACE_MAX, SPACE_NAME_MAX } from '../views/spaces.js';
 import { applyEdit } from './pm.js';
 import { IDLE_DELAY } from './root.js';
 import { LIVE } from '../core/env.js';
+import { ACCOUNT_NAME, BADGE_FLAG, GROUP_FLAG, PM_CONNECTION } from '../core/chatango.js';
 /* ---------- Live state: session, world and groups built for Root ---------- */
 // A session loss only gives way to a reason of equal or higher rank.
 export var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
@@ -21,7 +21,7 @@ export var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
 export function sessionAfterConn(d, op) {
   var s = d.session;
   if (op.state === 'open') {
-    if (s && s.reason === 'kicked') return op.gid === 'private_message' ? null : s;
+    if (s && s.reason === 'kicked') return op.gid === PM_CONNECTION ? null : s;
     return s && s.reason !== 'denied' && navigator.onLine ? null : s;
   }
   // Network back: if the reconnections started on its return all fail, "offline" gives way to "lost".

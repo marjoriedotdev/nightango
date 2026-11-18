@@ -1,12 +1,13 @@
 import { T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { Person, SkeletonRows, useApp } from '../core/ui.js';
 import { RichText } from '../core/rich-text.js';
-import { genderShort, miniStyleOf, userOf } from '../core/selectors.js';
+import { miniStyleOf, userOf } from '../core/selectors.js';
 import { coverReveal, miniSkin, useMiniCover } from '../views/profile.js';
 import { ActivityRow, Page, setIn } from './shell.js';
 import { useMarkupToolbar } from './markup-toolbar.js';
 import { ProfilePageLive } from './live-account.js';
 import { LIVE } from '../core/env.js';
+import { genderCode } from '../core/chatango.js';
 export function ProfilePage() {
   if (LIVE) return h(ProfilePageLive, null);
   var app = useApp(), s = app.state, me = userOf(s, s.me);
@@ -16,7 +17,7 @@ export function ProfilePage() {
   var dirty = JSON.stringify(draft) !== JSON.stringify(snapshot());
   function set(k, v) { setDraft(function (d) { var n = JSON.parse(JSON.stringify(d)); setIn(n, k, v); return n; }); }
   var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
-  var meta = [draft.age, genderShort(draft.gender), draft.location].filter(Boolean).join(' · ');
+  var meta = [draft.age, genderCode(draft.gender), draft.location].filter(Boolean).join(' · ');
   return h(Page, { title: 'Profile', lede: 'Your Chatango profile. Everyone on Chatango sees it.', wide: true },
     h('div', { className: 'split' },
       h('div', { className: 'grow' },

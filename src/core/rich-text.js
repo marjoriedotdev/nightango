@@ -2,8 +2,8 @@ import { Frag, h, useState } from './globals.js';
 import { trimEnd } from './util.js';
 import { SURFACE, cssColor, ensureContrast } from './colors.js';
 import { useApp, useAppApi } from './ui.js';
-import { ACCOUNT_NAME } from '../bridge/live-model.js';
 import { mediaLinks } from '../bridge/live-parse.js';
+import { ACCOUNT_NAME } from './chatango.js';
 export var EMBED_LABEL = { youtube: 'Video', tiktok: 'Video', x: 'Post', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
 /**
  * Returns the text segments of a message as shown, without the links it already shows as a media.

@@ -1,7 +1,7 @@
 import { Frag, T, h, useMemo, useRef, useState } from '../core/globals.js';
 import { Dialog, useApp } from '../core/ui.js';
-import { profileImgSrc } from '../bridge/live-model.js';
 import { liveBridge } from '../bridge/live-bridge.js';
+import { profileImgSrc } from '../core/chatango.js';
 /* ---------- Profile picture cropping ---------- */
 // Smallest square in pixels of full.jpg, unless the image is smaller.
 var CROP_MIN = 32;

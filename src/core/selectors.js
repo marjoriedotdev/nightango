@@ -1,8 +1,9 @@
 import { ownOf } from './util.js';
 import { plainOf } from './draft.js';
 import { SURFACE, ensureContrast } from './colors.js';
-import { allPerms, flagsToPerms } from './roles.js';
-import { GROUP_FLAG, IS_STAFF_RIGHT } from '../bridge/live-model.js';
+import { IS_STAFF_RIGHT, allPerms, flagsToPerms } from './roles.js';
+import { ACCOUNT_NAME, GROUP_FLAG, plainMsgId, tempMsgId } from './chatango.js';
+import { LIVE } from './env.js';
 export function roleOf(group, name) { return group && group.settings && group.settings.staff ? group.settings.staff[name] || null : null; }
 /**
  * Returns the role shown by the badge a live group message carries, as BetterChatango shows it.
@@ -80,7 +81,6 @@ export function isHiddenAuthor(state, name) { var u = userOf(state, name); retur
  * @param {string} text Message text.
  */
 export function mentionsMe(me, text) { return new RegExp('@' + me + '(?![A-Za-z0-9_-])', 'i').test(text); }
-function plainMsgId(id) { return String(id).replace(/^k:/, ''); }
 /**
  * Finds a loaded group message by its temporary or final id.
  * @param {Object} g Group in the state.
@@ -89,7 +89,7 @@ function plainMsgId(id) { return String(id).replace(/^k:/, ''); }
 export function findMsg(g, id) {
   if (!g || !id) return null;
   var plain = plainMsgId(id), list = plainOf(g.messages);
-  for (var i = list.length - 1; i >= 0; i--) { var x = list[i]; if (x.id === plain || x.id === 'k:' + plain) return g.messages[i]; }
+  for (var i = list.length - 1; i >= 0; i--) { var x = list[i]; if (x.id === plain || x.id === tempMsgId(plain)) return g.messages[i]; }
   return null;
 }
 /**
@@ -228,12 +228,6 @@ export function pmShownIndex(list, x) {
   return i >= 0 ? i : list.findIndex(function (y) { return !y.archiveTs && (key && y.key ? y.key === key : y.from === x.from && pmContentKey(y) === k && Math.abs(y.ts - x.ts) < 120000); });
 }
 export function statusLabel(s) { return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline'; }
-export var GENDER_LABEL = { M: 'Male', F: 'Female' };
-/**
- * Abbreviates the gender of a profile.
- * @param {string} g Gender in full.
- */
-export function genderShort(g) { return g === 'Male' ? 'M' : g === 'Female' ? 'F' : null; }
 /**
  * Returns the readable colors of the Premium background of a mini profile.
  * @param {Object} prefs User preferences.
@@ -246,3 +240,9 @@ export function miniStyleOf(prefs, u, theme) {
   var text = ensureContrast(m.text || SURFACE[theme].body, m.bg, 4.5);
   return { bg: m.bg, text: text, link: m.link ? ensureContrast(m.link, m.bg, 4.5) : text, image: m.image, repeat: m.repeat };
 }
+/**
+ * Tells whether the mini profile of an account is still pending.
+ * @param {string} name Member name.
+ * @param {Object} u Member in the state.
+ */
+export function isProfilePending(name, u) { return LIVE && ACCOUNT_NAME.test(name) && !u.profileLoaded && !u.profileFailed; }

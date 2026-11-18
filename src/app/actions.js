@@ -5,7 +5,6 @@ import { DM_LINES, SAMPLE_TIKTOK_THUMB, SAMPLE_X_POST, sampleMedia, sampleVisits
 import { BETTER_CHATANGO_SAVE_FAILED } from '../core/prefs.js';
 import { useLatestCalls } from '../core/ui.js';
 import { findMsg, readThrough, sentBadge, shownName, trimThread, userOf } from '../core/selectors.js';
-import { ACCOUNT_NAME, GROUP_FLAG, visitorPage } from '../bridge/live-model.js';
 import { GIF_URL, esc, lower, mediaEntryOk, mediaName, pmRecordEntry, screenPmRecords, warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { editedId } from '../views/message.js';
@@ -15,6 +14,8 @@ import { applyGroupEdit, banListOf, ensureLiveGroup, ensureLiveUser, ensureUnsee
 import { addSentPm, memoryPmArchive, mergePmHistory, pmConversation, pmMessage, readPm, syncPmUnread, unreadPm } from './pm.js';
 import { dropMentions, logMention } from './inbox.js';
 import { LIVE } from '../core/env.js';
+import { ACCOUNT_NAME, GROUP_FLAG, MEET_PAGE, PM_CONNECTION, isGuest } from '../core/chatango.js';
+import { visitorPage } from '../core/vissle.js';
 /* ---------- Actions: what the views ask, passed to Chatango by BetterChatango in live ---------- */
 /**
  * Puts the sample world of the prototype into the state with its mentions recorded like those of the live history.
@@ -526,7 +527,7 @@ export function useActions(k) {
       opts = opts || {};
       var me = stateRef.current.me, replyKey = opts.replyTo && opts.replyTo.key;
       var sent = liveBridge.sendPm(name, text, stateRef.current.ownStyle, { replyId: replyKey, editId: opts.editKey, quote: opts.quote });
-      if (!sent) { if (!opts.quiet) messageFailed('private_message', opts.editKey ? 'Message not edited.' : 'Private message not sent.'); return false; }
+      if (!sent) { if (!opts.quiet) messageFailed(PM_CONNECTION, opts.editKey ? 'Message not edited.' : 'Private message not sent.'); return false; }
       update(function (d) { addSentPm(d, name, { from: me, key: sent.key, replyId: sent.replyId, editId: sent.editId, text: sent.text, parts: sent.parts, embeds: sent.embeds, ts: Date.now() }); });
       setOwnStyle(sent.style);
       return true;
@@ -633,13 +634,13 @@ export function useActions(k) {
     actions.searchPeople = function (f, more) {
       var cur = stateRef.current.meet, from = more && cur ? cur.next : 0, token = (cur && cur.token || 0) + 1;
       update(function (d) { d.meet = Object.assign({ results: [] }, more ? d.meet : null, { loading: true, error: null, filters: f, token: token }); });
-      liveBridge.searchPeople(Object.assign({}, f, { from: from, to: from + 40 })).then(function (names) {
+      liveBridge.searchPeople(Object.assign({}, f, { from: from, to: from + MEET_PAGE })).then(function (names) {
         update(function (d) {
           if (d.meet.token !== token) return;
           var prev = more ? d.meet.results : [];
           var fresh = names.filter(function (n) { return prev.indexOf(n) < 0; });
           fresh.forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
-          d.meet = { results: prev.concat(fresh), next: from + names.length, loading: false, error: null, done: names.length < 40, filters: f, token: token };
+          d.meet = { results: prev.concat(fresh), next: from + names.length, loading: false, error: null, done: names.length < MEET_PAGE, filters: f, token: token };
         });
       }, function (e) {
         update(function (d) { if (d.meet.token === token) Object.assign(d.meet, { loading: false, error: e && e.message ? e.message : "Search didn't work. Try again." }); });
@@ -714,7 +715,7 @@ export function useActions(k) {
     actions.ban = function (gid, name, reason, opts) {
       var g = stateRef.current.groups[gid], m = opts && opts.msg && opts.msg.unid ? opts.msg : null;
       // Guests and anons can share a name: they are only banned from the chosen message.
-      if (!m && /^[!#]/.test(name)) { toast('Ban guests from one of their messages.'); return false; }
+      if (!m && isGuest(name)) { toast('Ban guests from one of their messages.'); return false; }
       m = m || (g && lastMessageOf(g, name));
       if (!m) { toast('No recent message from ' + shownName(stateRef.current, name) + ' in #' + gid + '. Chatango bans someone from one of their messages.'); return false; }
       if (!liveBridge.ban(gid, m)) return false;

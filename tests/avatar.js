@@ -10,7 +10,7 @@ w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'u
 w.eval(fs.readFileSync(S + '/torchds/project/components/bundle.js', 'utf8'));
 w.__TORCH_LIVE__ = true;
 // avatarSrc and the T.Avatar wrapper as assembled in the app, outside every season.
-w.eval(await bundleForTest("export { T } from './src/core/globals.js'; export { avatarSrc } from './src/bridge/live-model.js';"));
+w.eval(await bundleForTest("export { T } from './src/core/globals.js'; export { avatarSrc } from './src/core/chatango.js';"));
 w.__T = w.__mod.T; w.__src = w.__mod.avatarSrc;
 const check = (c, msg) => console.log((c ? 'ok  ' : 'FAIL') + ' ' + msg);
 check(w.__src('Marjorie', 36) === 'https://ust.chatango.com/profileimg/m/a/marjorie/thumb_m.jpg', 'url thumb_m');
