@@ -1,10 +1,10 @@
 import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
-import { MIN, cx, dayKey, dayLabel, fmtTime, lastMatch, warn } from '../core/util.js';
+import { cx, dayKey, dayLabel, fmtTime, lastMatch, warn } from '../core/util.js';
 import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useOutside, useRightColumn, useRowBatches, useStatePart, useWideLayout } from '../core/ui.js';
 import { bidiText } from '../core/rich-text.js';
 import { THREAD_MAX, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, shownName, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { MessageContent, authorName, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton } from './message.js';
+import { MessageContent, authorName, continues, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton } from './message.js';
 import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
 import { popOutItem } from './pip-window.js';
 import { inCurrentSpace, spacesItem } from './spaces.js';
@@ -221,7 +221,7 @@ export function DmThread(p) {
     var original = m.replyTo ? byKey[m.replyTo.key] || null : null;
     lastRow = joinRow(prev && lastRow, {
       key: m.id, m: m, shown: shownName(s, m.author), peer: id, me: s.me, prefs: s.prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, avatarV: a.avatarV,
-      continued: !!prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN, joinPrev: false, joinNext: false, highlight: log.targetId === m.id,
+      continued: continues(prev, m), joinPrev: false, joinNext: false, highlight: log.targetId === m.id,
       original: original, onJump: calls.jump, onReply: u.blocked ? null : calls.reply, onQuote: u.blocked ? null : calls.quote, onEdit: u.blocked ? null : calls.edit
     }, dmRowFill(m, a, s.prefs, app.theme));
     rows.push(lastRow);

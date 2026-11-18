@@ -1,11 +1,11 @@
 import { Frag, React, T, h, useEffect, useLayoutEffect, useMemo, useRef, useState } from '../core/globals.js';
-import { MIN, copyText, cx, dayKey, dayLabel, lastMatch, plural } from '../core/util.js';
+import { copyText, cx, dayKey, dayLabel, lastMatch, plural } from '../core/util.js';
 import { accentOf, accentScope } from '../core/colors.js';
 import { ROLE_LONG } from '../core/roles.js';
 import { AccentSwatches, ConnectionBanner, Dialog, MenuButton, groupDraftKey, presenceSr, roleBadge, useApp, useDraft, useLatestCalls, useRightColumn } from '../core/ui.js';
 import { badgeChoices, canBanMember, findMsg, groupRights, isHiddenAuthor, isStaffRole, messageBadge, msgFinder, roleOf, sentBadge, shownName, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { MessageEmbeds, MessageRow, canEditGroupMessage, editedId, groupRowFill, joinRow, mentionHandle, quoteOf } from './message.js';
+import { MessageEmbeds, MessageRow, canEditGroupMessage, continues, editedId, groupRowFill, joinRow, mentionHandle, quoteOf } from './message.js';
 import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
 import { GroupInfoSheet, MembersPanel } from './members.js';
 import { popOutItem } from './pip-window.js';
@@ -143,11 +143,11 @@ export function GroupView(p) {
         prev = null; continue;
       }
     }
-    var cont = !!(prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted), a = userOf(s, m.author);
+    var a = userOf(s, m.author);
     lastRow = joinRow(prev && lastRow, {
       key: m.id, m: m, shown: shownName(s, m.author), gid: g.id, me: me, prefs: prefs, theme: app.theme, style: a.style, unstyled: !!a.unstyled, ignored: !!a.ignored, msgBg: a.msgBg, avatarV: a.avatarV,
       role: LIVE ? messageBadge(g, m) : roleOf(g, m.author), staff: staff, canBan: canBanMember(g, me, m.author), seeIps: !!rights.seeIps,
-      original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: cont, joinPrev: false, joinNext: false, highlight: log.targetId === m.id,
+      original: m.replyTo ? findOriginal(m.replyTo.id) : null, continued: continues(prev, m), joinPrev: false, joinNext: false, highlight: log.targetId === m.id,
       onReply: calls.reply, onQuote: calls.quote, onEdit: calls.edit, onMention: calls.mention, onJump: calls.jump
     }, groupRowFill(m, me, a, prefs, app.theme));
     items.push(lastRow);

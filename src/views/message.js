@@ -1,5 +1,5 @@
 import { Frag, React, T, h, useEffect, useState } from '../core/globals.js';
-import { copyText, cx, fmtTime } from '../core/util.js';
+import { MIN, copyText, cx, fmtTime } from '../core/util.js';
 import { SURFACE, ensureContrast, hexToRgb, mix, rgbToHex } from '../core/colors.js';
 import { MenuButton, Person, developerBadge, roleBadge, useAppApi, useStatePart } from '../core/ui.js';
 import { MessageText, httpsHost, waitsForClick, warnOnLink } from '../core/rich-text.js';
@@ -87,6 +87,15 @@ export function groupRowFill(m, me, u, prefs, theme) {
  */
 export function dmRowFill(m, u, prefs, theme) {
   return memberStyles(u, prefs.styles, theme, false).row ? 'member:' + m.author : null;
+}
+
+/**
+ * Tells whether a message shows as the follow-up of the previous one: same author within five minutes, neither a reply nor next to a deleted message.
+ * @param {?Object} prev Previous message of the log, null after a divider or another kind of row.
+ * @param {Object} m Message.
+ */
+export function continues(prev, m) {
+  return !!prev && prev.author === m.author && !m.replyTo && m.ts - prev.ts < 5 * MIN && !m.deleted && !prev.deleted;
 }
 
 /**
