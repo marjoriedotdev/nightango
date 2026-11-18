@@ -7,7 +7,7 @@ import { miniStyleForm, miniStyleOfForm } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { FullProfileFrame, useFullProfileMedia } from '../views/profile.js';
 import { useMarkupToolbar } from './markup-toolbar.js';
-import { ProfilePreviewCard, VisibilitySection, VisitorsSection } from './profile.js';
+import { AboutYouFields, ProfilePreviewCard, VisibilitySection, VisitorsSection, ageError } from './profile.js';
 import { BrowserTabSection, ChatangoPmSection, NotesSection, PRIVACY_LEDE, PmHistoryRows, StartupSection } from './privacy.js';
 import { AvatarCropDialog } from './avatar-crop.js';
 import { LIVE } from '../core/env.js';
@@ -42,7 +42,7 @@ export function ProfilePageLive() {
   var avatarInput = useRef(null), bannerInput = useRef(null), bioInput = useRef(null), fullInput = useRef(null);
   var media = useFullProfileMedia();
   var dirty = JSON.stringify(draft) !== JSON.stringify(editable(base));
-  var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
+  var ageErr = ageError(draft.age);
   var imageErr = draft.style && draft.style.image && !SAFE_IMAGE_URL.test(draft.style.image) ? 'Enter an image link that starts with https:// and has no spaces, quotes or parentheses.' : '';
   function set(k, v) { setDraft(function (d) { var n = Object.assign({}, d); n[k] = v; return n; }); }
   function setStyle(k, v) { setDraft(function (d) { var n = Object.assign({}, d, { style: Object.assign({}, d.style) }); n.style[k] = v; return n; }); }
@@ -131,12 +131,7 @@ export function ProfilePageLive() {
               h('input', { ref: avatarInput, type: 'file', accept: AVATAR_TYPES, hidden: true, onChange: pickAvatar })))),
         h(T.SettingsSection, { title: 'About you', padded: true },
           h('fieldset', { disabled: locked, style: { border: 0, margin: 0, padding: 0, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 } },
-            h('div', { className: 'grid3' },
-              h(T.TextField, { id: 'pf-age', label: 'Age', type: 'number', min: 13, max: 120, value: draft.age, error: ageErr || undefined, onChange: function (e) { set('age', e.target.value); } }),
-              h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'pf-gender' }, 'Gender'),
-                h('select', { id: 'pf-gender', className: 'tc-input', value: draft.gender, onChange: function (e) { set('gender', e.target.value); } }, [['Not specified', 'Not specified'], ['Male', 'M'], ['Female', 'F']].map(function (g) { return h('option', { key: g[0], value: g[0] }, g[1]); }))),
-              h(T.TextField, { id: 'pf-loc', label: 'Location', value: draft.location, onChange: function (e) { set('location', e.target.value); } })),
-            h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, inputRef: bioInput, toolbar: bioMarkup.toolbar, onKeyDown: bioMarkup.onKeyDown, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }))),
+            h(AboutYouFields, { draft: draft, set: set, ageErr: ageErr, bioInput: bioInput, bioMarkup: bioMarkup }))),
         h(MiniBackgroundSection, { style: draft.style, failed: me.profileFailed, locked: locked, uploading: uploading, imageErr: imageErr, onChange: setStyle, onUpload: function () { bannerInput.current.click(); } }),
         h('input', { ref: bannerInput, type: 'file', accept: BANNER_TYPES, hidden: true, onChange: pickBanner }),
         h(T.SettingsSection, { title: 'Full profile', description: 'HTML page on chatango.com, opened from your mini profile.', padded: true },

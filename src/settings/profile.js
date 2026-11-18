@@ -1,4 +1,4 @@
-import { T, h, useEffect, useRef, useState } from '../core/globals.js';
+import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { SkeletonRows, useApp } from '../core/ui.js';
 import { RichText } from '../core/rich-text.js';
 import { miniStyleOf, userOf } from '../core/selectors.js';
@@ -14,19 +14,14 @@ export function ProfilePage() {
   var bioInput = useRef(null), bioMarkup = useMarkupToolbar(bioInput, 'pf-bio');
   var dirty = JSON.stringify(draft) !== JSON.stringify(snapshot());
   function set(k, v) { setDraft(function (d) { var n = JSON.parse(JSON.stringify(d)); setIn(n, k, v); return n; }); }
-  var ageErr = draft.age !== '' && (isNaN(+draft.age) || +draft.age < 13 || +draft.age > 120) ? 'Enter an age between 13 and 120.' : '';
+  var ageErr = ageError(draft.age);
   var meta = [draft.age, genderCode(draft.gender), draft.location].filter(Boolean).join(' · ');
   return h(Page, { title: 'Profile', lede: 'Your Chatango profile. Everyone on Chatango sees it.', wide: true },
     h('div', { className: 'split' },
       h('div', { className: 'grow' },
         h(T.SettingsSection, { title: 'About you', padded: true },
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
-            h('div', { className: 'grid3' },
-              h(T.TextField, { id: 'pf-age', label: 'Age', type: 'number', min: 13, max: 120, value: draft.age, error: ageErr || undefined, onChange: function (e) { set('age', e.target.value); } }),
-              h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'pf-gender' }, 'Gender'),
-                h('select', { id: 'pf-gender', className: 'tc-input', value: draft.gender, onChange: function (e) { set('gender', e.target.value); } }, [['Not specified', 'Not specified'], ['Male', 'M'], ['Female', 'F']].map(function (g) { return h('option', { key: g[0], value: g[0] }, g[1]); }))),
-              h(T.TextField, { id: 'pf-loc', label: 'Location', value: draft.location, onChange: function (e) { set('location', e.target.value); } })),
-            h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: 2000, value: draft.about, inputRef: bioInput, toolbar: bioMarkup.toolbar, onKeyDown: bioMarkup.onKeyDown, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / 2000'), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }))),
+            h(AboutYouFields, { draft: draft, set: set, ageErr: ageErr, bioInput: bioInput, bioMarkup: bioMarkup }))),
         h(VisibilitySection, { meet: draft.meet, onChange: function (v) { set('meet', v); } }),
         h(VisitorsSection, { bio: me.about || '', draft: draft.about, onDraft: function (v) { set('about', v); } })),
       h('aside', { className: 'side', 'aria-labelledby': 'pv-h' },
@@ -41,6 +36,29 @@ export function ProfilePage() {
         app.ui.toast('Profile saved.', { tone: 'success' });
       }, saveLabel: 'Save profile'
     }, 'Unsaved changes to your Chatango profile') : null);
+}
+
+// BetterChatango's limit of a bio, the tag of the vissle tracker included.
+var BIO_MAX = 2000;
+/**
+ * Tells why the age typed in the profile can't be saved.
+ * @param {string} age Typed age, empty when none is given.
+ * @returns {string} Error to show, empty when the age can be saved.
+ */
+export function ageError(age) { return age !== '' && (isNaN(+age) || +age < 13 || +age > 120) ? 'Enter an age between 13 and 120.' : ''; }
+/**
+ * Age, gender, location and bio fields of the profile, the same in live and in the prototype.
+ * @param {{draft: Object, set: function(string, *), ageErr: string, bioInput: Object, bioMarkup: Object}} p Profile draft and its setter, age error, bio field and its formatting bar (useMarkupToolbar).
+ */
+export function AboutYouFields(p) {
+  var draft = p.draft, set = p.set, bioInput = p.bioInput, bioMarkup = p.bioMarkup, ageErr = p.ageErr;
+  return h(Frag, null,
+    h('div', { className: 'grid3' },
+      h(T.TextField, { id: 'pf-age', label: 'Age', type: 'number', min: 13, max: 120, value: draft.age, error: ageErr || undefined, onChange: function (e) { set('age', e.target.value); } }),
+      h('div', { className: 'tc-field' }, h('label', { className: 'tc-label', htmlFor: 'pf-gender' }, 'Gender'),
+        h('select', { id: 'pf-gender', className: 'tc-input', value: draft.gender, onChange: function (e) { set('gender', e.target.value); } }, [['Not specified', 'Not specified'], ['Male', 'M'], ['Female', 'F']].map(function (g) { return h('option', { key: g[0], value: g[0] }, g[1]); }))),
+      h(T.TextField, { id: 'pf-loc', label: 'Location', value: draft.location, onChange: function (e) { set('location', e.target.value); } })),
+    h(T.TextField, { id: 'pf-bio', label: 'Bio', multiline: true, rows: 5, maxLength: BIO_MAX, value: draft.about, inputRef: bioInput, toolbar: bioMarkup.toolbar, onKeyDown: bioMarkup.onKeyDown, labelAside: h('span', { className: 'tc-msg-time' }, draft.about.length + ' / ' + BIO_MAX), hint: 'Shown in your mini profile.', onChange: function (e) { set('about', e.target.value); } }));
 }
 
 /**
@@ -112,7 +130,7 @@ export function VisitorsSection(p) {
   function toggleTracker() {
     if (drafted) { p.onDraft(p.draft.replace(VISSLE_TRACKER_LINE, '')); return; }
     // BetterChatango rule: the bio, tag included, stays strictly under 2000 characters.
-    var over = p.draft.length - (2000 - VISSLE_TRACKER_ADD.length) + 1;
+    var over = p.draft.length - (BIO_MAX - VISSLE_TRACKER_ADD.length) + 1;
     if (over > 0) { app.ui.toast('Remove ' + over + (over === 1 ? ' character' : ' characters') + ' from your bio to make room for the tracker.', { tone: 'error' }); return; }
     p.onDraft(p.draft + VISSLE_TRACKER_ADD);
   }
