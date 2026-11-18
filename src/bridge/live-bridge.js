@@ -296,7 +296,8 @@ export var liveBridge = (function () {
     }
   }
   // Frames that BetterChatango does not listen to: we add a handler, which its dispatcher calls like its own.
-  var GROUP_EXTRA = ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'show_tb', 'tb', 'nlptb', 'show_nlp_tb', 'ratelimited'];
+  // groupflagstoggled is read by no one: its handler only keeps BetterChatango from logging it as unknown, which the journal would note on every flag change.
+  var GROUP_EXTRA = ['getratelimit', 'ratelimitset', 'addmoderr', 'updatemoderr', 'removemoderr', 'groupflagstoggled', 'show_tb', 'tb', 'nlptb', 'show_nlp_tb', 'ratelimited'];
   function wrapTable(table, kind) {
     if (!table) return;
     if (kind === 'group') GROUP_EXTRA.forEach(function (name) { if (!(name in table)) table[name] = function () { /* handler added by Nightango */ }; });
