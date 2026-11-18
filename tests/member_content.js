@@ -11,7 +11,7 @@ w.eval(fs.readFileSync('node_modules/react/umd/react.development.js', 'utf8'));
 w.eval(fs.readFileSync('node_modules/react-dom/umd/react-dom.development.js', 'utf8'));
 w.eval(fs.readFileSync(ROOT + '/torchds/project/components/bundle.js', 'utf8'));
 (async () => {
-w.eval(await bundleForTest("export { parseMiniCss, parseContent } from './src/bridge/live-parse.js'; export { shownParts } from './src/core/rich-text.js';"));
+w.eval(await bundleForTest("export { parseMiniCss } from './src/bridge/live-parse.js'; export { parseContent, shownParts } from './src/core/message-content.js';"));
 const m = w.__mod;
 
 const log = [];

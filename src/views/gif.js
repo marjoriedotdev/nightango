@@ -1,7 +1,7 @@
 import { T, h, useEffect, useMemo, useRef, useState } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
-import { GIF_URL } from '../bridge/live-parse.js';
 import { MediaStar, MediaStarButton, mediaThumbShown } from './media.js';
+import { GIF_URL } from '../core/message-content.js';
 /* ---------- GIF tab of the composer picker ---------- */
 var RECENT_GIFS_MAX = 24;
 

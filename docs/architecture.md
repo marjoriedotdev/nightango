@@ -9,7 +9,7 @@ src/
   core/       shared base, evaluated first
     env.js           page environment set by the loader: LIVE, JOURNAL, root element and theme of the viewer, mount point, showing and hiding the interface, BetterChatango refs
     globals.js       React aliases, T wrapper (live avatars), hooks
-    util.js          time, local storage, copy, reading a JSON file, downloading a JSON file, trailing white space trim
+    util.js          time, local storage (skinKey), copy, reading a JSON file, downloading a JSON file, trailing white space trim, console warning (warn), lowercase, HTML escaping, URI decoding
     draft.js         copy-on-write drafts of the state (openDraft), plain object behind a draft for the scans that only read (plainOf)
     colors.js        colors and contrast
     chatango.js      facts of Chatango shared by both modes: account names and guests (ACCOUNT_NAME, isGuest), profile pictures (avatarSrc, AVATAR_VERSION), page addresses (chatangoPageUrl, parseGroupName),
@@ -23,15 +23,16 @@ src/
                      functions that keep their identity across renders (useLatestCalls), Layers (layer node and open dialogs of the interface), Portal (#layer layer), useFloating (layer anchored to its trigger), useDraft (composer text per conversation), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
                      Person (avatar and name that open the profile), role and "You" badges, list presence,
                      useRightColumn (single 1180 px threshold: right column above, full screen below)
-    rich-text.js     MessageText (emphasis, quotes, mentions, links), memberLink (member link through the link warning), bidiText (plain text with its names, links and quotes kept in their own direction), shownParts (shown text without the links shown as a media), trusted hosts (isTrustedUrl),
+    rich-text.js     MessageText (emphasis, quotes, mentions, links), memberLink (member link through the link warning), bidiText (plain text with its names, links and quotes kept in their own direction), trusted hosts (isTrustedUrl),
                      RichText (sanitized mini profile), unlinkFullProfile (full profile links removed and listed), fullProfileDoc
+    message-content.js  what a message holds once read (parseContent, parsePm): text, emphasis segments (EMPHASIS), references (encodeRef), media (mediaLinks, textLinks),
+                     shown text without the links shown as a media (shownParts, messagePreview, EMBED_LABEL)
+    media-library.js rules of the BetterChatango media library shared with the sample one: page size, entry validation, page order (mediaMatch), import screening
     selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry,
                      message cap of a group or a conversation (THREAD_MAX, trimThread)
   bridge/     the bridge to BetterChatango
-    live-parse.js    pure bridge functions: message content (parseContent, media), group frames,
-                     Premium background (parseMiniCss, background form), allowed client.post calls (postRefusal), updateprofile response, message background (parseMsgBg), vissle activity replies (parseVisits), linked accounts (parseWho), presence, timestamps,
-                     message references, private history records (reading, sorting an import),
-                     media library entries (validation, page order, sorting an import)
+    live-parse.js    pure bridge functions: name spelling, private history records (reading, sorting an import), PM settings, group frames,
+                     Premium background (parseMiniCss, background form), allowed client.post calls (postRefusal), updateprofile response, message background (parseMsgBg), vissle activity replies (parseVisits), linked accounts (parseWho), presence, timestamps
     live-bridge.js   liveBridge: incoming and outgoing frames, warnings, connections,
                      profiles, search, private history, media library, vissle, group creation
   views/      main screens

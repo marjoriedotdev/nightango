@@ -1,8 +1,6 @@
 import { useCallback, useRef } from '../core/globals.js';
-import { uid } from '../core/util.js';
-import { messagePreview } from '../core/rich-text.js';
+import { uid, warn } from '../core/util.js';
 import { groupRouteAt, isDmInView, isGroupInView, isHiddenAuthor, isPaneOpen, mentionsMe, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
-import { warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { openPipWindow } from '../views/pip.js';
 import { quietOutsideSpace } from '../views/spaces.js';
@@ -11,6 +9,7 @@ import { withReply } from './live-state.js';
 import { betterChatangoPmArchive, memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
 import { LIVE } from '../core/env.js';
 import { isGuest } from '../core/chatango.js';
+import { messagePreview } from '../core/message-content.js';
 /* ---------- Inbox: messages received and read ---------- */
 var MENTION_MAX = 100;
 /**

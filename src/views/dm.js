@@ -1,10 +1,9 @@
 import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
-import { MIN, ago, cx, dayKey, dayLabel, elapsedShort, fmtTime, lastMatch } from '../core/util.js';
+import { MIN, ago, cx, dayKey, dayLabel, elapsedShort, fmtTime, lastMatch, warn } from '../core/util.js';
 import { ROLE_LONG } from '../core/roles.js';
 import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useMinute, useOutside, useRightColumn, useRowBatches, useShownUsers, useStatePart, useWideLayout } from '../core/ui.js';
-import { bidiText, messagePreview } from '../core/rich-text.js';
+import { bidiText } from '../core/rich-text.js';
 import { THREAD_MAX, isPaneOpen, isProfilePending, listedDms, pmEditTarget, pmShownIndex, roleOf, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
-import { warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { MobileNavButton, favoriteItem } from './shell.js';
 import { COMPOSER_MODES, EDIT_MAX, editsLastOnUp, useComposerMode } from './group.js';
@@ -26,6 +25,7 @@ import { runCommand } from './commands.js';
 import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, PM_CONNECTION, genderCode } from '../core/chatango.js';
+import { messagePreview } from '../core/message-content.js';
 /* ---------- Private messages ---------- */
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };

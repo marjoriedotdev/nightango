@@ -1,7 +1,7 @@
 import { MIN, pick, uid } from './util.js';
 import { mkSettings } from './roles.js';
-import { MEDIA_PAGE, mediaMatch, screenMediaEntries } from '../bridge/live-parse.js';
 import { VISIT_PAGE } from './vissle.js';
+import { MEDIA_PAGE, mediaMatch, screenMediaEntries } from './media-library.js';
 export var LINES = {
   community: ['Did the reconnect fix stick for everyone?', 'Theme import works on Firefox now.', 'Is there a way to pin a group to the top?', 'Welcome to the new folks.', 'The compact mode is so much easier to read.', 'Anyone tried the light theme on mobile?', 'Server s12 seems stable again.', 'How do I turn names colors back on?', 'Thanks for the quick fix.', 'Reminder: bug reports go to #betterchatangodev.'],
   betterchatangodev: ['Pushed a fix for the reply preview.', 'CI is green again.', 'Can someone review the AutoMod copy?', 'Safari still clips the composer on iOS 17.', 'Merged the notification matrix.'],

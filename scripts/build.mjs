@@ -64,12 +64,10 @@ export async function bundleForTest(exports, name) {
 const LAYER_RANK = { core: 0, bridge: 1, views: 2, settings: 2, app: 3 };
 // Debt left by the migration to modules: each refactor removes its entries, any other upward import or cycle fails the build.
 const KNOWN_UPWARD = new Set([
-  'core/rich-text.js -> bridge/live-parse.js', 'core/sample-data.js -> bridge/live-parse.js',
   'views/session.js -> app/reconnection.js', 'views/profile.js -> app/live-state.js',
   'settings/live-group-pages.js -> app/live-state.js', 'settings/notifications.js -> app/sound.js'
 ]);
 const KNOWN_CYCLIC = new Set([
-  'bridge/live-parse.js', 'core/rich-text.js',
   'app/actions.js', 'app/inbox.js', 'app/live-ops.js', 'app/live-state.js', 'app/pm.js', 'app/reconnection.js', 'app/root.js',
   'settings/appearance.js', 'settings/group-pages.js', 'settings/group-staff.js', 'settings/group-view.js', 'settings/language-a11y-about.js',
   'settings/live-account.js', 'settings/live-group-pages.js', 'settings/live-group-staff.js', 'settings/live-group-view.js', 'settings/notifications.js',

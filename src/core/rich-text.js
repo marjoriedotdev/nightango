@@ -1,38 +1,8 @@
 import { Frag, h, useState } from './globals.js';
-import { trimEnd } from './util.js';
 import { SURFACE, cssColor, ensureContrast } from './colors.js';
 import { useApp, useAppApi } from './ui.js';
-import { mediaLinks } from '../bridge/live-parse.js';
 import { ACCOUNT_NAME } from './chatango.js';
-export var EMBED_LABEL = { youtube: 'Video', tiktok: 'Video', x: 'Post', image: 'Image', photo: 'Photo', video: 'Video', audio: 'Audio' };
-/**
- * Returns the text segments of a message as shown, without the links it already shows as a media.
- * @param {{text: string, parts: ?Array, embeds: ?Array}} m Message read by parseContent.
- * @returns {Array} Non-empty segments {text, b, i, u, s}.
- */
-export function shownParts(m) {
-  var links = mediaLinks(m), parts = m.parts || [{ text: m.text || '' }];
-  if (!links.length) return m.text ? parts : [];
-  var shown = parts.map(function (part) {
-    var chunks = String(part.text).split(/(https?:\/\/\S+)/), text = '';
-    for (var i = 0; i < chunks.length; i++) {
-      if (i % 2 && links.indexOf(chunks[i]) >= 0) {
-        // The space after a hidden link leaves with it: no double space or blank line stays.
-        if (i + 1 < chunks.length) chunks[i + 1] = chunks[i + 1].replace(/^\s+/, '');
-        continue;
-      }
-      text += chunks[i];
-    }
-    return Object.assign({}, part, { text: text });
-  });
-  shown[0].text = shown[0].text.replace(/^\s+/, '');
-  shown[shown.length - 1].text = trimEnd(shown[shown.length - 1].text);
-  return shown.filter(function (part) { return part.text; });
-}
-export function messagePreview(m) {
-  var e = m.embeds && m.embeds[0], text = shownParts(m).map(function (part) { return part.text; }).join('');
-  return text || (e ? EMBED_LABEL[e.kind] : '');
-}
+import { EMPHASIS } from './message-content.js';
 /**
  * Returns the host of an https URL as the browser will reach it.
  * @param {string} url URL read.
@@ -96,7 +66,6 @@ export function memberLink(app, url, gid, key) {
   return h('a', { key: key, href: url, target: '_blank', rel: 'noopener noreferrer', className: 'msg-link', dir: 'ltr', onClick: profile ? onProfileLink(app, url, profile, gid) : warnOnLink(app, url) }, url);
 }
 
-export var EMPHASIS = ['b', 'i', 'u', 's'];
 
 // Like BetterChatango's rendering: "@name: `text`" is a quote and does not cross a line break.
 var QUOTE = /@([A-Za-z0-9]{1,20}): `(.*?)`/;

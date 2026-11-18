@@ -1,11 +1,11 @@
 import { useRef, useState } from '../core/globals.js';
-import { copyText, pick, uid } from '../core/util.js';
+import { copyText, esc, lower, pick, uid, warn } from '../core/util.js';
 import { ROLE_LONG, mkSettings } from '../core/roles.js';
 import { DM_LINES, SAMPLE_TIKTOK_THUMB, SAMPLE_X_POST, sampleMedia, sampleVisits, seedWorld } from '../core/sample-data.js';
 import { BETTER_CHATANGO_SAVE_FAILED } from '../core/prefs.js';
 import { useLatestCalls } from '../core/ui.js';
 import { findMsg, readThrough, sentBadge, shownName, trimThread, userOf } from '../core/selectors.js';
-import { GIF_URL, esc, lower, mediaEntryOk, mediaName, pmRecordEntry, screenPmRecords, warn } from '../bridge/live-parse.js';
+import { pmRecordEntry, screenPmRecords } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { editedId } from '../views/message.js';
 import { closePipWindow } from '../views/pip.js';
@@ -16,6 +16,8 @@ import { dropMentions, logMention } from './inbox.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, GROUP_FLAG, MEET_PAGE, PM_CONNECTION, isGuest } from '../core/chatango.js';
 import { visitorPage } from '../core/vissle.js';
+import { mediaEntryOk, mediaName } from '../core/media-library.js';
+import { GIF_URL } from '../core/message-content.js';
 /* ---------- Actions: what the views ask, passed to Chatango by BetterChatango in live ---------- */
 /**
  * Puts the sample world of the prototype into the state with its mentions recorded like those of the live history.

@@ -206,3 +206,9 @@ export function copyText(text, onDone) {
  * @param {string} me Lowercase username.
  */
 export function skinKey(me) { return 'torch-skin:' + me; }
+export function warn(e) { try { console.warn('[torch-skin]', e); } catch (x) { /* console unavailable */ } }
+export function lower(v) { return String(v == null ? '' : v).toLowerCase(); }
+// Like urllib.parse.unquote (chatango-lib) and BetterChatango: "+" stays a "+".
+export function unquote(v) { try { return decodeURIComponent(String(v || '')); } catch (e) { return String(v || ''); } }
+/** Escapes the typed text since client.sendMessage expects HTML like the BetterChatango input field. */
+export function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }

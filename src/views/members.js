@@ -1,9 +1,8 @@
 import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
-import { cx, ownOf } from '../core/util.js';
+import { cx, lower, ownOf } from '../core/util.js';
 import { Dialog, MenuButton, SkeletonRows, developerBadge, menuGroups, presenceSr, roleBadge, useApp, useAppApi, useRowBatches, youBadge } from '../core/ui.js';
 import { bidiText, httpsHost } from '../core/rich-text.js';
 import { canBanMember, guestsOf, isNotifyingOnline, isPaneOpen, miniStyleOf, roleOf, shownName, userOf } from '../core/selectors.js';
-import { lower } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SeasonWeb } from './season.js';
 import { columnHeader, favoriteItem } from './shell.js';

@@ -1,7 +1,6 @@
 import { useEffect, useRef } from '../core/globals.js';
-import { MIN, uid } from '../core/util.js';
+import { MIN, uid, warn } from '../core/util.js';
 import { favoritePeople, isDmInView, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, trimThread, userOf } from '../core/selectors.js';
-import { warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { ensureLiveUser, pmAuthor } from './live-state.js';
 import { LIVE } from '../core/env.js';
