@@ -5,7 +5,7 @@ import { SESSION_RANK } from './live-state.js';
 import { PM_CONNECTION } from '../core/chatango.js';
 /* ---------- Reconnection of the live connections ---------- */
 // Delays of the attempts that follow a connection loss: the first one starts right away, the next ones leave a Chatango restart time to finish.
-export var RECONNECT_DELAYS = [0, 10000, 30000];
+var RECONNECT_DELAYS = [0, 10000, 30000];
 /**
  * Returns the state of a tracked connection: the private connection or a joined group.
  * @param {Object} s Application state.
@@ -64,18 +64,18 @@ export function useReconnection(stateRef, update) {
    */
   function startRetries(gid) {
     stopRetry(gid);
-    trackRetry(gid, { tries: 0, at: null, timer: null });
+    trackRetry(gid, { tries: 0, at: null, delay: null, timer: null });
     reconnectAuto(gid);
   }
   /**
    * Records the sequence of a connection and copies its attempt number and the time of its next attempt into the state,
    * which the connection banner and the session dialog read.
    * @param {string} gid Group or private_message.
-   * @param {?{tries: number, at: ?number, timer: ?number}} r Sequence in progress with the time its timer fires, null when it ends.
+   * @param {?{tries: number, at: ?number, delay: ?number, timer: ?number}} r Sequence in progress with the time its timer fires and its delay, null when it ends.
    */
   function trackRetry(gid, r) {
     if (r) retries.current[gid] = r; else delete retries.current[gid];
-    update(function (d) { if (!d.auth.loggedIn) return; if (r) d.retrying[gid] = { attempt: r.tries, at: r.at }; else delete d.retrying[gid]; });
+    update(function (d) { if (!d.auth.loggedIn) return; if (r) d.retrying[gid] = { attempt: r.tries, of: RECONNECT_DELAYS.length, at: r.at, delay: r.delay }; else delete d.retrying[gid]; });
   }
   function stopRetry(gid) {
     var r = retries.current[gid];
@@ -94,7 +94,7 @@ export function useReconnection(stateRef, update) {
     var delay = RECONNECT_DELAYS[tries];
     liveBridge.note('Reconnecting to ' + liveBridge.connName(gid) + (delay ? ' in ' + delay / 1000 + ' s' : ' now') + ', attempt ' + (tries + 1) + ' of ' + RECONNECT_DELAYS.length);
     // Even without a delay, the timer lets the closed state reach the store first: the attempt checks it and then shows the connection connecting.
-    trackRetry(gid, { tries: tries + 1, at: Date.now() + delay, timer: setTimeout(function () {
+    trackRetry(gid, { tries: tries + 1, at: Date.now() + delay, delay: delay, timer: setTimeout(function () {
       var s0 = stateRef.current, conn = connOf(s0, gid);
       // Attempt already started elsewhere (Reconnect, network back): its failure resumes the sequence.
       if (conn === 'connecting') return;

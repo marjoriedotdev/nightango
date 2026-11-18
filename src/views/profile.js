@@ -8,9 +8,9 @@ import { liveBridge } from '../bridge/live-bridge.js';
 import { columnHeader } from './shell.js';
 import { useProfileActions } from './members.js';
 import { personAsl, personStatus } from './dm.js';
-import { NOTE_LABEL_MAX, NOTE_TEXT_MAX } from '../app/live-state.js';
 import { LIVE } from '../core/env.js';
 import { avatarSrc, chatangoPageUrl, profileImgSrc } from '../core/chatango.js';
+import { NOTE_LABEL_MAX, NOTE_TEXT_MAX } from '../core/account-store.js';
 /**
  * "About" block.
  * It shows formatted Chatango text in live and plain text in the prototype.

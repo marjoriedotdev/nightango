@@ -3,7 +3,7 @@ import { MIN, kindOf, ownOf, skinKey, storageGet, storageMerge, storageSet } fro
 import { plainOf } from '../core/draft.js';
 import { hexToRgb } from '../core/colors.js';
 import { mkSettings, roleOfFlags } from '../core/roles.js';
-import { favoritePeople, findMsg } from '../core/selectors.js';
+import { banKey, favoritePeople, findMsg } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SPACE_MAX, SPACE_NAME_MAX } from '../views/spaces.js';
 import { applyEdit } from './pm.js';
@@ -54,21 +54,6 @@ function storedLocal(stored) {
   var out = {};
   if (kindOf(stored) !== 'object') return out;
   Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
-  return out;
-}
-export var NOTE_LABEL_MAX = 24, NOTE_TEXT_MAX = 500;
-/**
- * Returns the private notes kept in this browser without the entries of another shape.
- * @param {Object} stored Notes by member name, untrusted.
- */
-export function storedNotes(stored) {
-  var out = {};
-  Object.keys(stored).forEach(function (n) {
-    var x = stored[n];
-    if (ACCOUNT_NAME.test(n) && kindOf(x) === 'object' && typeof x.label === 'string' && typeof x.note === 'string' && (x.label || x.note)) {
-      out[n] = { label: x.label.slice(0, NOTE_LABEL_MAX), note: x.note.slice(0, NOTE_TEXT_MAX) };
-    }
-  });
   return out;
 }
 /**
@@ -176,16 +161,7 @@ export function useLocalStore(state) {
   }, [me, state.ownStyle, state.notes, state.spaces, state.space, state.dms, state.groups, state.users]);
   return { ref: localRef, restore: restore };
 }
-/** Key of a ban list entry: unid and IP, like removeblock. */
-export function banKey(b) { return b.unid + ':' + b.ip; }
 export function blankBanPage() { return { loaded: false, more: false, loading: false }; }
-/**
- * Returns a BetterChatango list loaded by pages: bans (block) or unbans (unblock).
- * @param {Object} g Live group.
- * @param {string} kind block or unblock.
- * @returns {{rows: Array, page: {loaded: boolean, more: boolean, loading: boolean}}} Loaded rows and list state.
- */
-export function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.live.banPage } : { rows: g.live.unbans, page: g.live.unbanPage }; }
 function liveGroup(id, title) {
   var t = title || id;
   return {

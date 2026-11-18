@@ -246,3 +246,12 @@ export function miniStyleOf(prefs, u, theme) {
  * @param {Object} u Member in the state.
  */
 export function isProfilePending(name, u) { return LIVE && ACCOUNT_NAME.test(name) && !u.profileLoaded && !u.profileFailed; }
+/** Key of a ban list entry: unid and IP, like removeblock. */
+export function banKey(b) { return b.unid + ':' + b.ip; }
+/**
+ * Returns a BetterChatango list loaded by pages: bans (block) or unbans (unblock).
+ * @param {Object} g Live group.
+ * @param {string} kind block or unblock.
+ * @returns {{rows: Array, page: {loaded: boolean, more: boolean, loading: boolean}}} Loaded rows and list state.
+ */
+export function banListOf(g, kind) { return kind === 'block' ? { rows: g.bans, page: g.live.banPage } : { rows: g.live.unbans, page: g.live.unbanPage }; }

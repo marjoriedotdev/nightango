@@ -2,16 +2,17 @@ import { useEffect, useRef } from '../core/globals.js';
 import { CHATANGO_URL, MIN, dayKey, plural, shortDate, skinKey, storageGet, storageMerge, uid, unknownUserText } from '../core/util.js';
 import { plainOf } from '../core/draft.js';
 import { BETTER_CHATANGO_PREFS } from '../core/prefs.js';
-import { isDmInView, isGroupInView, isNotifyingOnline, mentionsMe, pmEditTarget, premiumEndsSoon, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
+import { banListOf, isDmInView, isGroupInView, isNotifyingOnline, mentionsMe, pmEditTarget, premiumEndsSoon, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
 import { deliverOp, liveBridge } from '../bridge/live-bridge.js';
 import { DEFAULT_MESSAGE_STYLE } from '../views/message-style.js';
 import { setIn } from '../settings/shell.js';
-import { SESSION_RANK, applyGroupEdit, applyPresence, banListOf, blankBanPage, deriveLive, editTarget, ensureLiveGroup, ensureLiveUser, ensurePresentUser, ensureUnseenUser, groupUpdate, liveWorld, mergeEdits, mergeSpelling, mergeStyle, noteBadge, receiveBanPage, sessionAfterConn, storedFavoritePeople, storedNotes, storedSpaces, withReply } from './live-state.js';
+import { SESSION_RANK, applyGroupEdit, applyPresence, blankBanPage, deriveLive, editTarget, ensureLiveGroup, ensureLiveUser, ensurePresentUser, ensureUnseenUser, groupUpdate, liveWorld, mergeEdits, mergeSpelling, mergeStyle, noteBadge, receiveBanPage, sessionAfterConn, storedFavoritePeople, storedSpaces, withReply } from './live-state.js';
 import { memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
 import { dropMentions, logMention } from './inbox.js';
 import { JOURNAL, LIVE } from '../core/env.js';
 import { PM_CONNECTION } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
+import { storedNotes } from '../core/account-store.js';
 /* ---------- Live operations: what the bridge emits, applied to the state ---------- */
 /**
  * Hands each bridge operation to the handler of the latest render.

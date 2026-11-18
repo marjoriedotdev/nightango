@@ -62,22 +62,18 @@ export async function bundleForTest(exports, name) {
 
 // Imports only go down these layers (ADR-0017). views/ and settings/ are one layer: the screens.
 const LAYER_RANK = { core: 0, bridge: 1, views: 2, settings: 2, app: 3 };
-// Debt left by the migration to modules: each refactor removes its entries, any other upward import or cycle fails the build.
-const KNOWN_UPWARD = new Set([
-  'views/session.js -> app/reconnection.js', 'views/profile.js -> app/live-state.js',
-  'settings/live-group-pages.js -> app/live-state.js', 'settings/notifications.js -> app/sound.js'
-]);
+// Debt left by the migration to modules: each refactor removes its entries, any other module in a cycle fails the build.
 const KNOWN_CYCLIC = new Set([
   'app/actions.js', 'app/inbox.js', 'app/live-ops.js', 'app/live-state.js', 'app/pm.js', 'app/reconnection.js', 'app/root.js',
   'settings/appearance.js', 'settings/group-pages.js', 'settings/group-staff.js', 'settings/group-view.js', 'settings/language-a11y-about.js',
   'settings/live-account.js', 'settings/live-group-pages.js', 'settings/live-group-staff.js', 'settings/live-group-view.js', 'settings/notifications.js',
   'settings/privacy.js', 'settings/profile.js', 'settings/shell.js',
   'views/commands.js', 'views/discover.js', 'views/dm.js', 'views/group.js', 'views/live-joined.js', 'views/meet.js', 'views/members.js', 'views/mentions.js',
-  'views/message-style.js', 'views/message.js', 'views/palette.js', 'views/pip.js', 'views/profile.js', 'views/session.js', 'views/shared-media.js', 'views/shell.js'
+  'views/message-style.js', 'views/message.js', 'views/pip.js', 'views/profile.js', 'views/shared-media.js', 'views/shell.js'
 ]);
 
 /**
- * Refuses an import that goes up the layers and a module that joins a cycle, beyond the known debt.
+ * Refuses an import that goes up the layers, and a module in a cycle beyond the known debt.
  * @param {object} metafile esbuild metafile of an application entry.
  */
 function checkImports(metafile) {
@@ -88,8 +84,7 @@ function checkImports(metafile) {
   const rank = (file) => LAYER_RANK[file.split('/')[0]] ?? Infinity;
   const errors = [];
   for (const [file, imports] of graph) for (const target of imports) {
-    const edge = `${file} -> ${target}`;
-    if (rank(target) > rank(file) && !KNOWN_UPWARD.has(edge)) errors.push(`${edge} goes up the layers`);
+    if (rank(target) > rank(file)) errors.push(`${file} -> ${target} goes up the layers`);
   }
   const cyclic = new Set();
   for (const group of cycles(graph)) for (const file of group) {
@@ -97,10 +92,6 @@ function checkImports(metafile) {
     if (!KNOWN_CYCLIC.has(file)) errors.push(`${file} is in an import cycle with ${group.filter((f) => f !== file).join(', ')}`);
   }
   // The debt only shrinks: an entry that no longer holds is removed with the change that fixed it.
-  for (const edge of KNOWN_UPWARD) {
-    const [file, target] = edge.split(' -> ');
-    if (!(graph.get(file) || []).includes(target)) errors.push(`${edge} is gone: remove it from KNOWN_UPWARD`);
-  }
   for (const file of KNOWN_CYCLIC) if (!cyclic.has(file)) errors.push(`${file} is in no cycle any more: remove it from KNOWN_CYCLIC`);
   if (errors.length) throw new Error('Import graph (ADR-0017):\n' + errors.join('\n'));
 }

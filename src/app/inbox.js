@@ -4,12 +4,12 @@ import { groupRouteAt, isDmInView, isGroupInView, isHiddenAuthor, isPaneOpen, me
 import { liveBridge } from '../bridge/live-bridge.js';
 import { openPipWindow } from '../views/pip.js';
 import { quietOutsideSpace } from '../views/spaces.js';
-import { beep } from './sound.js';
 import { withReply } from './live-state.js';
 import { betterChatangoPmArchive, memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
 import { LIVE } from '../core/env.js';
 import { isGuest } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
+import { beep } from '../core/sound.js';
 /* ---------- Inbox: messages received and read ---------- */
 var MENTION_MAX = 100;
 /**

@@ -28,6 +28,8 @@ src/
     message-content.js  what a message holds once read (parseContent, parsePm): text, emphasis segments (EMPHASIS), references (encodeRef), media (mediaLinks, textLinks),
                      shown text without the links shown as a media (shownParts, messagePreview, EMBED_LABEL)
     media-library.js rules of the BetterChatango media library shared with the sample one: page size, entry validation, page order (mediaMatch), import screening
+    sound.js         alert sound of the prototype (beep), silent in live
+    account-store.js account data kept in this browser: private notes and their limits (storedNotes)
     selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry,
                      message cap of a group or a conversation (THREAD_MAX, trimThread)
   bridge/     the bridge to BetterChatango
@@ -57,7 +59,6 @@ src/
     avatar-crop                                                         cropping of one's own profile picture (live)
     live-group-view, live-group-pages, live-group-staff (audit log), live-account   live variants (live-account: Password and email and Chatango Premium pages shared with the prototype)
   app/        root
-    sound.js
     state.js         persisted preferences
     live-state.js    live state built for Root: world at login, group, ban lists, session loss, account data kept in this browser (useLocalStore),
                      members and groups created on the fly with that data, presence, styles, group edits, group settings read from Chatango,
@@ -105,7 +106,7 @@ Each file of `src/` is an ES module: it imports every name it reads from another
 
 The `build:info` module, provided by the build, exports `APP_VERSION`, the `@version` of `src/loader/skin-loader.js`, and `RELEASE_NOTES`, the sections of `CHANGELOG.md` read in the Keep a Changelog format (`{ version, date, groups: [{ title, items }] }`, most recent first). The prototype and the userscript therefore get the same version and the same notes. The build rejects a malformed `CHANGELOG.md` or one whose first section is not the `@version` one.
 
-Imports only go down the layers `core/`, `bridge/`, the screens (`views/` and `settings/`), then `app/`, and no module is in an import cycle. The build reads the import graph from the esbuild metafile and refuses any other import (`checkImports`). The imports left by the migration that break this rule are listed in `KNOWN_UPWARD` and `KNOWN_CYCLIC`, which only shrink.
+Imports only go down the layers `core/`, `bridge/`, the screens (`views/` and `settings/`), then `app/`, and no module is in an import cycle. The build reads the import graph from the esbuild metafile and refuses any other import (`checkImports`). The modules left in a cycle by the migration are listed in `KNOWN_CYCLIC`, which only shrinks: the build refuses an entry that no longer holds.
 
 The evaluation order follows the imports: a module whose top level runs code (the bridge, global listeners) runs after the modules it imports. esbuild renames a function named like another top-level name of the bundle (`MessageRow2`): its `name` property carries the suffix.
 

@@ -3,8 +3,8 @@ import { useApp } from '../core/ui.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { Page, usePref } from './shell.js';
 import { useBetterChatangoSettings } from './live-account.js';
-import { beep } from '../app/sound.js';
 import { LIVE } from '../core/env.js';
+import { beep } from '../core/sound.js';
 export function NotificationsPage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
   var perm = 'default';
@@ -41,7 +41,7 @@ export function NotificationsPage() {
     LIVE ? h(BetterChatangoSoundsSection) : h(T.SettingsSection, { title: 'Sound' },
       h(T.SettingRow, {
         asLabel: false, title: 'Volume', description: 'Applies to every alert sound.',
-        control: h(VolumeControl, { label: 'Volume', value: prefs.volume, onChange: function (v) { pr.set('volume', v); }, onPlay: function () { beep(prefs.volume, true); } })
+        control: h(VolumeControl, { label: 'Volume', value: prefs.volume, onChange: function (v) { pr.set('volume', v); }, onPlay: function () { beep(prefs.volume); } })
       }),
       h(T.SettingRow, { title: "Only when you're on Nightango", description: "Silent while you're in another tab or app.", control: pr.sw('soundFocusOnly') })),
     h(T.SettingsSection, { title: 'In the app' },

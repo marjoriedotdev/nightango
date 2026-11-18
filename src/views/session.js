@@ -1,7 +1,6 @@
 import { T, h, useEffect, useState } from '../core/globals.js';
 import { cx } from '../core/util.js';
 import { CONN_DONE_MS, CONN_LEAVE_MS, Dialog, useApp } from '../core/ui.js';
-import { RECONNECT_DELAYS } from '../app/reconnection.js';
 import { LIVE } from '../core/env.js';
 import { PM_CONNECTION } from '../core/chatango.js';
 /* ---------- Session loss ---------- */
@@ -104,7 +103,7 @@ export function SessionBanner(p) {
   }, [phase]);
   if (!next) return null;
   var shown = next === 'leaving' ? 'done' : next, retry = lost ? nextRetry(s.retrying) : null;
-  var attempt = retry && retry.attempt ? 'Attempt ' + retry.attempt + ' of ' + RECONNECT_DELAYS.length + '.' : null;
+  var attempt = retry && retry.attempt ? 'Attempt ' + retry.attempt + ' of ' + retry.of + '.' : null;
   var title, text = null, action = null, icon;
   /**
    * Builds the Reload button.
@@ -114,7 +113,7 @@ export function SessionBanner(p) {
   if (shown === 'waiting') {
     title = 'Connection lost';
     text = ['Reconnecting in ' + Math.ceil((retry.at - now) / 1000) + ' s.', attempt].filter(Boolean).join(' ');
-    icon = h(CountdownRing, { left: retry.at - now, total: RECONNECT_DELAYS[retry.attempt - 1] });
+    icon = h(CountdownRing, { left: retry.at - now, total: retry.delay });
     // Ember only once Nightango has stopped trying: until then the automatic attempts are the way back.
     action = [reload('ghost'), h(T.Button, { key: 'now', size: 'sm', onClick: app.actions.reconnectSession }, 'Reconnect now')];
   } else if (shown === 'trying') {
