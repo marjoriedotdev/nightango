@@ -201,11 +201,6 @@ export function copyText(text, onDone) {
   try { navigator.clipboard.writeText(text).then(function () { onDone(true); }, fallback); } catch (e) { fallback(); }
 }
 
-/**
- * Names the local storage key for the data of one account.
- * @param {string} me Lowercase username.
- */
-export function skinKey(me) { return 'torch-skin:' + me; }
 export function warn(e) { try { console.warn('[torch-skin]', e); } catch (x) { /* console unavailable */ } }
 export function lower(v) { return String(v == null ? '' : v).toLowerCase(); }
 // Like urllib.parse.unquote (chatango-lib) and BetterChatango: "+" stays a "+".

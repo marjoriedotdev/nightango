@@ -1,7 +1,7 @@
 import { T, h, useState } from '../core/globals.js';
 import { Dialog, MenuButton, useApp } from '../core/ui.js';
+import { SPACE_MAX, SPACE_NAME_MAX } from '../core/account-store.js';
 /* ---------- Spaces ---------- */
-export var SPACE_MAX = 12, SPACE_NAME_MAX = 24;
 
 /**
  * Names a conversation inside a space.

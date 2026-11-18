@@ -1,11 +1,11 @@
 import { Frag, T, h, useLayoutEffect, useRef, useState } from '../core/globals.js';
-import { kindOf, skinKey, storageGet, storageMerge } from '../core/util.js';
 import { Portal, useFloating, useStatePart } from '../core/ui.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { MediaPanel } from './media.js';
 import { GifPanel } from './gif.js';
 import { LIVE } from '../core/env.js';
 import { EMOTICONS, EMOTICON_BY_NAME } from '../core/emoticons.js';
+import { readOwn, writeOwn } from '../core/account-store.js';
 /* ---------- Composer emoticon and media picker ---------- */
 var EMOJI_SECTIONS = [{ title: 'Classic', premium: false }, { title: 'Premium', premium: true }];
 var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'gif', label: 'GIF' }, { value: 'media', label: 'Media' }];
@@ -15,10 +15,7 @@ var RECENT_EMOJI_MAX = 16;
  * Returns the names of the emoticons last picked by an account.
  * @param {string} me Signed-in account.
  */
-function recentEmoji(me) {
-  var list = (storageGet(skinKey(me)) || {}).recentEmoji;
-  return kindOf(list) === 'array' ? list : [];
-}
+function recentEmoji(me) { return readOwn(me, 'recentEmoji'); }
 /**
  * Moves an emoticon to the front of the ones last picked by an account.
  * @param {string} me Signed-in account.
@@ -26,7 +23,7 @@ function recentEmoji(me) {
  */
 function keepRecentEmoji(me, name) {
   var list = recentEmoji(me).filter(function (n) { return n !== name; });
-  storageMerge(skinKey(me), { recentEmoji: [name].concat(list).slice(0, RECENT_EMOJI_MAX) });
+  writeOwn(me, 'recentEmoji', [name].concat(list).slice(0, RECENT_EMOJI_MAX));
 }
 
 /**

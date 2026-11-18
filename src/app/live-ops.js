@@ -1,18 +1,18 @@
 import { useEffect, useRef } from '../core/globals.js';
-import { CHATANGO_URL, MIN, dayKey, plural, shortDate, skinKey, storageGet, storageMerge, uid, unknownUserText } from '../core/util.js';
+import { CHATANGO_URL, MIN, dayKey, plural, shortDate, uid, unknownUserText } from '../core/util.js';
 import { plainOf } from '../core/draft.js';
 import { BETTER_CHATANGO_PREFS } from '../core/prefs.js';
 import { banListOf, isDmInView, isGroupInView, isNotifyingOnline, mentionsMe, pmEditTarget, premiumEndsSoon, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
 import { deliverOp, liveBridge } from '../bridge/live-bridge.js';
 import { DEFAULT_MESSAGE_STYLE } from '../views/message-style.js';
 import { setIn } from '../settings/shell.js';
-import { SESSION_RANK, applyGroupEdit, applyPresence, blankBanPage, deriveLive, editTarget, ensureLiveGroup, ensureLiveUser, ensurePresentUser, ensureUnseenUser, groupUpdate, liveWorld, mergeEdits, mergeSpelling, mergeStyle, noteBadge, receiveBanPage, sessionAfterConn, storedFavoritePeople, storedSpaces, withReply } from './live-state.js';
+import { SESSION_RANK, applyGroupEdit, applyPresence, blankBanPage, deriveLive, editTarget, ensureLiveGroup, ensureLiveUser, ensurePresentUser, ensureUnseenUser, groupUpdate, liveWorld, mergeEdits, mergeSpelling, mergeStyle, noteBadge, receiveBanPage, sessionAfterConn, withReply } from './live-state.js';
 import { memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
 import { dropMentions, logMention } from './inbox.js';
 import { JOURNAL, LIVE } from '../core/env.js';
 import { PM_CONNECTION } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
-import { storedNotes } from '../core/account-store.js';
+import { readOwn, writeOwn } from '../core/account-store.js';
 /* ---------- Live operations: what the bridge emits, applied to the state ---------- */
 /**
  * Hands each bridge operation to the handler of the latest render.
@@ -106,10 +106,10 @@ export function useLiveOps(k) {
         // BetterChatango's "Mentioned in #g" title would come back 5 s later without the Nightango counter.
         if (liveBridge.setting('tabTitleAlerts')) liveBridge.setSetting('tabTitleAlerts', false);
         update(function (d) {
-          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = storedNotes(localRef.current.notes); d.spaces = storedSpaces(localRef.current.spaces); d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
+          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = localRef.current.notes; d.spaces = localRef.current.spaces; d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
           mergeSpelling(d.users[op.me], op.spelling, Date.now());
           (liveBridge.ignoredUsers() || []).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
-          storedFavoritePeople(localRef.current.favoritePeople).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); d.users[n].favorite = true; });
+          localRef.current.favoritePeople.forEach(function (n) { ensureUnseenUser(d, n, localRef.current); d.users[n].favorite = true; });
           Object.keys(BETTER_CHATANGO_PREFS).forEach(function (path) { var v = liveBridge.setting(BETTER_CHATANGO_PREFS[path]); if (v !== null) setIn(d.prefs, path, v); });
           d.prefs.safety.trustedHosts = liveBridge.trustedHosts();
         });
@@ -334,11 +334,11 @@ export function useLiveOps(k) {
         actions.checkPmr();
         break;
       case 'premium': {
-        var premium = { status: op.status, until: op.until }, today = dayKey(Date.now()), key = skinKey(stateRef.current.me);
+        var premium = { status: op.status, until: op.until }, today = dayKey(Date.now()), me = stateRef.current.me;
         update(function (d) { if (d.auth.loggedIn) d.premium = premium; });
         // Chatango sends the frame on each private connection: the day of the last reminder is kept for the account.
-        if (premiumEndsSoon(premium, Date.now()) && (storageGet(key) || {}).premiumReminded !== today) {
-          storageMerge(key, { premiumReminded: today });
+        if (premiumEndsSoon(premium, Date.now()) && readOwn(me, 'premiumReminded') !== today) {
+          writeOwn(me, 'premiumReminded', today);
           toast('Your Chatango Premium ends on ' + shortDate(op.until) + '.', { icon: 'star', action: { label: 'Open chatango.com', run: function () { window.open(CHATANGO_URL, '_blank', 'noopener,noreferrer'); } } });
         }
         break;

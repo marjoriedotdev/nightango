@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useRef } from '../core/globals.js';
-import { MIN, kindOf, ownOf, skinKey, storageGet, storageMerge, storageSet } from '../core/util.js';
+import { MIN, ownOf } from '../core/util.js';
 import { plainOf } from '../core/draft.js';
-import { hexToRgb } from '../core/colors.js';
 import { mkSettings, roleOfFlags } from '../core/roles.js';
 import { banKey, favoritePeople, findMsg } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { SPACE_MAX, SPACE_NAME_MAX } from '../views/spaces.js';
 import { applyEdit } from './pm.js';
 import { IDLE_DELAY } from './root.js';
 import { LIVE } from '../core/env.js';
-import { ACCOUNT_NAME, BADGE_FLAG, GROUP_FLAG, PM_CONNECTION } from '../core/chatango.js';
+import { GROUP_FLAG, PM_CONNECTION } from '../core/chatango.js';
+import { blankMirror, cleanAccount, readMirror, writeMirror } from '../core/account-store.js';
 /* ---------- Live state: session, world and groups built for Root ---------- */
 // A session loss only gives way to a reason of equal or higher rank.
 export var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
@@ -41,41 +40,9 @@ export function liveWorld(me) {
     groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, pmSettings: null, pmSettingSave: null, premium: null, retrying: {}
   };
 }
-// Kind of each value kept by account in this browser, the local lists from before the sync with BetterChatango included.
-var LOCAL_KINDS = { hidden: 'array', channels: 'object', sendChannels: 'object', accents: 'object', notes: 'object', favoritePeople: 'array', spaces: 'array', space: 'string', readTs: 'object', badges: 'object', ownBadges: 'object', unstyled: 'array', style: 'object', recentEmoji: 'array', fav: 'array', muted: 'array', ignored: 'array', premiumReminded: 'string' };
 // The read position of the group in view moves with each message: its writes wait and go out together.
 var READ_SAVE_MS = 2000;
 var READ_POSITIONS_MAX = 100;
-/**
- * Returns the account data stored in this browser without the values of another kind left by an older version or corrupted.
- * @param {*} stored Content of skinKey.
- */
-function storedLocal(stored) {
-  var out = {};
-  if (kindOf(stored) !== 'object') return out;
-  Object.keys(stored).forEach(function (k) { if (!LOCAL_KINDS.hasOwnProperty(k) || kindOf(stored[k]) === LOCAL_KINDS[k]) out[k] = stored[k]; });
-  return out;
-}
-/**
- * Returns the favorite people kept in this browser without the entries that are not an account name.
- * @param {Array} stored Member names, untrusted.
- */
-export function storedFavoritePeople(stored) {
-  return stored.filter(function (n) { return typeof n === 'string' && ACCOUNT_NAME.test(n); });
-}
-var SPACE_MEMBER = /^(group|dm):[a-z0-9_-]{1,20}$/;
-/**
- * Returns the spaces kept in this browser without the entries of another shape.
- * @param {Array} stored Spaces, untrusted.
- */
-export function storedSpaces(stored) {
-  return stored.filter(function (x) {
-    return kindOf(x) === 'object' && typeof x.id === 'string' && typeof x.name === 'string' && x.name.trim() && kindOf(x.members) === 'array';
-  }).slice(0, SPACE_MAX).map(function (x) {
-    return { id: x.id, name: x.name.trim().slice(0, SPACE_NAME_MAX), quiet: x.quiet === true, members: x.members.filter(function (m) { return typeof m === 'string' && SPACE_MEMBER.test(m); }) };
-  });
-}
-function blankLocal() { return { hidden: [], channels: {}, sendChannels: {}, accents: {}, notes: {}, favoritePeople: [], spaces: [], space: '', readTs: {}, badges: {}, ownBadges: {}, unstyled: [], style: null }; }
 /**
  * Returns the most recent read positions of a map of read positions.
  * @param {Object} reads Server time of the newest read message by group.
@@ -92,13 +59,13 @@ function newestReads(reads) {
  * @returns {{ref: Object, restore: function(string)}} Ref to the account data, and its reading at sign-in.
  */
 export function useLocalStore(state) {
-  var localRef = useRef(blankLocal()), pending = useRef(null);
+  var localRef = useRef(blankMirror()), pending = useRef(null);
   function flush() {
     var p = pending.current;
     if (!p) return;
     pending.current = null;
     clearTimeout(p.timer);
-    storageMerge(skinKey(p.me), p.o);
+    writeMirror(p.me, p.o);
   }
   // A reload is also how live signs out: the read position waiting to be written goes out before the page leaves or is hidden, which a phone may end without pagehide.
   useEffect(function () {
@@ -112,19 +79,18 @@ export function useLocalStore(state) {
    * @param {string} me Signed-in account.
    */
   function restore(me) {
-    var stored = storageGet(skinKey(me)) || {}, raw = JSON.stringify(stored);
-    stored = storedLocal(stored);
-    var lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
+    var mirror = readMirror(me), lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
     // Lists from before the sync with BetterChatango: moved into its own lists, removed from local storage once all are accepted.
-    Object.keys(lists).forEach(function (k) { if (stored[k] && stored[k].map(function (x) { return lists[k](x, true); }).every(Boolean)) delete stored[k]; });
-    if (JSON.stringify(stored) !== raw) storageSet(skinKey(me), stored);
-    localRef.current = Object.assign(blankLocal(), stored);
+    var accepted = Object.keys(lists).filter(function (k) { return mirror[k] && mirror[k].map(function (x) { return lists[k](x, true); }).every(Boolean); });
+    accepted.forEach(function (k) { mirror[k] = undefined; });
+    cleanAccount(me, accepted);
+    localRef.current = mirror;
   }
   var me = LIVE && state.auth.loggedIn ? state.me : null;
   // Runs again only when what it keeps can change: the own style, the conversations, the groups or the members.
   useEffect(function () {
     if (!me) return;
-    var prev = localRef.current, o = blankLocal();
+    var prev = localRef.current, o = blankMirror();
     o.style = state.ownStyle;
     o.notes = state.notes;
     o.favoritePeople = favoritePeople(state);
@@ -195,10 +161,10 @@ export function ensureLiveGroup(d, gid, local) {
     g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
     g.hiddenChannels = local.channels[gid] || [];
     g.sendChannel = local.sendChannels[gid] || 'none';
-    g.accent = hexToRgb(local.accents[gid]) ? local.accents[gid] : null;
+    g.accent = local.accents[gid] || null;
     g.lastReadTs = local.readTs[gid] || null;
     g.live.knownBadges = local.badges[gid] || {};
-    g.live.ownBadge = BADGE_FLAG[local.ownBadges[gid]] ? local.ownBadges[gid] : 'none';
+    g.live.ownBadge = local.ownBadges[gid] || 'none';
     g.settings.staff = staffOf(g.live);
   }
   return g;

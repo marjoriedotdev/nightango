@@ -1,9 +1,10 @@
-import { CONFIRM_TIMEOUT, MIN, esc, lower, skinKey, storageGet, storageMerge, uid, unquote, warn } from '../core/util.js';
+import { CONFIRM_TIMEOUT, MIN, esc, lower, uid, unquote, warn } from '../core/util.js';
 import { MINI_CSS_MAX_LENGTH, PM_SETTING_NAMES, VISSLE_UPLOAD, epochMs, friendPresence, miniStyleOfForm, notNone, parseBanSearch, parseBans, parseMiniCss, parseModLog, parseMods, parseMsgBg, parseParticipants, parsePmSettings, parseProfileReply, parseUnbanned, parseVisits, parseWho, pmRecordEntry, postRefusal, screenPmRecords, sessionOf, spellingOf, stateOf } from './live-parse.js';
 import { JOURNAL, LIVE, betterChatangoRefs, showInterface } from '../core/env.js';
 import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNELS, GENDER_LABEL, MEET_PAGE, MSG_FLAG, PM_CONNECTION, badgeRoleOf, channelOf, isGuest, isTempMsgId, tempMsgId } from '../core/chatango.js';
 import { MEDIA_PAGE, mediaEntryOk, mediaMatch, screenMediaEntries } from '../core/media-library.js';
 import { encodeRef, parseContent, parsePm } from '../core/message-content.js';
+import { readOwn, writeOwn } from '../core/account-store.js';
 /**
  * Gives an operation to a listener: one that throws stops neither the other listeners nor the sequence that emits, sign-in included.
  * @param {function(Object)} fn Listener.
@@ -620,11 +621,11 @@ export var liveBridge = (function () {
    * @param {?IDBDatabase} db Private history database.
    */
   function migrateUnread(db) {
-    var key = skinKey(lower(C.user.name));
-    if (!db || pmReadMigrated || (storageGet(key) || {}).pmReadMigrated) return db;
+    var me = lower(C.user.name);
+    if (!db || pmReadMigrated || readOwn(me, 'pmReadMigrated')) return db;
     pmReadMigrated = true;
     return markRead(db, null).then(function () {
-      if (!storageMerge(key, { pmReadMigrated: true })) note('Could not save the unread migration: local storage refused the write');
+      if (!writeOwn(me, 'pmReadMigrated', true)) note('Could not save the unread migration: local storage refused the write');
     }, warn).then(function () { return db; });
   }
   // String upper bound like BetterChatango: in IndexedDB order, a string comes after any timestamp.
