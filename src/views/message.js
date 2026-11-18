@@ -5,10 +5,9 @@ import { useAppApi, useStatePart } from '../core/ui.js';
 import { MessageText, httpsHost, waitsForClick, warnOnLink } from '../core/rich-text.js';
 import { mentionsMe } from '../core/selectors.js';
 import { MSG_BG_ALIGN } from '../bridge/live-parse.js';
-import { liveBridge } from '../bridge/live-bridge.js';
 import { MediaStar } from './media.js';
 import { LIVE } from '../core/env.js';
-import { CHANNELS, FONT_STACKS } from '../core/chatango.js';
+import { CHANNELS, FONT_STACKS, isDelivered } from '../core/chatango.js';
 import { EMBED_LABEL, messagePreview, shownParts } from '../core/message-content.js';
 import { banItem, ignoreItem, styleItem, viewProfileItem, whoItem } from './people.js';
 import { MenuButton } from '../core/layers.js';
@@ -53,7 +52,7 @@ export function memberStyles(u, styles, theme, highlighted, msgBg) {
  */
 export function canEditGroupMessage(m, me) {
   // Like a reply, an edit waits for the message's final id.
-  return m.author === me && (!LIVE || liveBridge.delivered(m.id));
+  return m.author === me && isDelivered(m.id);
 }
 
 /**

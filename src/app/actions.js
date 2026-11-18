@@ -9,7 +9,7 @@ import { ensureLiveGroup, ensureLiveUser, ensureUnseenUser, groupUpdate, pmAutho
 import { addSentPm, mergePmHistory, pmConversation, readPm, syncPmUnread, unreadPm } from './pm.js';
 import { dropMentions } from './inbox.js';
 import { LIVE } from '../core/env.js';
-import { ACCOUNT_NAME, GROUP_FLAG, MEET_PAGE, PM_CONNECTION, isGuest } from '../core/chatango.js';
+import { ACCOUNT_NAME, GROUP_FLAG, MEET_PAGE, PM_CONNECTION, isDelivered, isGuest } from '../core/chatango.js';
 import { visitorPage } from '../core/vissle.js';
 import { mediaEntryOk, mediaName } from '../core/media-library.js';
 import { GIF_URL } from '../core/message-content.js';
@@ -61,7 +61,7 @@ function wordList(v) { return String(v || '').split(/[,\n]/).map(function (x) { 
  */
 export function useActions(k) {
   var stateRef = k.store.stateRef, update = k.store.update, toast = k.toast, setNavOpen = k.setNavOpen;
-  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, openSplit = k.inbox.openSplit, closeSplit = k.inbox.closeSplit, openPip = k.inbox.openPip, receiveGroup = k.inbox.receiveGroup, receiveDm = k.inbox.receiveDm;
+  var pmArchive = k.inbox.pmArchive, nav = k.inbox.nav, openSplit = k.inbox.openSplit, closeSplit = k.inbox.closeSplit, openPip = k.inbox.openPip;
   var drafts = k.drafts, localRef = k.localRef, reconnection = k.reconnection, pms = k.pms, proto = k.prototype;
   var up = useState({}), uploads = up[0], setUploads = up[1];
   /**
@@ -303,7 +303,7 @@ export function useActions(k) {
     actions.sendGroup = function (gid, text, opts) {
       opts = opts || {};
       var replyId = opts.replyTo && opts.replyTo.id;
-      if (replyId && !liveBridge.delivered(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
+      if (replyId && !isDelivered(replyId)) { toast('Wait until this message is delivered before replying to it.'); return false; }
       return sendStyled(gid, text, { replyId: replyId, quote: opts.quote, channel: opts.channel }, opts.quiet ? null : 'Message not sent.');
     };
     // Editing an edit shown on its own targets its original, the only message visible to other members.
@@ -487,10 +487,10 @@ export function useActions(k) {
       }, function (e) { toast(e && e.message ? e.message : 'Chatango refused to create the group.', { tone: 'error' }); return false; });
     };
     actions.deleteMessage = function (gid, mid) {
-      if (!liveBridge.delivered(mid)) { toast('This message is still being delivered. Try again in a moment.'); return; }
+      if (!isDelivered(mid)) { toast('This message is still being delivered. Try again in a moment.'); return; }
       var m = findMsg(stateRef.current.groups[gid], mid);
       // Like BetterChatango: the original, then each of its edits whose final id Chatango has given.
-      [mid].concat((m && m.editIds) || []).filter(liveBridge.delivered).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
+      [mid].concat((m && m.editIds) || []).filter(isDelivered).forEach(function (id) { liveBridge.deleteMessage(gid, id); });
     };
     actions.deleteAllFrom = function (gid, name, msg) {
       var g = stateRef.current.groups[gid], m = msg && msg.unid ? msg : g && lastMessageOf(g, name);

@@ -1,7 +1,7 @@
 import { CONFIRM_TIMEOUT, MIN, esc, lower, uid, unquote, warn } from '../core/util.js';
 import { MINI_CSS_MAX_LENGTH, PM_SETTING_NAMES, VISSLE_UPLOAD, epochMs, friendPresence, groupInfo, miniStyleOfForm, notNone, parseBanSearch, parseBans, parseBlocked, parseMiniCss, parseModLog, parseMods, parseMsgBg, parseParticipants, parsePmSettings, parsePresence, parseProfileReply, parseUnbanned, parseVisits, parseWho, pmFrame, pmRecordEntry, postRefusal, screenPmRecords, sessionOf, spellingOf, stateOf } from './live-parse.js';
 import { JOURNAL, LIVE, betterChatangoRefs, showInterface } from '../core/env.js';
-import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNELS, GENDER_LABEL, MEET_PAGE, MSG_FLAG, PM_CONNECTION, badgeRoleOf, channelOf, isGuest, isTempMsgId, tempMsgId } from '../core/chatango.js';
+import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNELS, GENDER_LABEL, MEET_PAGE, MSG_FLAG, PM_CONNECTION, badgeRoleOf, channelOf, isGuest, tempMsgId } from '../core/chatango.js';
 import { MEDIA_PAGE, mediaEntryOk, mediaMatch, screenMediaEntries } from '../core/media-library.js';
 import { encodeRef, parseContent } from '../core/message-content.js';
 import { readOwn, writeOwn } from '../core/account-store.js';
@@ -958,11 +958,6 @@ export var liveBridge = (function () {
     note: note,
     connName: connName,
     closedHint: closedHint,
-    /**
-     * Tells whether a message already has the final id that replying to it or editing or deleting it waits for.
-     * @param {string} id Message id in the state.
-     */
-    delivered: function (id) { return !!id && !isTempMsgId(id); },
     /**
      * Sends a group message or the edit of a message.
      * @param {string} gid Target group.

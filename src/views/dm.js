@@ -299,7 +299,7 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
     copyTextItem(app, m), m.author !== me ? viewProfileItem(app, m.author, null) : null, whoItem(app, m.author),
     canRemove ? { divider: true } : null,
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(shownName(app.state, p.peer), LIVE), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
+      app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(shownName(app.state, p.peer)), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
     } } : null];
   var o = p.original;
   var reply = o ? { author: h(Person, { name: o.author, size: 16 }), text: messagePreview(o), onJump: function () { p.onJump(o); } }
@@ -341,11 +341,11 @@ function personRow(n, u, c, me, onClick, active, draft) {
 
 /**
  * Tells who keeps the PMs removed from this browser.
+ * In live it says first that only BetterChatango's copy goes away.
  * @param {string} name Correspondent as they spell their name.
- * @param {boolean} betterChatango True to say first that only BetterChatango's copy goes away.
  */
-function keptCopyText(name, betterChatango) {
-  return (betterChatango ? 'Removes the copy BetterChatango keeps in this browser. ' : '') + "Chatango doesn't store private messages, and " + name + ' keeps their copy.';
+function keptCopyText(name) {
+  return (LIVE ? 'Removes the copy BetterChatango keeps in this browser. ' : '') + "Chatango doesn't store private messages, and " + name + ' keeps their copy.';
 }
 
 /**
@@ -360,7 +360,7 @@ function convActions(app, name, c) {
     received && !c.unread ? { label: 'Mark as unread', short: 'Unread', icon: 'message', onSelect: function () { app.actions.markDmUnread(name); } } : null,
     { label: 'Close conversation', short: 'Close', icon: 'x', onSelect: function () { app.actions.closeDm(name); } },
     { label: 'Delete conversation…', short: 'Delete', icon: 'trash', danger: true, onSelect: function () {
-      app.ui.confirm({ title: 'Delete this conversation?', body: keptCopyText(shownName(app.state, name), LIVE), confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
+      app.ui.confirm({ title: 'Delete this conversation?', body: keptCopyText(shownName(app.state, name)), confirmLabel: 'Delete', danger: true, onConfirm: function () { app.actions.deleteDm(name); } });
     } }
   ].filter(Boolean);
 }

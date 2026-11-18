@@ -11,7 +11,12 @@ export var MEET_PAGE = 40;
 
 // A message shown before its final id keeps the temporary id k:{key}, which Chatango refers to by the key alone.
 export function tempMsgId(key) { return 'k:' + key; }
-export function isTempMsgId(id) { return String(id).indexOf('k:') === 0; }
+function isTempMsgId(id) { return String(id).indexOf('k:') === 0; }
+/**
+ * Tells whether a message already has the final id that replying to it or editing or deleting it waits for.
+ * @param {?string} id Message id in the state.
+ */
+export function isDelivered(id) { return !!id && !isTempMsgId(id); }
 export function plainMsgId(id) { return String(id).replace(/^k:/, ''); }
 
 // Outside React state: set by the bridge after an upload or a crop, it bypasses the HTTP cache of the pictures.
