@@ -12,6 +12,7 @@ import { columnHeader } from './chrome.js';
 import { personActionGroups, personCard, useProfileActions, useProfiles } from './people.js';
 import { Dialog, MenuButton, menuGroups } from '../core/layers.js';
 import { developerBadge, presenceSr, roleBadge, youBadge } from '../core/people-ui.js';
+import { LOADER_TEXT } from '../core/loader-contract.js';
 /**
  * Member list of a group.
  * @param {{g: Object, scrollRef: Object}} p Shown group and ref of its scrolling area.
@@ -134,7 +135,7 @@ export function WhoDialog(p) {
   var o = useState(null), open = o[0], setOpen = o[1];
   useEffect(function () {
     liveBridge.fetchWho(p.name).then(function (levels) {
-      setRes(levels ? { levels: levels } : { error: "vissle sent an answer Nightango can't read." });
+      setRes(levels ? { levels: levels } : { error: LOADER_TEXT.vissleUnreadable });
     }, function () { setRes({ error: "Couldn't reach vissle. Try again later." }); });
   }, [p.name]);
   var levels = res && res.levels || [];

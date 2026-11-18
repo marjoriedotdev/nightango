@@ -1582,7 +1582,7 @@ export var liveBridge = (function () {
       return askLoader('vissle', { page: q.page, order: q.order, get: q.get }, "vissle didn't answer in time. Reload the page and try again.").then(function (r) {
         if (r.data && typeof r.data.error === 'string') throw new Error(r.data.error);
         var items = parseVisits(r.data);
-        if (!items) throw new Error("vissle sent an answer Nightango can't read.");
+        if (!items) throw new Error(LOADER_TEXT.vissleUnreadable);
         return items;
       });
     },

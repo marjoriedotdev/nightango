@@ -91,6 +91,19 @@ export function dmRowFill(m, u, prefs, theme) {
 }
 
 /**
+ * Preview of the message a reply answers, shown above it.
+ * @param {Object} m Message.
+ * @param {?Object} original Loaded original, null if it is not loaded.
+ * @param {?string} gid Group of a group message, null for a PM.
+ * @param {function(Object)} onJump Jumps to the original.
+ * @returns {?Object} Reply of T.Message, null for a message that answers none.
+ */
+export function replyPreview(m, original, gid, onJump) {
+  if (original) return { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: messagePreview(original), onJump: function () { onJump(original); } };
+  return m.replyTo ? { text: 'Original message not loaded' } : null;
+}
+
+/**
  * Tells whether a message shows as the follow-up of the previous one: same author within five minutes, neither a reply nor next to a deleted message.
  * @param {?Object} prev Previous message of the log, null after a divider or another kind of row.
  * @param {Object} m Message.
@@ -173,9 +186,7 @@ export var MessageRow = React.memo(function MessageRow(p) {
     : h(MessageContent, { m: m, style: textStyle, plain: ms.plain, gid: gid });
   var chan = chanColor ? h('span', { className: 'chan' }, h('i', { style: { background: chanColor } }), CHANNELS[m.channel].label + ' channel') : null;
   if (chanColor) rowStyle = Object.assign({ '--chan': chanColor }, rowStyle);
-  var original = p.original;
-  var reply = original ? { author: h(Person, { name: original.author, gid: gid, size: 16 }), text: messagePreview(original), onJump: function () { p.onJump(original); } }
-    : m.replyTo ? { text: 'Original message not loaded' } : null;
+  var reply = replyPreview(m, p.original, gid, p.onJump);
   var authorBtn = handle
     ? h('button', { type: 'button', className: 'tc-msg-author namebtn namebtn-mention', title: 'Mention ' + p.shown, style: nameStyle, onClick: function () { p.onMention(handle); } }, p.shown)
     : authorName(p.shown, nameStyle);

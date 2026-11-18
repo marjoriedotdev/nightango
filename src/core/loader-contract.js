@@ -26,5 +26,6 @@ export var LOADER_TEXT = {
   tiktokUnknown: "TikTok didn't say which video this link leads to. Open the link instead.",
   tiktokLate: "TikTok didn't answer in time. Open the link instead.",
   xUnshared: "X didn't share this post. Open the link instead.",
-  xLate: "X didn't answer in time. Open the link instead."
+  xLate: "X didn't answer in time. Open the link instead.",
+  vissleUnreadable: "vissle sent an answer Nightango can't read."
 };

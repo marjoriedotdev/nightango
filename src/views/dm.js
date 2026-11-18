@@ -4,7 +4,7 @@ import { SkeletonRows, useApp, useAppApi, useLatestCalls, useRightColumn, useRow
 import { bidiText } from '../core/rich-text.js';
 import { THREAD_MAX, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, shownName, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { MessageContent, authorName, continues, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton } from './message.js';
+import { MessageContent, authorName, continues, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton, replyPreview } from './message.js';
 import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
 import { popOutItem } from './pip-window.js';
 import { inCurrentSpace, spacesItem } from './spaces.js';
@@ -301,9 +301,7 @@ var DmMessageRow = React.memo(function DmMessageRow(p) {
     canRemove ? { label: 'Remove from this browser…', icon: 'trash', danger: true, onSelect: function () {
       app.ui.confirm({ title: 'Remove this message from this browser?', body: keptCopyText(shownName(app.state, p.peer)), confirmLabel: 'Remove', danger: true, onConfirm: function () { app.actions.removeDmMessage(p.peer, m); } });
     } } : null];
-  var o = p.original;
-  var reply = o ? { author: h(Person, { name: o.author, size: 16 }), text: messagePreview(o), onJump: function () { p.onJump(o); } }
-    : m.replyTo ? { text: 'Original message not loaded' } : null;
+  var reply = replyPreview(m, p.original, null, p.onJump);
   var actions = h(Frag, null,
     p.onReply && m.key ? h(T.IconButton, { icon: 'reply', label: 'Reply', size: 28, iconSize: 16, onClick: function () { p.onReply(m); } }) : null,
     moreActionsButton(items, setMenuOpen));
