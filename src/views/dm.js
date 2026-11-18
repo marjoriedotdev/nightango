@@ -9,7 +9,7 @@ import { COMPOSER_MODES, EDIT_MAX, editsLastOnUp, useComposerMode } from './grou
 import { MessageContent, authorName, copyTextItem, dmRowFill, joinRow, joinedRow, memberStyles, mentionHandle, moreActionsButton, quoteOf } from './message.js';
 import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
 import { confirmRemoveFriend, notifyOnlineItem, personActionGroups, useFriendRequest, useProfileActions, viewProfileItem, whoItem } from './members.js';
-import { popOutItem } from './pip.js';
+import { popOutItem } from './pip-window.js';
 import { inCurrentSpace, spacesItem } from './spaces.js';
 import { MeetPeople } from './meet.js';
 import { MessageEntry } from './mentions.js';

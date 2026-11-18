@@ -77,8 +77,7 @@ export async function bundleForTest(exports, name) {
 const LAYER_RANK = { core: 0, bridge: 1, views: 2, settings: 2, app: 3 };
 // Debt left by the migration to modules: each refactor removes its entries, any other module in a cycle fails the build.
 const KNOWN_CYCLIC = new Set([
-  'views/commands.js', 'views/discover.js', 'views/dm.js', 'views/group.js', 'views/live-joined.js', 'views/meet.js', 'views/members.js', 'views/message-style.js',
-  'views/message.js', 'views/pip.js', 'views/profile.js', 'views/shared-media.js'
+  'views/dm.js', 'views/group.js', 'views/meet.js', 'views/members.js', 'views/message-style.js', 'views/message.js', 'views/profile.js', 'views/shared-media.js'
 ]);
 
 /**

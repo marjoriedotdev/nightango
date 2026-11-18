@@ -1,6 +1,5 @@
-import { T, h, useState } from '../core/globals.js';
+import { Frag, T, h, useState } from '../core/globals.js';
 import { Dialog, useApp } from '../core/ui.js';
-import { JoinedGroups } from './live-joined.js';
 import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, chatangoPageUrl, parseGroupName } from '../core/chatango.js';
@@ -12,7 +11,7 @@ import { pageHeader } from './chrome.js';
  * @param {string} id Group name read by parseGroupName.
  */
 export function unknownGroupError(s, id) { return s.groups[id] || LIVE ? '' : 'No group named ' + id + '. Check the spelling.'; }
-export function GroupJoinButton(p) {
+function GroupJoinButton(p) {
   var app = useApp(), g = p.group;
   return g.joined
     ? h(T.Button, { size: 'sm', variant: 'ghost', onClick: function () { app.nav({ view: 'group', id: g.id }); } }, 'Open')
@@ -73,4 +72,26 @@ export function CreateGroupDialog(p) {
       h(T.TextField, { id: 'cg-title', label: 'Title', value: title, error: err.title, placeholder: 'Shown under the name in Discover', onChange: function (ev) { setTitle(ev.target.value); } }),
       h(T.TextField, { id: 'cg-desc', label: 'Description', multiline: true, rows: 3, value: desc, labelAside: h('span', { className: 'tc-msg-time' }, desc.length + ' / 300'), maxLength: 300, onChange: function (ev) { setDesc(ev.target.value); } }),
       h('label', { className: 'tc-checkline', style: { justifyContent: 'space-between', width: '100%' } }, h('span', null, 'Show in Discover'), h(T.Switch, { checked: listed, onChange: function (ev) { setListed(ev.target.checked); } }))));
+}
+
+function GroupSection(p) {
+  var s = useApp().state;
+  return h('section', { 'aria-labelledby': p.id, style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },
+    h('h2', { id: p.id, className: 'tc-section-title' }, p.title),
+    p.names.length ? h('div', { className: 'cards small' }, p.names.map(function (k) {
+      return h('article', { key: k, className: 'card row' }, h(T.Avatar, { name: k, square: true, size: 36 }),
+        h('span', { className: 'card-title' }, h('strong', { title: k }, k), h('span', null, s.groups[k].title)), h(GroupJoinButton, { group: s.groups[k] }));
+    })) : h('p', { className: 'muted', style: { margin: 0 } }, p.empty));
+}
+function JoinedGroups() {
+  var s = useApp().state;
+  var names = Object.keys(s.groups);
+  var joined = names.filter(function (k) { return s.groups[k].joined; });
+  var rest = names.filter(function (k) { return !s.groups[k].joined; }).sort();
+  var owned = rest.filter(function (k) { return s.groups[k].owned; });
+  var recent = rest.filter(function (k) { return !s.groups[k].owned; });
+  return h(Frag, null,
+    h(GroupSection, { id: 'lj-h', title: 'Joined groups', names: joined, empty: LIVE ? 'Connecting to your groups. They appear here as BetterChatango joins them.' : "You haven't joined any group yet." }),
+    owned.length ? h(GroupSection, { id: 'lo-h', title: 'Groups you own', names: owned }) : null,
+    recent.length ? h(GroupSection, { id: 'lr-h', title: 'Recent groups', names: recent }) : null);
 }

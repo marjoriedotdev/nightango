@@ -7,7 +7,6 @@ import { banListOf, findMsg, readThrough, sentBadge, shownName, trimThread, user
 import { pmRecordEntry, screenPmRecords } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { editedId } from '../views/message.js';
-import { closePipWindow } from '../views/pip.js';
 import { uploadKey } from '../views/attach.js';
 import { applyGroupEdit, ensureLiveGroup, ensureLiveUser, ensureUnseenUser, groupUpdate, pmAuthor } from './live-state.js';
 import { addSentPm, memoryPmArchive, mergePmHistory, pmConversation, pmMessage, readPm, syncPmUnread, unreadPm } from './pm.js';
@@ -110,7 +109,6 @@ export function useActions(k) {
     openSplit: openSplit,
     closeSplit: closeSplit,
     openPip: openPip,
-    closePip: closePipWindow,
     login: function (name) { var world = sampleWorld(name); drafts.clear(); update(function (d) { seedState(d, world); d.auth = { loggedIn: true }; d.lastChat = { view: 'group', id: 'community' }; }); },
     logout: function () { update(function (d) { d.auth = { loggedIn: false }; }); setNavOpen(false); },
     resetDemo: function () { var world = sampleWorld(stateRef.current.me); update(function (d) { seedState(d, world); }); toast('Sample data restored.', { tone: 'success' }); },

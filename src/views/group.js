@@ -8,7 +8,7 @@ import { liveBridge } from '../bridge/live-bridge.js';
 import { MessageEmbeds, MessageRow, canEditGroupMessage, editedId, groupRowFill, joinRow, mentionHandle, quoteOf } from './message.js';
 import { MessageLog, logChangeKey, useMessageLog } from './message-log.js';
 import { GroupInfoSheet, MembersPanel } from './members.js';
-import { popOutItem } from './pip.js';
+import { popOutItem } from './pip-window.js';
 import { spacesItem } from './spaces.js';
 import { MessageStyleButton } from './message-style.js';
 import { useEmojiPicker } from './emoji-picker.js';
@@ -16,7 +16,7 @@ import { uploadKey, useAttachMedia } from './attach.js';
 import { attachMenu, useVoiceRecorder } from './voice.js';
 import { useMediaCompletion } from './media.js';
 import { SharedMediaDialog } from './shared-media.js';
-import { runCommand } from './commands.js';
+import { confirmLeave, runCommand } from './commands.js';
 import { SessionBanner, sessionLost } from './session.js';
 import { LIVE } from '../core/env.js';
 import { CHANNELS, channelLabel, chatangoPageUrl, isGuest } from '../core/chatango.js';
@@ -493,11 +493,3 @@ function AnnouncementText(p) {
     expanded || tall ? h('button', { ref: moreRef, type: 'button', className: 'linkbtn ann-more', 'aria-expanded': String(expanded), 'aria-controls': id, onClick: function () { setExpanded(!expanded); } }, expanded ? 'Show less' : 'Show more') : null);
 }
 
-/**
- * Asks for confirmation before leaving a group.
- * @param {Object} app Application context.
- * @param {string} gid Group to leave.
- */
-export function confirmLeave(app, gid) {
-  app.ui.confirm({ title: 'Leave #' + gid + '?', body: 'You can join again from Discover at any time.', confirmLabel: 'Leave group', danger: true, onConfirm: function () { app.actions.leaveGroup(gid); } });
-}

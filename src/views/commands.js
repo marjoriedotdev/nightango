@@ -1,4 +1,3 @@
-import { confirmLeave } from './group.js';
 import { dmNameError } from './new-dm.js';
 import { unknownGroupError } from './discover.js';
 import { parseGroupName } from '../core/chatango.js';
@@ -47,4 +46,13 @@ export function runCommand(app, text, gid) {
     else toast('No command named ' + asked + '. ' + commandList());
   }
   return true;
+}
+
+/**
+ * Asks for confirmation before leaving a group.
+ * @param {Object} app Application context.
+ * @param {string} gid Group to leave.
+ */
+export function confirmLeave(app, gid) {
+  app.ui.confirm({ title: 'Leave #' + gid + '?', body: 'You can join again from Discover at any time.', confirmLabel: 'Leave group', danger: true, onConfirm: function () { app.actions.leaveGroup(gid); } });
 }
