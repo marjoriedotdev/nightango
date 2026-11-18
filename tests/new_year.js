@@ -1,9 +1,9 @@
-// New Year: the last-minute countdown and the fireworks minute around local midnight, on src/core/util.js.
+// New Year: the last-minute countdown and the fireworks minute around local midnight, on src/core/season.js.
 const vm = require('vm');
 const { bundleForTest } = require('../scripts/build.mjs');
 (async () => {
 const ctx = {};
-vm.runInNewContext(await bundleForTest("export { newYearAt } from './src/core/util.js';"), ctx);
+vm.runInNewContext(await bundleForTest("export { newYearAt } from './src/core/season.js';"), ctx);
 const util = ctx.__mod;
 const check = (c, msg, detail) => console.log((c ? 'ok  ' : 'FAIL') + ' ' + msg + (c || !detail ? '' : ' ' + JSON.stringify(detail)));
 const at = (y, mo, d, h, mi, s, ms) => util.newYearAt(new Date(y, mo - 1, d, h, mi, s, ms).getTime());

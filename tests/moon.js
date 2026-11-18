@@ -30,7 +30,7 @@ check(svg('2024-04-23T23:49Z').includes('aria-label="Full moon, 100% lit"') && !
 /* Season dates, read on the local date: the first and last second of each season and the seconds around it, in both hemispheres */
 (async () => {
 const loaded = {};
-vm.runInNewContext(await bundleForTest("export { seasonOf, skyAt } from './src/core/util.js';"), loaded);
+vm.runInNewContext(await bundleForTest("export { seasonOf, skyAt } from './src/core/season.js';"), loaded);
 const util = loaded.__mod;
 const seasonAt = (south) => ([y, m, d, hh, mm, ss]) => util.seasonOf(new Date(y, m - 1, d, hh, mm, ss), south);
 /* Each range with the season around it: Christmas cuts the northern winter in two and stands alone in the south */

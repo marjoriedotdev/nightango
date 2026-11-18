@@ -1,6 +1,6 @@
 import { APP_VERSION } from 'build:info';
 import { AvatarDecorCtx, h, useEffect, useMemo, useRef, useState, useSyncExternalStore } from '../core/globals.js';
-import { REPO_URLS, SEASONS, isNewerVersion, seasonOf, skyAt, storageSet } from '../core/util.js';
+import { REPO_URLS, isNewerVersion, storageSet } from '../core/util.js';
 import { openDraft } from '../core/draft.js';
 import { accentOf, accentTokens } from '../core/colors.js';
 import { ApiCtx, ConfirmDialog, Ctx, Layers, Toasts, draftStore, minuteClock } from '../core/ui.js';
@@ -25,6 +25,7 @@ import { useReconnection } from './reconnection.js';
 import { useLiveOps } from './live-ops.js';
 import { JOURNAL, LIVE, ROOT_EL, VIEWER_THEME } from '../core/env.js';
 import { PipHost } from '../views/pip.js';
+import { SEASONS, seasonOf, skyAt } from '../core/season.js';
 /* ---------- Root ---------- */
 /**
  * Returns the first stable version of a list of release tags.
