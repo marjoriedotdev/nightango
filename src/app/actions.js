@@ -14,7 +14,7 @@ import { visitorPage } from '../core/vissle.js';
 import { mediaEntryOk, mediaName } from '../core/media-library.js';
 import { GIF_URL } from '../core/message-content.js';
 import { BETTER_CHATANGO_SAVE_FAILED } from '../settings/kit.js';
-// -- Actions: what the views ask, passed to Chatango by BetterChatango in live
+// -- Actions: what the views ask, sent to Chatango in live --------------------
 /**
  * Announces the toggle of a member mark in the prototype as in live.
  * @param {string} name Target member as they spell their name.
