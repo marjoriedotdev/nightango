@@ -1,13 +1,11 @@
-import { T, h, useState } from '../core/globals.js';
+import { T, h } from '../core/globals.js';
 import { readJsonFile, uid } from '../core/util.js';
 import { accentOf, hexToRgb } from '../core/colors.js';
 import { AccentSwatches, JsonFileButton, useApp } from '../core/ui.js';
-import { liveBridge } from '../bridge/live-bridge.js';
-import { Page, saveBetterChatangoSetting, usePref } from './shell.js';
-import { LIVE } from '../core/env.js';
+import { Page, useBetterChatangoSettings, usePref } from './shell.js';
 export function AppearancePage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs, accent = accentOf(prefs, app.theme);
-  var md = useState(function () { return LIVE ? liveBridge.setting('markdown') : null; }), markdown = md[0], setMarkdown = md[1];
+  var md = useBetterChatangoSettings(['markdown']), markdown = md[0] && md[0].markdown, setMarkdown = md[1];
   var themes = [
     ['dark', 'Dark', ['#0e1629', '#080d1b', '#34446a', '#2b3a5f', '#1b2747']],
     ['light', 'Light', ['#fdfcfa', '#eceaf4', '#c6c2d1', '#d6d2df', '#ffffff']],
@@ -63,9 +61,9 @@ export function AppearancePage() {
       }),
       h(T.SettingRow, { title: '24-hour time', description: 'Shows 14:05 instead of 2:05 PM.', control: pr.sw('h24') }),
       h(T.SettingRow, { title: 'Show group announcements', description: 'Timed staff announcements and the banner at the top of a group.', control: pr.sw('announcements') }),
-      markdown === null ? null : h(T.SettingRow, {
+      md[0] === null ? null : h(T.SettingRow, {
         title: 'Format Markdown when sending', description: '*text* sends as italic, **text** as bold and __text__ as underlined, in groups and private messages.',
-        control: h(T.Switch, { checked: markdown, onChange: function (e) { var v = e.target.checked; if (saveBetterChatangoSetting(app, liveBridge.setSetting, 'markdown', v)) setMarkdown(v); } })
+        control: h(T.Switch, { checked: markdown, onChange: function (e) { setMarkdown('markdown', e.target.checked); } })
       })),
     h(T.SettingsSection, { title: 'Chatango styles', description: 'Styles members set on Chatango. Hard-to-read colors are corrected.' },
       h(T.SettingRow, { title: 'Name colors', control: pr.sw('styles.names') }),

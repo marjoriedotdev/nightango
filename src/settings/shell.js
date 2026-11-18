@@ -1,6 +1,6 @@
-import { Frag, T, h } from '../core/globals.js';
+import { Frag, T, h, useState } from '../core/globals.js';
 import { ago, cx } from '../core/util.js';
-import { BETTER_CHATANGO_PREFS, BETTER_CHATANGO_SAVE_FAILED } from '../core/prefs.js';
+import { BETTER_CHATANGO_PREFS } from '../core/prefs.js';
 import { useApp } from '../core/ui.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SessionBanner } from '../views/session.js';
@@ -27,27 +27,40 @@ function getIn(obj, path) { return path.split('.').reduce(function (o, k) { retu
 export function usePref() {
   var app = useApp();
   return {
-    get: function (path) { return getIn(app.state.prefs, path); },
     set: function (path, v) { app.update(function (d) { setIn(d.prefs, path, v); }); },
     sw: function (path) {
       var v = getIn(app.state.prefs, path), key = LIVE && BETTER_CHATANGO_PREFS[path];
-      return h(T.Switch, { checked: !!v, onChange: function (e) { var nv = e.target.checked; if (!key || saveBetterChatangoSetting(app, liveBridge.setSetting, key, nv)) app.update(function (d) { setIn(d.prefs, path, nv); }); } });
+      return h(T.Switch, { checked: !!v, onChange: function (e) { var nv = e.target.checked; if (!key || saveBetterChatangoSetting(app, key, nv)) app.update(function (d) { setIn(d.prefs, path, nv); }); } });
     }
   };
 }
 
+export var BETTER_CHATANGO_SAVE_FAILED = "BetterChatango couldn't save this setting. Reload the page and try again.";
 /**
  * Saves a setting into the BetterChatango settings with a toast if BetterChatango does not save it.
  * @param {Object} app Application context.
- * @param {Function} write Bridge write, true if BetterChatango saved the value.
  * @param {string} key Setting key in the bridge.
  * @param {boolean|number} value New value.
  * @returns {boolean} True if BetterChatango saved it.
  */
-export function saveBetterChatangoSetting(app, write, key, value) {
-  if (write(key, value)) return true;
+function saveBetterChatangoSetting(app, key, value) {
+  if (liveBridge.setSetting(key, value)) return true;
   app.ui.toast(BETTER_CHATANGO_SAVE_FAILED, { tone: 'error' });
   return false;
+}
+/**
+ * Reads BetterChatango settings for a page: the interface changes only if BetterChatango saved the value, otherwise a toast says so.
+ * @param {Array<string>} keys Setting keys in the bridge.
+ * @returns {[?Object, function(string, (boolean|number))]} Value by key, null outside live or if one of them is unreadable, and its save.
+ */
+export function useBetterChatangoSettings(keys) {
+  var app = useApp();
+  var st = useState(function () { return LIVE ? liveBridge.settings(keys) : null; }), value = st[0], setValue = st[1];
+  function set(key, v) {
+    if (!saveBetterChatangoSetting(app, key, v)) return;
+    setValue(function (x) { var n = Object.assign({}, x); n[key] = v; return n; });
+  }
+  return [value, set];
 }
 
 export function SettingsShell(p) {

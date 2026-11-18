@@ -19,16 +19,19 @@ export var liveBridge = (function () {
   var C = refs.client, CH = refs.chatango, SB = refs.sidebar;
   var ENV = refs.torch && refs.torch.environment;
   var listeners = [], queue = [];
+  // BetterChatango settings that Nightango reads or writes: path in client.settings and kind of the value. The slider saves a volume as text.
   var SETTINGS = {
     joinOwned: ['privacy', 'groups', 'connect_own'], joinRecent: ['privacy', 'groups', 'connect_recent'], joinFavorites: ['privacy', 'groups', 'connect_favorite'],
     markdown: ['appearance', 'messages', 'parse_markdown'], guestMessages: ['safety', 'messages', 'show_guest'], announcements: ['appearance', 'messages', 'show_annc'],
     pmrCheck: ['privacy', 'private_messages', 'check_pmr'],
-    tabTitleAlerts: ['notifications', 'display', 'tab_title'], desktopMentions: ['notifications', 'display', 'push_desktop']
+    tabTitleAlerts: ['notifications', 'display', 'tab_title'], desktopMentions: ['notifications', 'display', 'push_desktop'],
+    playMention: ['notifications', 'sound', 'play_mention'], playOnline: ['notifications', 'sound', 'play_online'],
+    volumeMention: ['notifications', 'sound', 'volume_mention', 'volume'], volumeOnline: ['notifications', 'sound', 'volume_online', 'volume']
   };
-  var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore'], trusted: ['safety', 'whitelist', 'domain'] };
+  // Lists of the BetterChatango settings, the names and hosts in lowercase.
+  var LISTS = { favorite: ['privacy', 'groups', 'favorite'], muted: ['notifications', 'muted', 'groups'], ignored: ['safety', 'users', 'ignore', 'lowercase'], trusted: ['safety', 'whitelist', 'domain', 'lowercase'] };
   var CONNECT_STATE = { online: 'on', app: 'app', offline: 'off' };
-  // Only sound settings that BetterChatango reads, with the Audio object each one sets.
-  var SOUND_KEYS = ['play_mention', 'volume_mention', 'play_online', 'volume_online'];
+  // Audio object of each BetterChatango sound, read again at its volume on each sound.
   var SOUND_AUDIO = { mention: 'message', online: 'play_online' };
   // Size of the ban and unban pages requested by BetterChatango.
   var BAN_PAGE = 50;
@@ -224,9 +227,8 @@ export var liveBridge = (function () {
         // BetterChatango plays the sound itself for the PM of client.private.focus, reset to false on each private connection: the bridge plays it for the others, like BetterChatango, except for edits and ignored members.
         var from = lower(data[0]);
         if (name === 'msg' && !p2.editId && from !== lower(C.user.name) && from !== C.private.focus && (readList('ignored') || []).indexOf(from) < 0) {
-          var sounds = readSounds();
           // Playback refused by the browser: intended silence, no toast.
-          if (sounds && sounds.play_mention) playSound('mention').then(null, function () {});
+          if (readSetting('playMention')) playSound('mention').then(null, function () {});
         }
         break;
       }
@@ -712,13 +714,13 @@ export var liveBridge = (function () {
   // Same persistence as BetterChatango: the whole object is rewritten under the single settings key.
   function saveSettings() { localStorage.setItem('settings', JSON.stringify(C.settings)); }
   /**
-   * Reads a switch from the BetterChatango settings.
+   * Reads a BetterChatango setting.
    * @param {string} key SETTINGS key.
-   * @returns {?boolean} Value read, null if the BetterChatango settings are unreadable.
+   * @returns {?(boolean|number)} Switch, or volume from 0 to 100, null if the BetterChatango settings are unreadable.
    */
   function readSetting(key) {
     var p = SETTINGS[key];
-    try { return !!C.settings[p[0]][p[1]][p[2]]; } catch (e) { warn(e); return null; }
+    try { var v = C.settings[p[0]][p[1]][p[2]]; return p[3] === 'volume' ? parseInt(v, 10) : !!v; } catch (e) { warn(e); return null; }
   }
   /**
    * Reads a list from the BetterChatango settings.
@@ -729,14 +731,6 @@ export var liveBridge = (function () {
     var info = C.groups && C.groups[gid] && C.groups[gid].room && C.groups[gid].room.information;
     return info ? { title: String(info.title || ''), description: String(info.description || '') } : null;
   }
-  function readSounds() {
-    try {
-      var sound = C.settings.notifications.sound, out = {};
-      // The BetterChatango slider saves the volume as text.
-      SOUND_KEYS.forEach(function (k) { out[k] = k.indexOf('volume_') === 0 ? parseInt(sound[k], 10) : !!sound[k]; });
-      return out;
-    } catch (e) { warn(e); return null; }
-  }
   function playSound(kind) {
     try {
       var audio = C.sound[SOUND_AUDIO[kind]];
@@ -746,7 +740,7 @@ export var liveBridge = (function () {
   }
   function readList(kind) {
     var p = LISTS[kind];
-    try { return C.settings[p[0]][p[1]][p[2]].slice(); } catch (e) { warn(e); return null; }
+    try { var list = C.settings[p[0]][p[1]][p[2]].slice(); return p[3] === 'lowercase' ? list.map(lower) : list; } catch (e) { warn(e); return null; }
   }
   /**
    * Adds or removes a value in a BetterChatango settings list the way BetterChatango does with filter or a push without duplicates.
@@ -756,6 +750,7 @@ export var liveBridge = (function () {
    */
   function writeList(kind, value, on) {
     var p = LISTS[kind];
+    if (p[3] === 'lowercase') value = lower(value);
     try {
       var owner = C.settings[p[0]][p[1]];
       if (!on) owner[p[2]] = owner[p[2]].filter(function (x) { return x !== value; });
@@ -1512,7 +1507,21 @@ export var liveBridge = (function () {
         return data;
       }, busyOr("Chatango didn't save your background. Try again."));
     },
+    /**
+     * Reads a BetterChatango setting.
+     * @param {string} key SETTINGS key.
+     * @returns {?(boolean|number)} Switch or volume, null if the BetterChatango settings are unreadable.
+     */
     setting: readSetting,
+    /**
+     * Reads several BetterChatango settings at once.
+     * @param {Array<string>} keys SETTINGS keys.
+     * @returns {?Object} Value by key, null if one of them is unreadable.
+     */
+    settings: function (keys) {
+      var out = {};
+      return keys.every(function (k) { out[k] = readSetting(k); return out[k] !== null; }) ? out : null;
+    },
     /**
      * Reads the PM restriction of one's account with at most one call per page load after the private connection opens.
      * @returns {Promise<?string>} restricted, ok or unknown, null without a call if check_pmr is off or unreadable.
@@ -1528,40 +1537,14 @@ export var liveBridge = (function () {
       return pmrCheck;
     },
     /**
-     * Reads the BetterChatango startup settings.
-     * @returns {?Object} The three switches, null if the BetterChatango settings are unreadable.
-     */
-    startupSettings: function () {
-      var out = {};
-      return ['joinOwned', 'joinRecent', 'joinFavorites'].every(function (k) { out[k] = readSetting(k); return out[k] !== null; }) ? out : null;
-    },
-    /**
-     * Saves a switch in the BetterChatango settings in place and under the settings key.
+     * Saves a BetterChatango setting in place and under the settings key.
      * @param {string} key SETTINGS key.
-     * @param {boolean} value New value.
+     * @param {boolean|number} value Switch, or volume from 0 to 100.
      */
     setSetting: function (key, value) {
       var p = SETTINGS[key];
       try {
-        C.settings[p[0]][p[1]][p[2]] = value;
-        saveSettings();
-        return true;
-      } catch (e) { warn(e); return false; }
-    },
-    /**
-     * Reads the sound settings that BetterChatango applies.
-     * @returns {?Object} Switches and volumes from 0 to 100, null if the BetterChatango settings are unreadable.
-     */
-    betterChatangoSounds: readSounds,
-    /**
-     * Saves a sound setting in the BetterChatango settings that are read again on each sound.
-     * @param {string} key SOUND_KEYS key.
-     * @param {boolean|number} value Switch, or volume from 0 to 100.
-     */
-    setBetterChatangoSound: function (key, value) {
-      if (SOUND_KEYS.indexOf(key) < 0) return false;
-      try {
-        C.settings.notifications.sound[key] = key.indexOf('volume_') === 0 ? Math.max(0, Math.min(100, Math.round(value))) : !!value;
+        C.settings[p[0]][p[1]][p[2]] = p[3] === 'volume' ? Math.max(0, Math.min(100, Math.round(value))) : !!value;
         saveSettings();
         return true;
       } catch (e) { warn(e); return false; }
@@ -1571,51 +1554,22 @@ export var liveBridge = (function () {
      * @param {string} kind mention or online.
      * @returns {Promise} Rejected if the browser refuses playback.
      */
-    playBetterChatangoSound: playSound,
+    playSound: playSound,
     /**
-     * Reads the BetterChatango favorite groups.
-     * @returns {?Array<string>} Group names, null if the BetterChatango settings are unreadable.
+     * Reads a list of the BetterChatango settings: favorite groups, muted groups whose mentions it silences, ignored members whose alerts it silences,
+     * trusted hosts whose links it opens without a warning.
+     * @param {string} kind LISTS key.
+     * @returns {?Array<string>} Copy of the list, null if the BetterChatango settings are unreadable.
      */
-    favoriteGroups: function () { return readList('favorite'); },
+    list: readList,
     /**
-     * Adds or removes a group from the BetterChatango favorites.
-     * @param {string} gid Target group.
+     * Adds a value to a list of the BetterChatango settings or removes it.
+     * @param {string} kind LISTS key.
+     * @param {string} value Group name, member name or host without scheme or path.
      * @param {boolean} on True to add it.
+     * @returns {boolean} False if BetterChatango did not save it.
      */
-    setFavorite: function (gid, on) { return writeList('favorite', gid, on); },
-    /**
-     * Reads the groups muted in BetterChatango whose mentions it silences.
-     * @returns {?Array<string>} Group names, null if the BetterChatango settings are unreadable.
-     */
-    mutedGroups: function () { return readList('muted'); },
-    /**
-     * Mutes or unmutes a group in BetterChatango.
-     * @param {string} gid Target group.
-     * @param {boolean} on True to mute it.
-     */
-    setMuted: function (gid, on) { return writeList('muted', gid, on); },
-    /**
-     * Reads the members ignored in BetterChatango whose alerts it silences.
-     * @returns {?Array<string>} Lowercase names, null if the BetterChatango settings are unreadable.
-     */
-    ignoredUsers: function () { return readList('ignored'); },
-    /**
-     * Ignores or stops ignoring a member in BetterChatango.
-     * @param {string} name Target member.
-     * @param {boolean} on True to ignore them.
-     */
-    setIgnored: function (name, on) { return writeList('ignored', lower(name), on); },
-    /**
-     * Reads the BetterChatango trusted hosts whose links it opens without a warning.
-     * @returns {?Array<string>} Lowercase hosts, null if the BetterChatango settings are unreadable.
-     */
-    trustedHosts: function () { var list = readList('trusted'); return list && list.map(lower); },
-    /**
-     * Adds a host to the BetterChatango trusted hosts or removes it.
-     * @param {string} host Lowercase host, without scheme or path.
-     * @param {boolean} on True to add it.
-     */
-    setTrustedHost: function (host, on) { return writeList('trusted', host, on); },
+    setListed: writeList,
     /**
      * Reads the activity of one's own profile recorded by vissle.me.
      * @param {{page: number, order: string, get: string}} q Cursor, order and filter of the requested page.

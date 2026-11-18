@@ -1,8 +1,7 @@
 import { Frag, T, h, useState } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { Page, usePref } from './shell.js';
-import { useBetterChatangoSettings } from './live-account.js';
+import { Page, useBetterChatangoSettings, usePref } from './shell.js';
 import { LIVE } from '../core/env.js';
 import { beep } from '../core/sound.js';
 export function NotificationsPage() {
@@ -58,24 +57,24 @@ function VolumeControl(p) {
 }
 
 var BETTER_CHATANGO_SOUND_ROWS = [
-  ['mention', 'Mention sound', 'When someone mentions you or sends you a private message.', 'Mention volume'],
-  ['online', 'Friend online sound', 'When a friend comes online, at most once every 5 minutes per friend.', 'Friend online volume']
+  { sound: 'mention', play: 'playMention', volume: 'volumeMention', title: 'Mention sound', description: 'When someone mentions you or sends you a private message.', volumeLabel: 'Mention volume' },
+  { sound: 'online', play: 'playOnline', volume: 'volumeOnline', title: 'Friend online sound', description: 'When a friend comes online, at most once every 5 minutes per friend.', volumeLabel: 'Friend online volume' }
 ];
 
 function BetterChatangoSoundsSection() {
   var app = useApp();
-  var st = useBetterChatangoSettings(liveBridge.betterChatangoSounds, liveBridge.setBetterChatangoSound), sounds = st[0], set = st[1];
+  var st = useBetterChatangoSettings(['playMention', 'volumeMention', 'playOnline', 'volumeOnline']), sounds = st[0], set = st[1];
   function play(kind) {
-    liveBridge.playBetterChatangoSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.', { tone: 'error' }); });
+    liveBridge.playSound(kind).then(null, function () { app.ui.toast('Your browser blocked the sound. Click the page, then try again.', { tone: 'error' }); });
   }
   return h(T.SettingsSection, { title: 'Sounds', description: 'Played by BetterChatango. Nightango plays none of its own.' },
     sounds ? BETTER_CHATANGO_SOUND_ROWS.map(function (r) {
-      var on = sounds['play_' + r[0]];
+      var on = sounds[r.play];
       return h(T.SettingRow, {
-        key: r[0], asLabel: false, title: r[1], description: r[2],
+        key: r.sound, asLabel: false, title: r.title, description: r.description,
         control: h(Frag, null,
-          h(T.Switch, { label: r[1], checked: on, onChange: function (e) { set('play_' + r[0], e.target.checked); } }),
-          h(VolumeControl, { label: r[3], value: sounds['volume_' + r[0]], disabled: !on, onChange: function (v) { set('volume_' + r[0], v); }, onPlay: function () { play(r[0]); } }))
+          h(T.Switch, { label: r.title, checked: on, onChange: function (e) { set(r.play, e.target.checked); } }),
+          h(VolumeControl, { label: r.volumeLabel, value: sounds[r.volume], disabled: !on, onChange: function (v) { set(r.volume, v); }, onPlay: function () { play(r.sound); } }))
       });
     }) : h('p', { className: 'pal-empty' }, "Couldn't read BetterChatango's sound settings. Reload the page and try again."));
 }

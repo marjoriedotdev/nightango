@@ -6,7 +6,7 @@ import { miniStyleOf, premiumActive, premiumEndsSoon, userOf } from '../core/sel
 import { miniStyleForm, miniStyleOfForm } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { FullProfileFrame, useFullProfileMedia } from '../views/profile.js';
-import { Page, saveBetterChatangoSetting } from './shell.js';
+import { Page, useBetterChatangoSettings } from './shell.js';
 import { useMarkupToolbar } from './markup-toolbar.js';
 import { ProfilePreviewCard, VisibilitySection, VisitorsSection } from './profile.js';
 import { BrowserTabSection, ChatangoPmSection, NotesSection, PRIVACY_LEDE, PmHistoryRows, StartupSection } from './privacy.js';
@@ -188,28 +188,17 @@ function MiniBackgroundSection(p) {
             h(T.Checkbox, { label: 'Tile across', checked: st.tileAcross, onChange: function (e) { p.onChange('tileAcross', e.target.checked); } }))));
 }
 
-// The interface changes only if BetterChatango saved the value, otherwise a toast says so.
-export function useBetterChatangoSettings(read, write) {
-  var app = useApp();
-  var st = useState(read), value = st[0], setValue = st[1];
-  function set(key, v) {
-    if (!saveBetterChatangoSetting(app, write, key, v)) return;
-    setValue(function (x) { var n = Object.assign({}, x); n[key] = v; return n; });
-  }
-  return [value, set];
-}
 
 var PMR_STATUS = {
   ok: 'vissle sees no restriction on your private messages.',
   restricted: 'vissle thinks your private messages are restricted.',
   unknown: "vissle couldn't check your private message status."
 };
-function readPmrCheck() { var v = liveBridge.setting('pmrCheck'); return v === null ? null : { pmrCheck: v }; }
 
 export function PrivacyPageLive() {
   var app = useApp();
-  var st = useBetterChatangoSettings(liveBridge.startupSettings, liveBridge.setSetting), startup = st[0], setStartupSetting = st[1];
-  var pc = useBetterChatangoSettings(readPmrCheck, liveBridge.setSetting), pmr = pc[0], setPmrSetting = pc[1];
+  var st = useBetterChatangoSettings(['joinOwned', 'joinRecent', 'joinFavorites']), startup = st[0], setStartupSetting = st[1];
+  var pc = useBetterChatangoSettings(['pmrCheck']), pmr = pc[0], setPmrSetting = pc[1];
   var checking = !!(pmr && pmr.pmrCheck);
   // Also runs when the setting is turned off: pmrStatus then returns null, which removes the status and the PM banner.
   useEffect(function () { app.actions.checkPmr(); }, [checking]);

@@ -2,7 +2,6 @@ import { useRef, useState } from '../core/globals.js';
 import { copyText, esc, lower, pick, uid, warn } from '../core/util.js';
 import { ROLE_LONG, mkSettings } from '../core/roles.js';
 import { DM_LINES, SAMPLE_TIKTOK_THUMB, SAMPLE_X_POST, sampleMedia, sampleVisits, seedWorld } from '../core/sample-data.js';
-import { BETTER_CHATANGO_SAVE_FAILED } from '../core/prefs.js';
 import { useLatestCalls } from '../core/ui.js';
 import { banListOf, findMsg, readThrough, sentBadge, shownName, trimThread, userOf } from '../core/selectors.js';
 import { pmRecordEntry, screenPmRecords } from '../bridge/live-parse.js';
@@ -18,6 +17,7 @@ import { ACCOUNT_NAME, GROUP_FLAG, MEET_PAGE, PM_CONNECTION, isGuest } from '../
 import { visitorPage } from '../core/vissle.js';
 import { mediaEntryOk, mediaName } from '../core/media-library.js';
 import { GIF_URL } from '../core/message-content.js';
+import { BETTER_CHATANGO_SAVE_FAILED } from '../settings/shell.js';
 /* ---------- Actions: what the views ask, passed to Chatango by BetterChatango in live ---------- */
 /**
  * Puts the sample world of the prototype into the state with its mentions recorded like those of the live history.
@@ -458,9 +458,9 @@ export function useActions(k) {
    * @param {function(string, boolean): boolean} save Bridge write.
    * @param {string} failure Toast shown if BetterChatango does not save.
    */
-  function toggleBetterChatangoList(gid, key, save, failure) {
+  function toggleBetterChatangoList(gid, key, failure) {
     var on = !stateRef.current.groups[gid][key];
-    if (!save(gid, on)) { toast(failure, { tone: 'error' }); return; }
+    if (!liveBridge.setListed(key, gid, on)) { toast(failure, { tone: 'error' }); return; }
     update(function (d) { d.groups[gid][key] = on; });
   }
   /**
@@ -564,16 +564,16 @@ export function useActions(k) {
       liveBridge.join(gid);
       nav({ view: 'group', id: gid });
     };
-    actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', liveBridge.setFavorite, "BetterChatango couldn't save this favorite. Reload the page and try again."); };
-    actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', liveBridge.setMuted, "BetterChatango couldn't save the mute for #" + gid + '. Reload the page and try again.'); };
+    actions.toggleFavorite = function (gid) { toggleBetterChatangoList(gid, 'favorite', "BetterChatango couldn't save this favorite. Reload the page and try again."); };
+    actions.toggleMute = function (gid) { toggleBetterChatangoList(gid, 'muted', "BetterChatango couldn't save the mute for #" + gid + '. Reload the page and try again.'); };
     actions.setTrustedHost = function (host, on) {
-      if (!liveBridge.setTrustedHost(host, on)) { toast(BETTER_CHATANGO_SAVE_FAILED, { tone: 'error' }); return false; }
-      update(function (d) { d.prefs.safety.trustedHosts = liveBridge.trustedHosts(); });
+      if (!liveBridge.setListed('trusted', host, on)) { toast(BETTER_CHATANGO_SAVE_FAILED, { tone: 'error' }); return false; }
+      update(function (d) { d.prefs.safety.trustedHosts = liveBridge.list('trusted'); });
       return true;
     };
     actions.leaveGroup = function (gid) {
       liveBridge.leave(gid);
-      var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setFavorite(gid, false);
+      var kept = !!(stateRef.current.groups[gid] && stateRef.current.groups[gid].favorite) && !liveBridge.setListed('favorite', gid, false);
       if (kept) toast("BetterChatango couldn't remove #" + gid + ' from favorites. Reload the page and try again.', { tone: 'error' });
       update(function (d) { if (d.groups[gid]) { d.groups[gid].joined = false; d.groups[gid].favorite = kept; } dropMentions(d, gid, null); });
       var next = Object.keys(stateRef.current.groups).filter(function (k) { return k !== gid && stateRef.current.groups[k].joined; })[0];
@@ -678,7 +678,7 @@ export function useActions(k) {
       }
       if (key === 'friend' && !liveBridge.removeFriend(name)) return;
       if (key === 'blocked' && !(was ? liveBridge.unblock(name) : liveBridge.block(name))) return;
-      if (key === 'ignored' && !liveBridge.setIgnored(name, !was)) { toast("BetterChatango couldn't save its ignore list. Reload the page and try again.", { tone: 'error' }); return; }
+      if (key === 'ignored' && !liveBridge.setListed('ignored', name, !was)) { toast("BetterChatango couldn't save its ignore list. Reload the page and try again.", { tone: 'error' }); return; }
       update(function (d) { ensureLiveUser(d, name, localRef.current)[key] = !was; });
       toast(toggleUserText(shownName(stateRef.current, name), key, was), { tone: 'success', action: { label: 'Undo', run: function () { actions.toggleUser(name, key); } } });
     };

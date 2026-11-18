@@ -21,4 +21,3 @@ export function defaultPrefs() {
 }
 // In live, these preferences are BetterChatango settings, which are authoritative: read again at sign-in, written to BetterChatango before switching.
 export var BETTER_CHATANGO_PREFS = { 'safety.guestMessages': 'guestMessages', announcements: 'announcements' };
-export var BETTER_CHATANGO_SAVE_FAILED = "BetterChatango couldn't save this setting. Reload the page and try again.";

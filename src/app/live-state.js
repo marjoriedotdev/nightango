@@ -79,9 +79,9 @@ export function useLocalStore(state) {
    * @param {string} me Signed-in account.
    */
   function restore(me) {
-    var mirror = readMirror(me), lists = { fav: liveBridge.setFavorite, muted: liveBridge.setMuted, ignored: liveBridge.setIgnored };
+    var mirror = readMirror(me), lists = { fav: 'favorite', muted: 'muted', ignored: 'ignored' };
     // Lists from before the sync with BetterChatango: moved into its own lists, removed from local storage once all are accepted.
-    var accepted = Object.keys(lists).filter(function (k) { return mirror[k] && mirror[k].map(function (x) { return lists[k](x, true); }).every(Boolean); });
+    var accepted = Object.keys(lists).filter(function (k) { return mirror[k] && mirror[k].map(function (x) { return liveBridge.setListed(lists[k], x, true); }).every(Boolean); });
     accepted.forEach(function (k) { mirror[k] = undefined; });
     cleanAccount(me, accepted);
     localRef.current = mirror;
@@ -157,8 +157,8 @@ export function ensureLiveGroup(d, gid, local) {
   var g = d.groups[gid];
   if (!g) {
     g = d.groups[gid] = liveGroup(gid, gid);
-    g.favorite = (liveBridge.favoriteGroups() || []).indexOf(gid) >= 0;
-    g.muted = (liveBridge.mutedGroups() || []).indexOf(gid) >= 0;
+    g.favorite = (liveBridge.list('favorite') || []).indexOf(gid) >= 0;
+    g.muted = (liveBridge.list('muted') || []).indexOf(gid) >= 0;
     g.hiddenChannels = local.channels[gid] || [];
     g.sendChannel = local.sendChannels[gid] || 'none';
     g.accent = local.accents[gid] || null;
@@ -181,7 +181,7 @@ export function ensureLiveUser(d, name, local) {
   var u = ownOf(d.users, name);
   if (!u) {
     u = d.users[name] = { status: 'online', about: '', style: {} };
-    if ((liveBridge.ignoredUsers() || []).indexOf(name) >= 0) u.ignored = true;
+    if ((liveBridge.list('ignored') || []).indexOf(name) >= 0) u.ignored = true;
     if (local.unstyled.indexOf(name) >= 0) u.unstyled = true;
   }
   return u;
