@@ -6,7 +6,7 @@ import { listedDms } from '../core/selectors.js';
 // -- Spaces -------------------------------------------------------------------
 
 /**
- * Names a conversation inside a space.
+ * Names a conversation inside a space, in the form the account store checks (SPACE_MEMBER).
  * @param {{view: string, id: string}} route Group or PM.
  */
 function spaceKey(route) { return route.view + ':' + route.id; }
@@ -19,7 +19,7 @@ export function currentSpace(s) { return s.space ? s.spaces.filter(function (x) 
  */
 export function inCurrentSpace(s, view, id) {
   var sp = currentSpace(s);
-  return !sp || sp.members.indexOf(view + ':' + id) >= 0;
+  return !sp || sp.members.indexOf(spaceKey({ view: view, id: id })) >= 0;
 }
 /**
  * Counts the conversations of a space with unread messages, as the sidebar marks them.
@@ -30,10 +30,10 @@ function spaceUnread(s, sp) {
   var n = 0;
   Object.keys(s.groups).forEach(function (k) {
     var g = s.groups[k];
-    if (g.joined && (g.mentions || (g.unread && !g.muted)) && (!sp || sp.members.indexOf('group:' + k) >= 0)) n++;
+    if (g.joined && (g.mentions || (g.unread && !g.muted)) && (!sp || sp.members.indexOf(spaceKey({ view: 'group', id: k })) >= 0)) n++;
   });
   // Like the sidebar, a closed conversation counts no more, whatever unreads its history keeps.
-  listedDms(s).forEach(function (k) { if (s.dms[k].unread && (!sp || sp.members.indexOf('dm:' + k) >= 0)) n++; });
+  listedDms(s).forEach(function (k) { if (s.dms[k].unread && (!sp || sp.members.indexOf(spaceKey({ view: 'dm', id: k })) >= 0)) n++; });
   return n;
 }
 /**
@@ -43,7 +43,7 @@ function spaceUnread(s, sp) {
  */
 export function quietOutsideSpace(s, name) {
   var sp = currentSpace(s);
-  return !!sp && sp.quiet && sp.members.indexOf('dm:' + name) < 0;
+  return !!sp && sp.quiet && sp.members.indexOf(spaceKey({ view: 'dm', id: name })) < 0;
 }
 
 /**
