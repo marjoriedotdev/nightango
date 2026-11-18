@@ -44,7 +44,7 @@ export function dropMentions(d, gid, ids) {
 function opened(d, route) {
   var r = Object.assign({}, route);
   if (r.view === 'group' && d.groups[r.id]) { var g = d.groups[r.id]; r.markerTs = g.lastReadTs; g.lastReadTs = readThrough(g); g.unread = 0; g.mentions = 0; }
-  if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].lastReadTs = Date.now(); d.dms[r.id].closed = false; }
+  if (r.view === 'dm' && r.id && d.dms[r.id]) { d.dms[r.id].closed = false; }
   return r;
 }
 function sameConversation(a, b) { return !!a && !!b && a.view === b.view && a.id === b.id; }
@@ -199,11 +199,7 @@ export function useInbox(stateRef, update, toast, setNavOpen) {
   function receiveDm(from, text) {
     var s0 = stateRef.current, m = { author: from, key: uid(), text: text, ts: Date.now() };
     var focused = isDmInView(s0, from);
-    update(function (d) {
-      receivePm(d, m);
-      var c = d.dms[from];
-      if (focused) c.lastReadTs = Date.now();
-    });
+    update(function (d) { receivePm(d, m); });
     pmArchive.current.record(from, m, !focused);
     syncPmUnread(pmArchive.current, update, [from]);
     if (!focused && !userOf(s0, from).ignored) notifyPm(from, text);

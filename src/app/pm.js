@@ -80,7 +80,7 @@ export function unreadPm(archive, update, name) {
  * @param {Object=} extra Fields of a created conversation.
  */
 export function pmConversation(d, name, extra) {
-  return d.dms[name] || (d.dms[name] = Object.assign({ messages: [], unread: 0, lastReadTs: Date.now() }, extra));
+  return d.dms[name] || (d.dms[name] = Object.assign({ messages: [], unread: 0 }, extra));
 }
 /**
  * Builds the shown message of a received or archived entry.
@@ -126,7 +126,7 @@ export function addSentPm(d, name, x) {
  * @returns {boolean} True if the message was an applied edit.
  */
 export function receivePm(d, x) {
-  var c = pmConversation(d, x.author, { lastReadTs: 0 }), o = pmEditTarget(c, x);
+  var c = pmConversation(d, x.author), o = pmEditTarget(c, x);
   if (o) { applyPmEdit(o, x); return true; }
   c.closed = false;
   c.messages.push(pmMessage(x));

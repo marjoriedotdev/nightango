@@ -145,7 +145,7 @@ function busyState(tpl, style) {
   for (let k = 0; k < CHATS; k++) {
     const n = 'c' + k;
     s.users[n] = user();
-    s.dms[n] = { messages: [{ id: 'pm' + k, author: n, key: 'k' + k, text: 'Hello ' + k, ts: now - k * MIN }], unread: 0, lastReadTs: now, olderMore: false };
+    s.dms[n] = { messages: [{ id: 'pm' + k, author: n, key: 'k' + k, text: 'Hello ' + k, ts: now - k * MIN }], unread: 0, olderMore: false };
   }
   // Seen once and referenced by nothing any more: former members, search results.
   for (let k = 0; k < STALE; k++) s.users['gone' + k] = user({ status: 'offline' });

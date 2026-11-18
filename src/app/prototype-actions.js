@@ -5,8 +5,9 @@ import { pmRecordEntry, screenPmRecords } from '../bridge/live-parse.js';
 import { toggleUserText } from './actions.js';
 import { dropMentions, logMention } from './inbox.js';
 import { applyGroupEdit } from './live-state.js';
-import { addSentPm, memoryPmArchive, pmMessage } from './pm.js';
+import { addSentPm, memoryPmArchive, pmConversation, pmMessage } from './pm.js';
 import { dmReply, seedWorld } from './sample-data.js';
+import { newGroup } from './state.js';
 // -- Prototype actions --------------------------------------------------------
 
 /**
@@ -87,10 +88,11 @@ export function prototypeActions(k) {
     exportDms: function () {
       var s0 = stateRef.current, out = [];
       Object.keys(s0.dms).forEach(function (t) {
-        var c = s0.dms[t];
+        // The last received messages are the unread ones, as many as the archive counts (ADR-0012).
+        var c = s0.dms[t], got = c.messages.filter(function (m) { return m.author === t; }), firstUnread = got[got.length - c.unread];
         c.messages.forEach(function (m) {
           var ts = m.ts / 1000;
-          out.push({ target: t, ts: ts, data: ['msg', m.author, s0.me, 'unknown', ts, 0, esc(m.text)].join(':'), unread: m.author !== s0.me && m.ts > c.lastReadTs ? 1 : 0 });
+          out.push({ target: t, ts: ts, data: ['msg', m.author, s0.me, 'unknown', ts, 0, esc(m.text)].join(':'), unread: c.unread && m.author === t && m.ts >= firstUnread.ts ? 1 : 0 });
         });
       });
       return Promise.resolve(out.sort(function (a, b) { return a.ts - b.ts; }));
@@ -105,7 +107,7 @@ export function prototypeActions(k) {
       screened.valid.forEach(function (r) { if (!keys[r.ts]) { keys[r.ts] = true; added.push(r); } });
       update(function (d) {
         added.forEach(function (r) {
-          var t = lower(r.target), c = d.dms[t] || (d.dms[t] = { messages: [], unread: 0, lastReadTs: Date.now() });
+          var t = lower(r.target), c = pmConversation(d, t);
           c.messages.push(pmMessage(pmRecordEntry(r)));
           c.messages.sort(function (a, b) { return a.ts - b.ts; });
           trimThread(c);
@@ -149,13 +151,12 @@ export function prototypeActions(k) {
       var me = stateRef.current.me, now = Date.now();
       update(function (d) {
         var staff = {}; staff[me] = 'owner';
-        d.groups[name] = {
-          id: name, title: title, topic: desc || title, joined: true, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: now,
-          members: [me], guests: 0, closed: false, dismissedAnnouncement: false, bans: [],
+        d.groups[name] = newGroup(name, {
+          title: title, topic: desc || title, joined: true, lastReadTs: now, members: [me],
           settings: mkSettings({ overview: { title: title, description: desc }, staff: staff }),
           audit: [{ id: uid(), at: now, actor: me, text: 'Created the group' }],
           messages: [{ id: uid(), kind: 'system', text: 'You created #' + name + '. Share ' + name + '.chatango.com to invite people.', ts: now }]
-        };
+        });
       });
       nav({ view: 'group', id: name });
       return true;
