@@ -22,7 +22,6 @@ import { useOverlays } from './overlays.js';
 import { useInbox } from './inbox.js';
 import { useActions } from './actions.js';
 import { useReconnection } from './reconnection.js';
-import { useSimulation } from './simulation.js';
 import { useLiveOps } from './live-ops.js';
 import { JOURNAL, LIVE, ROOT_EL, VIEWER_THEME } from '../core/env.js';
 import { PipHost } from '../views/pip.js';
@@ -309,8 +308,9 @@ export function Root(props) {
   var keepUsers = usePrunedUsers(store, state.auth.loggedIn);
   var reconnection = useReconnection(store.stateRef, store.update);
   var pms = useLivePms(store, local.ref, inbox.pmArchive);
-  var act = useActions({ store: store, toast: o.toast, setNavOpen: o.setNavOpen, inbox: inbox, drafts: drafts, localRef: local.ref, reconnection: reconnection, pms: pms });
-  useSimulation(store, inbox, o.toast, act.actions);
+  // The live tests run the hosted bundle with BetterChatango: live ignores the prototype whatever page starts it.
+  var proto = LIVE ? null : props.host.prototype;
+  var act = useActions({ store: store, toast: o.toast, setNavOpen: o.setNavOpen, inbox: inbox, drafts: drafts, localRef: local.ref, reconnection: reconnection, pms: pms, prototype: proto });
   useLiveOps({ store: store, toast: o.toast, inbox: inbox, actions: act.actions, local: local, reconnection: reconnection, pms: pms });
 
   // nav, actions and ui keep their identity: the context changes only with what the views show.
@@ -326,6 +326,7 @@ export function Root(props) {
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
     // Rendered on every screen, signed out too: the floating window follows the state and closes with its conversation.
     h(PipHost, null),
+    proto ? h(proto.Simulation, { store: store, inbox: inbox, toast: o.toast, actions: act.actions }) : null,
     state.auth.loggedIn && o.profile ? h(ProfileDialog, { name: o.profile.name, gid: o.profile.gid, onClose: function () { o.setProfile(null); } }) : null,
     state.auth.loggedIn && o.banCfg ? h(BanDialog, { name: o.banCfg.name, gid: o.banCfg.gid, msg: o.banCfg.msg, onClose: function () { o.setBan(null); } }) : null,
     state.auth.loggedIn && o.fullProfile ? h(FullProfileDialog, { name: o.fullProfile, onClose: function () { o.setFullProfile(null); } }) : null,

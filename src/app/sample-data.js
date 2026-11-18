@@ -1,7 +1,7 @@
-import { MIN, pick, uid } from './util.js';
-import { mkSettings } from './roles.js';
-import { VISIT_PAGE } from './vissle.js';
-import { MEDIA_PAGE, mediaMatch, screenMediaEntries } from './media-library.js';
+import { MIN, pick, uid } from '../core/util.js';
+import { mkSettings } from '../core/roles.js';
+import { VISIT_PAGE } from '../core/vissle.js';
+import { MEDIA_PAGE, mediaMatch, screenMediaEntries } from '../core/media-library.js';
 export var LINES = {
   community: ['Did the reconnect fix stick for everyone?', 'Theme import works on Firefox now.', 'Is there a way to pin a group to the top?', 'Welcome to the new folks.', 'The compact mode is so much easier to read.', 'Anyone tried the light theme on mobile?', 'Server s12 seems stable again.', 'How do I turn names colors back on?', 'Thanks for the quick fix.', 'Reminder: bug reports go to #betterchatangodev.'],
   betterchatangodev: ['Pushed a fix for the reply preview.', 'CI is green again.', 'Can someone review the AutoMod copy?', 'Safari still clips the composer on iOS 17.', 'Merged the notification matrix.'],
@@ -12,7 +12,7 @@ export var LINES = {
   generic: ['Hi everyone.', 'Evening all.', 'That makes sense.', 'Back in a bit.', 'Nice.']
 };
 export var MENTION_LINES = ['@%me do you have a minute to test the new build?', '@%me nice theme, can you share the file?', '@%me thanks for the help earlier.', '@%me are you joining speedrun night?'];
-export var DM_LINES = {
+var DM_LINES = {
   sable: ["Logs look clean on my side. I think it's Chatango.", 'Ping me if the drops come back.', 'Sounds good.', "I'll pin it in the announcement."],
   kestrel: ['Still interested in that trade?', 'I can do two gifts for it.', 'No rush, let me know.'],
   quill: ['Thanks again for the invite.', 'The light theme is nice.', 'See you in #retrogaming.'],
@@ -20,6 +20,11 @@ export var DM_LINES = {
   default: ['Hey.', 'Sure.', 'Sounds good.', 'Talk later.']
 };
 
+/**
+ * Picks what a sample member answers to a PM.
+ * @param {string} name Sample member.
+ */
+export function dmReply(name) { return pick(DM_LINES[name] || DM_LINES.default); }
 export function seedWorld(me) {
   var now = Date.now();
   function t(m) { return now - m * MIN; }

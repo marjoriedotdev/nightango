@@ -17,7 +17,7 @@ export function Login() {
     setErrors(err);
     if (Object.keys(err).length) return;
     setBusy(true);
-    setTimeout(function () { app.actions.login(user.toLowerCase(), pass); }, 450);
+    setTimeout(function () { app.actions.login(user.toLowerCase()); }, 450);
   }
   return h('div', { className: 'login' },
     h('section', { className: 'login-main', 'aria-label': 'Account' },

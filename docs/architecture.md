@@ -17,7 +17,6 @@ src/
     emoticons.js     emoticon table (EMOTICONS)
     vissle.js        pages of the profile activity vissle tracks (visitorPage)
     roles.js         permissions, roles (owner, admin, mod), Chatango rights bits (PERM_FLAG, IS_STAFF_RIGHT), default rights of a role, default group settings
-    sample-data.js   prototype sample data, simulated visits, in-memory sample media library
     prefs.js         default preferences
     ui.js            React contexts (useApp, and useAppApi with useStatePart for the memoized rows), minute clock of the relative times (useMinute), members a view shows kept in the state (useShownUsers),
                      functions that keep their identity across renders (useLatestCalls), Layers (layer node and open dialogs of the interface), Portal (#layer layer), useFloating (layer anchored to its trigger), useDraft (composer text per conversation), MenuButton, Dialog, ConfirmDialog, Toasts, JsonFileButton,
@@ -72,9 +71,13 @@ src/
     overlays.js      useOverlays: toasts, dialogs and navigation drawer, opened by the views through ui
     inbox.js         useInbox: PM archive of unreads, reception and notification of incoming events, navigation that marks a conversation read,
                      Mentions page log
-    actions.js       useActions: actions the views call through the context, those of the prototype replaced in live by those passed to Chatango
+    actions.js       useActions: actions the views call through the context, those shared by both modes, and in live those passed to Chatango in place of the prototype's
     reconnection.js  useReconnection: reconnection of the groups and the private connection, on demand and automatic after a loss
-    simulation.js    useSimulation: activity of the prototype's sample world
+    prototype.js     PROTOTYPE, the prototype backend the hosted entry hands to start: sample world, media library, visits, TikTok and X posts, member replies,
+                     prototype actions and simulation. Only src/main-hosted.js imports it: none of it ships in the userscript, and Root ignores it in live
+    prototype-actions.js  prototypeActions: the actions live replaces, written against the sample world in the state
+    sample-data.js   prototype sample data, simulated visits, in-memory sample media library
+    simulation.js    Simulation: activity of the prototype's sample world
     live-ops.js      useLiveOps: bridge operations applied to the state (handleLiveOp), through useBridgeOps: each operation goes to the handler
                      of the latest render, those after login once it has rendered, history pages applied in one update (addHistory)
     root.js          Root, which only composes the hooks of app/ and renders, and its page hooks: state (useAppState and its store, appStore), display preferences,

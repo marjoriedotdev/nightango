@@ -40,7 +40,7 @@ Recovery.prototype.render = function () { return this.state.failed ? h(RecoveryS
 
 /**
  * Mounts the interface.
- * @param {{state: ?Object, snapshot: ?function(Function)}} host Page that starts the interface (useAppState).
+ * @param {{state: ?Object, snapshot: ?function(Function), prototype: ?Object}} host Page that starts the interface: saved state and its reader (useAppState), and the prototype backend (PROTOTYPE) of the hosted page.
  */
 export function start(host) {
   ReactDOM.createRoot(appMount()).render(h(Recovery, null, h(Root, { host: host })));
