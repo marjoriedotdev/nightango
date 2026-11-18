@@ -3,6 +3,7 @@ import { unreadTotal } from '../core/selectors.js';
 import { useApp } from '../core/ui.js';
 import { closePipWindow } from './pip-window.js';
 // -- Pane chrome --------------------------------------------------------------
+// Headers and menu items that the panes share, apart from the shell that routes between them.
 
 /**
  * Close button of a conversation shown beside the main pane or in the floating window, null in the main pane.
@@ -15,7 +16,6 @@ export function paneCloseButton(app, role, name) {
   if (role === 'floating') return h(T.IconButton, { icon: 'x', label: 'Close the floating window', onClick: closePipWindow });
   return null;
 }
-// Headers and menu items that the panes share, apart from the shell that routes between them.
 export function MobileNavButton() {
   var app = useApp();
   return h(T.IconButton, { icon: 'menu', label: 'Open navigation', className: 'only-mobile', count: unreadTotal(app.state), onClick: app.ui.openNav });

@@ -54,9 +54,9 @@ function wordList(v) { return String(v || '').split(/[,\n]/).map(function (x) { 
 
 /**
  * Actions the views call through the context: those of the prototype, replaced in live by those BetterChatango passes to Chatango.
- * @param {{store: Object, toast: Function, setNavOpen: Function, inbox: Object, drafts: Object, localRef: Object, reconnection: Object, pms: Object}} k
+ * @param {{store: Object, toast: Function, setNavOpen: Function, inbox: Object, drafts: Object, localRef: Object, reconnection: Object, pms: Object, prototype: ?Object}} k
  *   Application state with its ref and update, notifications, navigation drawer, inbox (useInbox), composer drafts, account data kept in this browser,
- *   reconnection (useReconnection) and live PMs (useLivePms).
+ *   reconnection (useReconnection), live PMs (useLivePms) and the prototype backend (PROTOTYPE), null in live.
  * @returns {{actions: Object, uploads: Object}} Actions, and the name of the file being sent to each group or PM.
  */
 export function useActions(k) {
@@ -237,7 +237,6 @@ export function useActions(k) {
    * Toggles a group flag held by a BetterChatango list without changing anything if BetterChatango does not save it.
    * @param {string} gid Target group.
    * @param {string} key favorite or muted.
-   * @param {function(string, boolean): boolean} save Bridge write.
    * @param {string} failure Toast shown if BetterChatango does not save.
    */
   function toggleBetterChatangoList(gid, key, failure) {

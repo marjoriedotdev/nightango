@@ -24,6 +24,7 @@ function layerRoot(layer) {
   (mountEl && mountEl.parentNode ? mountEl.parentNode : doc.body).appendChild(layer.node);
   return layer.node;
 }
+/* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
 export function Portal(p) { return ReactDOM.createPortal(p.children, layerRoot(useContext(LayerCtx))); }
 export function useOutside(ref, open, onClose, extraRef) {
   useEffect(function () {
@@ -95,6 +96,7 @@ export function menuGroups(groups) {
   });
   return out;
 }
+/* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch, presence}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
 export function MenuButton(p) {
   var st = useState(false), open = p.open != null ? p.open : st[0];
   var ref = useRef(null), menuRef = useRef(null);

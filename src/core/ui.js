@@ -67,8 +67,6 @@ export function useLatestCalls(fns) {
   return calls.current;
 }
 
-/* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
-
 export var LOAD_BELOW_MARGIN = '0px 0px 400px 0px';
 
 /**
@@ -152,8 +150,6 @@ export function useRightColumn(openFull) {
   var b = useState(true), shown = b[0], setShown = b[1];
   return { open: fits && shown, pressed: fits ? shown : null, toggle: function () { if (fits) setShown(!shown); else openFull(); } };
 }
-
-/* Button that opens an action menu. items: {label, icon, onSelect, danger, disabled, checked, divider, swatch, presence}. open and onOpenChange make it controlled, at {x, y} anchors it to a point */
 
 /**
  * Color field with its hex value.

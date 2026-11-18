@@ -9,9 +9,6 @@ export var ROOT_EL = window.__TORCH_ROOT__ || document.documentElement;
 // Theme the hosted page set before the interface started: Root writes data-theme afterwards.
 export var VIEWER_THEME = ROOT_EL.getAttribute('data-theme');
 
-/**
- * Returns the element the interface mounts in.
- */
 export function appMount() { return window.__TORCH_MOUNT__ || document.getElementById('app'); }
 
 /**

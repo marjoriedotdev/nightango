@@ -159,10 +159,6 @@ var SAMPLE_VISITS = (function () {
     return { user: n, action: action, time: now - (i * 47 + 3) * 60, msg: action === 'msg' ? 'Love the new theme.' : '' };
   });
 })();
-/**
- * Simulates a page of vissle activity.
- * @param {{page: number, get: string}} q Cursor and filter of the requested page.
- */
 // Post of TikTok's embed documentation, and the thumbnail the prototype shows in place of the one TikTok's oEmbed would give.
 var SAMPLE_TIKTOK_LINK = 'https://www.tiktok.com/@scout2015/video/6718335390845095173';
 export var SAMPLE_TIKTOK_THUMB = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 320"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a2a4f"/><stop offset="1" stop-color="#c9774a"/></linearGradient></defs><rect width="180" height="320" fill="url(#g)"/><circle cx="90" cy="150" r="46" fill="#f3d2b3"/><path d="M52 120l12-40 22 30zM128 120l-12-40-22 30z" fill="#f3d2b3"/><circle cx="74" cy="148" r="5" fill="#2a2030"/><circle cx="106" cy="148" r="5" fill="#2a2030"/><path d="M84 166q6 6 12 0" stroke="#2a2030" stroke-width="3" fill="none"/></svg>');
@@ -178,6 +174,10 @@ export var SAMPLE_X_POST = {
     }
   }
 };
+/**
+ * Simulates a page of vissle activity.
+ * @param {{page: number, get: string}} q Cursor and filter of the requested page.
+ */
 export function sampleVisits(q) {
   return SAMPLE_VISITS.filter(function (x) { return (q.get === 'all' || x.action === q.get) && (q.page === 1 || x.time < q.page); }).slice(0, VISIT_PAGE);
 }

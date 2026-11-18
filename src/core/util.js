@@ -68,10 +68,6 @@ export function isNewerVersion(a, b) {
   return b.indexOf('-') !== -1;
 }
 export function plural(n, one, many) { return n.toLocaleString('en-US') + ' ' + (n === 1 ? one : many); }
-/**
- * Returns a text without its trailing white space.
- * @param {string} text Text to trim.
- */
 export function trimEnd(text) {
   var end = text.length;
   // A loop rather than replace(/\s+$/, ''): that pattern starts again from each space of a long run.
@@ -81,11 +77,6 @@ export function trimEnd(text) {
 export function unknownUserText(name) { return 'Nobody on Chatango is named ' + name + '.'; }
 // Own key only: a name such as constructor is also a key of every object.
 export function ownOf(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
-/**
- * Returns the last element of a list that passes a test.
- * @param {Array} list List searched from its end.
- * @param {function(*): boolean} test Test of an element.
- */
 export function lastMatch(list, test) {
   for (var i = list.length - 1; i >= 0; i--) if (test(list[i])) return list[i];
   return null;

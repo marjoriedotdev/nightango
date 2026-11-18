@@ -69,9 +69,6 @@ export function popOutItem(app, route) {
   return canPopOut() && !isTarget(app.state.pip, route.view, route.id) ? { label: 'Pop out', icon: 'external', onSelect: function () { app.actions.openPip(route); } } : null;
 }
 
-/**
- * Tells whether the floating window is open.
- */
 export function pipOpen() { return !!PIP.win; }
 /**
  * Renders into the floating window once it is ready, with a React root of its own.

@@ -724,11 +724,6 @@ export var liveBridge = (function () {
     var p = SETTINGS[key];
     try { var v = C.settings[p[0]][p[1]][p[2]]; return p[3] === 'volume' ? parseInt(v, 10) : !!v; } catch (e) { warn(e); return null; }
   }
-  /**
-   * Reads a list from the BetterChatango settings.
-   * @param {string} kind LISTS key.
-   * @returns {?Array<string>} Copy of the list, null if the BetterChatango settings are unreadable.
-   */
   function roomInfo(gid) {
     var info = C.groups && C.groups[gid] && C.groups[gid].room && C.groups[gid].room.information;
     return info ? { title: String(info.title || ''), description: String(info.description || '') } : null;
@@ -740,6 +735,11 @@ export var liveBridge = (function () {
       return audio.play();
     } catch (e) { warn(e); return Promise.reject(e); }
   }
+  /**
+   * Reads a list from the BetterChatango settings.
+   * @param {string} kind LISTS key.
+   * @returns {?Array<string>} Copy of the list, null if the BetterChatango settings are unreadable.
+   */
   function readList(kind) {
     var p = LISTS[kind];
     try { var list = C.settings[p[0]][p[1]][p[2]].slice(); return p[3] === 'lowercase' ? list.map(lower) : list; } catch (e) { warn(e); return null; }
@@ -861,13 +861,6 @@ export var liveBridge = (function () {
   }
   ['vissle', 'tiktok', 'x'].forEach(function (channel) { document.addEventListener(loaderEvent(channel, 'response'), onLoaderReply); });
   /**
-   * Sends a request to a userscript bridge.
-   * @param {string} channel Bridge name: vissle, tiktok or x.
-   * @param {Object} q Request fields.
-   * @param {string} late Text to show if the bridge does not reply.
-   * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error or does not come.
-   */
-  /**
    * Builds an X card from a reply of the X bridge, null if a field has another shape than the loader sends: any script of the page can reply.
    * @param {Object} r Reply of the bridge.
    * @returns {?Object} Author, handle, text, date, link, author picture, time and media of the post.
@@ -884,6 +877,13 @@ export var liveBridge = (function () {
       && (m.kind === 'photo' || (m.kind === 'video' && text(m.video) && X_VIDEO.test(m.video))))) return null;
     return { author: r.author, handle: r.handle, text: r.text, date: r.date, link: r.link, avatar: r.avatar || null, time: r.time == null ? null : r.time, media: m };
   }
+  /**
+   * Sends a request to a userscript bridge.
+   * @param {string} channel Bridge name: vissle, tiktok or x.
+   * @param {Object} q Request fields.
+   * @param {string} late Text to show if the bridge does not reply.
+   * @returns {Promise<Object>} Reply of the bridge, rejected with the text to show if it carries an error or does not come.
+   */
   function askLoader(channel, q, late) {
     return new Promise(function (resolve, reject) {
       var id = uid();
@@ -1423,7 +1423,7 @@ export var liveBridge = (function () {
     },
     /** Tells whether this browser keeps the BetterChatango private history. */
     pmArchived: function () { return openPmDb().then(function (db) { return !!db; }); },
-    /** Deletes the history that BetterChatango keeps in this browser. Chatango keeps none. */
+    /** Deletes the history that BetterChatango keeps in this browser with one correspondent. Chatango keeps none. */
     clearPmHistory: function (target) { try { C.private.clearHistory(target); return true; } catch (e) { warn(e); return false; } },
     /**
      * Removes a PM from the private history like the BetterChatango remove entry after reading its record again.

@@ -55,8 +55,8 @@ function sameConversation(a, b) { return !!a && !!b && a.view === b.view && a.id
  * @param {Function} update State update.
  * @param {Function} toast Shows a notification.
  * @param {function(boolean)} setNavOpen Opens or closes the navigation drawer.
- * @returns {{pmArchive: Object, nav: Function, readInView: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}} PM archive ref, navigation, notification
- *   of an event and of a PM, and reception.
+ * @returns {{pmArchive: Object, nav: Function, readInView: Function, openSplit: Function, closeSplit: Function, openPip: Function, notify: Function, notifyPm: Function, receiveGroup: Function, receiveDm: Function}}
+ *   PM archive ref, navigation, side-by-side and floating panes, notification of an event and of a PM, and reception.
  */
 export function useInbox(stateRef, update, toast, setNavOpen) {
   // Only source of PM unreads: the BetterChatango database in live, an in-memory archive in the prototype or when that database is missing.

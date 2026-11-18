@@ -55,7 +55,6 @@ export var MSG_FLAG = { PREMIUM: 4, BG_ON: 8, MOD_ICON: 64, STAFF_ICON: 128 };
 export var BADGE_FLAG = { mod: MSG_FLAG.MOD_ICON, admin: MSG_FLAG.STAFF_ICON, owner: MSG_FLAG.MOD_ICON | MSG_FLAG.STAFF_ICON };
 // Chatango fonts under their Chatango name, in the order of their number (0 to 8), the one used in the <f x…="n"> and <g x…="n"> tags.
 export var FONT_STACKS = { 'Arial': 'Arial, sans-serif', 'Comic': '"Comic Sans MS", "Comic Sans", "Chalkboard SE", sans-serif', 'Georgia': 'Georgia, serif', 'Handwriting': '"Lucida Handwriting", Zapfino, Chalkduster, cursive', 'Impact': 'Impact, sans-serif', 'Palatino': 'Palatino, serif', 'Papyrus': 'Papyrus, cursive', 'Times': 'Times, serif', 'Typewriter': 'Typewriter, "Courier New", monospace' };
-// Chatango fonts under their Chatango name, in the order of their number (0 to 8), the one used in the <f x…="n"> and <g x…="n"> tags.
 export var FONT_FACES = Object.keys(FONT_STACKS);
 /**
  * Converts a Chatango font size to a percentage.

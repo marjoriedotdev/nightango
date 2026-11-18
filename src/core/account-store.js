@@ -80,9 +80,6 @@ function accountKey(me) { return 'torch-skin:' + me; }
 function blankOf(f) { return f.blank === undefined ? undefined : JSON.parse(JSON.stringify(f.blank)); }
 function readField(f, v) { return kindOf(v) === f.kind ? (f.read ? f.read(v) : v) : blankOf(f); }
 
-/**
- * Returns the mirrored fields with their blank values.
- */
 export function blankMirror() {
   var out = {};
   Object.keys(MIRRORED).forEach(function (k) { out[k] = blankOf(MIRRORED[k]); });

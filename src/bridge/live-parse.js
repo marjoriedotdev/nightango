@@ -160,7 +160,7 @@ export function parseModLog(data) {
 // -- Premium background -------------------------------------------------------
 
 /**
- * Converts a CSS background color to hex.
+ * Converts a CSS background color to hex, null for a fully transparent one.
  * @param {string} value CSS color read in custom_profile.css.
  */
 function opaqueColor(value) {
@@ -369,6 +369,3 @@ export function parsePresence(data) {
   return people;
 }
 export function stateOf(sock) { return !sock ? 'closed' : sock.readyState === 1 ? 'open' : sock.readyState === 0 ? 'connecting' : 'closed'; }
-
-// -- BetterChatango media library ---------------------------------------------
-
