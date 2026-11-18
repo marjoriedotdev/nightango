@@ -2,6 +2,20 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.39.0-beta.1] - 2026-11-18
+
+### Changed
+
+- Nightango is put together in a new way behind the scenes. Nothing should look different: if something behaves oddly, tell us.
+
+### Fixed
+
+- In Ban someone, a member who is already banned is shown as banned instead of opening a second ban.
+- A profile that failed to load, or a guest's, no longer says Loading profile forever.
+- An X post whose media can't be read keeps its author picture and time.
+- The unread count of a space matches the conversations its sidebar lists: a private conversation you closed no longer counts.
+- The diagnostic journal no longer notes a line each time a group setting is switched.
+
 ## [0.38.3] - 2026-11-17
 
 ### Fixed
