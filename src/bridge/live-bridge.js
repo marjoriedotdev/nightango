@@ -66,11 +66,13 @@ export var liveBridge = (function () {
     // Like BetterChatango, messages from the group owner count as Premium.
     var premium = !!(flags & MSG_FLAG.PREMIUM) || name === lower(C.groups[room].room.owner);
     var parsed = parseContent(data.slice(9).join(':'), false, premium);
-    return {
-      id: temp ? tempMsgId(data[5]) : data[5], kind: 'msg', author: name, spelling: spellingOf(name, data[1] || '#' + data[2]), text: parsed.text, parts: parsed.parts, ts: Math.round(parseFloat(data[0]) * 1000) || Date.now(),
-      style: parsed.style, embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags),
+    var msg = {
+      id: temp ? tempMsgId(data[5]) : data[5], kind: 'msg', author: name, text: parsed.text, parts: parsed.parts, ts: epochMs(data[0]) || Date.now(),
+      embeds: parsed.embeds, replyId: parsed.replyId, editId: parsed.editId, unid: data[4] || '', ip: data[6] || '', channel: channelOf(flags),
       badge: badgeRoleOf(flags), bg: !!(flags & MSG_FLAG.BG_ON) && premium
     };
+    // The style and the spelling of the name belong to the author, not to the message.
+    return { msg: msg, style: parsed.style, spelling: spellingOf(name, data[1] || '#' + data[2]) };
   }
 
   // Final ids (u frame) that arrived before the matching message (b frame).
@@ -139,11 +141,11 @@ export var liveBridge = (function () {
     switch (name) {
       case 'b': {
         var bm = toMsg(room, data, true), k = room + '|' + data[5];
-        if (earlyIds[k]) { bm.id = earlyIds[k]; delete earlyIds[k]; } else waitingIds[k] = true;
-        emit({ op: 'msg', gid: room, msg: bm });
+        if (earlyIds[k]) { bm.msg.id = earlyIds[k]; delete earlyIds[k]; } else waitingIds[k] = true;
+        emit(Object.assign({ op: 'msg', gid: room }, bm));
         break;
       }
-      case 'i': emit({ op: 'hist', gid: room, msg: toMsg(room, data, false) }); break;
+      case 'i': emit(Object.assign({ op: 'hist', gid: room }, toMsg(room, data, false))); break;
       case 'u': {
         var ku = room + '|' + data[0];
         if (waitingIds[ku]) { delete waitingIds[ku]; emit({ op: 'msgid', gid: room, tmp: tempMsgId(data[0]), id: data[1] }); } else earlyIds[ku] = data[1];
