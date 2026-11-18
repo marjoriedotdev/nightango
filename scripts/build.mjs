@@ -4,41 +4,36 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build as esbuild, transform } from 'esbuild';
 import { parseChangelog } from './changelog.mjs';
 import { versionOf } from './release.mjs';
+import { unimportedReads } from './imports.mjs';
 
 // -- Sources ------------------------------------------------------------------
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
-/**
- * Provides the build:info module: the version of the userscript and the release notes, the same for every target.
- * @param {{version: string, notes: object[]}} info Version and release notes.
- */
-function buildInfo(info) {
-  return {
-    name: 'build-info',
-    setup(build) {
-      build.onResolve({ filter: /^build:info$/ }, () => ({ path: 'build:info', namespace: 'build-info' }));
-      build.onLoad({ filter: /.*/, namespace: 'build-info' }, () => ({
-        contents: `export var APP_VERSION = ${JSON.stringify(info.version)};\nexport var RELEASE_NOTES = ${JSON.stringify(info.notes)};\n`,
-        loader: 'js'
-      }));
-    }
-  };
-}
+// Modules the build provides, by name: each export with its value, from the version and the release notes.
+const BUILD_MODULES = {
+  'build:info': (info) => ({ APP_VERSION: info.version, RELEASE_NOTES: info.notes }),
+  // Every color token of the design system by theme.
+  'build:tokens': () => {
+    const color = { dark: {}, light: {} };
+    for (const t of designTokens().color.tokens) for (const theme of ['dark', 'light']) color[theme][t.name] = typeof t.value === 'object' ? t.value[theme] : t.value;
+    return { COLOR: color };
+  }
+};
 
 /**
- * Provides the build:tokens module: the colors of the design system by theme, read from tokens.json.
+ * Provides the modules of BUILD_MODULES to the bundle.
+ * @param {{version: string, notes: object[]}} info Version and release notes.
  */
-function buildTokens() {
+function buildModules(info) {
   return {
-    name: 'build-tokens',
+    name: 'build-modules',
     setup(build) {
-      build.onResolve({ filter: /^build:tokens$/ }, () => ({ path: 'build:tokens', namespace: 'build-tokens' }));
-      build.onLoad({ filter: /.*/, namespace: 'build-tokens' }, () => {
-        const color = { dark: {}, light: {} };
-        for (const t of designTokens().color.tokens) for (const theme of ['dark', 'light']) color[theme][t.name] = typeof t.value === 'object' ? t.value[theme] : t.value;
-        return { contents: `export var COLOR = ${JSON.stringify(color)};\n`, loader: 'js' };
-      });
+      build.onResolve({ filter: /^build:/ }, (args) => ({ path: args.path, namespace: 'build-modules' }));
+      build.onLoad({ filter: /.*/, namespace: 'build-modules' }, (args) => ({
+        contents: Object.entries(BUILD_MODULES[args.path](info)).map(([name, value]) => `export var ${name} = ${JSON.stringify(value)};\n`).join(''),
+        loader: 'js'
+      }));
     }
   };
 }
@@ -51,7 +46,7 @@ function buildTokens() {
  * @returns {Promise<object>} esbuild result, the code in outputFiles[0].
  */
 function bundle(input, info, options) {
-  return esbuild(Object.assign({ bundle: true, format: 'esm', target: 'es5', charset: 'utf8', write: false, logLevel: 'silent', absWorkingDir: ROOT, plugins: [buildInfo(info), buildTokens()] }, input, options));
+  return esbuild(Object.assign({ bundle: true, format: 'esm', target: 'es5', charset: 'utf8', write: false, logLevel: 'silent', absWorkingDir: ROOT, plugins: [buildModules(info)] }, input, options));
 }
 
 /**
@@ -346,6 +341,9 @@ async function build() {
   const info = { version, notes: releaseNotes };
   // The hosted prototype hook hands the interface a state and reads it back: any script on st.chatango.com could define it, so only the hosted entry reads it.
   const [appJs, userscriptAppJs] = await Promise.all([appBundle('main-hosted.js', info), appBundle('main.js', info)]);
+  const provided = Object.fromEntries(Object.entries(BUILD_MODULES).flatMap(([module, exportsOf]) => Object.keys(exportsOf(info)).map((name) => [name, module])));
+  const unimported = await unimportedReads(join(ROOT, 'src'), provided);
+  if (unimported.length) throw new Error('Each module imports what it reads (ADR-0017):\n' + unimported.join('\n'));
   for (const [name, src] of [['bundle', bundleJs], ['app', appJs], ['userscript app', userscriptAppJs]]) {
     if (src.toLowerCase().includes('</script')) throw new Error(`${name} contains </script`);
   }

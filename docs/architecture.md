@@ -89,6 +89,7 @@ src/
 scripts/
   build.mjs          Node build (esbuild bundle, import graph check, userscript assembly, minification)
   changelog.mjs      reads CHANGELOG.md, for the build (What's new) and the GitLab release notes
+  imports.mjs        names a module reads without importing them, refused by the build
   release.mjs        release rules of both CI (version, what a branch publishes, notes) and the GitLab release
   ds-components.mjs  regenerates README.md and preview.html of the design system components
 tests/               jsdom suites and run.mjs runner
@@ -109,7 +110,7 @@ The `build:info` module, provided by the build, exports `APP_VERSION`, the `@ver
 
 The `build:tokens` module, provided by the build, exports `COLOR`: each color token of `tokens.json` by theme. The surfaces against which colors are corrected (`SURFACE`), the default accents, the text on an accent fill, the soft fill opacity and the theme thumbnails of Appearance read it, never a copy.
 
-Imports only go down the layers `core/`, `bridge/`, the screens (`views/` and `settings/`), then `app/`, and no module is in an import cycle. The build reads the import graph from the esbuild metafile and refuses any other import (`checkImports`). The modules left in a cycle by the migration are listed in `KNOWN_CYCLIC`, which only shrinks: the build refuses an entry that no longer holds.
+Imports only go down the layers `core/`, `bridge/`, the screens (`views/` and `settings/`), then `app/`, and no module is in an import cycle. The build reads the import graph from the esbuild metafile and refuses any other import (`checkImports`). The modules left in a cycle by the migration are listed in `KNOWN_CYCLIC`, which only shrinks: the build refuses an entry that no longer holds. It also refuses a module that reads a name another module declares without importing it (`unimportedReads`, `scripts/imports.mjs`): bundled in one scope, such a read would reach that name by chance, or fail only when the code runs.
 
 The evaluation order follows the imports: a module whose top level runs code (the bridge, global listeners) runs after the modules it imports. esbuild renames a function named like another top-level name of the bundle (`MessageRow2`): its `name` property carries the suffix.
 
