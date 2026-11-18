@@ -1,3 +1,4 @@
+import { COLOR } from 'build:tokens';
 /* ---------- Colors ---------- */
 export function hexToRgb(hex) {
   var m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || '').trim());
@@ -50,12 +51,14 @@ export function cssColor(value) {
   var m = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/.exec(v);
   return m ? rgbToHex([+m[1], +m[2], +m[3]]) : null;
 }
-export function rgba(hex, a) { var c = hexToRgb(hex) || [242, 122, 63]; return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + a + ')'; }
-function darken(hex, f) { var c = hexToRgb(hex) || [242, 122, 63]; return rgbToHex(c.map(function (v) { return v * f; })); }
+export function rgba(hex, a) { var c = hexToRgb(hex) || hexToRgb(EMBER); return 'rgba(' + c[0] + ', ' + c[1] + ', ' + c[2] + ', ' + a + ')'; }
 
-// Copy of the bg, text-body and selected tokens from tokens.json: selected is the surface where the accent as text has the lowest contrast.
-export var SURFACE = { dark: { bg: '#0e1629', body: '#d0d7e6', selected: '#202e52' }, light: { bg: '#fdfcfa', body: '#2b2f41', selected: '#e4e1ed' } };
-var EMBER = '#f27a3f', MOONLIGHT = '#fbf6df';
+// Surfaces of the design system: selected is the surface where the accent as text has the lowest contrast.
+export var SURFACE = {
+  dark: { bg: COLOR.dark.bg, body: COLOR.dark['text-body'], selected: COLOR.dark.selected },
+  light: { bg: COLOR.light.bg, body: COLOR.light['text-body'], selected: COLOR.light.selected }
+};
+var MOONLIGHT = COLOR.dark.accent, EMBER = COLOR.light.accent;
 export var ACCENTS = [['Moonlight', MOONLIGHT], ['Ember', EMBER], ['Blue', '#5b8def'], ['Green', '#3fb27f'], ['Violet', '#c084fc'], ['Pink', '#f472b6'], ['Slate', '#94a3b8']];
 // Not one default for both themes: a Moonlight fill disappears on the light surfaces, where it holds 1.06:1.
 var DEFAULT_ACCENTS = { dark: MOONLIGHT, light: EMBER };
@@ -69,7 +72,8 @@ export function accentOf(prefs, theme) { return hexToRgb(prefs.accent) ? prefs.a
  * Returns the text color that holds 4.5:1 on an accent fill.
  * @param {string} hex Accent color.
  */
-export function onAccentOf(hex) { return contrast(hexToRgb(hex), [15, 16, 18]) >= 4.5 ? '#0f1012' : '#ffffff'; }
+export function onAccentOf(hex) { var ink = COLOR.dark['on-accent']; return contrast(hexToRgb(hex), hexToRgb(ink)) >= 4.5 ? ink : '#ffffff'; }
+function alphaOf(rgbaText) { return parseFloat(/([\d.]+)\)$/.exec(rgbaText)[1]); }
 /**
  * Returns the accent tokens of a color, with the accent as text corrected for contrast in each theme.
  * @param {string} hex Accent color, Ember if it is not a hex color.
@@ -80,7 +84,7 @@ export function accentTokens(hex) {
   return {
     accent: acc, onAccent: onAccentOf(acc),
     text: { dark: ensureContrast(acc, SURFACE.dark.selected, 4.5), light: ensureContrast(acc, SURFACE.light.selected, 4.5) },
-    soft: { dark: rgba(acc, 0.12), light: rgba(acc, 0.14) }
+    soft: { dark: rgba(acc, alphaOf(COLOR.dark['accent-soft'])), light: rgba(acc, alphaOf(COLOR.light['accent-soft'])) }
   };
 }
 /**

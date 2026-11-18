@@ -78,8 +78,8 @@ export function GroupSettingsViewLive(p) {
     }) : null
   },
     h(map[page], Object.assign({ key: page }, props)),
-    pending ? h('div', { style: { maxWidth: 1040, paddingBottom: 16 } }, h(T.Banner, { icon: 'info' }, 'Waiting for Chatango to confirm your changes.'))
-      : dirty ? h('div', { style: { maxWidth: 1040, paddingBottom: 16 } }, h(T.SaveBar, {
+    pending ? h('div', { style: { maxWidth: 'var(--size-page-wide)', paddingBottom: 16 } }, h(T.Banner, { icon: 'info' }, 'Waiting for Chatango to confirm your changes.'))
+      : dirty ? h('div', { style: { maxWidth: 'var(--size-page-wide)', paddingBottom: 16 } }, h(T.SaveBar, {
         onDiscard: function () { base.current = sig; setDraft(JSON.parse(sig)); },
         onSave: function () {
           if (saving.current) return;

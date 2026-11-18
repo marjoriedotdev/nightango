@@ -26,6 +26,23 @@ function buildInfo(info) {
 }
 
 /**
+ * Provides the build:tokens module: the colors of the design system by theme, read from tokens.json.
+ */
+function buildTokens() {
+  return {
+    name: 'build-tokens',
+    setup(build) {
+      build.onResolve({ filter: /^build:tokens$/ }, () => ({ path: 'build:tokens', namespace: 'build-tokens' }));
+      build.onLoad({ filter: /.*/, namespace: 'build-tokens' }, () => {
+        const color = { dark: {}, light: {} };
+        for (const t of designTokens().color.tokens) for (const theme of ['dark', 'light']) color[theme][t.name] = typeof t.value === 'object' ? t.value[theme] : t.value;
+        return { contents: `export var COLOR = ${JSON.stringify(color)};\n`, loader: 'js' };
+      });
+    }
+  };
+}
+
+/**
  * Bundles application modules into ES5 code with one scope.
  * @param {object} input esbuild entry: entryPoints, or stdin with its resolveDir.
  * @param {{version: string, notes: object[]}} info Version and release notes for build:info.
@@ -33,7 +50,7 @@ function buildInfo(info) {
  * @returns {Promise<object>} esbuild result, the code in outputFiles[0].
  */
 function bundle(input, info, options) {
-  return esbuild(Object.assign({ bundle: true, format: 'esm', target: 'es5', charset: 'utf8', write: false, logLevel: 'silent', absWorkingDir: ROOT, plugins: [buildInfo(info)] }, input, options));
+  return esbuild(Object.assign({ bundle: true, format: 'esm', target: 'es5', charset: 'utf8', write: false, logLevel: 'silent', absWorkingDir: ROOT, plugins: [buildInfo(info), buildTokens()] }, input, options));
 }
 
 /**
@@ -122,8 +139,23 @@ function cycles(graph) {
 // -- Design system tokens -----------------------------------------------------
 
 const OVERRIDE = new Set(['accent-text', 'accent-soft', 'focus-ring']);
-const ACCENT_DEFAULTS = '--accent-text-d: #fbf6df; --accent-text-l: #964c27; ' +
-  '--accent-soft-d: rgba(251, 246, 223, 0.12); --accent-soft-l: rgba(242, 122, 63, 0.14);';
+
+/**
+ * Reads tokens.json.
+ */
+function designTokens() {
+  return JSON.parse(readFileSync(join(ROOT, 'torchds', 'project', 'tokens.json'), 'utf8'));
+}
+
+/**
+ * Declares the accent text and soft fill of each theme, which the root and an accent scope pick from (accentScope).
+ * @param {object} tokens Content of tokens.json.
+ */
+function accentDefaults(tokens) {
+  const value = (name) => tokens.color.tokens.find((t) => t.name === name).value;
+  return `--accent-text-d: ${value('accent-text').dark}; --accent-text-l: ${value('accent-text').light}; ` +
+    `--accent-soft-d: ${value('accent-soft').dark}; --accent-soft-l: ${value('accent-soft').light};`;
+}
 
 /**
  * Declares the variables of a theme.
@@ -155,7 +187,7 @@ function themeRules(tokens, root, auto, light, dark) {
   for (const family of ['spacing', 'radius', 'size', 'motion']) for (const t of tokens[family].tokens) statics.push(`--${t.name}: ${t.value};`);
   for (const [key, stack] of Object.entries(tokens.type.families)) statics.push(`--font-${key}: ${stack};`);
   for (const group of tokens.type.groups) for (const style of group.styles) statics.push(`--font-size-${style.name}: ${style.fontSize};`);
-  return `${root} { color-scheme: dark; ${ACCENT_DEFAULTS} ${statics.join(' ')} ${themeBlock(tokens, 'dark')} }\n` +
+  return `${root} { color-scheme: dark; ${accentDefaults(tokens)} ${statics.join(' ')} ${themeBlock(tokens, 'dark')} }\n` +
     `@media (prefers-color-scheme: light) { ${auto} { color-scheme: light; ${themeBlock(tokens, 'light')} } }\n` +
     `${light} { color-scheme: light; ${themeBlock(tokens, 'light')} }\n` +
     `${dark} { color-scheme: dark; ${themeBlock(tokens, 'dark')} }\n`;
@@ -302,7 +334,7 @@ function emit(name, content) {
 }
 
 async function build() {
-  const tokens = JSON.parse(read('torchds', 'project', 'tokens.json'));
+  const tokens = designTokens();
   const bundleJs = read('torchds', 'project', 'components', 'bundle.js');
   const bundleCss = read('torchds', 'project', 'components', 'bundle.css');
   const appCss = read('src', 'styles', 'app.css');

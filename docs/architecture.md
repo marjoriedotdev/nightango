@@ -107,6 +107,8 @@ Each file of `src/` is an ES module: it imports every name it reads from another
 
 The `build:info` module, provided by the build, exports `APP_VERSION`, the `@version` of `src/loader/skin-loader.js`, and `RELEASE_NOTES`, the sections of `CHANGELOG.md` read in the Keep a Changelog format (`{ version, date, groups: [{ title, items }] }`, most recent first). The prototype and the userscript therefore get the same version and the same notes. The build rejects a malformed `CHANGELOG.md` or one whose first section is not the `@version` one.
 
+The `build:tokens` module, provided by the build, exports `COLOR`: each color token of `tokens.json` by theme. The surfaces against which colors are corrected (`SURFACE`), the default accents, the text on an accent fill, the soft fill opacity and the theme thumbnails of Appearance read it, never a copy.
+
 Imports only go down the layers `core/`, `bridge/`, the screens (`views/` and `settings/`), then `app/`, and no module is in an import cycle. The build reads the import graph from the esbuild metafile and refuses any other import (`checkImports`). The modules left in a cycle by the migration are listed in `KNOWN_CYCLIC`, which only shrinks: the build refuses an entry that no longer holds.
 
 The evaluation order follows the imports: a module whose top level runs code (the bridge, global listeners) runs after the modules it imports. esbuild renames a function named like another top-level name of the bundle (`MessageRow2`): its `name` property carries the suffix.

@@ -1,5 +1,4 @@
 import { startJournal } from './skin-journal.js';
-
 (function () {
   'use strict';
   if (window.__TORCH_SKIN__) return;

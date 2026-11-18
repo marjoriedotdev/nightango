@@ -38,7 +38,7 @@ export function GroupSettingsView(p) {
     }) : null
   },
     h(map[page], Object.assign({ key: page }, props)),
-    dirty ? h('div', { style: { maxWidth: 1040, paddingBottom: 16 } }, h(T.SaveBar, {
+    dirty ? h('div', { style: { maxWidth: 'var(--size-page-wide)', paddingBottom: 16 } }, h(T.SaveBar, {
       onDiscard: function () { setDraft(JSON.parse(JSON.stringify(g.settings))); },
       onSave: function () { app.actions.saveGroupSettings(g.id, draft); }
     }, 'Unsaved changes to #' + g.id)) : null);
