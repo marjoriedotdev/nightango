@@ -81,19 +81,29 @@ export function GSMedia(p) {
     })));
 }
 
+/**
+ * Checks the name typed in the Ban someone form, then opens the ban of that member.
+ * In live the ban list may be loaded in part: a name it holds is banned, a name it lacks may be too.
+ * @param {Object} app Application context.
+ * @param {Object} g Group.
+ * @param {string} typed Typed name.
+ * @param {Function} setName Empties the field once the ban opens.
+ * @param {Function} setErr Shows why the name can't be banned.
+ */
+export function banFrom(app, g, typed, setName, setErr) {
+  var n = typed.trim().toLowerCase();
+  if (!n) { setErr('Enter a username.'); return; }
+  if (n === app.state.me) { setErr("You can't ban yourself."); return; }
+  if (roleOf(g, n) === 'owner') { setErr("The owner can't be banned."); return; }
+  if (g.bans.some(function (x) { return x.name === n; })) { setErr(shownName(app.state, n) + ' is already banned.'); return; }
+  setName(''); setErr(''); app.ui.ban(n, g.id);
+}
 export function GSBans(p) {
   var app = useApp(), g = p.g;
   var a = useState(''), name = a[0], setName = a[1];
   var b = useState(''), err = b[0], setErr = b[1];
   var showIp = p.perms.seeIps;
-  function ban() {
-    var n = name.trim().toLowerCase();
-    if (!n) { setErr('Enter a username.'); return; }
-    if (n === app.state.me) { setErr("You can't ban yourself."); return; }
-    if (roleOf(g, n) === 'owner') { setErr("The owner can't be banned."); return; }
-    if (g.bans.some(function (x) { return x.name === n; })) { setErr(shownName(app.state, n) + ' is already banned.'); return; }
-    setName(''); setErr(''); app.ui.ban(n, g.id);
-  }
+  function ban() { banFrom(app, g, name, setName, setErr); }
   return h(Page, {
     title: 'Bans', lede: "Banned members can't read or post. Bans apply to the account and its IP.",
     aside: g.bans.length && (p.myRole === 'owner' || p.perms.unbanAll) ? h(T.Button, { variant: 'danger', onClick: function () { app.ui.confirm({ title: 'Unban everyone?', body: plural(g.bans.length, 'member', 'members') + ' will be able to join #' + g.id + ' again.', confirmLabel: 'Unban everyone', danger: true, onConfirm: function () { app.actions.unbanAll(g.id); } }); } }, 'Unban everyone') : null

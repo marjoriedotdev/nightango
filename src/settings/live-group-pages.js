@@ -1,8 +1,8 @@
 import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { ago, plural } from '../core/util.js';
 import { LOAD_BELOW_MARGIN, SkeletonRows, useApp, useInfiniteScroll } from '../core/ui.js';
-import { banKey, banListOf, roleOf, shownName } from '../core/selectors.js';
-import { AutoModFilters, ProxiesRow } from './group-pages.js';
+import { banKey, banListOf, shownName } from '../core/selectors.js';
+import { AutoModFilters, ProxiesRow, banFrom } from './group-pages.js';
 import { ACCOUNT_NAME } from '../core/chatango.js';
 import { Page, liveSelect, withCurrent } from './kit.js';
 import { Person } from '../core/people-ui.js';
@@ -104,13 +104,7 @@ export function GSBansLive(p) {
   useEffect(function () { app.actions.requestBans(g.id); }, [g.id]);
   useEffect(function () { if (tab === 'unblock' && !unbansLoaded) app.actions.requestUnbans(g.id); }, [g.id, tab, unbansLoaded]);
   var showIp = p.perms.seeIps;
-  function ban() {
-    var n = name.trim().toLowerCase();
-    if (!n) { setErr('Enter a username.'); return; }
-    if (n === app.state.me) { setErr("You can't ban yourself."); return; }
-    if (roleOf(g, n) === 'owner') { setErr("The owner can't be banned."); return; }
-    setName(''); setErr(''); app.ui.ban(n, g.id);
-  }
+  function ban() { banFrom(app, g, name, setName, setErr); }
   function runSearch() {
     var v = query.trim();
     if (v) app.actions.searchBans(g.id, v); else app.actions.clearBanSearch(g.id);
