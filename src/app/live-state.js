@@ -4,8 +4,6 @@ import { plainOf } from '../core/draft.js';
 import { mkSettings, roleOfFlags } from '../core/roles.js';
 import { banKey, favoritePeople, findMsg } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { applyEdit } from './pm.js';
-import { IDLE_DELAY } from './root.js';
 import { LIVE } from '../core/env.js';
 import { GROUP_FLAG, PM_CONNECTION } from '../core/chatango.js';
 import { blankMirror, cleanAccount, readMirror, writeMirror } from '../core/account-store.js';
@@ -399,3 +397,5 @@ export function receiveBanPage(list, op) {
   list.page.loaded = true;
   list.page.loading = false;
 }
+export var IDLE_DELAY = 3 * MIN;
+export function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }

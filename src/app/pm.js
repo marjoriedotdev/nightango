@@ -2,7 +2,7 @@ import { useEffect, useRef } from '../core/globals.js';
 import { MIN, uid, warn } from '../core/util.js';
 import { favoritePeople, isDmInView, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, trimThread, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
-import { ensureLiveUser, pmAuthor } from './live-state.js';
+import { applyEdit, ensureLiveUser, pmAuthor } from './live-state.js';
 import { LIVE } from '../core/env.js';
 import { MEET_PAGE } from '../core/chatango.js';
 /* ---------- PMs: conversations, unreads and private history ---------- */
@@ -93,7 +93,6 @@ export function pmMessage(x) {
   if (x.replyId) m.replyTo = { key: x.replyId };
   return m;
 }
-export function applyEdit(o, m) { o.text = m.text; o.parts = m.parts; o.embeds = m.embeds; o.edited = true; }
 /**
  * Applies a PM edit to its original and counts it once.
  * @param {Object} o Original message.

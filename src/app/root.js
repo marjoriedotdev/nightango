@@ -1,6 +1,6 @@
 import { APP_VERSION } from 'build:info';
 import { AvatarDecorCtx, h, useEffect, useMemo, useRef, useState, useSyncExternalStore } from '../core/globals.js';
-import { MIN, REPO_URLS, SEASONS, isNewerVersion, seasonOf, skyAt, storageSet } from '../core/util.js';
+import { REPO_URLS, SEASONS, isNewerVersion, seasonOf, skyAt, storageSet } from '../core/util.js';
 import { openDraft } from '../core/draft.js';
 import { accentOf, accentTokens } from '../core/colors.js';
 import { ApiCtx, ConfirmDialog, Ctx, Layers, Toasts, draftStore, minuteClock } from '../core/ui.js';
@@ -16,7 +16,7 @@ import { CreateGroupDialog } from '../views/discover.js';
 import { Palette } from '../views/palette.js';
 import { SessionOverlay, sessionBlocks } from '../views/session.js';
 import { PREFS_KEY, initialState } from './state.js';
-import { useLocalStore, usePrunedUsers } from './live-state.js';
+import { IDLE_DELAY, useLocalStore, usePrunedUsers } from './live-state.js';
 import { useLivePms } from './pm.js';
 import { useOverlays } from './overlays.js';
 import { useInbox } from './inbox.js';
@@ -26,7 +26,6 @@ import { useSimulation } from './simulation.js';
 import { useLiveOps } from './live-ops.js';
 import { JOURNAL, LIVE, ROOT_EL, VIEWER_THEME } from '../core/env.js';
 /* ---------- Root ---------- */
-export var IDLE_DELAY = 3 * MIN;
 /**
  * Returns the first stable version of a list of release tags.
  * @param {Array} tags Tags newest first, untrusted.
