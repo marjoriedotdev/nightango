@@ -1,8 +1,9 @@
 import { AvatarDecorCtx, h, useContext, useEffect } from '../core/globals.js';
-import { ApiCtx, Ctx, Layers, useApp, useAppApi } from '../core/ui.js';
+import { ApiCtx, Ctx, useApp, useAppApi } from '../core/ui.js';
 import { paneShown } from '../core/selectors.js';
 import { closePipWindow, pipOpen, renderInPip } from './pip-window.js';
 import { SidePane } from './shell.js';
+import { Layers } from '../core/layers.js';
 // -- Floating conversation -----------------------------------------------------
 
 /**

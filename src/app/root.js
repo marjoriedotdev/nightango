@@ -3,7 +3,7 @@ import { AvatarDecorCtx, h, useEffect, useMemo, useRef, useState, useSyncExterna
 import { REPO_URLS, isNewerVersion, storageSet } from '../core/util.js';
 import { openDraft } from '../core/draft.js';
 import { accentOf, accentTokens } from '../core/colors.js';
-import { ApiCtx, ConfirmDialog, Ctx, Layers, Toasts, draftStore, minuteClock } from '../core/ui.js';
+import { ApiCtx, Ctx, minuteClock } from '../core/ui.js';
 import { resolvedTheme, shownName, unreadTotal } from '../core/selectors.js';
 import { Login } from '../views/login.js';
 import { Shell } from '../views/shell.js';
@@ -26,6 +26,8 @@ import { useLiveOps } from './live-ops.js';
 import { JOURNAL, LIVE, ROOT_EL, VIEWER_THEME } from '../core/env.js';
 import { PipHost } from '../views/pip.js';
 import { SEASONS, seasonOf, skyAt } from '../core/season.js';
+import { draftStore } from '../core/drafts.js';
+import { ConfirmDialog, Layers, Toasts } from '../core/layers.js';
 /* ---------- Root ---------- */
 /**
  * Returns the first stable version of a list of release tags.

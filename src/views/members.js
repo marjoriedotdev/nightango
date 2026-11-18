@@ -1,6 +1,6 @@
 import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { cx, lower } from '../core/util.js';
-import { Dialog, MenuButton, SkeletonRows, developerBadge, menuGroups, presenceSr, roleBadge, useApp, useAppApi, useRowBatches, youBadge } from '../core/ui.js';
+import { SkeletonRows, useApp, useAppApi, useRowBatches } from '../core/ui.js';
 import { bidiText, httpsHost } from '../core/rich-text.js';
 import { guestsOf, miniStyleOf, roleOf, shownName, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
@@ -10,6 +10,8 @@ import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, isGuest } from '../core/chatango.js';
 import { columnHeader } from './chrome.js';
 import { personActionGroups, personCard, useProfileActions, useProfiles } from './people.js';
+import { Dialog, MenuButton, menuGroups } from '../core/layers.js';
+import { developerBadge, presenceSr, roleBadge, youBadge } from '../core/people-ui.js';
 /**
  * Member list of a group.
  * @param {{g: Object, scrollRef: Object}} p Shown group and ref of its scrolling area.

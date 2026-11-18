@@ -4,9 +4,10 @@ import { T, h, useEffect, useState } from '../core/globals.js';
 import { RichText } from '../core/rich-text.js';
 import { ROLE_LONG } from '../core/roles.js';
 import { canBanMember, isNotifyingOnline, isPaneOpen, isProfilePending, miniStyleOf, roleOf, shownName, statusLabel, userOf } from '../core/selectors.js';
-import { developerBadge, premiumBadge, presenceSr, useApp, useMinute, useShownUsers, youBadge } from '../core/ui.js';
+import { useApp, useMinute, useShownUsers } from '../core/ui.js';
 import { ago, dayKey, dayLabel, elapsedShort, fmtTime, ownOf } from '../core/util.js';
 import { favoriteItem } from './chrome.js';
+import { developerBadge, premiumBadge, presenceSr, youBadge } from '../core/people-ui.js';
 // -- People --------------------------------------------------------------------
 /**
  * Writes a member's presence with their last online time when it is known.

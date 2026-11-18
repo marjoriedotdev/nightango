@@ -1,8 +1,9 @@
 import { Frag, T, h, useState } from '../core/globals.js';
 import { downloadJson, plural, readJsonArray } from '../core/util.js';
-import { JsonFileButton, Person, useApp } from '../core/ui.js';
+import { JsonFileButton, useApp } from '../core/ui.js';
 import { httpsHost } from '../core/rich-text.js';
 import { Page, usePref } from './kit.js';
+import { Person } from '../core/people-ui.js';
 export function PrivacyPage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
   return h(Page, { title: 'Privacy', lede: PRIVACY_LEDE },

@@ -1,7 +1,7 @@
 import { Frag, React, T, h, useEffect, useState } from '../core/globals.js';
 import { MIN, copyText, cx, fmtTime } from '../core/util.js';
 import { SURFACE, ensureContrast, hexToRgb, mix, rgbToHex } from '../core/colors.js';
-import { MenuButton, Person, developerBadge, roleBadge, useAppApi, useStatePart } from '../core/ui.js';
+import { useAppApi, useStatePart } from '../core/ui.js';
 import { MessageText, httpsHost, waitsForClick, warnOnLink } from '../core/rich-text.js';
 import { mentionsMe } from '../core/selectors.js';
 import { MSG_BG_ALIGN } from '../bridge/live-parse.js';
@@ -11,6 +11,8 @@ import { LIVE } from '../core/env.js';
 import { CHANNELS, FONT_STACKS } from '../core/chatango.js';
 import { EMBED_LABEL, messagePreview, shownParts } from '../core/message-content.js';
 import { banItem, ignoreItem, styleItem, viewProfileItem, whoItem } from './people.js';
+import { MenuButton } from '../core/layers.js';
+import { Person, developerBadge, roleBadge } from '../core/people-ui.js';
 var UNSTYLED = { names: false, fonts: false, backgrounds: false };
 
 /**

@@ -1,8 +1,9 @@
 import { T, h, useEffect, useState } from '../core/globals.js';
 import { cx } from '../core/util.js';
-import { Dialog, useApp } from '../core/ui.js';
+import { useApp } from '../core/ui.js';
 import { LIVE } from '../core/env.js';
 import { PM_CONNECTION } from '../core/chatango.js';
+import { Dialog } from '../core/layers.js';
 /* ---------- Session loss ---------- */
 var SESSION_ATTEMPTS = 3;
 // A lost connection has no dialog: it shows in SessionBanner.

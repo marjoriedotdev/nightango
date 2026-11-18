@@ -2,7 +2,7 @@ import { Frag, React, T, h, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { copyText, cx, dayKey, dayLabel, lastMatch, plural } from '../core/util.js';
 import { accentOf, accentScope } from '../core/colors.js';
 import { ROLE_LONG } from '../core/roles.js';
-import { AccentSwatches, Dialog, MenuButton, groupDraftKey, presenceSr, roleBadge, useApp, useDraft, useLatestCalls, useRightColumn } from '../core/ui.js';
+import { AccentSwatches, useApp, useLatestCalls, useRightColumn } from '../core/ui.js';
 import { badgeChoices, canBanMember, findMsg, groupRights, isHiddenAuthor, isStaffRole, messageBadge, msgFinder, roleOf, sentBadge, shownName, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { MessageEmbeds, MessageRow, canEditGroupMessage, continues, editedId, groupRowFill, joinRow, mentionHandle, quoteOf } from './message.js';
@@ -17,6 +17,9 @@ import { LIVE } from '../core/env.js';
 import { CHANNELS, channelLabel, chatangoPageUrl, isGuest } from '../core/chatango.js';
 import { MobileNavButton, favoriteItem, paneCloseButton } from './chrome.js';
 import { ConversationComposer, EDIT_MAX, useComposerMode } from './composer.js';
+import { groupDraftKey, useDraft } from '../core/drafts.js';
+import { Dialog, MenuButton } from '../core/layers.js';
+import { presenceSr, roleBadge } from '../core/people-ui.js';
 /* ---------- Group ---------- */
 // BetterChatango's limit for a group, counted on the body it builds and not on the typed text.
 var GROUP_MESSAGE_MAX = 2900;

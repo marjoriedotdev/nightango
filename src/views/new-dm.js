@@ -1,8 +1,9 @@
 import { T, h, useEffect, useState } from '../core/globals.js';
 import { unknownUserText } from '../core/util.js';
-import { Dialog, useApp } from '../core/ui.js';
+import { useApp } from '../core/ui.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME } from '../core/chatango.js';
+import { Dialog } from '../core/layers.js';
 /**
  * Rejects a name no conversation can be opened with.
  * @param {Object} s Application state.

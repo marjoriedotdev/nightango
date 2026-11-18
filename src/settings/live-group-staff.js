@@ -1,7 +1,8 @@
 import { Frag, T, h, useState } from '../core/globals.js';
-import { Person, SkeletonRows, useApp } from '../core/ui.js';
+import { SkeletonRows, useApp } from '../core/ui.js';
 import { shownName } from '../core/selectors.js';
 import { ActivityRow, Page } from './kit.js';
+import { Person } from '../core/people-ui.js';
 /* Labels of the Chatango moderation log, based on the chadango models (models/modaction.go). */
 var MODLOG_TEXT = {
   amod: 'made *t* a moderator', aadm: 'made *t* an admin', rmod: 'removed *t* as a moderator', radm: 'removed *t* as an admin',

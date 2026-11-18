@@ -1,11 +1,12 @@
 import { Frag, T, h, useLayoutEffect, useRef, useState } from '../core/globals.js';
-import { Portal, useFloating, useStatePart } from '../core/ui.js';
+import { useStatePart } from '../core/ui.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { MediaPanel } from './media.js';
 import { GifPanel } from './gif.js';
 import { LIVE } from '../core/env.js';
 import { EMOTICONS, EMOTICON_BY_NAME } from '../core/emoticons.js';
 import { readOwn, writeOwn } from '../core/account-store.js';
+import { Portal, useFloating } from '../core/layers.js';
 /* ---------- Composer emoticon and media picker ---------- */
 var EMOJI_SECTIONS = [{ title: 'Classic', premium: false }, { title: 'Premium', premium: true }];
 var PICKER_TABS = [{ value: 'emoji', label: 'Emoji' }, { value: 'gif', label: 'GIF' }, { value: 'media', label: 'Media' }];

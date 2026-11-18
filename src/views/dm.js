@@ -1,6 +1,6 @@
 import { Frag, React, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { cx, dayKey, dayLabel, fmtTime, lastMatch, warn } from '../core/util.js';
-import { DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useOutside, useRightColumn, useRowBatches, useStatePart, useWideLayout } from '../core/ui.js';
+import { SkeletonRows, useApp, useAppApi, useLatestCalls, useRightColumn, useRowBatches, useStatePart, useWideLayout } from '../core/ui.js';
 import { bidiText } from '../core/rich-text.js';
 import { THREAD_MAX, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, shownName, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
@@ -18,6 +18,9 @@ import { messagePreview } from '../core/message-content.js';
 import { MobileNavButton, favoriteItem, paneCloseButton } from './chrome.js';
 import { MessageEntry, PresenceTime, confirmRemoveFriend, notifyOnlineItem, personActionGroups, personAsl, personMetaLine, personStatus, presenceSince, presenceText, useFriendRequest, useProfileActions, useProfiles, viewProfileItem, whoItem } from './people.js';
 import { ConversationComposer, EDIT_MAX, useComposerMode } from './composer.js';
+import { DraftMark, dmDraftKey, showsDraft, useDraft, useDraftMarks } from '../core/drafts.js';
+import { MenuButton, menuGroups, useOutside } from '../core/layers.js';
+import { Person, presenceSr } from '../core/people-ui.js';
 /* ---------- Private messages ---------- */
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };

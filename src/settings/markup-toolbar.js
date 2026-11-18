@@ -1,7 +1,8 @@
 import { ReactDOM, T, h, useState } from '../core/globals.js';
 import { plural } from '../core/util.js';
-import { ColorField, Dialog, MenuButton, useApp } from '../core/ui.js';
+import { ColorField, useApp } from '../core/ui.js';
 import { FONT_FACES, FONT_STACKS } from '../core/chatango.js';
+import { Dialog, MenuButton } from '../core/layers.js';
 /* ---------- Formatting bar of the profile fields ---------- */
 
 // Sizes in pixels, as BetterChatango reads them (inject.js:656).

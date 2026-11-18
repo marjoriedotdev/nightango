@@ -27,7 +27,7 @@ const nativeFocus = w.HTMLElement.prototype.focus;
 w.HTMLElement.prototype.focus = function (o) { if (!this.closest('[inert]')) nativeFocus.call(this, o); };
 
 (async () => {
-w.eval(await bundleForTest("export { Layers, MenuButton, Dialog, Toasts } from './src/core/ui.js';", 'ui'));
+w.eval(await bundleForTest("export { Layers, MenuButton, Dialog, Toasts } from './src/core/layers.js';", 'ui'));
 const ui = w.ui, R = w.React, h = R.createElement;
 
 // Like skin-page.js: #app in the shadow root of the host, the layer next to it.

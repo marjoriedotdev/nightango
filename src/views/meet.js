@@ -1,8 +1,9 @@
 import { Frag, T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { cx } from '../core/util.js';
-import { Dialog, LOAD_BELOW_MARGIN, SkeletonRows, useApp, useInfiniteScroll } from '../core/ui.js';
+import { LOAD_BELOW_MARGIN, SkeletonRows, useApp, useInfiniteScroll } from '../core/ui.js';
 import { GENDER_LABEL } from '../core/chatango.js';
 import { personCard, useProfiles } from './people.js';
+import { Dialog } from '../core/layers.js';
 var MEET_DEFAULTS = { query: '', sex: 'B', ageMin: 13, ageMax: 99, online: true, avatar: 0 };
 var PULL_TRIGGER = 64, PULL_MAX = 96;
 /** Filters that differ from BetterChatango's defaults, for the counter and the chips. */

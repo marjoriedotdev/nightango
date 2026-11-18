@@ -1,6 +1,7 @@
 import { T, h, useState } from '../core/globals.js';
-import { Dialog, MenuButton, useApp } from '../core/ui.js';
+import { useApp } from '../core/ui.js';
 import { SPACE_MAX, SPACE_NAME_MAX } from '../core/account-store.js';
+import { Dialog, MenuButton } from '../core/layers.js';
 /* ---------- Spaces ---------- */
 
 /**

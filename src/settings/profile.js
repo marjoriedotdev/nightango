@@ -1,11 +1,12 @@
 import { T, h, useEffect, useRef, useState } from '../core/globals.js';
-import { Person, SkeletonRows, useApp } from '../core/ui.js';
+import { SkeletonRows, useApp } from '../core/ui.js';
 import { RichText } from '../core/rich-text.js';
 import { miniStyleOf, userOf } from '../core/selectors.js';
 import { coverReveal, miniSkin, useMiniCover } from '../views/profile.js';
 import { useMarkupToolbar } from './markup-toolbar.js';
 import { genderCode } from '../core/chatango.js';
 import { ActivityRow, Page, setIn } from './kit.js';
+import { Person } from '../core/people-ui.js';
 export function ProfilePage() {
   var app = useApp(), s = app.state, me = userOf(s, s.me);
   function snapshot() { return { age: me.age || '', gender: me.gender || 'Not specified', location: me.location || '', about: me.about || '', meet: !!s.profile.visibility.meet }; }
