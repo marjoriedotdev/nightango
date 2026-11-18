@@ -128,7 +128,7 @@ export function trimThread(t) {
  * @param {Object} group Group.
  */
 export function guestsOf(group) {
-  // The prototype has no guestNames: all its guests are anons.
+  // A state the hosted page saved before guestNames existed has none: all its guests are anons.
   var names = group.guestNames || [];
   return { names: names, count: names.length + group.guests };
 }

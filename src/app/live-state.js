@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef } from '../core/globals.js';
 import { MIN, ownOf } from '../core/util.js';
 import { plainOf } from '../core/draft.js';
-import { mkSettings, roleOfFlags } from '../core/roles.js';
+import { roleOfFlags } from '../core/roles.js';
 import { banKey, favoritePeople, findMsg } from '../core/selectors.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { LIVE } from '../core/env.js';
 import { GROUP_FLAG, PM_CONNECTION } from '../core/chatango.js';
 import { blankMirror, cleanAccount, readMirror, writeMirror } from '../core/account-store.js';
+import { newGroup, newUser } from './state.js';
 /* ---------- Live state: session, world and groups built for Root ---------- */
 // A session loss only gives way to a reason of equal or higher rank.
 export var SESSION_RANK = { lost: 0, offline: 1, kicked: 2, denied: 3 };
@@ -29,15 +30,6 @@ export function sessionAfterConn(d, op) {
   return down ? { reason: 'lost', attempts: 0 } : s;
 }
 
-export function liveWorld(me) {
-  var users = {}; users[me] = { status: 'online', self: true, about: '', style: {} };
-  return {
-    me: me, users: users, groups: {}, dms: {}, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0, pmHistoryRev: 0, meStatus: 'online',
-    route: { view: 'discover' }, split: null, pip: null, lastChat: { view: 'discover' },
-    sections: { favorites: true, groups: true, dms: true },
-    groupsSeen: false, pmLoaded: false, friendsLoaded: false, pmChecked: null, pmrStatus: null, pmrDismissed: false, pmSettings: null, pmSettingSave: null, premium: null, retrying: {}
-  };
-}
 // The read position of the group in view moves with each message: its writes wait and go out together.
 var READ_SAVE_MS = 2000;
 var READ_POSITIONS_MAX = 100;
@@ -126,15 +118,11 @@ export function useLocalStore(state) {
   return { ref: localRef, restore: restore };
 }
 export function blankBanPage() { return { loaded: false, more: false, loading: false }; }
-function liveGroup(id, title) {
-  var t = title || id;
-  return {
-    id: id, title: t, topic: t, joined: true, owned: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: null,
-    members: [], guestNames: [], guests: 0, liveCount: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false,
-    conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
-    live: { flags: 0, mods: {}, badges: {}, knownBadges: {}, ownBadge: 'none', owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() },
-    settings: mkSettings({ overview: { title: t, description: '' }, staff: {} })
-  };
+function liveGroup(id) {
+  return newGroup(id, {
+    joined: true, conn: 'open', historyDone: false, historyCapped: false, inited: false, membersLoaded: false, loadingMore: false,
+    live: { flags: 0, mods: {}, badges: {}, knownBadges: {}, ownBadge: 'none', owner: null, rate: null, cooldown: null, tempBan: null, refused: null, bw: null, annc: null, modlog: null, modlogPage: blankBanPage(), banPage: blankBanPage(), banSearch: null, unbans: [], unbanPage: blankBanPage() }
+  });
 }
 
 // -- Members, groups and messages of the live state ---------------------------
@@ -154,7 +142,7 @@ export function groupUpdate(update, gid, fn) { update(function (d) { if (!d.auth
 export function ensureLiveGroup(d, gid, local) {
   var g = d.groups[gid];
   if (!g) {
-    g = d.groups[gid] = liveGroup(gid, gid);
+    g = d.groups[gid] = liveGroup(gid);
     g.favorite = (liveBridge.list('favorite') || []).indexOf(gid) >= 0;
     g.muted = (liveBridge.list('muted') || []).indexOf(gid) >= 0;
     g.hiddenChannels = local.channels[gid] || [];
@@ -175,10 +163,10 @@ export function ensureLiveGroup(d, gid, local) {
  */
 export function ensureLiveUser(d, name, local) {
   // Assigning __proto__ would replace the prototype of the map: this name gets a member that is never kept.
-  if (name === '__proto__') return { status: 'offline', about: '', style: {} };
+  if (name === '__proto__') return newUser({ status: 'offline' });
   var u = ownOf(d.users, name);
   if (!u) {
-    u = d.users[name] = { status: 'online', about: '', style: {} };
+    u = d.users[name] = newUser();
     if ((liveBridge.list('ignored') || []).indexOf(name) >= 0) u.ignored = true;
     if (local.unstyled.indexOf(name) >= 0) u.unstyled = true;
   }

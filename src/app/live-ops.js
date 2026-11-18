@@ -5,7 +5,7 @@ import { BETTER_CHATANGO_PREFS } from '../core/prefs.js';
 import { banListOf, isDmInView, isGroupInView, isNotifyingOnline, mentionsMe, pmEditTarget, premiumEndsSoon, readThrough, shownName, trimThread, userOf } from '../core/selectors.js';
 import { deliverOp, liveBridge } from '../bridge/live-bridge.js';
 import { DEFAULT_MESSAGE_STYLE } from '../views/message-style.js';
-import { SESSION_RANK, applyGroupEdit, applyPresence, blankBanPage, deriveLive, editTarget, ensureLiveGroup, ensureLiveUser, ensurePresentUser, ensureUnseenUser, groupUpdate, liveWorld, mergeEdits, mergeSpelling, mergeStyle, noteBadge, receiveBanPage, sessionAfterConn, withReply } from './live-state.js';
+import { SESSION_RANK, applyGroupEdit, applyPresence, blankBanPage, deriveLive, editTarget, ensureLiveGroup, ensureLiveUser, ensurePresentUser, ensureUnseenUser, groupUpdate, mergeEdits, mergeSpelling, mergeStyle, noteBadge, receiveBanPage, sessionAfterConn, withReply } from './live-state.js';
 import { memoryPmArchive, readPm, receivePm, syncPmUnread } from './pm.js';
 import { dropMentions, logMention } from './inbox.js';
 import { JOURNAL, LIVE } from '../core/env.js';
@@ -13,6 +13,7 @@ import { PM_CONNECTION } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
 import { readOwn, writeOwn } from '../core/account-store.js';
 import { setIn } from '../settings/kit.js';
+import { newWorld } from './state.js';
 /* ---------- Live operations: what the bridge emits, applied to the state ---------- */
 /**
  * Hands each bridge operation to the handler of the latest render.
@@ -106,7 +107,7 @@ export function useLiveOps(k) {
         // BetterChatango's "Mentioned in #g" title would come back 5 s later without the Nightango counter.
         if (liveBridge.setting('tabTitleAlerts')) liveBridge.setSetting('tabTitleAlerts', false);
         update(function (d) {
-          Object.assign(d, liveWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = localRef.current.notes; d.spaces = localRef.current.spaces; d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
+          Object.assign(d, newWorld(op.me)); d.ownStyle = localRef.current.style && Object.assign({}, DEFAULT_MESSAGE_STYLE, localRef.current.style); d.notes = localRef.current.notes; d.spaces = localRef.current.spaces; d.space = d.spaces.some(function (x) { return x.id === localRef.current.space; }) ? localRef.current.space : null; d.auth = { loggedIn: true };
           mergeSpelling(d.users[op.me], op.spelling, Date.now());
           (liveBridge.list('ignored') || []).forEach(function (n) { ensureUnseenUser(d, n, localRef.current); });
           localRef.current.favoritePeople.forEach(function (n) { ensureUnseenUser(d, n, localRef.current); d.users[n].favorite = true; });

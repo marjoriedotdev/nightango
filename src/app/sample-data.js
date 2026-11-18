@@ -2,6 +2,7 @@ import { MIN, pick, uid } from '../core/util.js';
 import { mkSettings } from '../core/roles.js';
 import { VISIT_PAGE } from '../core/vissle.js';
 import { MEDIA_PAGE, mediaMatch, screenMediaEntries } from '../core/media-library.js';
+import { newGroup, newWorld } from './state.js';
 export var LINES = {
   community: ['Did the reconnect fix stick for everyone?', 'Theme import works on Firefox now.', 'Is there a way to pin a group to the top?', 'Welcome to the new folks.', 'The compact mode is so much easier to read.', 'Anyone tried the light theme on mobile?', 'Server s12 seems stable again.', 'How do I turn names colors back on?', 'Thanks for the quick fix.', 'Reminder: bug reports go to #betterchatangodev.'],
   betterchatangodev: ['Pushed a fix for the reply preview.', 'CI is green again.', 'Can someone review the AutoMod copy?', 'Safari still clips the composer on iOS 17.', 'Merged the notification matrix.'],
@@ -46,12 +47,7 @@ export function seedWorld(me) {
   };
   users[me] = { status: 'online', age: 27, gender: 'Not specified', location: 'Rennes, France', about: 'Building themes for BetterChatango. Usually in #community and #betterchatangodev. Ping me for theme import issues.', style: {}, self: true };
 
-  function group(id, o) {
-    return Object.assign({
-      id: id, title: '', topic: '', joined: false, favorite: false, muted: false, hiddenChannels: [], sendChannel: 'none', accent: null, unread: 0, mentions: 0, lastReadTs: now,
-      members: [], guests: 0, messages: [], closed: false, bans: [], audit: [], dismissedAnnouncement: false
-    }, o);
-  }
+  function group(id, o) { return newGroup(id, Object.assign({ title: '', topic: '', lastReadTs: now }, o)); }
   var groups = {};
   var known = msg('sable', "Known issue on server s12, it's on Chatango's side. Reconnecting twice usually sticks.", 18);
   groups.community = group('community', {
@@ -146,15 +142,13 @@ export function seedWorld(me) {
     halcyon: { messages: [dm('halcyon', 'See you Friday for game night.', 60 * 26)], unread: 0, lastReadTs: now },
     pixelmint: { messages: [dm('pixelmint', 'Hi! Saw you in #retrogaming. Want to swap themes?', 50)], unread: 1, lastReadTs: t(60) }
   };
-  return {
-    me: me, users: users, groups: groups, dms: dms, notifyOnline: {}, friendAdds: {}, mentionLog: [], notes: {}, spaces: [], space: null, mediaRev: 0,
-    meStatus: 'online',
-    pmSettings: { hideIdle: false, allowAnon: true, emailOffline: false }, pmSettingSave: null,
+  return newWorld(me, {
+    users: users, groups: groups, dms: dms,
+    pmSettings: { hideIdle: false, allowAnon: true, emailOffline: false },
     premium: { status: 200, until: now + 2 * 1440 * MIN + 5 * 60 * MIN },
     profile: { visibility: { meet: false } },
-    route: { view: 'group', id: 'community', markerTs: now }, split: null, pip: null,
-    sections: { favorites: true, groups: true, dms: true }
-  };
+    route: { view: 'group', id: 'community', markerTs: now }
+  });
 }
 
 var SAMPLE_VISITS = (function () {
