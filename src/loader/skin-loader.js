@@ -156,12 +156,13 @@ import { ACCOUNT_EVENT, LOADER_TEXT, LOADER_TIMEOUT, TIKTOK_POST, TIKTOK_SHORT, 
     GM_xmlhttpRequest({
       method: 'GET', url: 'https://cdn.syndication.twimg.com/tweet-result?id=' + post[2] + '&lang=en&token=' + xToken(post[2]), anonymous: true, timeout: LOADER_TIMEOUT,
       onload: function (r) {
-        // Undocumented reply: if X changes it, the card shows without media.
-        try {
-          var t = r.status === 200 ? JSON.parse(r.responseText) : null, media = t && xMedia(t);
-          if (t) extra = xAuthor(t);
-          if (media) extra.media = media;
-        } catch (x) { extra = {}; }
+        // Undocumented reply: if X changes it, the card shows without what it no longer reads. Author and media are read apart: a media X changed keeps the author.
+        var t = null;
+        try { t = r.status === 200 ? JSON.parse(r.responseText) : null; } catch (x) { t = null; }
+        if (t) {
+          try { extra = xAuthor(t); } catch (x) { extra = {}; }
+          try { var media = xMedia(t); if (media) extra.media = media; } catch (x) { delete extra.media; }
+        }
         done();
       },
       onerror: done, ontimeout: done
