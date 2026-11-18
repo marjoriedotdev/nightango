@@ -15,7 +15,7 @@ import { confirmLeave } from './commands.js';
 import { SessionBanner, sessionLost } from './session.js';
 import { LIVE } from '../core/env.js';
 import { CHANNELS, channelLabel, chatangoPageUrl, isGuest } from '../core/chatango.js';
-import { MobileNavButton, favoriteItem } from './chrome.js';
+import { MobileNavButton, favoriteItem, paneCloseButton } from './chrome.js';
 import { ConversationComposer, EDIT_MAX, useComposerMode } from './composer.js';
 /* ---------- Group ---------- */
 // BetterChatango's limit for a group, counted on the body it builds and not on the typed text.
@@ -58,8 +58,9 @@ export function GroupView(p) {
   var a11 = useState(false), sharedOpen = a11[0], setSharedOpen = a11[1];
   var a12 = useState(false), badgeOpen = a12[0], setBadgeOpen = a12[1];
   var column = useRightColumn(function () { setInfoOpen(true); });
-  // Side by side, the members open as a sheet: a right column would leave no room for the messages.
-  if (p.compact) column = { open: false, pressed: null, toggle: function () { setInfoOpen(true); } };
+  var inMain = p.role === 'main';
+  // Side by side or floating, the members open as a sheet: a right column would leave no room for the messages.
+  if (!inMain || p.compact) column = { open: false, pressed: null, toggle: function () { setInfoOpen(true); } };
   var a9 = useDraft(groupDraftKey(p.gid)), draft = a9[0], setDraft = a9[1];
   var cm = useComposerMode(a9), mode = cm.mode;
   var inputRef = useRef(null);
@@ -202,8 +203,8 @@ export function GroupView(p) {
     h('main', { className: 'main', style: g.accent ? accentScope(g.accent, app.theme) : undefined },
       h('header', { className: 'topbar' },
         // A pane beside or a floating window has no navigation of its own.
-        p.onClose ? null : h(MobileNavButton, null),
-        h(p.onClose ? 'h2' : 'h1', { className: 'pane-title' }, g.id),
+        inMain ? h(MobileNavButton, null) : null,
+        h(inMain ? 'h1' : 'h2', { className: 'pane-title' }, g.id),
         // The member column shows the full description: once open, the cut one in the header has nothing left to open.
         g.topic ? h(Frag, null, h('span', { className: 'vsep' }), column.open ? h('p', { className: 'topic' }, g.topic)
           : h('button', { type: 'button', className: 'topic topic-btn', 'aria-label': 'Show the full description of #' + g.id, onClick: column.toggle }, g.topic)) : null,
@@ -228,7 +229,7 @@ export function GroupView(p) {
             { label: 'Leave group…', icon: 'log-out', danger: true, onSelect: function () { confirmLeave(app, g.id); } }
           ]
         }),
-        p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
+        paneCloseButton(app, p.role, '#' + g.id)),
       prefs.announcements && ann.enabled && ann.text && !g.dismissedAnnouncement ? h('div', { className: 'banner-wrap' },
         h(T.Banner, { title: 'Announcement', onDismiss: function () { app.update(function (d) { d.groups[g.id].dismissedAnnouncement = true; }); } },
           // The text as key: a new announcement shows collapsed.
@@ -239,7 +240,7 @@ export function GroupView(p) {
         h(T.Button, { variant: 'ghost', onClick: function () { setSearch(null); } }, 'Close')) : null,
       h(MessageLog, { log: log, label: 'Messages in ' + g.id, rows: items, firstTs: count ? g.messages[0].ts : null, changeKey: logChangeKey(g.messages) + ':' + !!search, newBelow: 'notify', older: older }),
       // One banner for a lost connection, in the main pane: it takes the place of the banner of each group.
-      p.onClose ? null : h(SessionBanner, null),
+      inMain ? h(SessionBanner, null) : null,
       LIVE && g.conn && !sessionLost(app.state) ? h(ConnectionBanner, { key: g.id, name: '#' + g.id, conn: g.conn, retrying: !!app.state.retrying[g.id], onRetry: function () { app.actions.retryConnection(g.id); } }) : null,
       h('div', { className: 'composer-wrap', onKeyUp: mentions.onCaret, onMouseUp: mentions.onCaret, onFocus: mentions.onCaret, onBlur: mentions.onBlur }, composer)),
     column.open ? h(MembersPanel, { g: g }) : null,

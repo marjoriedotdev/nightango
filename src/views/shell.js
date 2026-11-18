@@ -5,8 +5,7 @@ import { DraftMark, MenuButton, SkeletonRows, dmDraftKey, groupDraftKey, presenc
 import { favoritePeople, isPaneOpen, listedDms, paneShown, shownName, statusLabel, unreadDmCount, userOf } from '../core/selectors.js';
 import { NewYearMark, NewYearSky, SeasonSky, SeasonStar, skyMoves } from './season.js';
 import { GroupView } from './group.js';
-import { DMView, SplitDm } from './dm.js';
-import { PipHost } from './pip.js';
+import { DMView, DmThread } from './dm.js';
 import { SpaceBar, currentSpace, inCurrentSpace, spacesItem } from './spaces.js';
 import { MentionsView } from './mentions.js';
 import { Discover } from './discover.js';
@@ -26,24 +25,30 @@ export var Shell = React.memo(function Shell() {
   var split = wide && s.split && paneShown(s, s.split) ? s.split : null;
   // A window too narrow for two panes, or a conversation that went away, closes the pane beside.
   useEffect(function () { if (s.split && !split) app.actions.closeSplit(); }, [!!s.split, !!split]);
-  // PipHost on every route: without it the floating window stops following the state.
-  if (r.view === 'settings') return h(Frag, null, h(SettingsView, { page: r.page }), h(PipHost, null));
-  if (r.view === 'gsettings') return h(Frag, null, h(LIVE ? GroupSettingsViewLive : GroupSettingsView, { key: r.id, gid: r.id, page: r.page }), h(PipHost, null));
+  if (r.view === 'settings') return h(SettingsView, { page: r.page });
+  if (r.view === 'gsettings') return h(LIVE ? GroupSettingsViewLive : GroupSettingsView, { key: r.id, gid: r.id, page: r.page });
   if (LIVE && !s.groupsSeen) main = h(StartupScreen, null);
-  else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id, msgId: r.msgId, markerTs: r.markerTs, compact: !!split });
+  else if (r.view === 'group') main = h(GroupView, { key: r.id, gid: r.id, role: 'main', msgId: r.msgId, markerTs: r.markerTs, compact: !!split });
   else if (r.view === 'dm') main = h(DMView, { id: r.id, tab: r.tab, seek: r.seek, compact: !!split });
   else if (r.view === 'mentions') main = h(MentionsView, null);
   else main = h(Discover, null);
-  var side = !split ? null : split.view === 'group'
-    ? h(GroupView, { key: 'split:' + split.id, gid: split.id, markerTs: split.markerTs, compact: true, onClose: app.actions.closeSplit, closeLabel: 'Close #' + split.id + ' side by side' })
-    : h(SplitDm, { key: 'split:' + split.id, id: split.id });
+  var side = split ? h(SidePane, { route: split, role: 'beside' }) : null;
   return h('div', { className: cx('shell', app.navOpen && 'nav-open', split && 'side-by-side') },
     h(NewYearSky, null),
     h(Sidebar, { wide: wide }),
     h('div', { className: 'scrim', onClick: app.ui.closeNav }),
-    main, side,
-    h(PipHost, null));
+    main, side);
 });
+
+/**
+ * Group or private conversation shown beside the main pane or in the floating window.
+ * @param {{route: {view: string, id: string, markerTs: ?number}, role: string}} p Conversation and pane: beside or floating.
+ */
+export function SidePane(p) {
+  var r = p.route, key = p.role + ':' + r.id;
+  if (r.view === 'group') return h(GroupView, { key: key, gid: r.id, role: p.role, markerTs: r.markerTs });
+  return h('div', { key: key, className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: r.id, role: p.role }));
+}
 
 
 /**

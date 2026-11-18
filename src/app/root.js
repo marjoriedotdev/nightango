@@ -25,6 +25,7 @@ import { useReconnection } from './reconnection.js';
 import { useSimulation } from './simulation.js';
 import { useLiveOps } from './live-ops.js';
 import { JOURNAL, LIVE, ROOT_EL, VIEWER_THEME } from '../core/env.js';
+import { PipHost } from '../views/pip.js';
 /* ---------- Root ---------- */
 /**
  * Returns the first stable version of a list of release tags.
@@ -323,6 +324,8 @@ export function Root(props) {
   }, [state, o.navOpen, act.uploads, theme, season]);
   return h(Layers, null, h(ApiCtx.Provider, { value: api }, h(AvatarDecorCtx.Provider, { value: decor }, h(Ctx.Provider, { value: app },
     state.auth.loggedIn ? h(Shell, null) : LIVE ? null : h(Login, null),
+    // Rendered on every screen, signed out too: the floating window follows the state and closes with its conversation.
+    h(PipHost, null),
     state.auth.loggedIn && o.profile ? h(ProfileDialog, { name: o.profile.name, gid: o.profile.gid, onClose: function () { o.setProfile(null); } }) : null,
     state.auth.loggedIn && o.banCfg ? h(BanDialog, { name: o.banCfg.name, gid: o.banCfg.gid, msg: o.banCfg.msg, onClose: function () { o.setBan(null); } }) : null,
     state.auth.loggedIn && o.fullProfile ? h(FullProfileDialog, { name: o.fullProfile, onClose: function () { o.setFullProfile(null); } }) : null,

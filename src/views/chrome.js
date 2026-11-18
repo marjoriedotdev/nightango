@@ -1,7 +1,20 @@
 import { T, h } from '../core/globals.js';
 import { unreadTotal } from '../core/selectors.js';
 import { useApp } from '../core/ui.js';
+import { closePipWindow } from './pip-window.js';
 // -- Pane chrome ---------------------------------------------------------------
+
+/**
+ * Close button of a conversation shown beside the main pane or in the floating window, null in the main pane.
+ * @param {Object} app Application context.
+ * @param {string} role Pane of the conversation: main, beside or floating.
+ * @param {string} name Conversation as the button names it.
+ */
+export function paneCloseButton(app, role, name) {
+  if (role === 'beside') return h(T.IconButton, { icon: 'x', label: 'Close ' + name + ' side by side', onClick: app.actions.closeSplit });
+  if (role === 'floating') return h(T.IconButton, { icon: 'x', label: 'Close the floating window', onClick: closePipWindow });
+  return null;
+}
 // Headers and menu items that the panes share, apart from the shell that routes between them.
 export function MobileNavButton() {
   var app = useApp();

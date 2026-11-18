@@ -15,7 +15,7 @@ import { SessionBanner } from './session.js';
 import { LIVE } from '../core/env.js';
 import { ACCOUNT_NAME, PM_CONNECTION } from '../core/chatango.js';
 import { messagePreview } from '../core/message-content.js';
-import { MobileNavButton, favoriteItem } from './chrome.js';
+import { MobileNavButton, favoriteItem, paneCloseButton } from './chrome.js';
 import { MessageEntry, PresenceTime, confirmRemoveFriend, notifyOnlineItem, personActionGroups, personAsl, personMetaLine, personStatus, presenceSince, presenceText, useFriendRequest, useProfileActions, useProfiles, viewProfileItem, whoItem } from './people.js';
 import { ConversationComposer, EDIT_MAX, useComposerMode } from './composer.js';
 /* ---------- Private messages ---------- */
@@ -69,7 +69,7 @@ export function DMView(p) {
         batch.sentinel,
         term.length >= DM_SEARCH_MIN ? h(DmSearchHits, { found: found }) : null))));
 
-  var thread = convo ? h(DmThread, { key: id, id: id, tab: p.tab, column: column, seek: p.seek })
+  var thread = convo ? h(DmThread, { key: id, id: id, role: 'main', tab: p.tab, column: column, seek: p.seek })
     : h('main', { className: 'thread' }, h('div', { className: 'empty' },
       h(T.Icon, { name: 'message', size: 28, strokeWidth: 1.6 }), h('h2', null, 'Select a conversation'),
       h('p', { style: { margin: 0 } }, 'Or start a new one with a friend or someone from a group.'),
@@ -180,10 +180,13 @@ function dmHitMessage(c, hit) {
 
 /**
  * Message log of a private conversation, mounted fresh for each correspondent.
- * @param {{id: string, tab: ?string, column: Object, seek: ?Object}} p Correspondent, list tab, profile column (useRightColumn) and search result to show.
+ * @param {{id: string, role: string, tab: ?string, column: ?Object, seek: ?Object}} p Correspondent, pane (main, beside or floating), list tab,
+ *   profile column of the main pane (useRightColumn) and search result to show.
  */
 export function DmThread(p) {
-  var app = useApp(), s = app.state, id = p.id, convo = s.dms[id];
+  var app = useApp(), s = app.state, id = p.id, convo = s.dms[id], inMain = p.role === 'main';
+  // Beside the main pane or floating, the profile opens as a dialog.
+  var column = p.column || { open: false, pressed: null, toggle: function () { app.ui.openProfile(id, null); } };
   var asked = useRef(false);
   var len = convo.messages.length;
   var log = useMessageLog();
@@ -245,17 +248,17 @@ export function DmThread(p) {
   });
   return h(Frag, null, h('main', { className: 'thread' },
     h('header', { className: 'topbar' },
-      p.onClose ? null : h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', count: unreadTotal(s), onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }),
+      inMain ? h(T.IconButton, { icon: 'arrow-left', label: 'Back to conversations', className: 'only-mobile', count: unreadTotal(s), onClick: function () { app.nav({ view: 'dm', id: null, tab: p.tab }); } }) : null,
       h('h2', { className: 'dm-title' }, h(Person, { name: id, size: 28, status: u.status, ring: 'var(--bg)' })),
       h('span', { className: 'topic', style: { flex: 1 } }, personStatus(s, id, null)),
       h('span', { className: 'topic dm-meta', style: { flex: 1 } }, [presenceText(u), personAsl(u)].filter(Boolean).join(' · ')),
-      h(T.IconButton, { icon: 'panel', label: p.column.pressed == null ? 'View profile' : p.column.pressed ? 'Hide profile' : 'Show profile', pressed: p.column.pressed, onClick: p.column.toggle }),
+      h(T.IconButton, { icon: 'panel', label: column.pressed == null ? 'View profile' : column.pressed ? 'Hide profile' : 'Show profile', pressed: column.pressed, onClick: column.toggle }),
       h(MenuButton, {
         label: 'Conversation options', items: menuGroups([[{ label: 'Media and links', icon: 'image', onSelect: function () { setSharedOpen(true); } }, popOutItem(app, { view: 'dm', id: id }), spacesItem(app, { view: 'dm', id: id })]].concat(personActionGroups(personActions), [convActions(app, id, convo)]))
       }),
-      p.onClose ? h(T.IconButton, { icon: 'x', label: p.closeLabel, onClick: p.onClose }) : null),
+      paneCloseButton(app, p.role, 'the conversation with ' + id)),
     h(MessageLog, { log: log, label: 'Messages with ' + shownName(s, id), rows: rows, firstTs: len ? convo.messages[0].ts : null, changeKey: logChangeKey(convo.messages), newBelow: 'follow', older: older }),
-    p.onClose ? null : h(SessionBanner, null),
+    inMain ? h(SessionBanner, null) : null,
     pmConnBanner(app),
     h('div', { className: 'composer-wrap' }, bottom)),
     sharedOpen ? h(SharedMediaDialog, { where: 'your messages with ' + shownName(s, id), messages: convo.messages, onJump: log.jumpTo, onClose: function () { setSharedOpen(false); } }) : null);
@@ -263,16 +266,6 @@ export function DmThread(p) {
 
 /** Points a reply to a private message by its PM key. */
 function dmReplyTo(m) { return { key: m.key }; }
-
-/**
- * Private conversation in the pane beside the main one.
- * @param {{id: string}} p Conversation member.
- */
-export function SplitDm(p) {
-  var app = useApp();
-  var column = { open: false, pressed: null, toggle: function () { app.ui.openProfile(p.id, null); } };
-  return h('div', { className: 'main', style: { flexDirection: 'row' } }, h(DmThread, { id: p.id, column: column, onClose: app.actions.closeSplit, closeLabel: 'Close the conversation with ' + p.id + ' side by side' }));
-}
 
 /**
  * Tells whether the user can edit a PM.
