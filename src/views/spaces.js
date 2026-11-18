@@ -2,6 +2,7 @@ import { T, h, useState } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
 import { SPACE_MAX, SPACE_NAME_MAX } from '../core/account-store.js';
 import { Dialog, MenuButton } from '../core/layers.js';
+import { listedDms } from '../core/selectors.js';
 /* ---------- Spaces ---------- */
 
 /**
@@ -31,7 +32,8 @@ function spaceUnread(s, sp) {
     var g = s.groups[k];
     if (g.joined && (g.mentions || (g.unread && !g.muted)) && (!sp || sp.members.indexOf('group:' + k) >= 0)) n++;
   });
-  Object.keys(s.dms).forEach(function (k) { if (s.dms[k].unread && (!sp || sp.members.indexOf('dm:' + k) >= 0)) n++; });
+  // Like the sidebar, a closed conversation counts no more, whatever unreads its history keeps.
+  listedDms(s).forEach(function (k) { if (s.dms[k].unread && (!sp || sp.members.indexOf('dm:' + k) >= 0)) n++; });
   return n;
 }
 /**
