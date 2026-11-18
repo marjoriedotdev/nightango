@@ -1,11 +1,12 @@
 // Profile formatting toolbar: tags placed around the selection and merging of <font> attributes.
 const vm = require('vm');
 const React = require('react');
+const { JSDOM } = require('jsdom');
 const { bundleForTest } = require('../scripts/build.mjs');
 
 (async () => {
-// The toolbar module also renders its dialogs: React is there, as in the page.
-const ctx = { window: { React } };
+// The toolbar module also renders its dialogs and reads the page environment: React and a document are there, as in the page.
+const ctx = { window: { React }, document: new JSDOM('').window.document };
 vm.createContext(ctx);
 vm.runInContext(await bundleForTest("export { fontMarkup, wrapMarkup } from './src/settings/markup-toolbar.js';"), ctx);
 Object.assign(ctx, ctx.__mod);

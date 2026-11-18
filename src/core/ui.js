@@ -3,6 +3,7 @@ import { MIN, cx } from './util.js';
 import { ACCENTS, onAccentOf } from './colors.js';
 import { ROLE_LABEL } from './roles.js';
 import { shownName, statusLabel } from './selectors.js';
+import { appMount } from './env.js';
 /* ---------- Context and UI primitives ---------- */
 export var Ctx = React.createContext(null);
 export function useApp() { return useContext(Ctx); }
@@ -71,7 +72,6 @@ export function useLatestCalls(fns) {
 
 /* Single layer for dialogs, menus and notifications: out of the flow, they no longer distort the layout. */
 export var LayerCtx = React.createContext(null);
-function appMount() { return window.__TORCH_MOUNT__ || document.getElementById('app'); }
 /**
  * Gives the interface inside it its layer node and its stack of open dialogs.
  * @param {{mount: ?Element, children: *}} p Mount point of this interface when it is not the application's, such as a floating window, and interface.

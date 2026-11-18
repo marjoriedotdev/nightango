@@ -2,11 +2,11 @@ import { T, h, useState } from '../core/globals.js';
 import { ROLE_LONG } from '../core/roles.js';
 import { useApp } from '../core/ui.js';
 import { groupRights, roleOf } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { SettingsShell, listedPage } from './shell.js';
 import { GSAnnouncement, GSAudit, GSAutoMod, GSBans, GSMedia, GSOverview } from './group-pages.js';
 import { GSInvites, GSMembers, GSStaff } from './group-staff.js';
 import { GroupSettingsViewLive } from './live-group-view.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Group settings ---------- */
 export function GroupSettingsView(p) {
   if (LIVE) return h(GroupSettingsViewLive, p);

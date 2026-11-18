@@ -4,12 +4,13 @@ import { ensureContrast, hexToRgb, mix, rgbToHex, rgba } from '../core/colors.js
 import { Dialog, LayerCtx, Portal, closeModal, developerBadge, openModal, premiumBadge, useApp, useShownUsers, useStatePart } from '../core/ui.js';
 import { RichText, bidiText, fullProfileDoc, memberLink, unlinkFullProfile, waitsForClick } from '../core/rich-text.js';
 import { commonGroups, miniStyleOf, shownName, userOf } from '../core/selectors.js';
-import { LIVE, avatarSrc, isProfilePending, profileImgSrc } from '../bridge/live-model.js';
+import { avatarSrc, isProfilePending, profileImgSrc } from '../bridge/live-model.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { columnHeader } from './shell.js';
 import { useProfileActions } from './members.js';
 import { personAsl, personStatus } from './dm.js';
 import { NOTE_LABEL_MAX, NOTE_TEXT_MAX } from '../app/live-state.js';
+import { LIVE } from '../core/env.js';
 /**
  * "About" block.
  * It shows formatted Chatango text in live and plain text in the prototype.

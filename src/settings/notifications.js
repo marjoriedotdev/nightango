@@ -1,10 +1,10 @@
 import { Frag, T, h, useState } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
-import { LIVE } from '../bridge/live-model.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { Page, usePref } from './shell.js';
 import { useBetterChatangoSettings } from './live-account.js';
 import { beep } from '../app/sound.js';
+import { LIVE } from '../core/env.js';
 export function NotificationsPage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;
   var perm = 'default';

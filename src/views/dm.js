@@ -4,7 +4,7 @@ import { ROLE_LONG } from '../core/roles.js';
 import { ConnectionBanner, DraftMark, MenuButton, Person, SkeletonRows, dmDraftKey, menuGroups, presenceSr, showsDraft, useApp, useAppApi, useDraft, useDraftMarks, useLatestCalls, useMinute, useOutside, useRightColumn, useRowBatches, useShownUsers, useStatePart, useWideLayout } from '../core/ui.js';
 import { bidiText, messagePreview } from '../core/rich-text.js';
 import { THREAD_MAX, genderShort, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, roleOf, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
-import { ACCOUNT_NAME, LIVE, isProfilePending } from '../bridge/live-model.js';
+import { ACCOUNT_NAME, isProfilePending } from '../bridge/live-model.js';
 import { warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { MobileNavButton, favoriteItem } from './shell.js';
@@ -25,6 +25,7 @@ import { useMediaCompletion } from './media.js';
 import { SharedMediaDialog } from './shared-media.js';
 import { runCommand } from './commands.js';
 import { SessionBanner } from './session.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Private messages ---------- */
 // The heading follows the entry of the sidebar that opened the column.
 var DM_SECTION_TITLES = { chats: 'Private messages', friends: 'Friends', meet: 'Meet people' };

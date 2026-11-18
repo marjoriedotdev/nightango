@@ -3,7 +3,7 @@ import { cx, ownOf } from '../core/util.js';
 import { Dialog, MenuButton, SkeletonRows, developerBadge, menuGroups, presenceSr, roleBadge, useApp, useAppApi, useRowBatches, youBadge } from '../core/ui.js';
 import { bidiText, httpsHost } from '../core/rich-text.js';
 import { canBanMember, guestsOf, isNotifyingOnline, isPaneOpen, miniStyleOf, roleOf, shownName, userOf } from '../core/selectors.js';
-import { ACCOUNT_NAME, LIVE } from '../bridge/live-model.js';
+import { ACCOUNT_NAME } from '../bridge/live-model.js';
 import { lower } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SeasonWeb } from './season.js';
@@ -11,6 +11,7 @@ import { columnHeader, favoriteItem } from './shell.js';
 import { useProfiles } from './dm.js';
 import { personCard } from './meet.js';
 import { ProfileSummary, miniSkin } from './profile.js';
+import { LIVE } from '../core/env.js';
 /**
  * Member list of a group.
  * @param {{g: Object, scrollRef: Object}} p Shown group and ref of its scrolling area.

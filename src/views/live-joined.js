@@ -1,7 +1,7 @@
 import { Frag, T, h } from '../core/globals.js';
 import { useApp } from '../core/ui.js';
-import { LIVE } from '../bridge/live-model.js';
 import { GroupJoinButton } from './discover.js';
+import { LIVE } from '../core/env.js';
 function GroupSection(p) {
   var s = useApp().state;
   return h('section', { 'aria-labelledby': p.id, style: { display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' } },

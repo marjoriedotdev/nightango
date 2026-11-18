@@ -5,7 +5,6 @@ import { ROLE_LONG } from '../core/roles.js';
 import { AccentSwatches, ConnectionBanner, Dialog, MenuButton, groupDraftKey, presenceSr, roleBadge, useApp, useDraft, useLatestCalls, useRightColumn } from '../core/ui.js';
 import { messagePreview } from '../core/rich-text.js';
 import { badgeChoices, canBanMember, findMsg, groupRights, isHiddenAuthor, isStaffRole, messageBadge, msgFinder, roleOf, sentBadge, shownName, userOf } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { MobileNavButton, favoriteItem } from './shell.js';
 import { MessageEmbeds, MessageRow, canEditGroupMessage, editedId, groupRowFill, joinRow, mentionHandle, quoteOf } from './message.js';
@@ -21,6 +20,7 @@ import { useMediaCompletion } from './media.js';
 import { SharedMediaDialog } from './shared-media.js';
 import { runCommand } from './commands.js';
 import { SessionBanner, sessionLost } from './session.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Group ---------- */
 // BetterChatango rejects the tenth edit of a message.
 export var EDIT_MAX = 9;

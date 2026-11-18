@@ -3,7 +3,6 @@ import { cx } from '../core/util.js';
 import { onAccentOf } from '../core/colors.js';
 import { DraftMark, MenuButton, SkeletonRows, dmDraftKey, groupDraftKey, presenceSr, showsDraft, useApp, useDraftMarks, useStatePart, useWideLayout } from '../core/ui.js';
 import { favoritePeople, isPaneOpen, listedDms, shownName, statusLabel, unreadDmCount, unreadTotal, userOf } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { NewYearMark, NewYearSky, SeasonSky, SeasonStar, skyMoves } from './season.js';
 import { GroupView } from './group.js';
 import { DMView, SplitDm } from './dm.js';
@@ -13,6 +12,7 @@ import { MentionsView } from './mentions.js';
 import { Discover } from './discover.js';
 import { SettingsView } from '../settings/shell.js';
 import { GroupSettingsView } from '../settings/group-view.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Application shell ---------- */
 export function MobileNavButton() {
   var app = useApp();

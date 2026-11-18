@@ -1,8 +1,4 @@
-/* ---------- Bridge to the real BetterChatango client (injected mode only) ---------- */
-export var LIVE = !!window.__TORCH_LIVE__;
-// Set by the page code before BetterChatango (loader/skin-journal.js): absent from the prototype and from the suites that only read the bridge.
-export var JOURNAL = window.__TORCH_JOURNAL__ || null;
-
+import { LIVE } from '../core/env.js';
 // Outside React state: set by the bridge after an upload or a crop, it bypasses the HTTP cache of the pictures.
 export var AVATAR_VERSION = {};
 /**

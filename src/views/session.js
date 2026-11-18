@@ -1,8 +1,8 @@
 import { T, h, useEffect, useState } from '../core/globals.js';
 import { cx } from '../core/util.js';
 import { CONN_DONE_MS, CONN_LEAVE_MS, Dialog, useApp } from '../core/ui.js';
-import { LIVE } from '../bridge/live-model.js';
 import { RECONNECT_DELAYS } from '../app/reconnection.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Session loss ---------- */
 var SESSION_ATTEMPTS = 3;
 // A lost connection has no dialog: it shows in SessionBanner.

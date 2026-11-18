@@ -5,7 +5,7 @@ import { DM_LINES, SAMPLE_TIKTOK_THUMB, SAMPLE_X_POST, sampleMedia, sampleVisits
 import { BETTER_CHATANGO_SAVE_FAILED } from '../core/prefs.js';
 import { useLatestCalls } from '../core/ui.js';
 import { findMsg, readThrough, sentBadge, shownName, trimThread, userOf } from '../core/selectors.js';
-import { ACCOUNT_NAME, GROUP_FLAG, LIVE, visitorPage } from '../bridge/live-model.js';
+import { ACCOUNT_NAME, GROUP_FLAG, visitorPage } from '../bridge/live-model.js';
 import { GIF_URL, esc, lower, mediaEntryOk, mediaName, pmRecordEntry, screenPmRecords, warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { editedId } from '../views/message.js';
@@ -14,6 +14,7 @@ import { uploadKey } from '../views/attach.js';
 import { applyGroupEdit, banListOf, ensureLiveGroup, ensureLiveUser, ensureUnseenUser, groupUpdate, pmAuthor } from './live-state.js';
 import { addSentPm, memoryPmArchive, mergePmHistory, pmConversation, pmMessage, readPm, syncPmUnread, unreadPm } from './pm.js';
 import { dropMentions, logMention } from './inbox.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Actions: what the views ask, passed to Chatango by BetterChatango in live ---------- */
 /**
  * Puts the sample world of the prototype into the state with its mentions recorded like those of the live history.

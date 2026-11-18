@@ -27,6 +27,4 @@ function loadPrefs(stored) {
   return prefs;
 }
 export var PREFS_KEY = 'torch-prototype-prefs';
-export var ROOT_EL = window.__TORCH_ROOT__ || document.documentElement;
-export var VIEWER_THEME = ROOT_EL.getAttribute('data-theme');
 export function initialState() { return { auth: { loggedIn: false }, prefs: loadPrefs(storageGet(PREFS_KEY)) }; }

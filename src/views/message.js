@@ -4,11 +4,11 @@ import { CHANNELS, FONT_STACKS, SURFACE, ensureContrast, hexToRgb, mix, rgbToHex
 import { MenuButton, Person, developerBadge, roleBadge, useAppApi, useStatePart } from '../core/ui.js';
 import { EMBED_LABEL, MessageText, httpsHost, messagePreview, shownParts, waitsForClick, warnOnLink } from '../core/rich-text.js';
 import { mentionsMe } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { MSG_BG_ALIGN } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { banItem, ignoreItem, styleItem, viewProfileItem, whoItem } from './members.js';
 import { MediaStar } from './media.js';
+import { LIVE } from '../core/env.js';
 var UNSTYLED = { names: false, fonts: false, backgrounds: false };
 
 /**

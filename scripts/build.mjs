@@ -66,7 +66,7 @@ const LAYER_RANK = { core: 0, bridge: 1, views: 2, settings: 2, app: 3 };
 const KNOWN_UPWARD = new Set([
   'core/globals.js -> bridge/live-model.js', 'core/selectors.js -> bridge/live-model.js', 'core/rich-text.js -> bridge/live-model.js',
   'core/rich-text.js -> bridge/live-parse.js', 'core/sample-data.js -> bridge/live-model.js', 'core/sample-data.js -> bridge/live-parse.js',
-  'views/season.js -> app/state.js', 'views/pip.js -> app/state.js', 'views/session.js -> app/reconnection.js', 'views/profile.js -> app/live-state.js',
+  'views/session.js -> app/reconnection.js', 'views/profile.js -> app/live-state.js',
   'settings/live-group-pages.js -> app/live-state.js', 'settings/notifications.js -> app/sound.js'
 ]);
 const KNOWN_CYCLIC = new Set([
@@ -94,9 +94,17 @@ function checkImports(metafile) {
     const edge = `${file} -> ${target}`;
     if (rank(target) > rank(file) && !KNOWN_UPWARD.has(edge)) errors.push(`${edge} goes up the layers`);
   }
+  const cyclic = new Set();
   for (const group of cycles(graph)) for (const file of group) {
+    cyclic.add(file);
     if (!KNOWN_CYCLIC.has(file)) errors.push(`${file} is in an import cycle with ${group.filter((f) => f !== file).join(', ')}`);
   }
+  // The debt only shrinks: an entry that no longer holds is removed with the change that fixed it.
+  for (const edge of KNOWN_UPWARD) {
+    const [file, target] = edge.split(' -> ');
+    if (!(graph.get(file) || []).includes(target)) errors.push(`${edge} is gone: remove it from KNOWN_UPWARD`);
+  }
+  for (const file of KNOWN_CYCLIC) if (!cyclic.has(file)) errors.push(`${file} is in no cycle any more: remove it from KNOWN_CYCLIC`);
   if (errors.length) throw new Error('Import graph (ADR-0017):\n' + errors.join('\n'));
 }
 

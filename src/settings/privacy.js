@@ -2,9 +2,9 @@ import { Frag, T, h, useState } from '../core/globals.js';
 import { downloadJson, plural, readJsonArray } from '../core/util.js';
 import { JsonFileButton, Person, useApp } from '../core/ui.js';
 import { httpsHost } from '../core/rich-text.js';
-import { LIVE } from '../bridge/live-model.js';
 import { Page, usePref } from './shell.js';
 import { PrivacyPageLive } from './live-account.js';
+import { LIVE } from '../core/env.js';
 export function PrivacyPage() {
   if (LIVE) return h(PrivacyPageLive, null);
   var app = useApp(), pr = usePref(), prefs = app.state.prefs;

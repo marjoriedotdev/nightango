@@ -9,7 +9,7 @@ const ROOT = process.argv[2];
 // Bundled once in main: the bridge, the PM module and what the cases read.
 let code = null;
 const EXPORTS = "export { liveBridge } from './src/bridge/live-bridge.js'; export { pmRecordEntry } from './src/bridge/live-parse.js'; export { THREAD_MAX } from './src/core/selectors.js';"
-  + " export { betterChatangoPmArchive, memoryPmArchive, syncPmUnread, readPm, unreadPm, mergePmHistory, receivePm, addSentPm } from './src/app/pm.js';";
+  + "export { betterChatangoPmArchive, memoryPmArchive, syncPmUnread, readPm, unreadPm, mergePmHistory, receivePm, addSentPm } from './src/app/pm.js';";
 const record = (target, data, unread) => ({ target, ts: parseFloat(data.split(':')[4]), data, unread });
 const received = (from, ts, body) => 'msg:' + from + ':' + ME + ':unknown:' + ts + ':0:' + body;
 

@@ -1,6 +1,7 @@
 import { CONFIRM_TIMEOUT, MIN, storageGet, storageMerge, uid } from '../core/util.js';
-import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNEL_FLAG, JOURNAL, LIVE, MSG_FLAG, badgeRoleOf, channelOf, skinKey } from './live-model.js';
+import { ACCOUNT_NAME, AVATAR_VERSION, BADGE_FLAG, CHANNEL_FLAG, MSG_FLAG, badgeRoleOf, channelOf, skinKey } from './live-model.js';
 import { MEDIA_PAGE, MINI_CSS_MAX_LENGTH, PM_SETTING_NAMES, VISSLE_UPLOAD, encodeRef, epochMs, esc, friendPresence, lower, mediaEntryOk, mediaMatch, miniStyleOfForm, notNone, parseBanSearch, parseBans, parseContent, parseMiniCss, parseModLog, parseMods, parseMsgBg, parseParticipants, parsePm, parsePmSettings, parseProfileReply, parseUnbanned, parseVisits, parseWho, pmRecordEntry, postRefusal, screenMediaEntries, screenPmRecords, sessionOf, spellingOf, stateOf, unquote, warn } from './live-parse.js';
+import { JOURNAL, LIVE, betterChatangoRefs, showInterface } from '../core/env.js';
 /**
  * Gives an operation to a listener: one that throws stops neither the other listeners nor the sequence that emits, sign-in included.
  * @param {function(Object)} fn Listener.
@@ -11,7 +12,7 @@ export function deliverOp(fn, op) {
 }
 export var liveBridge = (function () {
   if (!LIVE) return null;
-  var refs = window.__betterChatangoRefs || {};
+  var refs = betterChatangoRefs();
   var C = refs.client, CH = refs.chatango, SB = refs.sidebar;
   var ENV = refs.torch && refs.torch.environment;
   var listeners = [], queue = [];
@@ -908,7 +909,7 @@ export var liveBridge = (function () {
       emit({ op: 'login', me: me, spelling: spellingOf(me, C.user.full) });
       // Groups already connected before us: their inited and participants frames have gone by.
       if (catchUp) Object.keys(C.groups || {}).forEach(function (gid) { if (gid !== ENV) emit({ op: 'group', id: gid, title: '', hidden: false, ready: true }); });
-      if (typeof window.__TORCH_SHOW__ === 'function') window.__TORCH_SHOW__();
+      showInterface();
       if (pmOpen()) {
         // Session already open: the friend list and the history were received before us, so we request them again.
         emit({ op: 'pmReady' });

@@ -2,11 +2,11 @@ import { T, h, useEffect, useRef, useState } from '../core/globals.js';
 import { Person, SkeletonRows, useApp } from '../core/ui.js';
 import { RichText } from '../core/rich-text.js';
 import { genderShort, miniStyleOf, userOf } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { coverReveal, miniSkin, useMiniCover } from '../views/profile.js';
 import { ActivityRow, Page, setIn } from './shell.js';
 import { useMarkupToolbar } from './markup-toolbar.js';
 import { ProfilePageLive } from './live-account.js';
+import { LIVE } from '../core/env.js';
 export function ProfilePage() {
   if (LIVE) return h(ProfilePageLive, null);
   var app = useApp(), s = app.state, me = userOf(s, s.me);

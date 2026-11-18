@@ -4,7 +4,7 @@ import { isTarget } from '../core/selectors.js';
 import { paneShown } from './shell.js';
 import { GroupView } from './group.js';
 import { DmThread } from './dm.js';
-import { ROOT_EL } from '../app/state.js';
+import { ROOT_EL } from '../core/env.js';
 /* ---------- Floating conversation (Document Picture-in-Picture) ---------- */
 // One floating window at a time: the browser closes the previous one when a new one opens.
 var PIP = { win: null, mount: null, root: null, observer: null };

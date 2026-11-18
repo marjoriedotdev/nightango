@@ -2,7 +2,6 @@ import { Frag, T, h } from '../core/globals.js';
 import { ago, cx } from '../core/util.js';
 import { BETTER_CHATANGO_PREFS, BETTER_CHATANGO_SAVE_FAILED } from '../core/prefs.js';
 import { useApp } from '../core/ui.js';
-import { JOURNAL, LIVE } from '../bridge/live-model.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { SessionBanner } from '../views/session.js';
 import { ProfilePage } from './profile.js';
@@ -11,6 +10,7 @@ import { NotificationsPage } from './notifications.js';
 import { PrivacyPage, SafetyPage } from './privacy.js';
 import { AboutPage, AccessibilityPage, DiagnosticsPage, WhatsNewPage } from './language-a11y-about.js';
 import { AccountPage, PremiumPage } from './live-account.js';
+import { JOURNAL, LIVE } from '../core/env.js';
 /* ---------- User settings ---------- */
 export var SETTINGS_NAV = [
   { title: 'Account', items: [['profile', 'Profile'], ['privacy', 'Privacy'], ['safety', 'Safety'], ['account', 'Password and email'], ['premium', 'Chatango Premium']] },

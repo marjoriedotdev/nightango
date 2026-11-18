@@ -1,9 +1,10 @@
 import { T, h, useState } from '../core/globals.js';
 import { Dialog, useApp } from '../core/ui.js';
-import { ACCOUNT_NAME, LIVE } from '../bridge/live-model.js';
+import { ACCOUNT_NAME } from '../bridge/live-model.js';
 import { pageHeader } from './shell.js';
 import { JoinedGroups } from './live-joined.js';
 import { SessionBanner } from './session.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Discover ---------- */
 export function parseGroupName(v) {
   return String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^client\.chatango\.com\/q\?/, '').replace(/\.chatango\.com.*$/, '').replace(/\/.*$/, '').replace(/^#/, '');

@@ -1,10 +1,10 @@
 import { useEffect, useRef } from '../core/globals.js';
 import { MIN, uid } from '../core/util.js';
 import { favoritePeople, isDmInView, isPaneOpen, listedDms, pmEditTarget, pmShownIndex, trimThread, userOf } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { warn } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { ensureLiveUser, pmAuthor } from './live-state.js';
+import { LIVE } from '../core/env.js';
 /* ---------- PMs: conversations, unreads and private history ---------- */
 
 /**

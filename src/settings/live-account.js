@@ -3,7 +3,6 @@ import { shortDate } from '../core/util.js';
 import { ColorField, useApp } from '../core/ui.js';
 import { SAFE_IMAGE_URL } from '../core/rich-text.js';
 import { GENDER_LABEL, genderShort, miniStyleOf, premiumActive, premiumEndsSoon, userOf } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { miniStyleForm, miniStyleOfForm } from '../bridge/live-parse.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { FullProfileFrame, useFullProfileMedia } from '../views/profile.js';
@@ -13,6 +12,7 @@ import { ProfilePreviewCard, VisibilitySection, VisitorsSection } from './profil
 import { BrowserTabSection, ChatangoPmSection, NotesSection, PRIVACY_LEDE, PmHistoryRows, StartupSection } from './privacy.js';
 import { chatangoLink } from './live-group-view.js';
 import { AvatarCropDialog } from './avatar-crop.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Account settings in live mode ---------- */
 var GENDER_CODE = { Male: 'M', Female: 'F' };
 var FULL_PROFILE_VIEWS = [{ value: 'edit', label: 'Edit' }, { value: 'preview', label: 'Preview' }];

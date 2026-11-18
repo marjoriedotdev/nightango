@@ -7,6 +7,7 @@ Nightango is a single React 18 application written in ES5 JavaScript with ES mod
 ```
 src/
   core/       shared base, evaluated first
+    env.js           page environment set by the loader: LIVE, JOURNAL, root element and theme of the viewer, mount point, showing and hiding the interface, BetterChatango refs
     globals.js       React aliases, T wrapper (live avatars), hooks
     util.js          time, local storage, copy, reading a JSON file, downloading a JSON file, trailing white space trim
     draft.js         copy-on-write drafts of the state (openDraft), plain object behind a draft for the scans that only read (plainOf)
@@ -23,7 +24,7 @@ src/
     selectors.js     state reads: roles, a member's rights in a group (groupRights, canBanMember), user, theme, counters, listed conversations, displayed message of a private history entry,
                      message cap of a group or a conversation (THREAD_MAX, trimThread)
   bridge/     the bridge to BetterChatango
-    live-model.js    LIVE, JOURNAL, avatarSrc (and photo version of one's own account), vissle pagination, Chatango bits (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
+    live-model.js    avatarSrc (and photo version of one's own account), vissle pagination, Chatango bits (GROUP_FLAG, CHANNEL_FLAG, MSG_FLAG),
                      emoticon table (EMOTICONS)
     live-parse.js    pure bridge functions: message content (parseContent, media), group frames,
                      Premium background (parseMiniCss, background form), allowed client.post calls (postRefusal), updateprofile response, message background (parseMsgBg), vissle activity replies (parseVisits), linked accounts (parseWho), presence, timestamps,
@@ -132,7 +133,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 ## Diagnostic journal
 
 - `skin-journal.js` wraps the `WebSocket` constructor and the console, listens to the page lifecycle and to errors, and keeps the last 1,000 events of each account in `localStorage` under `torch-skin:journal:<username>`. Until sign-in, it keeps the events of the page in memory only. What it keeps and never keeps: [ADR-0011](adr/0011-diagnostic-journal.md).
-- The application reads it through `JOURNAL` (`bridge/live-model.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. On sign-in, the bridge gives it the account name (`JOURNAL.signIn`), which adds the events of the page to that account's log. The bridge records its connections, BetterChatango's warnings, the requests its post helper refuses and a refused save of the unread migration flag in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
+- The application reads it through `JOURNAL` (`core/env.js`, `window.__TORCH_JOURNAL__`), `null` in the prototype and in the suites that load only the bridge. On sign-in, the bridge gives it the account name (`JOURNAL.signIn`), which adds the events of the page to that account's log. The bridge records its connections, BetterChatango's warnings, the requests its post helper refuses and a refused save of the unread migration flag in it. The Diagnostics page, listed only if `JOURNAL` exists, shows it, copies it, downloads it and clears it.
 
 ## Mounting and display
 
@@ -148,7 +149,7 @@ Tampermonkey sandbox (skin-loader.js)            st.chatango.com page
 
 ## Live mode and prototype mode
 
-- `LIVE = !!window.__TORCH_LIVE__` (`bridge/live-model.js`). `skin-page.js` sets the flag, the hosted prototype does not.
+- `LIVE = !!window.__TORCH_LIVE__` (`core/env.js`). `skin-page.js` sets the flag, the hosted prototype does not.
 - The differences between the two modes are guarded by `if (LIVE)`.
 - Rights in a group follow Chatango's model in both modes: one owner and moderators with their rights bits (`settings.staff`, `settings.modFlags`), read by `groupRights`. The prototype has no role that Chatango does not have.
 - In live, the actions of `app/actions.js` are overridden by those of its "Live actions" block. The bridge (`liveBridge`) turns BetterChatango's frames into operations, which `handleLiveOp` (`app/live-ops.js`) applies to the state.

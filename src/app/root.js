@@ -5,7 +5,6 @@ import { openDraft } from '../core/draft.js';
 import { accentOf, accentTokens } from '../core/colors.js';
 import { ApiCtx, ConfirmDialog, Ctx, Layers, Toasts, draftStore, minuteClock } from '../core/ui.js';
 import { resolvedTheme, shownName, unreadTotal } from '../core/selectors.js';
-import { JOURNAL, LIVE } from '../bridge/live-model.js';
 import { Login } from '../views/login.js';
 import { Shell } from '../views/shell.js';
 import { avatarDecor } from '../views/season.js';
@@ -16,7 +15,7 @@ import { NewDmDialog } from '../views/new-dm.js';
 import { CreateGroupDialog } from '../views/discover.js';
 import { Palette } from '../views/palette.js';
 import { SessionOverlay, sessionBlocks } from '../views/session.js';
-import { PREFS_KEY, ROOT_EL, VIEWER_THEME, initialState } from './state.js';
+import { PREFS_KEY, initialState } from './state.js';
 import { useLocalStore, usePrunedUsers } from './live-state.js';
 import { useLivePms } from './pm.js';
 import { useOverlays } from './overlays.js';
@@ -25,6 +24,7 @@ import { useActions } from './actions.js';
 import { useReconnection } from './reconnection.js';
 import { useSimulation } from './simulation.js';
 import { useLiveOps } from './live-ops.js';
+import { JOURNAL, LIVE, ROOT_EL, VIEWER_THEME } from '../core/env.js';
 /* ---------- Root ---------- */
 export var IDLE_DELAY = 3 * MIN;
 /**

@@ -2,8 +2,8 @@ import { T, h, useState } from '../core/globals.js';
 import { ago, plural } from '../core/util.js';
 import { Person, useApp } from '../core/ui.js';
 import { roleOf, shownName } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { ActivityRow, Page } from './shell.js';
+import { LIVE } from '../core/env.js';
 export function GSOverview(p) {
   var app = useApp(), g = p.g, o = g.settings.overview, owner = p.myRole === 'owner';
   return h(Page, { title: 'Overview', lede: 'How #' + g.id + ' appears on Chatango.' },

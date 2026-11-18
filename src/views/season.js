@@ -1,7 +1,7 @@
 import { Frag, T, h, useEffect, useState } from '../core/globals.js';
 import { MIN, cx, newYearAt } from '../core/util.js';
 import { useApp } from '../core/ui.js';
-import { ROOT_EL } from '../app/state.js';
+import { ROOT_EL } from '../core/env.js';
 // -- Seasonal decorations ------------------------------------------------------
 
 var BAT_PATH = 'M22 5 21 1.5 23 3.5h2l2-2L26 5c6-3 14-4 22 1-3 .5-6 1-8 4-2-2-6-2-8 1-2-1-5 0-6 3q-2 4-4 0c-1-3-4-4-6-3-2-3-6-3-8-1-2-3-5-3.5-8-4 8-5 16-4 22-1z';

@@ -2,9 +2,9 @@ import { T, h, useState } from '../core/globals.js';
 import { readJsonFile, uid } from '../core/util.js';
 import { accentOf, hexToRgb } from '../core/colors.js';
 import { AccentSwatches, JsonFileButton, useApp } from '../core/ui.js';
-import { LIVE } from '../bridge/live-model.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { Page, saveBetterChatangoSetting, usePref } from './shell.js';
+import { LIVE } from '../core/env.js';
 export function AppearancePage() {
   var app = useApp(), pr = usePref(), prefs = app.state.prefs, accent = accentOf(prefs, app.theme);
   var md = useState(function () { return LIVE ? liveBridge.setting('markdown') : null; }), markdown = md[0], setMarkdown = md[1];

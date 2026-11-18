@@ -2,8 +2,8 @@ import { useEffect } from '../core/globals.js';
 import { pick, uid } from '../core/util.js';
 import { DM_LINES, LINES, MENTION_LINES } from '../core/sample-data.js';
 import { isNotifyingOnline, roleOf, shownName, userOf } from '../core/selectors.js';
-import { LIVE } from '../bridge/live-model.js';
 import { beep } from './sound.js';
+import { LIVE } from '../core/env.js';
 /* ---------- Prototype simulation: activity of the sample world ---------- */
 /**
  * Simulates activity in the prototype: group messages and mentions, members joining and leaving, PMs, friends going online and offline.

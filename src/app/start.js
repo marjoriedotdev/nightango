@@ -1,7 +1,7 @@
 import { React, ReactDOM, T, h } from '../core/globals.js';
-import { LIVE } from '../bridge/live-model.js';
 import { liveBridge } from '../bridge/live-bridge.js';
 import { Root } from './root.js';
+import { LIVE, appMount, hideInterface } from '../core/env.js';
 // -- Recovery screen ----------------------------------------------------------
 // Plain elements and design system buttons only: nothing from Root, which may be what failed.
 function RecoveryScreen() {
@@ -13,7 +13,7 @@ function RecoveryScreen() {
         ? "Reload the page to start Nightango again. Your groups keep working in BetterChatango meanwhile. Private messages won't open there until you reload."
         : 'Reload the page to start again.'),
       h('div', { className: 'recovery-actions' },
-        LIVE ? h(T.Button, { variant: 'ghost', onClick: function () { window.__TORCH_HIDE__(); } }, 'Show BetterChatango') : null,
+        LIVE ? h(T.Button, { variant: 'ghost', onClick: function () { hideInterface(); } }, 'Show BetterChatango') : null,
         h(T.Button, { variant: 'primary', onClick: function () { location.reload(); } }, 'Reload'))));
 }
 
@@ -43,5 +43,5 @@ Recovery.prototype.render = function () { return this.state.failed ? h(RecoveryS
  * @param {{state: ?Object, snapshot: ?function(Function)}} host Page that starts the interface (useAppState).
  */
 export function start(host) {
-  ReactDOM.createRoot(window.__TORCH_MOUNT__ || document.getElementById('app')).render(h(Recovery, null, h(Root, { host: host })));
+  ReactDOM.createRoot(appMount()).render(h(Recovery, null, h(Root, { host: host })));
 }
