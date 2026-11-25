@@ -73,41 +73,7 @@ function ProfilePhoto(p) {
   if (!hasPhoto) return avatar;
   return h(Frag, null,
     h('button', { type: 'button', className: 'avatar-btn photo-btn', 'aria-label': 'View ' + shown + "'s profile photo", onClick: function () { setOpen(true); } }, avatar),
-    open ? h(PhotoViewer, { name: p.name, onClose: function () { setOpen(false); } }) : null);
-}
-
-/**
- * Full-screen profile picture viewer.
- * @param {string} p.name Member name.
- * @param {Function} p.onClose Closes the viewer.
- */
-function PhotoViewer(p) {
-  var ref = useRef(null), layer = useContext(LayerCtx), thumb = avatarSrc(p.name, 96);
-  var shown = useStatePart(function (s) { return shownName(s, p.name); });
-  var a = useState(profileImgSrc(p.name, 'full')), src = a[0], setSrc = a[1];
-  var b = useState(false), loaded = b[0], setLoaded = b[1];
-  useEffect(function () {
-    var prev = ref.current.getRootNode().activeElement;
-    ref.current.querySelector('button').focus();
-    openModal(layer, ref);
-    // Capture listener: Escape and Tab stop before the profile dialog open underneath.
-    function onKey(e) {
-      if (e.key !== 'Escape' && e.key !== 'Tab') return;
-      e.stopPropagation();
-      e.preventDefault();
-      if (e.key === 'Escape') p.onClose();
-    }
-    document.addEventListener('keydown', onKey, true);
-    return function () {
-      document.removeEventListener('keydown', onKey, true);
-      closeModal(layer, ref);
-      if (prev && prev.focus) prev.focus();
-    };
-  }, []);
-  return h(Portal, null, h('div', { className: 'overlay photo-viewer', role: 'dialog', 'aria-modal': 'true', 'aria-label': shown + "'s profile photo", ref: ref, onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
-    loaded ? null : h('span', { className: 'photo-loading' }, h(T.Spinner, { size: 24, label: 'Loading photo' })),
-    h('img', { className: 'photo-full' + (loaded ? '' : ' photo-wait'), src: src, alt: shown + "'s profile photo", referrerPolicy: 'no-referrer', onLoad: function () { setLoaded(true); }, onError: function () { if (src !== thumb) setSrc(thumb); } }),
-    h(T.Button, { onClick: p.onClose }, 'Close')));
+    open ? h(ImageViewer, { src: profileImgSrc(p.name, 'full'), fallback: avatarSrc(p.name, 96), label: shown + "'s profile photo", onClose: function () { setOpen(false); } }) : null);
 }
 
 /**

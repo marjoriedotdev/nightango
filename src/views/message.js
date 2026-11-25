@@ -412,9 +412,11 @@ function FileEmbed(p) {
 function ImageEmbed(p) {
   var app = useAppApi(), safety = useStatePart(safetyPrefs);
   var st = useState(false), shown = st[0], setShown = st[1];
+  var z = useState(false), zoomed = z[0], setZoomed = z[1];
   if (!safety.embedImages) return mediaLink(app, p.url, 'msg-link', p.url);
   if (!shown && waitsForClick(safety, p.kind, p.url)) return h(RevealButton, { icon: 'image', label: 'Show image', url: p.url, onClick: function () { setShown(true); } });
   return h('span', { className: 'embed-image-wrap' },
-    mediaLink(app, p.url, 'embed-image', h('img', { src: p.url, alt: EMBED_LABEL[p.kind], loading: 'lazy', referrerPolicy: 'no-referrer' })),
-    h(MediaStar, { url: p.url }));
+    h('button', { type: 'button', className: 'embed-image', 'aria-label': 'View image', onClick: function () { setZoomed(true); } }, h('img', { src: p.url, alt: EMBED_LABEL[p.kind], loading: 'lazy', referrerPolicy: 'no-referrer' })),
+    h(MediaStar, { url: p.url }),
+    zoomed ? h(ImageViewer, { src: p.url, label: EMBED_LABEL[p.kind], onClose: function () { setZoomed(false); } }) : null);
 }

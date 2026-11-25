@@ -54,6 +54,52 @@ function MediaStar(p) {
 }
 
 /**
+ * Full-screen image viewer with a link to the original under the image.
+ * The link is absent for an address a new tab cannot open, such as the prototype's data: images.
+ * @param {string} p.src Image address.
+ * @param {string} [p.fallback] Address shown if the first one fails to load.
+ * @param {string} p.label Name of the dialog and of the image.
+ * @param {Function} p.onClose Closes the viewer.
+ */
+function ImageViewer(p) {
+  var app = useAppApi(), ref = useRef(null), layer = useContext(LayerCtx);
+  var a = useState(p.src), src = a[0], setSrc = a[1];
+  var b = useState(false), loaded = b[0], setLoaded = b[1];
+  useEffect(function () {
+    var root = ref.current.getRootNode(), prev = root.activeElement;
+    ref.current.querySelector('button').focus();
+    openModal(layer, ref);
+    // Capture listener: Escape and Tab stop before a dialog open underneath, such as the profile.
+    function onKey(e) {
+      if (e.key !== 'Escape' && e.key !== 'Tab') return;
+      e.stopPropagation();
+      e.preventDefault();
+      if (e.key === 'Escape') { p.onClose(); return; }
+      var items = [].slice.call(ref.current.querySelectorAll('a[href],button'));
+      var next = items.indexOf(root.activeElement) + (e.shiftKey ? -1 : 1);
+      items[(next + items.length) % items.length].focus();
+    }
+    document.addEventListener('keydown', onKey, true);
+    return function () {
+      document.removeEventListener('keydown', onKey, true);
+      closeModal(layer, ref);
+      if (prev && prev.focus) prev.focus();
+    };
+  }, []);
+  // The link warning opens under the viewer, which closes to leave it in front.
+  function openOriginal(e) {
+    warnOnLink(app, src)(e);
+    if (e.defaultPrevented) p.onClose();
+  }
+  return h(Portal, null, h('div', { className: 'overlay photo-viewer', role: 'dialog', 'aria-modal': 'true', 'aria-label': p.label, ref: ref, onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
+    loaded ? null : h('span', { className: 'photo-loading' }, h(T.Spinner, { size: 24, label: 'Loading image' })),
+    h('img', { className: 'photo-full' + (loaded ? '' : ' photo-wait'), src: src, alt: p.label, referrerPolicy: 'no-referrer', onLoad: function () { setLoaded(true); }, onError: function () { if (p.fallback && src !== p.fallback) setSrc(p.fallback); } }),
+    h('div', { className: 'photo-actions' },
+      httpsHost(src) ? h('a', { className: 'tc-btn tc-btn-ghost', href: src, target: '_blank', rel: 'noopener noreferrer', onClick: openOriginal, style: { textDecoration: 'none' } }, 'Open original', h(T.Icon, { name: 'external', size: 14 })) : null,
+      h(T.Button, { onClick: p.onClose }, 'Close'))));
+}
+
+/**
  * Media tab of the picker.
  * It shows BetterChatango's media library by pages, with search by name and import and export in BetterChatango's format.
  * @param {{scrollRef: Object, onPick: function(string)}} p Scrolling area and insertion of the chosen address.
