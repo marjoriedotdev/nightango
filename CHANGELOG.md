@@ -2,6 +2,13 @@
 
 Changes in Nightango that you can see, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The build shows these notes in Settings, What's new, and refuses a `@version` without its section.
 
+## [0.39.0] - 2026-11-26
+
+### Changed
+
+- Tapping an image sent in a chat shows it full screen instead of opening its link. Open original, under the image, opens the link.
+- A full screen profile photo also has Open original under it.
+
 ## [0.38.3] - 2026-11-17
 
 ### Fixed

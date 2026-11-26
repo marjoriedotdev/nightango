@@ -219,7 +219,8 @@ h1,h2,h3{text-wrap:balance}
 .embed-x-poster img{position:absolute;inset:0;height:100%;max-height:none}
 .embed-x-date{align-self:flex-start;font-size:var(--font-size-body-sm);color:var(--text-3);text-decoration:none}
 .embed-x-date:hover{text-decoration:underline;text-underline-offset:2px}
-.embed-image{display:block;max-width:100%}
+.embed-image{display:block;max-width:100%;padding:0;border:0;border-radius:var(--radius-lg);background:none;cursor:zoom-in}
+.embed-image:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .embed-image img{display:block;max-width:min(320px,100%);max-height:320px;width:auto;height:auto;border-radius:var(--radius-lg);border:1px solid var(--border)}
 .embed-image-wrap{position:relative;display:inline-block;max-width:100%}
 .media-star{position:absolute;top:var(--space-1);right:var(--space-1);background:var(--raised)}
@@ -662,6 +663,7 @@ button.tc-mention{border:0;font-family:inherit;font-size:inherit;line-height:inh
 .photo-full{display:block;min-height:0;max-width:100%;max-height:calc(100% - 64px);object-fit:contain;border-radius:var(--radius-lg)}
 .photo-wait{display:none}
 .photo-loading{display:inline-flex;color:var(--text-2)}
+.photo-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
 .crop-body{align-items:center}
 .crop-stage{position:relative;display:inline-block;max-width:100%;overflow:hidden;border-radius:var(--radius-lg);touch-action:none;user-select:none;-webkit-user-select:none}
 .crop-stage img{display:block;max-width:100%;max-height:min(55vh,360px)}
