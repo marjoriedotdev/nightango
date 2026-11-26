@@ -312,7 +312,8 @@ async function build() {
   const css = tokensCss(tokens);
   const fontsCss = embeddedFontsCss();
 
-  const html = `<title>Nightango</title>
+  const html = `<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightango</title>
 <style>
 ${fontsCss}
 ${css}
